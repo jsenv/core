@@ -15,9 +15,16 @@ export const ButtonRouteResolver = (props) => {
 
 const ButtonWithRoute = (props) => {
   const Next = useNextResolver();
-  const { route, routeParams, children, pseudoState, ...rest } = props;
+  // `href` is kept out of `rest`: spread after the route's url, an
+  // `href={undefined}` riding along would erase it.
+  const { route, routeParams, children, pseudoState, href, ...rest } = props;
   if (import.meta.dev) {
     assertRoute(route);
+    if (href !== undefined) {
+      console.warn(
+        `A button with a "route" ignores its "href" (${href}): the route builds the address.`,
+      );
+    }
   }
   const url = route.buildUrl(routeParams);
   const linkMatching = useRouteCurrent(route, routeParams);

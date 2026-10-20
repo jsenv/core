@@ -617,10 +617,18 @@ const LinkWithRoute = ({
   currentExcept,
   currentAlso,
   children,
+  // Kept out of `rest`: spread after the route's url, an `href={undefined}`
+  // riding along would erase it.
+  href,
   ...rest
 }) => {
   if (import.meta.dev) {
     assertRoute(route);
+    if (href !== undefined) {
+      console.warn(
+        `A link with a "route" ignores its "href" (${href}): the route builds the address.`,
+      );
+    }
   }
   const url = route.buildUrl(routeParams);
   if (import.meta.dev) {

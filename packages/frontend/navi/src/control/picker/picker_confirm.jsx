@@ -16,7 +16,6 @@
  * Escape, a click outside) is no.
  */
 
-import { MOUNT_DEFAULT } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { triggerNaviCommand } from "../commands.js";
@@ -130,10 +129,6 @@ export const PickerConfirmResolver = (props) => {
       focusCapture={focusCapture}
       openWhileReadOnly={openWhileReadOnly}
       onConfirm={onConfirm}
-      // A question holds no value to read before it is asked: the popup is
-      // built on the first open, like that of a picker told its value (see
-      // the `mount` resolution in picker_custom.jsx).
-      mount={MOUNT_DEFAULT}
       message={undefined}
       confirmLabel={undefined}
       cancelLabel={undefined}

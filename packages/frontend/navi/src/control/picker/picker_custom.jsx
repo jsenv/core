@@ -350,8 +350,10 @@ const PickerCustom = (props) => {
   props.id = props.id || controlId || idDefault;
   // Given no value, the picker holds what the control in its popup holds (see
   // the `mount` decision below) — and a group around it collects that from the
-  // moment both exist.
-  const valueInPopup = !isControlValueGivenByProps(props);
+  // moment both exist. A picker that picks nothing holds none: its popup's
+  // controls are never adopted (see canRegisterAsFacadeChild).
+  const valueInPopup =
+    !props.picksNothing && !isControlValueGivenByProps(props);
   const parentController = useContext(ParentUIStateControllerContext);
   const answersToGroup = Boolean(parentController) && !props.standalone;
   // Same narrow-container/maxWidth-compact heuristic Popup itself uses (see

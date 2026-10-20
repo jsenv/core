@@ -2265,8 +2265,9 @@ const PickerFirstResolver = (props) => {
  *   it (no `ui`, a `Picker.UI.*`, a component `ui`), when there is a clear
  *   cross, or when a form or group around the picker collects it; when an
  *   element `ui` calls `usePickerState()`. Read by nothing, it waits for the
- *   first open, like a picker told a value. A `type="confirm"` picker never
- *   builds them early: its popup is a question, there is nothing to read.
+ *   first open, like a picker told a value. A `picksNothing` picker (and so
+ *   `type="confirm"`) never builds them early: its popup holds no value, there
+ *   is nothing to read.
  */
 // Every picker type is resolved into one of these before it gets here (see
 // PickerTypeResolver and resolveInputProps): a native input type, or navi_js
