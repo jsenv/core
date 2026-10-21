@@ -141,7 +141,9 @@ row, and which of the two is on the left says which way it runs.
 It decides which side of an item the copy goes. Down a column, by how far down
 the copy is. Along a row, wrapped or not, by how far across its middle is,
 whatever the widths of the two: let go over the far half of an item, it goes
-after it; how high it is says nothing there.
+after it. How high it is only says which line: beside the items, above or below
+them, it goes on the nearest line where its middle is, the way a click puts the
+caret in a text.
 
 `data-drag-axis` follows it for a `reorder` with no `land`, `toss` or `leave`
 beside it — the copy walks the list: `y` down a column (also when nothing is

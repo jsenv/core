@@ -2018,62 +2018,94 @@ const areLevel = (a, b) => {
 
 /**
  * The item the copy is at, and its `side` in the order of the list: "start" for
- * before it, "end" for after it. Down a list, read by the copy's leading edge
- * (see getDropTargetInfo); along a row, by its middle against the item's — how
- * high the copy is says nothing there, and the leading edge assumes a copy as
- * large as what it passes over: items of a row are as wide as their content,
- * and one wider than its neighbour could never be put after it.
+ * before it, "end" for after it.
  *
- * Beyond an end of the list, over no item, is a place too: above the first line
- * or below the last, and along a row beside the first item or past the last.
+ * Down a list, the item under the copy, read by the copy's leading edge (see
+ * getDropTargetInfo); over no item, above the first one is the start of the
+ * list and below the last one its end.
+ *
+ * Along a row, the copy's middle decides, the way a click puts the caret in a
+ * text: on the nearest line, before the first item whose middle it has not
+ * reached. How high the copy is says which line and nothing more, its size
+ * nothing at all — the leading edge assumes a copy as large as what it passes
+ * over, and items of a row are as wide as their content: read by its edge, one
+ * wider than its neighbour could never be put after it.
  */
 const findPlaceInList = (gestureInfo, items, flow) => {
   const dragElementRect = gestureInfo.elementImpacted.getBoundingClientRect();
+  if (flow !== "down") {
+    return findPlaceOnNearestLine(dragElementRect, items, flow);
+  }
   const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
   if (dropTargetInfo) {
-    const { element } = dropTargetInfo;
-    if (flow === "down") {
-      return { element, side: dropTargetInfo.elementSide.y };
-    }
-    const elementRect = element.getBoundingClientRect();
-    const dragMiddle = dragElementRect.left + dragElementRect.width / 2;
-    const elementMiddle = elementRect.left + elementRect.width / 2;
-    const beforeItsMiddle =
-      flow === "right"
-        ? dragMiddle < elementMiddle
-        : dragMiddle > elementMiddle;
-    return { element, side: beforeItsMiddle ? "start" : "end" };
+    return {
+      element: dropTargetInfo.element,
+      side: dropTargetInfo.elementSide.y,
+    };
   }
   const firstItem = items[0];
   if (!firstItem) {
     return null;
   }
   const lastItem = items[items.length - 1];
-  const firstRect = firstItem.getBoundingClientRect();
-  const lastRect = lastItem.getBoundingClientRect();
-  if (
-    dragElementRect.bottom < firstRect.top ||
-    (flow !== "down" &&
-      areLevel(dragElementRect, firstRect) &&
-      isBeyond(dragElementRect, firstRect, flow === "right" ? "left" : "right"))
-  ) {
+  if (dragElementRect.bottom < firstItem.getBoundingClientRect().top) {
     return { element: firstItem, side: "start" };
   }
-  if (
-    dragElementRect.top > lastRect.bottom ||
-    (flow !== "down" &&
-      areLevel(dragElementRect, lastRect) &&
-      isBeyond(dragElementRect, lastRect, flow))
-  ) {
+  if (dragElementRect.top > lastItem.getBoundingClientRect().bottom) {
     return { element: lastItem, side: "end" };
   }
   return null;
 };
 
-const isBeyond = (dragElementRect, itemRect, towards) => {
-  return towards === "left"
-    ? dragElementRect.right < itemRect.left
-    : dragElementRect.left > itemRect.right;
+const findPlaceOnNearestLine = (dragElementRect, items, flow) => {
+  const lines = [];
+  let previousRect;
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    // A box that takes no room stands on no line (see readItemFlow).
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    if (!previousRect || !areLevel(previousRect, rect)) {
+      lines.push({ top: rect.top, bottom: rect.bottom, entries: [] });
+    }
+    const line = lines[lines.length - 1];
+    if (rect.top < line.top) {
+      line.top = rect.top;
+    }
+    if (rect.bottom > line.bottom) {
+      line.bottom = rect.bottom;
+    }
+    line.entries.push({ item, middle: rect.left + rect.width / 2 });
+    previousRect = rect;
+  }
+  const dragMiddleY = dragElementRect.top + dragElementRect.height / 2;
+  let nearestLine;
+  let nearestDistance;
+  for (const line of lines) {
+    const distance =
+      dragMiddleY < line.top
+        ? line.top - dragMiddleY
+        : dragMiddleY > line.bottom
+          ? dragMiddleY - line.bottom
+          : 0;
+    if (nearestLine === undefined || distance < nearestDistance) {
+      nearestLine = line;
+      nearestDistance = distance;
+    }
+  }
+  if (!nearestLine) {
+    return null;
+  }
+  const dragMiddleX = dragElementRect.left + dragElementRect.width / 2;
+  for (const { item, middle } of nearestLine.entries) {
+    const notReached =
+      flow === "right" ? middle > dragMiddleX : middle < dragMiddleX;
+    if (notReached) {
+      return { element: item, side: "start" };
+    }
+  }
+  return { element: nearestLine.entries.at(-1).item, side: "end" };
 };
 
 /**
