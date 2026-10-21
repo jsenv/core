@@ -332,8 +332,9 @@ const DROP_CONTAINER_ATTRIBUTE = "data-drop-container";
 // every outcome — a list runs one way, and something being put somewhere goes
 // wherever it is put.
 const AXIS_ATTRIBUTE = "data-drag-axis";
-// Which way the next item of a reordered list is: "down", "right" or "left".
-// Said nothing, it is read from where the items stand.
+// How the items of a reordered list are laid out: "column", "row", or "wrap" for
+// side by side over several lines. Said nothing, it is read from where the
+// items stand.
 const FLOW_ATTRIBUTE = "data-reorder-flow";
 const DELAY_ATTRIBUTE = "data-drag-delay";
 const SLOP_ATTRIBUTE = "data-drag-slop";
@@ -430,17 +431,24 @@ defineInteractionDetector({
     }
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
-    const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
-    const axes =
-      axisHolder?.getAttribute(AXIS_ATTRIBUTE) ||
-      // A list runs one way, and reordering walks it. Anything else goes wherever
-      // the hand takes it: a board has places all around, a thing put somewhere has
-      // two axes to be put along, a throw goes where it was thrown and a thing
-      // that leaves goes out by whichever edge.
-      (canReorder && !canLand && !canToss && !canLeave ? "y" : "xy");
     const itemFlow =
       element.closest(`[${FLOW_ATTRIBUTE}]`)?.getAttribute(FLOW_ATTRIBUTE) ||
       undefined;
+    const axisHolder = element.closest(`[${AXIS_ATTRIBUTE}]`);
+    const axes =
+      axisHolder?.getAttribute(AXIS_ATTRIBUTE) ||
+      // A list runs one way, and reordering walks it: down a column, along a
+      // row, and both for a row that wraps — its copy changes line. Anything
+      // else goes wherever the hand takes it: a board has places all around, a
+      // thing put somewhere has two axes to be put along, a throw goes where it
+      // was thrown and a thing that leaves goes out by whichever edge.
+      (canReorder && !canLand && !canToss && !canLeave
+        ? itemFlow === "row"
+          ? "x"
+          : itemFlow === "wrap"
+            ? "xy"
+            : "y"
+        : "xy");
     // Where the places are, read at setup for the same reason as the axes: they
     // are what the gesture is about, and it is what holds the two sides of it
     // that says them.

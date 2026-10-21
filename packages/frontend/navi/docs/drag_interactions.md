@@ -124,30 +124,29 @@ screen has not asked for it to swap places with whatever it flew over.
 | Attribute                                                | Meaning                                |
 | -------------------------------------------------------- | -------------------------------------- |
 | `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
-| `data-reorder-flow="down"\|"right"\|"left"`              | which way the next item of a list is   |
+| `data-reorder-flow="column"\|"row"\|"wrap"`              | how the items of a list are laid out   |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
 | `data-drag-free`                                         | it may leave its scroll area           |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
 | `data-drop-container`                                    | where the places are looked for        |
 
-`data-drag-axis` is `y` for a `reorder` with no `land`, `toss` or `leave` beside
-it — it walks the list; a list that runs sideways says `x` — and `xy` for
-everything else, which goes wherever the hand takes it.
+**How the items of a list are laid out**, `data-reorder-flow` on the list or
+any ancestor: `column`, one under the other; `row`, side by side on one line;
+`wrap`, side by side over as many lines as it takes — inline-blocks, a
+`flex-wrap`, a grid. A row runs in the writing direction of its list. Said
+nothing, it is read from where the items stand: one level with the next makes a
+row, and which of the two is on the left says which way it runs.
 
-**Which side of an item the copy goes.** It is read along the way the items
-follow each other. Down a list, by how far down the copy is. Along a row —
-wrapped or not, or a grid — by how far across its middle is, whatever the widths
-of the two: let go over the far half of an item, it goes after it; how high it
-is says nothing there. That way is read from where the items stand: one level
-with the next makes a row, and which of the two is on the left says which way it
-runs, so a column, a `flex-wrap` row, a grid and a right-to-left row need nothing
-said. `data-reorder-flow`, on the list or any ancestor, says it instead: `down`,
-`right` (a row from left to right) or `left` (from right to left) — for a list
-whose layout does not say it at the moment of the drag, or that must not depend
-on it. It is not `data-drag-axis`: that one says where the copy may travel — a
-wrapped row says `xy`, so that its copy can change line — and this one how its
-place is read.
+It decides which side of an item the copy goes. Down a column, by how far down
+the copy is. Along a row, wrapped or not, by how far across its middle is,
+whatever the widths of the two: let go over the far half of an item, it goes
+after it; how high it is says nothing there.
+
+`data-drag-axis` follows it for a `reorder` with no `land`, `toss` or `leave`
+beside it — the copy walks the list: `y` down a column (also when nothing is
+said), `x` along a row, `xy` for a row that wraps, its copy changing line — and
+is `xy` for everything else, which goes wherever the hand takes it.
 
 ### While it is being moved: `moving`
 

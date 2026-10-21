@@ -896,11 +896,12 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * @param {string} [options.itemSelector] What matches the items of the list.
  *   Left out, nothing is a place: no hint is drawn and no landing can be
  *   answered, which is what a drag that only ever throws the thing away asks for.
- * @param {"down"|"right"|"left"} [options.itemFlow] Which way the next item of
- *   a reordered list is: below, or along a line (a row, a wrapped row, a grid)
- *   to the right or to the left. It decides which side of an item the copy is
- *   read on and where the hint is drawn. Left out, it is read from where the
- *   items stand (see readItemFlow).
+ * @param {"column"|"row"|"wrap"} [options.itemFlow] How the items of a
+ *   reordered list are laid out: one under the other, side by side on one line,
+ *   or side by side over as many lines as it takes (inline-blocks, a flex-wrap,
+ *   a grid). A row runs in the writing direction of `containerElement`. It
+ *   decides which side of an item the copy is read on and where the hint is
+ *   drawn. Left out, it is read from where the items stand (see readItemFlow).
  * @param {function} [options.getItemId] `getItemId(element) → id`. An id rather
  *   than a DOM index, because the two do not match: a list draws fewer rows than
  *   it has, a search reorders them, and the structure may have holes.
@@ -1361,8 +1362,8 @@ const resolveDropMeaning = ({
 };
 
 // Which edge of its anchor the reorder hint is drawn at, for each way the items
-// can follow each other (the `itemFlow` of startDragTo): before an item, the
-// edge the flow comes in by; after the last one, the edge it leaves by.
+// can follow each other (see readItemFlow): before an item, the edge the flow
+// comes in by; after the last one, the edge it leaves by.
 const DROP_HINT_EDGES = {
   down: { before: "top", after: "bottom" },
   right: { before: "left", after: "right" },
@@ -1436,12 +1437,7 @@ const startDragToCarryCopy = (
   if (!isPrimaryButtonEvent(event)) {
     return undefined;
   }
-  const flowIsSaid = Object.hasOwn(DROP_HINT_EDGES, itemFlow);
-  if (import.meta.dev && itemFlow !== undefined && !flowIsSaid) {
-    console.warn(
-      `startDragTo: "itemFlow" is "down", "right" or "left", not "${itemFlow}". Read from where the items stand instead.`,
-    );
-  }
+  const flowSaid = resolveItemFlow(itemFlow, containerElement);
   // Where the hand is, for a press handed over: its `pointerdown` says where it
   // WAS, before the hold and whatever the hold opened. Let go of meanwhile, it
   // is not picked up after the fact.
@@ -1598,11 +1594,7 @@ const startDragToCarryCopy = (
             }
           }
 
-          const flow = canLand
-            ? undefined
-            : flowIsSaid
-              ? itemFlow
-              : readItemFlow(allItems);
+          const flow = canLand ? undefined : flowSaid || readItemFlow(allItems);
           const dropTargetInfo = canLand
             ? getDropTargetInfo(gestureInfo, items)
             : findPlaceInList(gestureInfo, items, flow);
@@ -1960,6 +1952,31 @@ const createDropSurface = () => {
   // and must survive an Escape or a click elsewhere.
   div.setAttribute("popover", "manual");
   return div;
+};
+
+/**
+ * The way the items follow each other, from how the caller said they are laid
+ * out (the `itemFlow` of startDragTo). A row runs the way the text of its list
+ * does: from right to left under `direction: rtl`.
+ */
+const resolveItemFlow = (itemFlow, containerElement) => {
+  if (itemFlow === undefined) {
+    return undefined;
+  }
+  if (itemFlow === "column") {
+    return "down";
+  }
+  if (itemFlow === "row" || itemFlow === "wrap") {
+    return getComputedStyle(containerElement).direction === "rtl"
+      ? "left"
+      : "right";
+  }
+  if (import.meta.dev) {
+    console.warn(
+      `startDragTo: "itemFlow" is "column", "row" or "wrap", not "${itemFlow}". Read from where the items stand instead.`,
+    );
+  }
+  return undefined;
 };
 
 /**

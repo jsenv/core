@@ -1665,6 +1665,7 @@ const useListScrollSync = ({
   useDuplicateHeaderWarning(ref);
   useStuckWindowWarning({
     ref,
+    getListEl,
     scrollerElResolved,
     renderWindowRef,
     windowLeavesItemsOut,
@@ -3291,6 +3292,7 @@ const readItemsPerLine = (listEl) => {
 // instead of scrolling — and there is no event missing to notice it by.
 const useStuckWindowWarning = ({
   ref,
+  getListEl,
   scrollerElResolved,
   renderWindowRef,
   windowLeavesItemsOut,
@@ -3317,6 +3319,22 @@ const useStuckWindowWarning = ({
       return;
     }
     if (canScrollerScroll(scrollerElResolved, horizontal ? "x" : "y")) {
+      return;
+    }
+    // Scrolling nothing, the box keeps out of reach only the items past what
+    // it shows. A list standing whole on the window's screen is one the window
+    // covers at its next evaluation: an item added in this commit is drawn on
+    // the resize it causes (see onGeometryChangeRef), after this effect.
+    const listEl = getListEl();
+    if (!listEl) {
+      return;
+    }
+    const screen = readWindowScreen(scrollerElResolved, horizontal);
+    const listRect = listEl.getBoundingClientRect();
+    const listFrom = horizontal ? listRect.left : listRect.top;
+    const listTo = horizontal ? listRect.right : listRect.bottom;
+    // A pixel of slack, like canScroll.
+    if (listFrom > screen.from - 1 && listTo < screen.to + 1) {
       return;
     }
     doneRef.current = true;
@@ -3978,30 +3996,39 @@ const findItemElementAt = (listEl, index) => {
   }
   return null;
 };
-// What the render window is placed and sized on (see evaluateWindow), along
-// the scroll axis and in viewport coordinates: the size of the screen, the part
-// of the list on it (the band), and the items drawn, in the order they stand.
-// The screen is the viewport of the box that scrolls the list — what "150%"
-// is a percentage of. A box that does not scroll — a list given no height, as
-// tall as its items — shows no more of them than the browser does: its
-// viewport is cut by the browser's, or a budget in % would draw items to fill
-// a screen they make grow. A list off screen is met at its edge nearest to the
-// screen, where it comes in.
-const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
+// The screen the render window is framed on, along the scroll axis and in
+// viewport coordinates: the viewport of the box that scrolls the list — what
+// "150%" is a percentage of. A box that does not scroll — a list given no
+// height, as tall as its items — shows no more of them than the browser does:
+// its viewport is cut by the browser's, or a budget in % would draw items to
+// fill a screen they make grow.
+const readWindowScreen = (scrollerEl, horizontal) => {
   const scrollerRect = getScrollerViewportRect(scrollerEl);
-  let screenFrom = horizontal ? scrollerRect.left : scrollerRect.top;
-  let screenTo = horizontal ? scrollerRect.right : scrollerRect.bottom;
+  let from = horizontal ? scrollerRect.left : scrollerRect.top;
+  let to = horizontal ? scrollerRect.right : scrollerRect.bottom;
   if (!canScrollerScroll(scrollerEl, horizontal ? "x" : "y")) {
     const browserSize = horizontal
       ? document.documentElement.clientWidth
       : document.documentElement.clientHeight;
-    if (screenFrom < 0) {
-      screenFrom = 0;
+    if (from < 0) {
+      from = 0;
     }
-    if (screenTo > browserSize) {
-      screenTo = browserSize;
+    if (to > browserSize) {
+      to = browserSize;
     }
   }
+  return { from, to };
+};
+// What the render window is placed and sized on (see evaluateWindow), along
+// the scroll axis and in viewport coordinates: the size of the screen (see
+// readWindowScreen), the part of the list on it (the band), and the items
+// drawn, in the order they stand. A list off screen is met at its edge nearest
+// to the screen, where it comes in.
+const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
+  const { from: screenFrom, to: screenTo } = readWindowScreen(
+    scrollerEl,
+    horizontal,
+  );
   const screenSize = screenTo - screenFrom;
   if (screenSize < 1) {
     return null;
