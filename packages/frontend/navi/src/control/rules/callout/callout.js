@@ -1295,6 +1295,20 @@ export const openCallout = (
   // deduped away on the grounds that the anchor did not move.
   callout.updatePosition = () =>
     positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
+  // Content that sizes itself once on screen (a shrink-wrapped BadgeList) does
+  // so after the callout measured it. The size observer positionCallout puts
+  // on the message sees the change, but answers a frame later (see observeSize
+  // in @jsenv/dom for why); placed again on the spot, the first painted frame
+  // is the right one. Stopped here, since a popup further up holds the callout
+  // out of flow and does not resize with it.
+  const onContentSizeChange = (sizeChangeEvent) => {
+    sizeChangeEvent.stopPropagation();
+    callout.updatePosition();
+  };
+  calloutElement.addEventListener("navi_size_change", onContentSizeChange);
+  addTeardown(() => {
+    calloutElement.removeEventListener("navi_size_change", onContentSizeChange);
+  });
 
   return callout;
 };

@@ -77,6 +77,7 @@ import {
   applyNewPosition,
   createPubSub,
   dispatchCustomEvent,
+  ELEMENT_SIZE_CHANGE,
   findEvent,
   getElementSignature,
   getPositionedParent,
@@ -2263,6 +2264,15 @@ const useDialogProps = (props) => {
       freezeSize(dialogEl);
     }
     rectEffect.observeSize(dialogEl);
+    // Content that sizes itself once on screen (a shrink-wrapped BadgeList)
+    // says so, after the placement read it: placed again on the spot, where
+    // observeSize answers a frame late. Stopped here, since a popup further up
+    // holds this one out of flow and does not resize with it.
+    const onContentSizeChange = (sizeChangeEvent) => {
+      sizeChangeEvent.stopPropagation();
+      rectEffect.check(new CustomEvent(ELEMENT_SIZE_CHANGE));
+    };
+    dialogEl.addEventListener("navi_size_change", onContentSizeChange);
     // Exposed for the placement-props effect below, which needs to re-place an
     // already-open dialog.
     repositionRef.current = (repositionEvent) => {
@@ -2276,6 +2286,7 @@ const useDialogProps = (props) => {
     };
     addCleanup(() => {
       repositionRef.current = null;
+      dialogEl.removeEventListener("navi_size_change", onContentSizeChange);
       rectEffect.disconnect();
     });
     // A descendant anchored to something inside this dialog (a Callout, a

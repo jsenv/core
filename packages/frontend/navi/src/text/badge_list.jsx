@@ -1,7 +1,8 @@
-import { measureWidestChildRow } from "@jsenv/dom";
+import { dispatchPublicCustomEvent, measureWidestChildRow } from "@jsenv/dom";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 import { BadgeUI } from "./badge.jsx";
 import { BadgeListContext, createBadgeRegistry } from "./badge_list_context.js";
 import { MaxLinesContext } from "./max_lines_context.js";
@@ -218,43 +219,29 @@ const BadgeListShrinkWrap = ({ fallback, children, max, ...restProps }) => {
   const measureRef = useRef();
   const visibleRef = useRef();
 
+  // In a closed popup the rows have no size to read: the list is measured when
+  // it comes on screen, before the frame is painted.
+  useDisplayedLayoutEffect(visibleRef, () => {
+    shrinkWrapToWidestRow(visibleRef.current, measureRef.current);
+  }, [children]);
+
   useLayoutEffect(() => {
     const measureEl = measureRef.current;
     const visibleEl = visibleRef.current;
     if (!measureEl || !visibleEl) {
       return undefined;
     }
-    let observer;
-    let rafId;
-
-    const measure = () => {
-      visibleEl.style.width = "";
-      // Clone the already-rendered DOM nodes instead of letting React/Preact
-      // render the children a second time into the ghost: re-rendering would
-      // instantiate Badge/Badge.Button a second time, double-registering their
-      // controllers (and any other mount side effect) under the same id.
-      measureEl.replaceChildren(
-        ...Array.from(visibleEl.children, (child) => child.cloneNode(true)),
-      );
-      const optimalWidth = measureWidestChildRow(measureEl);
-      if (optimalWidth !== null) {
-        visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
-      }
-    };
-
-    // A single badge is a single row, and a single row is already the widest
-    // one: there is nothing to narrow, and no width the list could be given
-    // that would change that.
+    // A single row whatever room it is given: nothing a resize could narrow.
     if (visibleEl.children.length < 2) {
-      visibleEl.style.width = "";
-      measureEl.replaceChildren();
       return undefined;
     }
-
-    measure();
+    let observer;
+    let rafId;
     const onResize = () => {
       cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(measure);
+      rafId = requestAnimationFrame(() => {
+        shrinkWrapToWidestRow(visibleEl, measureEl);
+      });
     };
     const outerParent = measureEl.parentElement?.parentElement;
     if (outerParent) {
@@ -275,7 +262,7 @@ const BadgeListShrinkWrap = ({ fallback, children, max, ...restProps }) => {
     // the list itself would, otherwise the list lands a pixel low in some
     // containers.
     <Box relative inline flex="x">
-      {/* Measurement ghost, filled by the layout effect above */}
+      {/* Measurement ghost, filled by shrinkWrapToWidestRow */}
       <Box
         baseClassName="navi_badge_list"
         {...boxProps}
@@ -290,6 +277,42 @@ const BadgeListShrinkWrap = ({ fallback, children, max, ...restProps }) => {
       </Box>
     </Box>
   );
+};
+
+// Narrows the list to its widest row, read from clones of its badges in the
+// ghost.
+//
+// What holds the list may have sized itself around the width it had before —
+// a callout pins its body to the width it measured — so a change is announced
+// with a bubbling navi_size_change for it to measure again, in the same frame.
+const shrinkWrapToWidestRow = (visibleEl, measureEl) => {
+  // Not drawn (back in a closed popup): no row to read. The width is kept for
+  // the next opening, which measures again before painting.
+  if (visibleEl.getClientRects().length === 0) {
+    return;
+  }
+  const widthBefore = visibleEl.style.width;
+  visibleEl.style.width = "";
+  if (visibleEl.children.length < 2) {
+    // A single badge is a single row, and a single row is already the widest
+    // one: there is nothing to narrow.
+    measureEl.replaceChildren();
+  } else {
+    // Clone the already-rendered DOM nodes instead of letting React/Preact
+    // render the children a second time into the ghost: re-rendering would
+    // instantiate Badge/Badge.Button a second time, double-registering their
+    // controllers (and any other mount side effect) under the same id.
+    measureEl.replaceChildren(
+      ...Array.from(visibleEl.children, (child) => child.cloneNode(true)),
+    );
+    const optimalWidth = measureWidestChildRow(measureEl);
+    if (optimalWidth !== null) {
+      visibleEl.style.width = `${Math.ceil(optimalWidth)}px`;
+    }
+  }
+  if (visibleEl.style.width !== widthBefore) {
+    dispatchPublicCustomEvent(visibleEl, "navi_size_change");
+  }
 };
 
 const BadgeListMaxLines = ({

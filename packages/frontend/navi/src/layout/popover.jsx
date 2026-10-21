@@ -48,6 +48,7 @@
 import {
   applyNewPosition,
   createPubSub,
+  ELEMENT_SIZE_CHANGE,
   findEvent,
   findSelfOrAncestorFixedPosition,
   getPositionedParent,
@@ -1532,6 +1533,18 @@ const usePopoverProps = (props) => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // Content that sizes itself once on screen (a shrink-wrapped BadgeList)
+    // says so, after the placement read it: placed again on the spot, where
+    // observeSize answers a frame late. Stopped here, since a popup further up
+    // holds this one out of flow and does not resize with it.
+    const onContentSizeChange = (sizeChangeEvent) => {
+      sizeChangeEvent.stopPropagation();
+      rectEffect.check(new CustomEvent(ELEMENT_SIZE_CHANGE));
+    };
+    popoverEl.addEventListener("navi_size_change", onContentSizeChange);
+    addCleanup(() => {
+      popoverEl.removeEventListener("navi_size_change", onContentSizeChange);
+    });
     // Exposed for the placement-props effect above, which needs to re-place an
     // already-open popover.
     repositionRef.current = (repositionEvent) => {
