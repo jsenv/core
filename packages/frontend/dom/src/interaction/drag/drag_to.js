@@ -130,6 +130,29 @@ const css = /* css */ `
       var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
     );
   }
+  /* Along a row the same line stands upright, in the gap beside the item and as
+     tall as it. Each margin keeps its axis: --drop-hint-margin-x takes it into
+     the gap, --drop-hint-margin-y shortens it. */
+  .navi_drop_hint[data-drop-edge="left"],
+  .navi_drop_hint[data-drop-edge="right"] {
+    top: calc(var(--drop-target-top) + var(--drop-hint-margin-y, 0px));
+    left: var(--drop-hint-x);
+    width: var(--drop-hint-size, 3px);
+    height: calc(
+      var(--drop-target-height) - 2 * var(--drop-hint-margin-y, 0px)
+    );
+    transform: translateX(-50%);
+  }
+  .navi_drop_hint[data-drop-edge="left"] {
+    --drop-hint-x: calc(
+      var(--drop-target-left) - var(--drop-hint-margin-x, 0px)
+    );
+  }
+  .navi_drop_hint[data-drop-edge="right"] {
+    --drop-hint-x: calc(
+      var(--drop-target-right) + var(--drop-hint-margin-x, 0px)
+    );
+  }
   /* A chevron at each end, pointing in: the line alone is easy to lose against
      a list of borders and separators, two arrows read as "here" at a glance
      (same idea as the table's column drop preview). They overhang the line,
@@ -153,6 +176,23 @@ const css = /* css */ `
   .navi_drop_hint_cap[data-side="end"] {
     right: calc(-1 * var(--drop-hint-arrow-size, 11px));
     rotate: 90deg;
+  }
+  .navi_drop_hint:is([data-drop-edge="left"], [data-drop-edge="right"])
+    .navi_drop_hint_cap {
+    right: auto;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .navi_drop_hint:is([data-drop-edge="left"], [data-drop-edge="right"])
+    .navi_drop_hint_cap[data-side="start"] {
+    top: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: none;
+  }
+  .navi_drop_hint:is([data-drop-edge="left"], [data-drop-edge="right"])
+    .navi_drop_hint_cap[data-side="end"] {
+    top: auto;
+    bottom: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: 180deg;
   }
 
   /* WHERE IT LANDS, when landing is ON a thing rather than between two: the
@@ -856,6 +896,11 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * @param {string} [options.itemSelector] What matches the items of the list.
  *   Left out, nothing is a place: no hint is drawn and no landing can be
  *   answered, which is what a drag that only ever throws the thing away asks for.
+ * @param {"down"|"right"|"left"} [options.itemFlow] Which way the next item of
+ *   a reordered list is: below, or along a line (a row, a wrapped row, a grid)
+ *   to the right or to the left. It decides which side of an item the copy is
+ *   read on and where the hint is drawn. Left out, it is read from where the
+ *   items stand (see readItemFlow).
  * @param {function} [options.getItemId] `getItemId(element) → id`. An id rather
  *   than a DOM index, because the two do not match: a list draws fewer rows than
  *   it has, a search reorders them, and the structure may have holes.
@@ -1315,6 +1360,15 @@ const resolveDropMeaning = ({
   return "cancel";
 };
 
+// Which edge of its anchor the reorder hint is drawn at, for each way the items
+// can follow each other (the `itemFlow` of startDragTo): before an item, the
+// edge the flow comes in by; after the last one, the edge it leaves by.
+const DROP_HINT_EDGES = {
+  down: { before: "top", after: "bottom" },
+  right: { before: "left", after: "right" },
+  left: { before: "right", after: "left" },
+};
+
 /**
  * A COPY of the element is carried, and the original keeps its place in the
  * layout — which is what makes a reorder possible at all: nothing else moves
@@ -1344,6 +1398,7 @@ const startDragToCarryCopy = (
     areaConstraint = canToss || canLeave ? "none" : undefined,
     containerElement = draggedElement.parentElement,
     itemSelector,
+    itemFlow,
     getItemId,
     onReorder,
     onLand,
@@ -1380,6 +1435,12 @@ const startDragToCarryCopy = (
   // A secondary button (right click and friends) is a context menu, not a grab.
   if (!isPrimaryButtonEvent(event)) {
     return undefined;
+  }
+  const flowIsSaid = Object.hasOwn(DROP_HINT_EDGES, itemFlow);
+  if (import.meta.dev && itemFlow !== undefined && !flowIsSaid) {
+    console.warn(
+      `startDragTo: "itemFlow" is "down", "right" or "left", not "${itemFlow}". Read from where the items stand instead.`,
+    );
   }
   // Where the hand is, for a press handed over: its `pointerdown` says where it
   // WAS, before the hold and whatever the hold opened. Let go of meanwhile, it
@@ -1495,6 +1556,7 @@ const startDragToCarryCopy = (
           dropHintEl.style.removeProperty("--drop-target-top");
           dropHintEl.style.removeProperty("--drop-target-bottom");
           dropHintEl.style.removeProperty("--drop-target-left");
+          dropHintEl.style.removeProperty("--drop-target-right");
           dropHintEl.style.removeProperty("--drop-target-width");
           dropHintEl.style.removeProperty("--drop-target-height");
         };
@@ -1536,12 +1598,14 @@ const startDragToCarryCopy = (
             }
           }
 
-          const dropTargetInfo = getDropTargetInfo(gestureInfo, items, {
-            // The edges of a LIST: above the first row means the top of it, below
-            // the last one means the end of it. A board has no such reading — away
-            // from every place is away from every place.
-            fallbackToEdge: !canLand,
-          });
+          const flow = canLand
+            ? undefined
+            : flowIsSaid
+              ? itemFlow
+              : readItemFlow(allItems);
+          const dropTargetInfo = canLand
+            ? getDropTargetInfo(gestureInfo, items)
+            : findPlaceInList(gestureInfo, items, flow);
           gestureInfo.dropTargetInfo = dropTargetInfo || null;
           if (!dropTargetInfo) {
             clearDropHint();
@@ -1575,14 +1639,13 @@ const startDragToCarryCopy = (
             );
             return;
           }
-          // Convert {element, edge} to a beforeElement using the items array
+          // Convert {element, side} to a beforeElement using the items array
           // (not nextElementSibling, which breaks if non-item elements exist between items).
-          //   edge "start" → insert before the hovered element
-          //   edge "end"   → insert before the next item (null = append at end)
-          const edge = dropTargetInfo.elementSide.y;
+          //   side "start" → insert before the hovered element
+          //   side "end"   → insert before the next item (null = append at end)
           const hoveredIndex = items.indexOf(dropTargetInfo.element);
           const beforeElement =
-            edge === "start"
+            dropTargetInfo.side === "start"
               ? dropTargetInfo.element
               : (items[hoveredIndex + 1] ?? null);
           // Detect no-op: result would leave the grabbed element in the same position.
@@ -1605,9 +1668,11 @@ const startDragToCarryCopy = (
           currentReleaseElement = releaseElement;
           // Update drop hint CSS vars.
           // beforeElement = null → insert at end (hint after last item)
-          // beforeElement = X    → insert before X (hint at top edge of X)
+          // beforeElement = X    → insert before X (hint at the edge of X the
+          //                        flow comes in by)
           const anchorEl = beforeElement || items[items.length - 1];
-          const anchorEdge = beforeElement !== null ? "top" : "bottom";
+          const anchorEdge =
+            DROP_HINT_EDGES[flow][beforeElement !== null ? "before" : "after"];
           // Viewport coordinates, straight from the anchor row: the hint is fixed
           // in the page (see its CSS), so there is no container box to be relative
           // to and no scroll offset to add back.
@@ -1626,8 +1691,16 @@ const startDragToCarryCopy = (
             `${anchorRect.left}px`,
           );
           dropHintEl.style.setProperty(
+            "--drop-target-right",
+            `${anchorRect.right}px`,
+          );
+          dropHintEl.style.setProperty(
             "--drop-target-width",
             `${anchorRect.width}px`,
+          );
+          dropHintEl.style.setProperty(
+            "--drop-target-height",
+            `${anchorRect.height}px`,
           );
         });
 
@@ -1887,6 +1960,103 @@ const createDropSurface = () => {
   // and must survive an Escape or a click elsewhere.
   div.setAttribute("popover", "manual");
   return div;
+};
+
+/**
+ * Which way the items of a list follow each other on screen: "down", or along a
+ * line — a row, a wrapped row, a grid — "right", or "left" when it runs from
+ * right to left. Read from where the items stand rather than declared: the
+ * first item level with the one after it makes the list run sideways, and which
+ * of the two is on the left says which way. Asked of the whole list, not of the
+ * item under the copy: alone on the last line of a wrapped row, an item is level
+ * with nothing and still part of a row.
+ */
+const readItemFlow = (items) => {
+  let previousRect;
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    // A box that takes no room stands on no line.
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    if (previousRect && areLevel(previousRect, rect)) {
+      return rect.left < previousRect.left ? "left" : "right";
+    }
+    previousRect = rect;
+  }
+  return "down";
+};
+
+// The middle of one within the height of the other. Overlapping is not enough:
+// items stacked with a negative margin (a border shared between two) overlap by
+// a pixel and are still one under the other.
+const areLevel = (a, b) => {
+  const aMiddle = a.top + a.height / 2;
+  const bMiddle = b.top + b.height / 2;
+  return (
+    (bMiddle > a.top && bMiddle < a.bottom) ||
+    (aMiddle > b.top && aMiddle < b.bottom)
+  );
+};
+
+/**
+ * The item the copy is at, and its `side` in the order of the list: "start" for
+ * before it, "end" for after it. Down a list, read by the copy's leading edge
+ * (see getDropTargetInfo); along a row, by its middle against the item's — how
+ * high the copy is says nothing there, and the leading edge assumes a copy as
+ * large as what it passes over: items of a row are as wide as their content,
+ * and one wider than its neighbour could never be put after it.
+ *
+ * Beyond an end of the list, over no item, is a place too: above the first line
+ * or below the last, and along a row beside the first item or past the last.
+ */
+const findPlaceInList = (gestureInfo, items, flow) => {
+  const dragElementRect = gestureInfo.elementImpacted.getBoundingClientRect();
+  const dropTargetInfo = getDropTargetInfo(gestureInfo, items);
+  if (dropTargetInfo) {
+    const { element } = dropTargetInfo;
+    if (flow === "down") {
+      return { element, side: dropTargetInfo.elementSide.y };
+    }
+    const elementRect = element.getBoundingClientRect();
+    const dragMiddle = dragElementRect.left + dragElementRect.width / 2;
+    const elementMiddle = elementRect.left + elementRect.width / 2;
+    const beforeItsMiddle =
+      flow === "right"
+        ? dragMiddle < elementMiddle
+        : dragMiddle > elementMiddle;
+    return { element, side: beforeItsMiddle ? "start" : "end" };
+  }
+  const firstItem = items[0];
+  if (!firstItem) {
+    return null;
+  }
+  const lastItem = items[items.length - 1];
+  const firstRect = firstItem.getBoundingClientRect();
+  const lastRect = lastItem.getBoundingClientRect();
+  if (
+    dragElementRect.bottom < firstRect.top ||
+    (flow !== "down" &&
+      areLevel(dragElementRect, firstRect) &&
+      isBeyond(dragElementRect, firstRect, flow === "right" ? "left" : "right"))
+  ) {
+    return { element: firstItem, side: "start" };
+  }
+  if (
+    dragElementRect.top > lastRect.bottom ||
+    (flow !== "down" &&
+      areLevel(dragElementRect, lastRect) &&
+      isBeyond(dragElementRect, lastRect, flow))
+  ) {
+    return { element: lastItem, side: "end" };
+  }
+  return null;
+};
+
+const isBeyond = (dragElementRect, itemRect, towards) => {
+  return towards === "left"
+    ? dragElementRect.right < itemRect.left
+    : dragElementRect.left > itemRect.right;
 };
 
 /**

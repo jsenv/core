@@ -124,6 +124,7 @@ screen has not asked for it to swap places with whatever it flew over.
 | Attribute                                                | Meaning                                |
 | -------------------------------------------------------- | -------------------------------------- |
 | `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
+| `data-reorder-flow="down"\|"right"\|"left"`              | which way the next item of a list is   |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
 | `data-drag-free`                                         | it may leave its scroll area           |
@@ -133,6 +134,20 @@ screen has not asked for it to swap places with whatever it flew over.
 `data-drag-axis` is `y` for a `reorder` with no `land`, `toss` or `leave` beside
 it — it walks the list; a list that runs sideways says `x` — and `xy` for
 everything else, which goes wherever the hand takes it.
+
+**Which side of an item the copy goes.** It is read along the way the items
+follow each other. Down a list, by how far down the copy is. Along a row —
+wrapped or not, or a grid — by how far across its middle is, whatever the widths
+of the two: let go over the far half of an item, it goes after it; how high it
+is says nothing there. That way is read from where the items stand: one level
+with the next makes a row, and which of the two is on the left says which way it
+runs, so a column, a `flex-wrap` row, a grid and a right-to-left row need nothing
+said. `data-reorder-flow`, on the list or any ancestor, says it instead: `down`,
+`right` (a row from left to right) or `left` (from right to left) — for a list
+whose layout does not say it at the moment of the drag, or that must not depend
+on it. It is not `data-drag-axis`: that one says where the copy may travel — a
+wrapped row says `xy`, so that its copy can change line — and this one how its
+place is read.
 
 ### While it is being moved: `moving`
 
@@ -336,7 +351,10 @@ it.
 The drop hint follows what a place is: a line drawn in the gap for `reorder`, the
 place itself lit up for `land`. Both are drawn among the places — the parent, or
 the `data-drop-container` — so the variables dressing them are set on the list,
-the board or the surface and reach them by inheritance:
+the board or the surface and reach them by inheritance. Along a row the line
+stands upright, as tall as the item, and each margin keeps its axis:
+`--drop-hint-margin-y` takes it into the gap down a list, `--drop-hint-margin-x`
+along a row, and the other one shortens it.
 
 | Variable                                                                                   | Dresses                 |
 | ------------------------------------------------------------------------------------------ | ----------------------- |

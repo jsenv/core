@@ -332,6 +332,9 @@ const DROP_CONTAINER_ATTRIBUTE = "data-drop-container";
 // every outcome — a list runs one way, and something being put somewhere goes
 // wherever it is put.
 const AXIS_ATTRIBUTE = "data-drag-axis";
+// Which way the next item of a reordered list is: "down", "right" or "left".
+// Said nothing, it is read from where the items stand.
+const FLOW_ATTRIBUTE = "data-reorder-flow";
 const DELAY_ATTRIBUTE = "data-drag-delay";
 const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
@@ -435,6 +438,9 @@ defineInteractionDetector({
       // two axes to be put along, a throw goes where it was thrown and a thing
       // that leaves goes out by whichever edge.
       (canReorder && !canLand && !canToss && !canLeave ? "y" : "xy");
+    const itemFlow =
+      element.closest(`[${FLOW_ATTRIBUTE}]`)?.getAttribute(FLOW_ATTRIBUTE) ||
+      undefined;
     // Where the places are, read at setup for the same reason as the axes: they
     // are what the gesture is about, and it is what holds the two sides of it
     // that says them.
@@ -508,6 +514,7 @@ defineInteractionDetector({
             : undefined,
         containerElement: dropContainer || undefined,
         outsideOf,
+        itemFlow,
         getItemId: (itemElement) => itemElement.id,
         direction: { x: axes.includes("x"), y: axes.includes("y") },
         // Where it may go, said in the DOM. A thing that is put somewhere stays

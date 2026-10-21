@@ -7,17 +7,9 @@
  *
  * @param {Object} gestureInfo - Gesture information
  * @param {Element[]} targetElements - Array of potential drop target elements
- * @param {object} [options]
- * @param {boolean} [options.fallbackToEdge=false] - When true and the drag element does
- *   not intersect any target, falls back to the first item (if above all items) or the
- *   last item (if below all items) so there is always a valid drop target at list edges.
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
-export const getDropTargetInfo = (
-  gestureInfo,
-  targetElements,
-  { fallbackToEdge = false } = {},
-) => {
+export const getDropTargetInfo = (gestureInfo, targetElements) => {
   const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
   const dragElementRect = dragElement.getBoundingClientRect();
   const intersectingTargets = [];
@@ -38,38 +30,6 @@ export const getDropTargetInfo = (
   }
 
   if (intersectingTargets.length === 0) {
-    if (fallbackToEdge) {
-      const dragElement = gestureInfo.elementImpacted || gestureInfo.element;
-      const dragElementRect = dragElement.getBoundingClientRect();
-      const firstItem = targetElements[0];
-      const lastItem = targetElements[targetElements.length - 1];
-      if (
-        firstItem &&
-        dragElementRect.bottom < firstItem.getBoundingClientRect().top
-      ) {
-        // Drag element is above all items → treat as hovering the first item from the top.
-        return {
-          element: firstItem,
-          elementSide: { x: "start", y: "start" },
-          index: 0,
-          intersectingIndex: 0,
-          intersecting: [firstItem],
-        };
-      }
-      if (
-        lastItem &&
-        dragElementRect.top > lastItem.getBoundingClientRect().bottom
-      ) {
-        // Drag element is below all items → treat as hovering the last item from the bottom.
-        return {
-          element: lastItem,
-          elementSide: { x: "start", y: "end" },
-          index: targetElements.length - 1,
-          intersectingIndex: 0,
-          intersecting: [lastItem],
-        };
-      }
-    }
     return null;
   }
 
