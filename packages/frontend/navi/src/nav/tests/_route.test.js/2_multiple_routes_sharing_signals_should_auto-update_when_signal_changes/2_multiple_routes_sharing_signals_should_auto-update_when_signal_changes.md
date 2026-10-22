@@ -5,7 +5,8 @@ const zoneSignal = stateSignal("paris", { id: "sharedZone" });
 const panelSignal = stateSignal("isochrone", { id: "panel" });
 const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
 
-const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+// a frame around its panels: "/map" opens on the default one, isochrone
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
   searchParams: { zone: zoneSignal },
 });
@@ -92,13 +93,13 @@ try {
   },
   "initial_urls": {
     "map": "http://127.0.0.1/map",
-    "panel": "http://127.0.0.1/map/isochrone",
-    "isochrone": "http://127.0.0.1/map/isochrone"
+    "panel": "http://127.0.0.1/map",
+    "isochrone": "http://127.0.0.1/map"
   },
   "updated_urls": {
     "map": "http://127.0.0.1/map?zone=london&iso_lon=0.1278",
     "panel": "http://127.0.0.1/map/settings?zone=london",
-    "isochrone": "http://127.0.0.1/map/isochrone?zone=london&iso_lon=0.1278"
+    "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
   },
   "url_changes": {
     "map_changed": true,

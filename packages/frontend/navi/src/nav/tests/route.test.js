@@ -92,7 +92,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const panelSignal = stateSignal("isochrone", { id: "panel" });
     const isoLonSignal = stateSignal(2.3522, { id: "isoLon" });
 
-    const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+    // a frame around its panels: "/map" opens on the default one, isochrone
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
       searchParams: { zone: zoneSignal },
     });
@@ -427,7 +428,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
     const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
 
-    const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+    // a frame around its panels: "/map" opens on the default one, isochrone
+    const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
     const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
       searchParams: { zone: zoneSignal },
     });

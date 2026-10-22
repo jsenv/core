@@ -5,6 +5,7 @@ linking to them, and turning them into tabs.
 
 - [The rule that decides everything else: the position belongs in the URL](#the-rule-that-decides-everything-else-the-position-belongs-in-the-url)
 - [Declaring routes](#declaring-routes)
+  - [A page or a frame: the trailing slash](#a-page-or-a-frame-the-trailing-slash)
   - [A document that is not at the root: `setBaseUrl`](#a-document-that-is-not-at-the-root-setbaseurl)
   - [A section is allowed to be a route of its own](#a-section-is-allowed-to-be-a-route-of-its-own)
   - [Which values a param accepts](#which-values-a-param-accepts)
@@ -68,6 +69,32 @@ application, and an import line says which places a component deals with. Routes
 are plain objects usable outside any component (`buildUrl()`, `navTo()`,
 `redirectTo()`, `matching`), which is why they are declared apart from the JSX.
 
+### A page or a frame: the trailing slash
+
+The last character of a pattern is part of what the route stands for:
+
+- `route("/map")` is a **page**: it matches `/map` and nothing below it.
+- `route("/map/")` is a **frame**: it matches `/map` and every address below it,
+  `/map/flow` and `/map/isochrone/compare` included. The root `/` is always one.
+
+A frame is what stays on screen while one moves below it: the map under its
+panels, an admin shell around its sections. A page is one screen among others,
+even when its address starts theirs: the profile at `/me`, beside the address
+book at `/me/players`. To choose, ask whether the route is still on screen at
+the addresses below it. The answer decides more than what renders:
+
+|                                                                    | page `route("/map")`                                           | frame `route("/map/")`                                              |
+| ------------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| matches `/map/flow`                                                | no                                                             | yes                                                                 |
+| its search params, on `/map/flow`                                  | absent: they belong to `/map` alone                            | held: the url keeps them, the signal follows them                   |
+| `/map/:panel` defaulting to `"isochrone"`, beside `/map/isochrone` | `/map` is this page alone, the panel lives at `/map/isochrone` | `/map` opens on the isochrone panel, and a link to it builds `/map` |
+
+So a frame written without its slash shows itself in two ways: its search params
+are left out of the addresses below it (not written there, not read from there),
+and its address does not open on the default section. Details in
+[Search params](#search-params) and in
+[Declaring the sections](#declaring-the-sections-is-what-makes-them-places).
+
 ### A document that is not at the root: `setBaseUrl`
 
 A second document in the same site — an admin panel at `/admin/admin.html`
@@ -129,17 +156,20 @@ The default section can also have an address of its own, when the bare address
 is another page:
 
 ```js
-export const PROFILE_ROUTE = route("/me");
+export const PROFILE_ROUTE = route("/me"); // a page, not a frame
 export const ADDRESS_BOOK_ROUTE = route(`/me/:section=${bookSectionSignal}`); // default "players"
 export const PLAYERS_ROUTE = route("/me/players");
 export const GROUPS_ROUTE = route("/me/groups");
 ```
 
-Declaring both `/me` and a literal for the default is what says so: the param
-is then required, `/me` is the profile alone, and `ADDRESS_BOOK_ROUTE.buildUrl()`
-gives `/me/players` or `/me/groups`, never `/me`. A visit to the profile leaves
-the section where it was. Leave out the literal for the default and `/me` is the
-default section, as with `/games/me` above.
+A page at the bare address (see
+[A page or a frame](#a-page-or-a-frame-the-trailing-slash)) and a literal for the
+default are what say so: the param is then required, `/me` is the profile alone,
+and `ADDRESS_BOOK_ROUTE.buildUrl()` gives `/me/players` or `/me/groups`, never
+`/me`. A visit to the profile leaves the section where it was. The bare address
+is the default section in the two other cases: when nothing is declared there
+but a frame (`/map/` around its panels opens on the default one), and when no
+literal is declared for the default (`/games/me` above).
 
 That the literals exist is what tells navi these values name pages. Where none is
 declared, the value stays a qualifier, carried by an ancestor url:
@@ -275,10 +305,13 @@ export const HOME_ROUTE = route("/", { searchParams: { vue: vueSignal } });
 
 The signal and the URL are the same state: never keep a `useState` beside a route
 param for the same fact. Declared on the **root route**, a search param holds
-wherever one is in the application; declared on one route, it exists only there.
-A route declared "this and below" (`/map/`) lends its params to every address
-below it; `/places` lends nothing, so a `?q=` of its own and the `?q=` of
-`/places/clubs` are two states, even with a `/places/:section` matching both.
+wherever one is in the application; declared on one route, it exists only there:
+on its own address for a page, on its own address and every address below it for
+a frame (see [A page or a frame](#a-page-or-a-frame-the-trailing-slash)). Two
+pages may each have a `?q=` of their own: the list at `/places` and the clubs at
+`/places/clubs` keep two searches, even with a `/places/:section` matching both.
+A param several pages need, and no frame holds, is declared on each of them,
+with the same signal.
 
 Writing it AMENDS the history entry one is on rather than stacking a new one: a
 param that qualifies a screen is not a place, and one entry per write turns a
@@ -321,7 +354,8 @@ the branch taken when no sibling matches.
 A route matches its own address and nothing below it — `/games/:gameId` does not
 match `/games/2/edit` — except `/` and a pattern ending in `/`, which match
 everything below them too (`route("/games/")` matches `/games/2/edit`): that is
-what keeps a section's container on screen while one is inside it. Two patterns
+what keeps a section's container on screen while one is inside it (see
+[A page or a frame](#a-page-or-a-frame-the-trailing-slash)). Two patterns
 can still match one url — `/games/my_games` is also a `/games/:gameId` — and a
 container renders the **first** branch that matches, in the order written, not
 the most specific. So the branches go from the most precise to the widest, and

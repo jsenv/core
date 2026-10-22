@@ -59,7 +59,8 @@ start when unsure which export solves a problem.
 ### Routing and movement
 
 - `navigation.md` — the position of the user belongs in the URL by default:
-  routes and which branch renders, search params, redirections, the back arrow
+  routes and which branch renders, a page (`/x`) or a frame (`/x/`), search
+  params, redirections, the back arrow
   (`navBack`), where a navigation lands (a `#id` for an element; a page not
   whole yet holds its position with `useHoldScrollRestoration`), a
   `SlideContainer` read from the URL, what a layer drawn over the screen may say

@@ -26,16 +26,18 @@ let isUpdatingRoutesFromUrl = false;
  * Declares a route from an url pattern.
  *
  * @param {string} pattern - The url pattern, where `:name` is a path param and
- *   `:name=${signal}` binds that param to a signal.
+ *   `:name=${signal}` binds that param to a signal. A pattern ending in `/` is a
+ *   frame: it matches every address below it too, and its search params hold
+ *   there (see docs/navigation.md, "A page or a frame: the trailing slash").
  * @param {object} [options]
  * @param {Object<string, import("@preact/signals").Signal | {signal: import("@preact/signals").Signal, default?: any}>} [options.searchParams]
  *   Search params this route two-way syncs with, by name. The signal and the url
  *   are the same state: writing the signal rewrites the address, an address
  *   arriving from outside writes the signal, and the param disappears from the
  *   url while the signal holds its default.
- *   They exist on this route's address only, unless the pattern catches the
- *   addresses below it (`/map/`, `/map/*`, the root): then they hold on every
- *   route below as well. `/places` does not lend its `?q=` to `/places/clubs`.
+ *   They exist on this route's address only, unless the pattern is a frame
+ *   (`/map/`, `/map/*`, the root): then on every address below it too.
+ *   `/places` does not lend its `?q=` to `/places/clubs`.
  *   `{ signal, default }` says what that state is worth ON THIS ROUTE: the same
  *   step opens a creation wizard on its first question and an edition one on
  *   its summary, each address staying clean on the step its page opens on. One

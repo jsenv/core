@@ -5,7 +5,8 @@ const zoneSignal = stateSignal("paris", { id: "hierarchicalZone" });
 const panelSignal = stateSignal("isochrone", { id: "hierarchicalPanel" });
 const isoLonSignal = stateSignal(2.3522, { id: "hierarchicalIsoLon" });
 
-const MAP_ROUTE = route("/map", { searchParams: { zone: zoneSignal } });
+// a frame around its panels: "/map" opens on the default one, isochrone
+const MAP_ROUTE = route("/map/", { searchParams: { zone: zoneSignal } });
 const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}`, {
   searchParams: { zone: zoneSignal },
 });
@@ -132,23 +133,23 @@ try {
   "url_progression": {
     "before_any_changes": {
       "map": "http://127.0.0.1/map",
-      "panel": "http://127.0.0.1/map/isochrone",
-      "isochrone": "http://127.0.0.1/map/isochrone"
+      "panel": "http://127.0.0.1/map",
+      "isochrone": "http://127.0.0.1/map"
     },
     "after_zone_change": {
       "map": "http://127.0.0.1/map?zone=london",
-      "panel": "http://127.0.0.1/map/isochrone?zone=london",
-      "isochrone": "http://127.0.0.1/map/isochrone?zone=london"
+      "panel": "http://127.0.0.1/map?zone=london",
+      "isochrone": "http://127.0.0.1/map?zone=london"
     },
     "after_panel_change": {
       "map": "http://127.0.0.1/map?zone=london",
       "panel": "http://127.0.0.1/map/settings?zone=london",
-      "isochrone": "http://127.0.0.1/map/isochrone?zone=london"
+      "isochrone": "http://127.0.0.1/map?zone=london"
     },
     "after_isolon_change": {
       "map": "http://127.0.0.1/map?zone=london&iso_lon=0.1278",
       "panel": "http://127.0.0.1/map/settings?zone=london",
-      "isochrone": "http://127.0.0.1/map/isochrone?zone=london&iso_lon=0.1278"
+      "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
     }
   },
   "reactivity_tests": {
