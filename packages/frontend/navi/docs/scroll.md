@@ -117,8 +117,8 @@ say so with `"document"` or the element itself.
 ### Where the list opens, and where it is
 
 `defaultScrolled` (or `scrolled`, held) takes `{id, offset}` — what
-`onScrolledChange` hands out — and asks for the row BY NAME, then puts it back
-by MEASURING it: it lands where it was even if rows were inserted before it,
+`onScrolledChange` hands out — and asks for the item BY NAME, then puts it back
+by MEASURING it: it lands where it was even if items were inserted before it,
 whatever the screen it was saved on. "Reopen a thread where I left it" is
 already provided; keep the position whole, its `visibleCount` sizes the first
 paint. A `defaultScrolled` that changes before anyone has moved the list is
@@ -129,9 +129,9 @@ must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-li
 **`scrollResetOnNavigation`** opts out. What it draws there before its source
 answers is another matter
 ([What a run knows when it opens](#what-a-run-knows-when-it-opens)). A list scrolling the document that
-opens on a row places the document itself: the offset the page kept for its url
-is not put back over it — the rows held off screen are fillers of an estimated
-height, and the same pixels now fall on other rows.
+opens on an item places the document itself: the offset the page kept for its url
+is not put back over it — the items held off screen are fillers of an estimated
+height, and the same pixels now fall on other items.
 
 ### A list that comes back: one `id`, one list
 

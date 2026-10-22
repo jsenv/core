@@ -474,6 +474,9 @@ What that means for a page and for the application around it:
   it was (`<List id>`) under the same `id` as a list of the page arriving is the
   same list to navi, and the two overwrite each other's position (see
   [scroll.md](./scroll.md#a-list-that-comes-back-one-id-one-list)).
+  They let go of the document once hidden: a list scrolling the page stops
+  placing it on the item it opened on, and stops answering its scrolls and
+  resizes, so the page arriving lands where it was left, or at its top.
 - **Never while a modal dialog is open.** An open modal keeps everything but
   itself out of reach — the page arriving could not even take the focus — and one
   in a page kept while leaving would stay open for the whole movement. The page is
