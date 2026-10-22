@@ -8,6 +8,7 @@ import {
   ELEMENT_SIZE_CHANGE,
   findEvent,
   getScrollContainer,
+  isPressDisputedByDrag,
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 
@@ -370,6 +371,12 @@ export const isDeclaredInsidePopup = (target, popupId) =>
  * Lives on the popup's own content element rather than in the backdrop's
  * handler, for both renderers: the backdrop is a sibling behind the popup
  * (never an ancestor), so a press inside the popup's box never reaches it.
+ *
+ * Inside a box that travels by drag — a row of slides walked by a swipe, a
+ * sheet pushed back towards its edge — the region is also where that travel
+ * starts, and at the mousedown nobody knows yet which of the two the press is.
+ * The dismissal then waits for the click, which only comes if the press stayed
+ * a press: a travel swallows the one it leaves behind.
  */
 export const handlePressOnOutsideRegion = (
   mouseDownEvent,
@@ -400,11 +407,36 @@ export const handlePressOnOutsideRegion = (
     mouseDownEvent.preventDefault();
     return;
   }
-  if (pressOutside === "close" || pressOutside === "cancel") {
-    openController.requestClose(mouseDownEvent, {
-      isCancel: pressOutside === "cancel",
-    });
+  if (pressOutside !== "close" && pressOutside !== "cancel") {
+    return;
   }
+  const isCancel = pressOutside === "cancel";
+  if (isPressDisputedByDrag(target)) {
+    onClickOfThisPress(target, (clickEvent) => {
+      openController.requestClose(clickEvent, { isCancel });
+    });
+    return;
+  }
+  openController.requestClose(mouseDownEvent, { isCancel });
+};
+
+// The click ending the press whose mousedown landed on `element`. A click goes
+// to what the press and the release have in common, so it reaches `element`
+// only when the release stayed on it or inside it. A press that never clicks
+// leaves it armed until the next one, and no longer — a click always comes
+// after a press, so it cannot reach the click of another (the rule
+// click_suppression.js in @jsenv/dom goes by).
+const onClickOfThisPress = (element, callback) => {
+  const onClick = (clickEvent) => {
+    disarm();
+    callback(clickEvent);
+  };
+  const disarm = () => {
+    element.removeEventListener("click", onClick);
+    window.removeEventListener("pointerdown", disarm, { capture: true });
+  };
+  element.addEventListener("click", onClick);
+  window.addEventListener("pointerdown", disarm, { capture: true });
 };
 
 /**

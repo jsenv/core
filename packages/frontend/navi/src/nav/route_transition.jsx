@@ -255,8 +255,8 @@ const css = /* css */ `
      pictures, and a group is not one of them, so a named descendant stands
      where it was captured while the pages slide under it. A morph wants exactly
      that; a component that names its parts for changes of its own does not, and
-     drops its names for the length of the movement (see list.jsx). A browser
-     without nested groups is warned instead (see
+     drops its names for the length of the movement (see list.jsx). A name
+     only one of the two pages has is never a morph, and is warned about (see
      warnAboutNamesEscapingArea). */
   @supports (view-transition-group: contain) {
     :root[data-navi-route-transition] [data-navi-route-transition-area] {
@@ -1690,7 +1690,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
       warnAboutNamesEscapingArea(areaElement, capturedNames);
       return;
     }
-    for (const name of capturedNames) {
+    for (const name of capturedNames.keys()) {
       if (name === "root") {
         continue;
       }
@@ -1901,9 +1901,10 @@ const ignoreSkipped = () => {};
 
 // The names the browser captured, read off the pictures themselves: what was
 // asked for in CSS and what was taken are not the same question (see
-// viewTransitionReady).
+// viewTransitionReady). Each with the states it was taken in: a name taken in
+// only one of them pairs with nothing.
 const capturedViewTransitionNames = () => {
-  const names = new Set();
+  const names = new Map();
   for (const animation of document.getAnimations()) {
     const pseudoElement = animation.effect?.pseudoElement;
     if (!pseudoElement || !pseudoElement.startsWith("::view-transition")) {
@@ -1913,25 +1914,34 @@ const capturedViewTransitionNames = () => {
     if (nameStart === -1) {
       continue;
     }
-    names.add(pseudoElement.slice(nameStart + 1, -1));
+    const name = pseudoElement.slice(nameStart + 1, -1);
+    let states = names.get(name);
+    if (!states) {
+      states = { old: false, new: false };
+      names.set(name, states);
+    }
+    if (pseudoElement.startsWith("::view-transition-old(")) {
+      states.old = true;
+    } else if (pseudoElement.startsWith("::view-transition-new(")) {
+      states.new = true;
+    }
   }
   return names;
 };
 
-// Nested groups keep a name written inside the area inside its picture (see
-// the @supports block in the CSS above). Without them the name escapes to the
-// top of the ::view-transition tree and the element it belongs to stands still,
-// fading on its own, while the pages move under it.
+// A name written inside the area is a group of its own: it stands where it was
+// captured while the area's two pictures carry the movement, in every browser.
+// Nested groups only keep it cut at the pages' edge (see the @supports block in
+// the CSS above). Paired with the same name on the other page it is a morph;
+// taken in one state only it pairs with nothing, and is a piece of its page
+// left behind, fading, while that page moves.
 const NESTED_GROUPS_SUPPORTED = window.CSS.supports(
   "view-transition-group",
   "contain",
 );
 const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
-  if (NESTED_GROUPS_SUPPORTED) {
-    return;
-  }
-  let escapedName = null;
-  for (const name of capturedNames) {
+  const unpairedNames = new Set();
+  for (const [name, states] of capturedNames) {
     if (
       name === "root" ||
       name === AREA_NAME ||
@@ -1939,24 +1949,30 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
     ) {
       continue;
     }
-    escapedName = name;
-    break;
+    if (states.old && states.new) {
+      continue;
+    }
+    unpairedNames.add(name);
   }
   // A name captured next to the area is not necessarily inside it — a bar the
   // application animates on the same clock is named on purpose. The subtree is
   // walked only once something is there to find, so the common case reads
-  // nothing.
-  if (!escapedName) {
+  // nothing. The page being left is still in it, hidden (keepLeavingPages in
+  // route.jsx), so a name taken only in the old state is found too.
+  if (unpairedNames.size === 0) {
     return;
   }
   for (const descendant of areaElement.querySelectorAll("*")) {
     const { viewTransitionName } = getComputedStyle(descendant);
-    if (!viewTransitionName || viewTransitionName === "none") {
+    if (!unpairedNames.has(viewTransitionName)) {
       continue;
     }
+    const unclipped = NESTED_GROUPS_SUPPORTED
+      ? ""
+      : " This browser has no nested groups (view-transition-group: contain), so it is not even cut at the pages' edge.";
     warnOnce(
       "names-escaping-area",
-      `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and this browser has no nested groups (view-transition-group: contain): the element it names is lifted out of the area's picture, so it stands still and fades on its own while the pages move. Give that name only for the length of the gesture it serves, or drop it while a route transition plays (:root[${TRANSITION_ATTRIBUTE}] { view-transition-name: none }).`,
+      `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and the page on the other side of the navigation has nothing of that name. A name lifts its element out of the pages' pictures, in every browser: with nothing to morph into, it stands where it was captured and fades on its own while the pages move.${unclipped} Give that name only for the length of the gesture it serves, or drop it while the pages move: :root:is([${TRANSITION_ATTRIBUTE}], [${ROUTE_TRAVEL_ATTRIBUTE}]) <that element> { view-transition-name: none } (with !important over an inline name).`,
     );
     return;
   }

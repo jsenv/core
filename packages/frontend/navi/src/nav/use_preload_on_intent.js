@@ -1,6 +1,7 @@
 import { useEffect } from "preact/hooks";
 
 import { announceOpeningPress } from "../control/commands.js";
+import { linkOpensElsewhere } from "./browser_integration/link_elsewhere.js";
 import { preloadUrl } from "./route.js";
 
 /**
@@ -20,6 +21,11 @@ export const usePreloadOnIntent = (ref, href, prefetch = true) => {
       return undefined;
     }
     const preload = () => {
+      // The tab or the window it opens loads its own code: what would be
+      // fetched here is not what runs there.
+      if (linkOpensElsewhere(element)) {
+        return;
+      }
       preloadUrl(href);
     };
     element.addEventListener("pointerenter", preload);

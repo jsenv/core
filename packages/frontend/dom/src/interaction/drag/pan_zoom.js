@@ -518,6 +518,16 @@ export const installPanZoom = (
     }
   };
 
+  // A link and an image are draggable without anyone asking, and the browser
+  // starts that drag about 3px in, under `threshold`: it cancels the pointer and
+  // keeps the rest of the press, so the pan never forms. Refused only while the
+  // surface reads a press — one yielded to something inside never got here.
+  const refuseNativeDrag = (dragStartEvent) => {
+    if (pointers.size > 0) {
+      dragStartEvent.preventDefault();
+    }
+  };
+
   // What the first event of the burst going on settled: a key let go of (or
   // pressed) halfway through must not hand a zoom to the page mid-gesture, and
   // a burst has no end but a silence.
@@ -587,6 +597,10 @@ export const installPanZoom = (
   element.addEventListener("touchmove", preventTouchScroll, {
     passive: false,
   });
+  // Without a pan, one pointer is whatever else reads it, its drag included.
+  if (onPan) {
+    element.addEventListener("dragstart", refuseNativeDrag);
+  }
   if (onZoom) {
     element.addEventListener("wheel", onWheel, { passive: false });
   }
@@ -598,6 +612,7 @@ export const installPanZoom = (
     element.removeEventListener("pointerdown", onPointerDown);
     element.removeEventListener("lostpointercapture", onLostPointerCapture);
     element.removeEventListener("touchmove", preventTouchScroll);
+    element.removeEventListener("dragstart", refuseNativeDrag);
     element.removeEventListener("wheel", onWheel);
     window.removeEventListener("pointerdown", onPointerDownAway, true);
     element.removeAttribute(SURFACE_ATTRIBUTE);

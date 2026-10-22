@@ -65,6 +65,25 @@ export const getHrefTargetInfo = (
   };
 };
 
+// The target of a link whose caller names none: a page of another site opens
+// in a new tab. Only a page: a `tel:`, `mailto:` or `sms:` address is handed to
+// another app, a `blob:` or `data:` one is this page's own, and a tab opened
+// for them would be left behind empty.
+export const getDefaultHrefTarget = (
+  href,
+  currentUrlString = window.location.href,
+) => {
+  const { isEmpty, isSameSite } = getHrefTargetInfo(href, currentUrlString);
+  if (isEmpty || isSameSite) {
+    return undefined;
+  }
+  const { protocol } = new URL(href, currentUrlString);
+  if (protocol !== "http:" && protocol !== "https:") {
+    return undefined;
+  }
+  return "_blank";
+};
+
 export const isAnchor = (href) => getHrefTargetInfo(href).isAnchor;
 export const isSameOrigin = (href) => getHrefTargetInfo(href).isSameOrigin;
 export const isSameSite = (href) => getHrefTargetInfo(href).isSameSite;

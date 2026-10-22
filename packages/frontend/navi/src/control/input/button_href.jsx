@@ -1,5 +1,6 @@
 import { documentUrlSignal } from "@jsenv/navi/src/nav/browser_integration/document_url_signal.js";
 import {
+  getDefaultHrefTarget,
   getHrefTargetInfo,
   useHrefTargetFlag,
 } from "@jsenv/navi/src/nav/browser_integration/href_target_info.js";
@@ -28,7 +29,9 @@ const ButtonWithHref = (props) => {
     <Next
       {...props}
       target={
-        target === undefined ? (isSameSite ? undefined : "_blank") : target
+        target === undefined
+          ? getDefaultHrefTarget(href, documentUrlSignal.peek())
+          : target
       }
       rel={
         rel === undefined

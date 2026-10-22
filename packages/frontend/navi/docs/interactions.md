@@ -478,10 +478,14 @@ teardown, so a travelling container above it does not take the gesture (see
   selection refused only for the length of its gesture — in time for a mouse,
   too late for a finger held still — so it says `user-select: none` itself (see
   [drag_interactions.md](./drag_interactions.md#the-text-inside-user-select-none)).
-- **A swipe cannot also be dragged out of the page.** An element declaring a
-  swipe gets `draggable={false}` and its `dragstart` refused — a native drag _is_
-  press-and-move, and a link or an image is draggable without anyone asking. One
-  gesture cannot mean both.
+- **What a press moves cannot also be dragged out of the page.** A swipe, a
+  travel (a `SlideContainer`, a `RouteTravel`, a sheet pushed back) and a `pan`
+  surface refuse the browser's own drag of the link or image a press lands on —
+  a native drag _is_ press-and-move, a link or an image is draggable without
+  anyone asking, and the browser starts it a few pixels in, before any of them
+  has decided. One gesture cannot mean both. What they leave alone keeps its
+  drag: an element inside marked `data-no-drag-travel` reads the pointer itself.
+  An element declaring a swipe also gets `draggable={false}`.
 - **A popup can open while the finger is still down** — a menu under a waiting
   finger is the native gesture (see
   [popup_open.md](./popup_open.md#opening-while-the-finger-is-still-down), and

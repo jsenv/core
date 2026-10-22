@@ -326,23 +326,12 @@ defineInteractionDetector({
       // A link and an image are draggable without anyone asking, and a native
       // drag IS press-and-move: the browser claims the gesture, takes the pointer
       // events with it and paints a ghost of the row the hand is trying to swipe.
-      // Two things are needed, and neither covers the other:
-      // - `draggable` refuses it on the element itself, before it starts;
-      // - a swipe is usually a row with a link or a thumbnail INSIDE it, and
-      //   those are draggable in their own right. `dragstart` bubbles, so
-      //   refusing it here refuses theirs too — and it is the only refusal every
-      //   browser honours (`-webkit-user-drag` is one engine's).
-      // The cost is stated rather than worked around: an element that takes a
-      // swipe cannot also be dragged out of the page, because there is one
-      // gesture and it cannot mean both.
+      // `draggable` refuses it on the element itself, before it starts; the drag
+      // of a link or a thumbnail INSIDE it is refused by the travel reading the
+      // press (startDragToTravel). The cost is stated rather than worked around:
+      // an element that takes a swipe cannot also be dragged out of the page,
+      // because there is one gesture and it cannot mean both.
       mark("draggable", "false");
-      const onDragStart = (dragStartEvent) => {
-        dragStartEvent.preventDefault();
-      };
-      element.addEventListener("dragstart", onDragStart);
-      undo.push(() => {
-        element.removeEventListener("dragstart", onDragStart);
-      });
 
       // A touch this element may take has to be refusable before the finger
       // lands, or the browser can cancel an established swipe mid-gesture by

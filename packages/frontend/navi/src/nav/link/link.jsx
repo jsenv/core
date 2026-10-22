@@ -18,6 +18,7 @@ import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { Icon, markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
 import {
+  getDefaultHrefTarget,
   getHrefTargetInfo,
   useHrefTargetFlag,
 } from "../browser_integration/href_target_info.js";
@@ -267,7 +268,9 @@ const css = /* css */ `
     /* Focus */
     &[data-focus],
     &[data-focus-visible] {
-      z-index: 1; /* Ensure focus outline is above other elements */
+      /* Ensure focus outline is above other elements. A slide Nav's bar
+         (.navi_nav_indicator in nav.jsx) sits one step above this value. */
+      z-index: 1;
     }
     /* Stretched: the hit area is a pseudo-element covering the nearest
        positioned ancestor, so the link itself is static — in every state. A
@@ -450,8 +453,9 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *
  * Href-derived behavior (all computed from `href`, recomputed on navigation):
  * - internal vs external target (`data-href-internal`/`data-href-external`),
- *   with `target`/`rel` auto-defaulted (`_self` internal, `_blank` +
- *   `noopener noreferrer` external) unless explicitly set.
+ *   with `target`/`rel` auto-defaulted unless explicitly set: `_blank` for a
+ *   page of another site (`http:`/`https:`), `noopener noreferrer` for any
+ *   external address, nothing otherwise.
  * - "current page" detection (`data-href-current`, `aria-current="page"`).
  * - anchor links (`href` starting with `#`) get `data-href-anchor`.
  * - an automatic end icon for `tel:`/`sms:`/`mailto:`/`github.com`, external
@@ -739,7 +743,9 @@ const LinkPlain = (props) => {
   };
 
   const innerTarget =
-    target === undefined ? (isSameSite ? "_self" : "_blank") : target;
+    target === undefined
+      ? getDefaultHrefTarget(href, documentUrlSignal.peek())
+      : target;
   const innerRel =
     rel === undefined ? (isSameSite ? undefined : "noopener noreferrer") : rel;
 
@@ -926,7 +932,7 @@ const LinkPlain = (props) => {
       }}
       href={href}
       rel={innerRel}
-      target={innerTarget === "_self" ? undefined : target}
+      target={innerTarget === "_self" ? undefined : innerTarget}
       // Which slide this tab is, and which box to say it to: read by the <Nav>
       // around it to place the row's own bar, and by the command above to find
       // the container across the document.

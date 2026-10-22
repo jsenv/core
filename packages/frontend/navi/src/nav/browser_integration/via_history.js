@@ -33,6 +33,7 @@ import {
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
+import { linkOpensElsewhere } from "./link_elsewhere.js";
 import { linkAsksForReplace } from "./link_replace.js";
 
 export const setupBrowserIntegrationViaHistory = ({
@@ -344,8 +345,10 @@ export const setupBrowserIntegrationViaHistory = ({
       // Ignore non-left clicks
       return;
     }
-    if (e.metaKey) {
-      // Ignore clicks with meta key (e.g. open in new tab)
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      // A modifier asks the browser for something other than this tab: a new
+      // tab (meta on macOS, ctrl elsewhere), a new window (shift), a download
+      // (alt).
       return;
     }
     if (e.defaultPrevented) {
@@ -354,6 +357,10 @@ export const setupBrowserIntegrationViaHistory = ({
     }
     const linkElement = e.currentTarget;
     if (linkElement.hasAttribute("data-readonly")) {
+      return;
+    }
+    if (linkOpensElsewhere(linkElement)) {
+      // Another tab or window, or a download (see link_elsewhere.js).
       return;
     }
     const href = linkElement.href;

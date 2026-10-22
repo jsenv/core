@@ -662,6 +662,14 @@ export const startDragToTravel = (
   if (movingAxis && !axesLeft.includes(movingAxis)) {
     return null;
   }
+  // A link and an image are draggable without anyone asking, and the browser
+  // starts that drag about 3px in, under the threshold below: it cancels the
+  // pointer and keeps the rest of the press, so the travel never forms. Refused
+  // for this press only — one excluded above, or left to a box inside, keeps it.
+  const refuseNativeDrag = (dragStartEvent) => {
+    dragStartEvent.preventDefault();
+  };
+  element.addEventListener("dragstart", refuseNativeDrag);
   const startThreshold =
     pointerDownEvent.pointerType === "mouse"
       ? DRAG_START_THRESHOLD
@@ -687,6 +695,7 @@ export const startDragToTravel = (
     clearTimeout(holdTimeout);
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
+    element.removeEventListener("dragstart", refuseNativeDrag);
     window.removeEventListener("pointerup", onPressOver);
     window.removeEventListener("pointercancel", onPressOver);
   };

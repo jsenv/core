@@ -138,6 +138,11 @@ wheel above is painted, so a press on it is a press on the popup — which is wh
 lets one marker cover a whole row without swallowing the controls it holds. A
 nested box that is see-through too needs its own marker.
 
+**Inside a box that travels by drag, the marker answers the click.** A press on
+a row of slides, or on a sheet that swipes closed, may be the start of that
+travel; the popup closes on the click that ends the press, which a travel
+swallows, rather than at the press itself.
+
 **Space beside something, not space between two things.** What the wheel does
 not cover is plainly nothing, and a press there reads as a press on the page.
 The gap between two rows of a column does not read that way — it is a seam of

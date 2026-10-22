@@ -14,7 +14,8 @@
  * and that field is the control the declaration speaks for: an ArrowUp declared
  * on a text field is the field saying what ArrowUp does there, not a container
  * taking the caret from a field inside it. A field inside a box that declares
- * keys for something else (a row, a list) keeps every key it has a use for.
+ * keys for something else (a row, a list) keeps every key it has a use for,
+ * even when it is the only control in that box.
  *
  * A declared key that matches takes the key: its default does not happen as
  * well, whether the gate lets the interaction through or refuses it and says
@@ -26,7 +27,7 @@
  */
 
 import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { findNearestControlHost } from "../control_dom.js";
+import { findNearestControlHost, isControlRoot } from "../control_dom.js";
 import { defineInteractionDetector } from "./interaction_registry.js";
 
 const KEYBOARD_PREFIX = "keyboard:";
@@ -43,7 +44,10 @@ defineInteractionDetector({
       };
     }
     const onKeyDown = createOnKeyDownForShortcuts(shortcuts, {
-      ownsTarget: (target) => target === findNearestControlHost(element),
+      // Only the control's own root speaks for its host: a box that wraps a
+      // single control is reached by that control's gate, not handed its keys.
+      ownsTarget: (target) =>
+        isControlRoot(element) && target === findNearestControlHost(element),
     });
     element.addEventListener("keydown", onKeyDown);
     return () => {

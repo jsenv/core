@@ -33,8 +33,9 @@ and `List` unnames its rows for the length of any route transition or travel. A
 name the app puts inside the pages is given only for the gesture it serves, or
 dropped while they move: `view-transition-name: none` under
 `:root:is([data-navi-route-transition], [data-navi-route-travel])`. Without nested
-groups it also escapes the pages' clip, and navi warns about one inside a
-transition area.
+groups it also escapes the pages' clip. navi warns about a name inside a
+transition area that only one of the two pages has: with nothing to morph into,
+it can only be this trap.
 
 ## Nested groups, and the fallback fade
 

@@ -79,9 +79,15 @@ are read at the press, before the box moves:
    [interactions.md](./interactions.md#an-affordance-inside-somebody-elses-box-selfinteractions));
    and a popover or a `<dialog>` inside the box, which is a layer over it. A
    button, a link or a checkbox is not among them on purpose: a drag from one
-   travels, and the click it would have made is swallowed. A field that only
-   reads the press — a picker's façade is an `<input>` that opens a popup — says
-   so with `data-press-only`, and a travel starts there like anywhere else.
+   travels, and the click it would have made is swallowed before any listener
+   hears it, the ancestors' included: an `onClick` on something that travels
+   needs no distance check of its own. For the same reason
+   navi refuses the browser's own drag of a link or an image for that press: it
+   starts a few pixels in and would take the pointer before the travel forms.
+   An app that wants an image dragged out of the page marks it
+   `data-no-drag-travel`. A field that only reads the press — a picker's façade
+   is an `<input>` that opens a popup — says so with `data-press-only`, and a
+   travel starts there like anywhere else.
 2. **A scroller in between with room left that way.** It keeps the gesture until
    it has no room left, and only then hands the travel over — so a row that
    scrolls sideways inside a page still scrolls sideways. A row swiped with

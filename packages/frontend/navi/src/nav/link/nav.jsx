@@ -112,7 +112,9 @@ const css = /* css */ `
       );
 
       position: absolute;
-      z-index: 1;
+      /* One step above a focused tab (link.jsx raises it to 1): the bar says
+         where you are, and the tab you just pressed must not hide it. */
+      z-index: 2;
       background: color-mix(
         in srgb,
         var(--x-nav-indicator-color-toward)
@@ -248,11 +250,12 @@ const css = /* css */ `
         var(--x-nav-child-border-radius)
       );
 
-      &:first-child {
+      /* Counted among the links only: a slide Nav writes its bar before them. */
+      &:nth-child(1 of .navi_link) {
         border-top-left-radius: var(--x-nav-link-border-radius);
         border-bottom-left-radius: var(--x-nav-link-border-radius);
       }
-      &:last-child {
+      &:nth-last-child(1 of .navi_link) {
         border-top-right-radius: var(--x-nav-link-border-radius);
         border-bottom-right-radius: var(--x-nav-link-border-radius);
       }

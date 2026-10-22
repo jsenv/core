@@ -287,9 +287,10 @@ Four misconfigurations are silent enough to be worth a console warning, each sai
 once: an area that was not captured (the case above); several elements marked at
 once — they share one `view-transition-name`, and the browser refuses every route
 transition while they do; pages travelling on the document while something else
-is captured on its own — the blank band; and, on a browser without nested groups,
-a `view-transition-name` written inside the area, whose element escapes the pages'
-picture (see
+is captured on its own — the blank band; and a `view-transition-name` written
+inside the area that only one of the two pages has: with nothing to morph into,
+its element stands still and fades while the pages move, in every browser, and
+without nested groups it is not even clipped (see
 [view_transitions.md](./view_transitions.md#a-name-is-unique-per-document)). A
 warning here is a bug to fix, not a mechanism to lean on.
 

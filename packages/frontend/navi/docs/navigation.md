@@ -398,6 +398,14 @@ section it does NOT stand for. Both amend what a link claims about itself and
 nothing else — neither is an answer to a route that lies about where the reader
 is (see [what its address may say](#a-layer-over-the-screen-what-its-address-may-say)).
 
+The routing takes a plain click that moves this tab, and nothing else. A link
+with `target="_blank"` (or any `target` other than `_self`) opens the app in that
+tab or window, which loads it and routes there; a link with `download` saves its
+address; a click with a modifier key (a new tab, a new window, a download) is the
+browser's. None of them costs the page the reader is on — a half-filled form
+beside a link to the terms stays filled. Nothing is fetched ahead for such a
+link either: the other tab loads its own code.
+
 ## The back arrow: `navBack`
 
 An arrow drawn inside the app promises the screen the reader came from — never

@@ -218,9 +218,10 @@ closing, and a name built from it at that render names no tile: build it from
 the last key the walk held — a ref written while the signal holds one.
 
 **A press on the surface that dismisses is `data-navi-popup-outside`** (see
-[popup_backdrop.md](./popup_backdrop.md#where-the-outside-begins)), read on the
-press itself. A close written by hand on a click has to tell a click from the
-end of a swipe — and that guard is the sign the marker was missed.
+[popup_backdrop.md](./popup_backdrop.md#where-the-outside-begins)). The row
+travels, so the marker answers the press's click rather than its mousedown: a
+swipe that starts on the free space walks, and only a press that stayed one
+closes.
 
 ## Lifting on the way back only
 
