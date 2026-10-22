@@ -539,7 +539,7 @@ const resetCommand = (source, event) => {
 // answers: "save" stays, "delete" goes back to the list. Same shape as the
 // browser's own formaction/formmethod, and the same shape the action already
 // has (it is told which button requested it).
-const resolveAfterSend = (target, requester) => {
+const resolveAfterSend = (target, requester, surface) => {
   const askedForByRequester = requester?.getAttribute?.("data-after-send");
   if (askedForByRequester) {
     return askedForByRequester;
@@ -548,11 +548,6 @@ const resolveAfterSend = (target, requester) => {
   if (askedFor) {
     return askedFor;
   }
-  // From above the target: a popup that IS the send target is handled on its
-  // own (see the aria-expanded branch below), and must not answer twice.
-  const surface = target.parentElement?.closest(
-    `[data-slide], [aria-expanded]`,
-  );
   if (!surface) {
     return undefined;
   }
@@ -564,6 +559,11 @@ const resolveAfterSend = (target, requester) => {
   }
   return undefined;
 };
+// The surface a send answers when the control says nothing. Found from above
+// the target: a popup that IS the send target is handled on its own (see the
+// aria-expanded branch in sendCommand), and must not answer twice.
+const resolveSendSurface = (target) =>
+  target.parentElement?.closest(`[data-slide], [aria-expanded]`);
 // What follows a send is caused by the send, not by the gesture: the send
 // answered the gesture and may have prevented it (an Enter must not also click
 // the submit button, nor activate the trigger of the popup it closed), and a
@@ -645,20 +645,30 @@ const sendCommand = (source, event, { requester }) => {
       // and the popup must stay open — with the form still in front of the
       // user, showing what it is waiting for.
       let invalid = false;
-      // What follows the send is read at the moment it runs, never before it:
-      // it depends on the requester (Enter in a field sends through the first
-      // submit button, and what follows is that button's answer), and on
-      // anything the send itself decided — an action that learned where to go
-      // from the response writes it on the form while it runs
-      // (data-after-send), and this is what picks it up.
+      // What follows the send is aimed at the press, like a button's command
+      // waiting for its action (see resolveNaviCommand): the send may take the
+      // form out of the document (a form keyed on what it edits, a row that
+      // moves once saved), and resolved from there it finds no popup to close.
+      // Which command it is gets read again once the send went through: an
+      // action that learned where to go from the response writes it on the
+      // form while it runs (data-after-send). That one can only be aimed when
+      // it is read.
+      const surface = resolveSendSurface(target);
+      const sentEvent = createSentEvent(event);
+      const afterSendAtPress = resolveAfterSend(target, sendRequester, surface);
+      const runAimedAtPress = afterSendAtPress
+        ? resolveNaviCommand(source, afterSendAtPress, sentEvent)
+        : undefined;
       const runAfterSend = () => {
-        const afterSend = resolveAfterSend(target, sendRequester);
+        const afterSend = resolveAfterSend(target, sendRequester, surface);
         if (!afterSend) {
           return;
         }
-        triggerNaviCommand(source, afterSend, createSentEvent(event), {
-          optional: true,
-        });
+        if (afterSend === afterSendAtPress) {
+          runAimedAtPress?.();
+          return;
+        }
+        triggerNaviCommand(source, afterSend, sentEvent);
       };
       const {
         result: sent,

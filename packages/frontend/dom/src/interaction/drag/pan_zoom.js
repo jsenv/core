@@ -56,10 +56,12 @@
  * under a mouse — until a pointer goes down away from it, which is the hand
  * saying it has moved on. Nothing disputes the touch in between: the finger
  * that stood still has already said it was not scrolling, and asking it to say
- * so again before every pan is asking three times for one sentence. That
- * in-between — the hand kept with nothing touching the surface — is
- * `data-hand-kept` in the DOM, since it is a state to be drawn and nothing else
- * names it: `data-grabbed` is a hand actually on it.
+ * so again before every pan is asking three times for one sentence. Only a
+ * finger that was asked to wait spends it: a mouse never owed the wait, so its
+ * pan neither keeps the hand nor marks it. That in-between — the hand kept with
+ * nothing touching the surface — is `data-hand-kept` in the DOM, since it is a
+ * state to be drawn and nothing else names it: `data-grabbed` is a hand
+ * actually on it.
  *
  * ITS WHEEL IS THE OTHER HALF of the same question, and the answer is not the
  * same word. A wheel over a surface in a page means to scroll that page nine
@@ -223,10 +225,11 @@ export const findPanZoomSurface = (element) => {
  * @param {boolean|"kept"} [options.afterHold=false] Whether a FINGER must be held
  *   still before it pans, the page keeping its scroll until then. For a surface
  *   standing in something that scrolls; a mouse pans by travelling either way.
- *   `"kept"` asks for the wait once: from the moment the surface has the hand it
- *   pans on contact, and it asks again only after a pointer has gone down away
- *   from it. `data-hand-kept` is on the element for as long as it holds the hand
- *   that way, a hand touching it or not.
+ *   `"kept"` asks for the wait once: from the moment a finger has given the
+ *   surface the hand it pans on contact, and it asks again only after a pointer
+ *   has gone down away from it. `data-hand-kept` is on the element for as long
+ *   as it holds the hand that way, a hand touching it or not; a mouse pan never
+ *   sets it.
  * @param {"auto"|"always"} [options.wheelZoom="auto"] Whether a BARE wheel zooms.
  *   `"auto"` gives it to whatever scrolls around the surface when there is one,
  *   and zooms when there is none; `"always"` takes it back, for a surface that
@@ -247,8 +250,8 @@ export const installPanZoom = (
   } = {},
 ) => {
   // Whether a finger still owes the wait. Constant under a plain `afterHold`;
-  // under `"kept"` it is spent the first time the surface is given the hand and
-  // asked for again once the hand has gone elsewhere.
+  // under `"kept"` it is spent the first time a finger gives the surface the hand
+  // and asked for again once the hand has gone elsewhere.
   let holdIsOwed = Boolean(afterHold);
   const reflectHoldOwed = () => {
     // What a touch may do is settled before it lands, so the mode is in the DOM
@@ -327,10 +330,14 @@ export const installPanZoom = (
 
   const activate = (anchorWhere, event) => {
     active = true;
-    if (afterHold === "kept" && holdIsOwed && onPan) {
-      // Asked for and given: whatever proved it — the hold, a second finger, a
-      // mouse travelling — the surface is the hand's from here. What it keeps
-      // is the pan on contact, which a surface that does not pan has none of.
+    if (
+      afterHold === "kept" &&
+      [...pointers.values()].some((pointer) => pointer.waitsForHold)
+    ) {
+      // Spent by the finger that owed it, whether the hold or a second finger
+      // proved it: the surface is the hand's from here. A mouse never owed the
+      // wait, so it neither spends it nor marks it — and a surface that does not
+      // pan asks no finger to wait, having no pan on contact to keep.
       keepTheHand();
     }
     for (const pointer of pointers.values()) {

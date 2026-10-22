@@ -45,7 +45,7 @@ acceptable » is not one of those.
 
 ## `createValidity(ruleConfig)`
 
-Returns `[validity, applyOn]`.
+Returns `[validity, applyOn, clear]`.
 
 `applyOn(value)` checks a value and writes the result into `validity`:
 
@@ -54,6 +54,9 @@ Returns `[validity, applyOn]`.
   it passed;
 - `validity.representations.valid` — `{ type, value }`, the closest acceptable
   value when a rule knows how to suggest one (`null` when none does).
+
+`clear()` forgets the value: `validity` reads as it did before any `applyOn`. It
+is for a value that is absent, which `applyOn(undefined)` would refuse.
 
 The full parameter list is on `createValidity`'s JSDoc — read it there rather
 than here, it cannot drift from the code.

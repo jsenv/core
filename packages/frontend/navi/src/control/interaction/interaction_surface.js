@@ -36,9 +36,10 @@
  * place rather than about this box.
  *
  * `data-pan-after-hold="kept"` asks for that wait once rather than before every
- * pan: the surface given the hand keeps it — panning on contact, like the same
- * plan opened full screen — and asks again after a press has landed away from
- * it, which is the hand saying it has moved on. What answers "away" is the same
+ * pan: the surface a finger has given the hand keeps it — panning on contact,
+ * like the same plan opened full screen — and asks again after a press has
+ * landed away from it, which is the hand saying it has moved on. A mouse never
+ * owed the wait, so it neither spends it nor marks it. What answers "away" is the same
  * thing that closes a popup, and the surface is the one that watches for it, so
  * an application never keeps a `pointerdown` listener on the window to know.
  * `[data-hand-kept]` is on the element for as long as it holds the hand that

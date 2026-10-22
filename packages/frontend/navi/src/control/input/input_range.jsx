@@ -16,6 +16,7 @@ const css = /* css */ `
       --outline-offset: var(--outline-width);
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
+      --margin: 2px;
       --height: 8px;
       --thumb-size: 16px;
       --thumb-width: var(--thumb-size);
@@ -136,7 +137,7 @@ const css = /* css */ `
     box-sizing: border-box;
     width: fit-content;
     height: var(--height);
-    margin: 2px;
+    margin: var(--margin);
     flex-direction: row;
     align-items: center;
     font-size: var(--font-size);

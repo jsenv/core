@@ -53,9 +53,10 @@ for.
 
 ### A popup that stays open
 
-A popup closes once a form inside it is sent. When it is a place one keeps
-working in — a panel where a push is sent, two fields are fixed, an account is
-linked — the form says it stays:
+A popup closes once a form inside it is sent, even when the send took the form
+out of the page. When it is a place one keeps working in — a panel where a push
+is sent, two fields are fixed, an account is linked, an answer drawn where the
+form was ("link sent, check your inbox") — the form says it stays:
 
 ```jsx
 <SidePanel signal={openUserSignal} value={user.id}>

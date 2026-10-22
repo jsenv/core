@@ -249,7 +249,7 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   // Determine localStorage key: use id if persists=true, or legacy localStorage option
   const localStorageKey = signalIdString;
-  const [validity, updateValidity] = createValidity({
+  const [validity, updateValidity, clearValidity] = createValidity({
     type,
     min,
     max,
@@ -380,14 +380,16 @@ export const stateSignal = (defaultValue, options = {}) => {
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
   const processValue = (value) => {
     if (value === undefined) {
+      // Absence is never validated, and the verdict on the previous value
+      // (validSignal, validity.valid) must not outlive it.
+      clearValidity();
       return undefined;
     }
     updateValidity(value);
     // A state without a default is repaired to absent. validity cannot suggest
-    // it: `undefined` is "no suggestion" there and its rules refuse it, while a
-    // state never validates its absence (above).
+    // it: `undefined` is "no suggestion" there and its rules refuse it.
     if (autoFix && !validity.valid && getDefaultValue(false) === undefined) {
-      validity.valid = true;
+      clearValidity();
       validity.autoFixed = true;
       return undefined;
     }

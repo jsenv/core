@@ -9,7 +9,6 @@ import {
   parseHtml,
   stringifyHtmlAst,
 } from "@jsenv/ast";
-import { createMagicSource } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import { fileURLToPath } from "node:url";
 
@@ -209,6 +208,10 @@ export const jsenvPluginPreact = ({
             urlInfo.content.includes("useReducer") ||
             urlInfo.content.includes("useRef") ||
             urlInfo.content.includes("useMemo"));
+        // The imports "@babel/plugin-transform-react-jsx" adds ("preact/jsx-runtime",
+        // "preact/jsx-dev-runtime", "preact") are found and resolved by jsenv's
+        // reference analysis like any import written in the file: it runs after
+        // the plugins given by the caller.
         let { code, map } = await applyBabelPlugins({
           babelPlugins: [
             ...(jsxEnabled
@@ -241,46 +244,6 @@ export const jsenvPluginPreact = ({
           outputUrl: urlInfo.generatedUrl,
           options: { sourceMaps: urlInfo.context.sourcemapsEnabled },
         });
-        if (jsxEnabled) {
-          const magicSource = createMagicSource(code);
-          // "@babel/plugin-transform-react-jsx" is injecting some of these 3 imports into the code:
-          // 1. import { jsx } from "preact/jsx-runtime"
-          // 2. import { jsxDev } from "preact/jsx-dev-runtime"
-          // 3. import { createElement } from "preact"
-          // see https://github.com/babel/babel/blob/410c9acf1b9212cac69d50b5bb2015b9f372acc4/packages/babel-plugin-transform-react-jsx/src/create-plugin.ts#L743-L755
-          // "@babel/plugin-transform-react-jsx" cannot be configured to inject what we want
-          // ("/node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js" instead of "preact/jsx-runtime")
-          // but that's fine we can still replace these imports afterwards as done below.
-          const injectedSpecifiers = [
-            `"preact"`,
-            `"preact/jsx-dev-runtime"`,
-            `"preact/jsx-runtime"`,
-          ];
-          for (const importSpecifier of injectedSpecifiers) {
-            let index = code.indexOf(importSpecifier);
-            while (index > -1) {
-              const specifier = importSpecifier.slice(1, -1);
-              const injectedJsImportReference = urlInfo.dependencies.inject({
-                type: "js_import",
-                expectedType: "js_module",
-                specifier,
-              });
-              magicSource.replace({
-                start: index,
-                end: index + importSpecifier.length,
-                replacement: injectedJsImportReference.generatedSpecifier,
-              });
-              index = code.indexOf(importSpecifier, index + 1);
-            }
-          }
-          const afterJsxReplace = magicSource.toContentAndSourcemap({
-            source: "jsenv_preact",
-          });
-          code = afterJsxReplace.content;
-          // can't compose import maps: the resulting sourcemap is wrong by a few lines
-          // (3-4) and would makes debugging experience close to horrible
-          // map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
-        }
         if (refreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code);
           const hasSig = /\$RefreshSig\$\(/.test(code);

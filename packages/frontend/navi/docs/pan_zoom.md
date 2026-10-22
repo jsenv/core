@@ -91,10 +91,12 @@ is not, and asking again is asking three times for one sentence:
 <Box data-pan-after-hold="kept" interactions={{ pan, zoom }} />
 ```
 
-From the moment the surface is given the hand — the hold, a pinch, a mouse
-travelling — it pans on contact, the way the same plan does opened full screen,
-until a press lands away from it; navi watches for that press itself, so nothing
-on your side listens to the window. The paid wait is a state to draw, and only a
+From the moment a finger gives the surface the hand — the hold, or a pinch — it
+pans on contact, the way the same plan does opened full screen, until a press
+lands away from it; navi watches for that press itself, so nothing on your side
+listens to the window. A mouse never owed the wait, so it neither spends it nor
+marks it: after a mouse pan the next finger still waits, and the attribute is
+safe to write for every device. The paid wait is a state to draw, and only a
 `"kept"` surface carries it: `[data-hand-kept]`, for as long as it holds the
 hand, a finger on it or not.
 

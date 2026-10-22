@@ -140,6 +140,12 @@ const hasWidthHeight = (context) => {
     (context.styles.height || context.remainingProps.height)
   );
 };
+// The `stretch` sizing keyword: the containing block's width minus the box's
+// own margins, so a box with a margin fills its row without leaving it (100%
+// adds the margins on top). Spelled with the prefix because an inline style
+// holds one value, and this is the one name Chromium, WebKit and Firefox all
+// read (Firefox 155 has no unprefixed `stretch`).
+const FILL_AVAILABLE_WIDTH = "-webkit-fill-available";
 const DIMENSION_PROPS = {
   boxSizing: PASS_THROUGH,
   width: PASS_THROUGH,
@@ -192,16 +198,16 @@ const DIMENSION_PROPS = {
       return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
-      // width 100% is what fills the cross axis; align-self stretch would do
+      // A width is what fills the cross axis; align-self stretch would do
       // the same but takes the parent's alignX away — a maxWidth-capped item
       // in an alignX="center" parent would then sit at the start instead of
       // in the middle.
       return {
-        width: "100%",
+        width: FILL_AVAILABLE_WIDTH,
       };
     }
     // Can't use flexGrow — parent is not flex-x
-    return { width: "100%" };
+    return { width: FILL_AVAILABLE_WIDTH };
   },
   expandY: (value, { parentBoxFlow }) => {
     if (!value) {

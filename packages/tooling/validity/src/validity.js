@@ -39,9 +39,11 @@ import { CANNOT_CONVERT, TYPES } from "./types.js";
  * @param {any|Function} [ruleConfig.fallback] - The value suggested when no rule can repair the one given (an enumeration has no nearest value). A function is read when the repair is needed, for a fallback that moves. Suggested only when it passes every rule
  * @param {Array} [ruleConfig.rules] - Rules of the app's own, checked alongside the built-in ones. Each is `{ name, applyOn(ruleValue, value, ruleConfig) }`; `ruleValue` is `ruleConfig[name]`, and the refusal lands on `validity[name]`
  *
- * @returns {[Object, Function]} Tuple containing:
+ * @returns {[Object, Function, Function]} Tuple containing:
  *   - validity: Reactive validity object with current validation state
  *   - applyOn: Function to validate values and update validity state
+ *   - clear: Function forgetting the value: validity reads as before any `applyOn`, for a caller
+ *     whose value is absent (absence is not refused; `applyOn(undefined)` refuses it)
  *
  * @description
  * The returned validity object contains:
@@ -406,6 +408,12 @@ export const createValidity = (ruleConfig) => {
         ruleValue: maxLineBreaks,
       });
     }
+  }
+
+  const clear = () => {
+    for (const { key } of ruleSet) {
+      validity[key] = undefined;
+    }
     validity.valid = true;
     validity.autoFixed = false;
     validity.value = undefined;
@@ -416,7 +424,8 @@ export const createValidity = (ruleConfig) => {
         value: undefined,
       };
     }
-  }
+  };
+  clear();
 
   const passesEveryRule = (candidate) => {
     for (const { rule, ruleValue } of ruleSet) {
@@ -574,7 +583,7 @@ export const createValidity = (ruleConfig) => {
     return value;
   };
 
-  return [validity, applyOn];
+  return [validity, applyOn, clear];
 };
 
 const assertPositiveInteger = (name, value) => {
