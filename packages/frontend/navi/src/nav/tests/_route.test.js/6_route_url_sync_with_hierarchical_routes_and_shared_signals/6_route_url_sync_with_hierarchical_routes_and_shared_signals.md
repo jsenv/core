@@ -132,23 +132,23 @@ try {
   "url_progression": {
     "before_any_changes": {
       "map": "http://127.0.0.1/map",
-      "panel": "http://127.0.0.1/map",
-      "isochrone": "http://127.0.0.1/map"
+      "panel": "http://127.0.0.1/map/isochrone",
+      "isochrone": "http://127.0.0.1/map/isochrone"
     },
     "after_zone_change": {
       "map": "http://127.0.0.1/map?zone=london",
-      "panel": "http://127.0.0.1/map?zone=london",
-      "isochrone": "http://127.0.0.1/map?zone=london"
+      "panel": "http://127.0.0.1/map/isochrone?zone=london",
+      "isochrone": "http://127.0.0.1/map/isochrone?zone=london"
     },
     "after_panel_change": {
       "map": "http://127.0.0.1/map?zone=london",
       "panel": "http://127.0.0.1/map/settings?zone=london",
-      "isochrone": "http://127.0.0.1/map?zone=london"
+      "isochrone": "http://127.0.0.1/map/isochrone?zone=london"
     },
     "after_isolon_change": {
       "map": "http://127.0.0.1/map?zone=london&iso_lon=0.1278",
       "panel": "http://127.0.0.1/map/settings?zone=london",
-      "isochrone": "http://127.0.0.1/map?zone=london&iso_lon=0.1278"
+      "isochrone": "http://127.0.0.1/map/isochrone?zone=london&iso_lon=0.1278"
     }
   },
   "reactivity_tests": {
