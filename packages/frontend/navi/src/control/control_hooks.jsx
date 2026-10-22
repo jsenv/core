@@ -194,11 +194,18 @@ export const ControlgroupChildrenWrapper = ({
  * All state changes route through DOM events on the field element so that
  * external subscribers (e.g. useControlUIState, Selectable) receive every update.
  *
+ * @param {object} options
+ * @param {"host"|"root"} [options.listenersOn] Where the caller's DOM listeners
+ *   (`onPointerDown`, `onFocus`…, never navi's own `onnavi_*`) land. `"host"`,
+ *   the default, is right wherever the host is what the person presses and
+ *   focuses: the field inside its box, or one element for both. `"root"` is for
+ *   a control whose host is a hidden carrier, or whose root also holds what
+ *   the control opens, so that a listener hears the control as a whole.
  * @returns {[controlRootProps, controlHostProps, { uiStateController }]}
  */
 export const useControlProps = (
   props,
-  { controlType, persists, uiActionInternal },
+  { controlType, persists, uiActionInternal, listenersOn = "host" },
 ) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
@@ -294,6 +301,7 @@ export const useControlProps = (
     uiStateController,
     boundAction,
     controlInfo,
+    listenersOn,
   });
 
   reactions: {
@@ -1450,6 +1458,8 @@ export const useControlgroupProps = (
     uiActionInternal,
     allowCapture = false,
     cascadeValidationToChildren = false,
+    // See useControlProps.
+    listenersOn = "host",
   },
 ) => {
   const { action, standalone } = props;
@@ -1507,6 +1517,7 @@ export const useControlgroupProps = (
     // here the state is derived from the children
     // so we don't have a value concept, nor readonly etc
     controlInfo: { controlType },
+    listenersOn,
   });
 
   const { basePseudoState } = controlgroupProps;
@@ -1658,10 +1669,12 @@ export const ControlFacadeChildrenWrapper = ({
 
 const useInteractiveProps = (
   props,
-  { uiStateController, boundAction, controlInfo },
+  { uiStateController, boundAction, controlInfo, listenersOn },
 ) => {
   const { ref } = props;
-  const [controlRootProps, controlHostProps] = splitControlProps(props);
+  const [controlRootProps, controlHostProps] = splitControlProps(props, {
+    listenersOn,
+  });
   controlRootProps["navi-control"] = controlInfo.controlType;
   if (props.selfInteractions) {
     // One attribute, in the DOM, because that is where the claim is read from —
@@ -2074,8 +2087,10 @@ const useInteractiveProps = (
         }
       }
     };
+    const onFocusFromProps = controlHostProps.onFocus;
     Object.assign(controlHostProps, {
       onFocus: (e) => {
+        onFocusFromProps?.(e);
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
         const focusProxyTarget =
           findFocusDelegateTarget(e.currentTarget) ||
@@ -2316,7 +2331,7 @@ const useInteractiveProps = (
 
   return [controlRootProps, controlHostProps];
 };
-const splitControlProps = (props) => {
+const splitControlProps = (props, { listenersOn }) => {
   const { ref } = props;
   const controlHostProps = {
     ref,
@@ -2331,10 +2346,17 @@ const splitControlProps = (props) => {
     if (isControlProp(key)) {
       continue;
     }
+    if (listenersOn === "host" && isDomListenerProp(key)) {
+      controlHostProps[key] = props[key];
+      continue;
+    }
     controlRootProps[key] = props[key];
   }
   return [controlRootProps, controlHostProps];
 };
+// `onPointerDown`, `onFocusOut`… but not navi's own events (`onnavi_command`),
+// which keep the element they are dispatched on.
+const isDomListenerProp = (key) => /^on[A-Z]/.test(key);
 
 const isCheckableInput = (controlType, typeProp) =>
   controlType === "input" && (typeProp === "radio" || typeProp === "checkbox");

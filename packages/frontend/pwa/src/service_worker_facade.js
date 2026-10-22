@@ -66,7 +66,9 @@ import { pwaLogger } from "./pwa_logger.js";
  *   - `subscribe(callback)`: called immediately then on every state change;
  *     returns an unsubscribe function
  *   - `setRegistrationPromise(promise)`: give it the return value of
- *     `navigator.serviceWorker.register(url)`
+ *     `navigator.serviceWorker.register(url)`. Async, resolves once the
+ *     registration is watched (after "inspect", so up to 1s on a plain
+ *     service worker script); a failure is written to `state.error`.
  *   - `checkForUpdates()`: async, resolves to true if an update was found. A
  *     failed check resolves to false, writes the browser's error to
  *     `state.update.error` and what failed to `state.update.errorKind`:
@@ -377,7 +379,9 @@ export const createServiceWorkerFacade = ({
       // make it control the navigator (when autoclaimOnFirstActivation is true)
       if (controller && stateSignal.peek().readyState === "") {
         const registration = await serviceWorkerAPI.getRegistration();
-        watchRegistration(registration);
+        if (registration) {
+          watchRegistration(registration);
+        }
       }
     });
 
@@ -400,7 +404,14 @@ export const createServiceWorkerFacade = ({
       try {
         mutate({ error: null, readyState: "registering" });
         const registration = await registrationPromise;
-        watchRegistration(registration);
+        if (!registration) {
+          // A browser's register() resolves to a registration or rejects:
+          // only an environment stubbing navigator.serviceWorker (crawlers)
+          // resolves without one, and there is nothing to watch there.
+          mutate({ readyState: "" });
+          return;
+        }
+        await watchRegistration(registration);
       } catch (e) {
         mutate({ error: e });
       }

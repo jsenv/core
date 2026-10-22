@@ -167,6 +167,8 @@ export const InputDuration = (props) => {
       {
         controlType: "duration_group",
         cascadeValidationToChildren: true,
+        // The host is an <input type="hidden"> carrying the value.
+        listenersOn: "root",
         // Aggregates sub-input values into an ISO 8601-like duration string.
         // durationToISOString preserves non-numeric mid-edit values
         // (e.g. hours="ab") between their unit markers ("PTabH30M"),

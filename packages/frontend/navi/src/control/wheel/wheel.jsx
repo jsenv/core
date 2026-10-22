@@ -1333,7 +1333,12 @@ function WheelUI(props) {
         // action explicitly on settle. A caller can still override actionEvent.
         actionEvent: props.actionEvent ?? "custom",
       },
-      { controlType: "input" },
+      {
+        controlType: "input",
+        // The host is the hidden input carrying the value: the container is
+        // what is focused and spun.
+        listenersOn: "root",
+      },
     );
   const uiStateController = getUIStateControllerById(controlHostProps.id);
   const { basePseudoState, children } = controlHostProps;

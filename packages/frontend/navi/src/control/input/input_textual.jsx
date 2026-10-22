@@ -78,6 +78,7 @@ import { InputTextualContext } from "./input_textual_context.js";
 import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { useAutoSelectReadOnly } from "./use_autoselect_read_only.js";
+import { useSelectOnPress } from "./use_select_on_press.js";
 
 const InputHeadlessResolver = (props) => {
   const Next = useNextResolver();
@@ -115,7 +116,13 @@ const useInputTextualProps = (props) => {
 };
 const InputTextualUI = (props) => {
   installInputCss();
-  const { ui, variant, backgroundColor, width = "maxLength" } = props;
+  const {
+    ui,
+    variant,
+    backgroundColor,
+    width = "maxLength",
+    selectOnPress,
+  } = props;
   const [
     inputControlRootProps,
     inputControlHostProps,
@@ -152,6 +159,8 @@ const InputTextualUI = (props) => {
   } else {
     inputControlHostProps.width = width;
   }
+  delete inputControlRootProps.selectOnPress;
+  inputControlHostProps.selectOnPress = selectOnPress;
 
   return (
     <Box
@@ -263,6 +272,7 @@ const INPUT_ONLY_PROPS = [
   "suggestions",
   "headless",
   "fieldSizing",
+  "selectOnPress",
   "action",
   "uiAction",
   "ui",
@@ -341,8 +351,12 @@ export const InputTextual = /*#__PURE__*/ createComponentResolver([
   InputTextualUI,
 ]);
 
-const RealInput = ({ maxLength, ...domProps }) => {
+const RealInput = ({ maxLength, selectOnPress, ...domProps }) => {
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
+  const selectOnPressProps = useSelectOnPress(
+    { ...domProps, ...autoSelectReadOnlyProps },
+    selectOnPress,
+  );
 
   return (
     <Box
@@ -350,6 +364,7 @@ const RealInput = ({ maxLength, ...domProps }) => {
       as="input"
       baseClassName="navi_control_input"
       {...autoSelectReadOnlyProps}
+      {...selectOnPressProps}
       // Never set native maxLength — our guard handles it. Omitting it entirely
       // avoids a Preact quirk: setting maxLength={undefined} on a fresh DOM element
       // (e.g. after a Suspense remount) causes Preact to run `el.maxLength = ""`

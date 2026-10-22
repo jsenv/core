@@ -1001,6 +1001,10 @@ const PickerButton = (props) => {
       },
       {
         controlType: "picker",
+        // The root holds what the picker opens as well as its trigger: a
+        // listener on the picker hears what bubbles out of the popup (the focus
+        // leaving it, see picker_custom.jsx).
+        listenersOn: "root",
       },
     );
   const uiStateController = getUIStateControllerById(inputProps.id);

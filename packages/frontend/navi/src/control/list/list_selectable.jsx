@@ -646,22 +646,27 @@ const ListItemSelectable = (props) => {
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
   const [checkableRootProps, checkableProps, controlChildrenWrapperProps] =
-    useCheckableProps({
-      readOnlyMessage: readOnlyMessageResolved,
-      // What the row itself is waiting for when it says so, the wait of the
-      // list around it otherwise — said as the selection where several things
-      // are taken, as the choice where one thing is.
-      busyMessage: busyMessageResolved,
-      loading,
-      readOnly,
-      ...rest,
-      ref: inputRef,
-      id: inputId,
-      type: inputType,
-      deselectable,
-      defaultChecked: defaultSelected,
-      ...(hasSelectedProp ? { checked: selected } : null),
-    });
+    useCheckableProps(
+      {
+        readOnlyMessage: readOnlyMessageResolved,
+        // What the row itself is waiting for when it says so, the wait of the
+        // list around it otherwise — said as the selection where several things
+        // are taken, as the choice where one thing is.
+        busyMessage: busyMessageResolved,
+        loading,
+        readOnly,
+        ...rest,
+        ref: inputRef,
+        id: inputId,
+        type: inputType,
+        deselectable,
+        defaultChecked: defaultSelected,
+        ...(hasSelectedProp ? { checked: selected } : null),
+      },
+      // The host is the visually hidden input carrying the selection: the row
+      // is what the person sees and presses (see onClick above).
+      { listenersOn: "root" },
+    );
   const { checked, value, basePseudoState, children } = checkableProps;
   // Everything holding the control back, not only the row's own `readOnly`
   // above: the list above it, a maxLengthGuard with no room left.

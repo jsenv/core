@@ -199,7 +199,9 @@ The returned facade exposes:
 - `subscribe(callback)` — runs the callback immediately and again on every
   state change; returns an unsubscribe function.
 - `setRegistrationPromise(promise)` — hand it the return value of
-  `navigator.serviceWorker.register(url)`.
+  `navigator.serviceWorker.register(url)`. Async, resolves once the
+  registration is watched (after `inspect`, so up to 1s on a plain service
+  worker script); a failure is written to `state.error`.
 - `checkForUpdates()` — async, resolves to `true` if an update was found.
 - `activateUpdate()` — async, activates the installed update (skipWaiting +
   claim) and resolves once it controls the page; rejects when the update is

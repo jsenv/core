@@ -17,6 +17,7 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   clearable?: boolean,
  *   value?: any,
  *   boolean?: boolean,
+ *   selectOnPress?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {any} [value] On a checkbox, what it is worth checked (`"on"` when
@@ -34,6 +35,12 @@ import { resolveInputProps } from "./resolve_input_props.js";
  * @param {boolean} [clearable] Gives any other type the same slot: the icon
  *   while empty (none, unless `icon` says otherwise), the clear cross once
  *   filled.
+ * @param {boolean} [selectOnPress] For a textual field whose value is usually
+ *   replaced rather than edited, like a browser's address bar: the first press
+ *   after the field took the focus selects its whole text once released, with a
+ *   mouse or a finger, and a second press places the caret. A focus that came
+ *   without a press (a dialog opening, Tab, code) selects nothing; the first key
+ *   that types selects first, so it replaces the text.
  */
 export const Input = (props) => {
   resolveInputProps(props);
