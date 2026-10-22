@@ -38,10 +38,7 @@ const css = /* css */ `
       --button-padding-y-default: var(--navi-button-padding-y-default);
       --button-loader-color: var(--navi-loader-color);
       --button-border-color: var(--navi-control-border-color);
-      --button-background-color: var(
-        --button-background,
-        var(--navi-button-background-color)
-      );
+      --button-background-color: var(--navi-button-background-color);
       --button-color: currentColor;
       --button-cursor: pointer;
       --button-font-size: var(--navi-control-font-size);
@@ -230,11 +227,11 @@ const css = /* css */ `
       gap: inherit;
       color: inherit;
       vertical-align: inherit;
-      background: var(--x-button-background);
-      background-color: var(
-        --x-button-background-color,
-        var(--x-button-background)
-      );
+      /* A background prop is drawn as given, in every state: the states mix
+         their colors from backgroundColor or the variant's, never from the
+         shorthand — a gradient over a fill is invalid as a background-color,
+         which then paints transparent over the shorthand's own color. */
+      background: var(--x-button-background, var(--x-button-background-color));
       border: var(--x-button-border);
       border-radius: inherit;
       outline-width: var(--button-outline-width);
@@ -254,6 +251,11 @@ const css = /* css */ `
       & > img {
         border-radius: inherit;
       }
+    }
+    /* background and backgroundColor both given: the shorthand's layers over
+       the color, which follows the states. */
+    &[data-background-color] .navi_button_content {
+      background-color: var(--x-button-background-color);
     }
 
     /* Current */
@@ -336,12 +338,10 @@ const css = /* css */ `
     /* A variant states what the caller did NOT: the frameless ones below move
        the DEFAULTS (--button-*) and never the resolved values (--x-button-*),
        so a backgroundColor/background/borderColor prop — which lands inline on
-       this same element — still wins. Two things come with that: the
-       transparent default is written as a fallback of --button-background, so
-       the background prop feeds --button-background-color through it; and the
-       per-state defaults are re-pointed at the base one, otherwise the @layer
-       formulas (hover = 5% black over the background, readonly = the same)
-       would repaint a box the variant just took away. */
+       this same element — still wins. The per-state defaults are re-pointed at
+       the base one too, otherwise the @layer formulas (hover = 5% black over
+       the background, readonly = the same) would repaint a box the variant
+       just took away. */
 
     /* discrete: background on hover, and nothing else — no box at rest, and no
        shrink when pressed where a pointer can hover. What is drawn IS the
@@ -357,7 +357,7 @@ const css = /* css */ `
       --button-border-color-current: var(--button-border-color);
       --button-border-color-readonly: var(--button-border-color);
       --button-border-color-disabled: var(--button-border-color);
-      --button-background-color: var(--button-background, transparent);
+      --button-background-color: transparent;
       /* The hover wash is mixed INTO the background instead of replacing it:
          over the transparent default it is exactly the 8% of currentColor it
          has always been, and over a backgroundColor the caller gave it darkens
@@ -393,7 +393,7 @@ const css = /* css */ `
       --button-border-color-current: var(--button-border-color);
       --button-border-color-readonly: var(--button-border-color);
       --button-border-color-disabled: var(--button-border-color);
-      --button-background-color: var(--button-background, transparent);
+      --button-background-color: transparent;
       --button-background-color-hover: var(--button-background-color);
       --button-background-color-readonly: var(--button-background-color);
       --button-background-color-disabled: var(--button-background-color);
@@ -406,7 +406,7 @@ const css = /* css */ `
     }
     /* discrete-border: border on hover */
     &[data-variant="discrete-border"] {
-      --button-background-color: var(--button-background, transparent);
+      --button-background-color: transparent;
       --button-background-color-hover: var(--button-background-color);
       --button-background-color-readonly: var(--button-background-color);
       --button-background-color-disabled: var(--button-background-color);
@@ -426,7 +426,7 @@ const css = /* css */ `
     }
     /* border variant: no background, border only */
     &[data-variant="border"] {
-      --button-background-color: var(--button-background, transparent);
+      --button-background-color: transparent;
       --button-background-color-hover: color-mix(
         in srgb,
         currentColor 8%,
@@ -465,10 +465,7 @@ const css = /* css */ `
        ends up filled with. A CTA lightens toward white where an ordinary
        button darkens toward black: it is already the darkest thing around. */
     &[data-cta] {
-      --button-background-color: var(
-        --button-background,
-        var(--button-cta-background-color)
-      );
+      --button-background-color: var(--button-cta-background-color);
       --button-border-color: var(--button-cta-background-color);
       --button-color: white;
       --button-background-color-hover: color-mix(
@@ -636,6 +633,9 @@ export const ButtonUI = (props) => {
       data-press-effect={pressEffect}
       data-icon={icon ? "" : undefined}
       data-cta={cta ? "" : undefined}
+      data-background-color={
+        props.backgroundColor === undefined ? undefined : ""
+      }
       data-callout-arrow-x="center"
       // style management
       baseClassName="navi_button"
