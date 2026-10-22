@@ -105,6 +105,15 @@ const css = /* css */ `
          the same label without one. The page's line, like the page's font. */
       line-height: var(--navi-control-line-height);
     }
+    /* bare: the drawing is the caller's, so it is written on the page's line
+       at the page's size — the control font and the control line belong to
+       the drawings navi makes, which this one is not. In the layer for the
+       same reason as above: a rule of the app's own still wins. */
+    .navi_button[data-variant="bare"] {
+      font-size: inherit;
+      font-family: inherit;
+      line-height: inherit;
+    }
   }
 
   a.navi_button {
@@ -298,7 +307,7 @@ const css = /* css */ `
        itself. Same box either way: the button has no padding and no border of
        its own, so the frame's border box was already the button's. */
     &[data-content-display="contents"] {
-      & [data-focus-visible] {
+      &[data-focus-visible] {
         outline: var(--button-outline-width) solid var(--button-outline-color);
         outline-offset: var(--button-outline-offset);
       }
@@ -369,12 +378,15 @@ const css = /* css */ `
         }
       }
     }
-    /* bare: discrete, minus the background on hover. For a control whose own
-       drawing IS the button (a carousel bullet, a swatch), where a box lighting
-       up around it would be the button showing through the only thing one is
-       supposed to see. It stays a button in every other way: focusable, ringed
-       on focus, commandable. */
+    /* bare: no frame at all — no border, no background even on hover, no
+       padding, and the page's typography (in the layer above). For a control
+       whose own drawing IS the button (a carousel bullet, a swatch, a badge),
+       where a box around it would be the button showing through the only thing
+       one is supposed to see. It stays a button in every other way: focusable,
+       ringed on focus, commandable. */
     &[data-variant="bare"] {
+      --button-padding-x-default: 0;
+      --button-padding-y-default: 0;
       --button-border-width: 0;
       --button-border-color: transparent;
       --button-border-color-hover: var(--button-border-color);
