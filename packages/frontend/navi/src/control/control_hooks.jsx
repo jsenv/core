@@ -180,6 +180,15 @@ export const ControlgroupChildrenWrapper = ({
   </MessagePropsRefContext.Provider>
 );
 
+// What the caller writes for these is called from the control's own reactions
+// (see `reactions` below), so the split leaves them out of both sides.
+const LISTENERS_CALLED_BY_REACTIONS = new Set([
+  "onMouseDown",
+  "onClick",
+  "onKeyDown",
+  "onPaste",
+  "onInput",
+]);
 /**
  * Core hook for interactive field components (InputTextual, InputCheckbox, etc.).
  *
@@ -201,6 +210,8 @@ export const ControlgroupChildrenWrapper = ({
  *   focuses: the field inside its box, or one element for both. `"root"` is for
  *   a control whose host is a hidden carrier, or whose root also holds what
  *   the control opens, so that a listener hears the control as a whole.
+ *   `onMouseDown`, `onClick`, `onKeyDown`, `onPaste` and `onInput` stay the
+ *   host's either way: the control's own reactions to them call them.
  * @returns {[controlRootProps, controlHostProps, { uiStateController }]}
  */
 export const useControlProps = (
@@ -302,6 +313,7 @@ export const useControlProps = (
     boundAction,
     controlInfo,
     listenersOn,
+    listenersCalledByReactions: LISTENERS_CALLED_BY_REACTIONS,
   });
 
   reactions: {
@@ -1669,11 +1681,18 @@ export const ControlFacadeChildrenWrapper = ({
 
 const useInteractiveProps = (
   props,
-  { uiStateController, boundAction, controlInfo, listenersOn },
+  {
+    uiStateController,
+    boundAction,
+    controlInfo,
+    listenersOn,
+    listenersCalledByReactions,
+  },
 ) => {
   const { ref } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props, {
     listenersOn,
+    listenersCalledByReactions,
   });
   controlRootProps["navi-control"] = controlInfo.controlType;
   if (props.selfInteractions) {
@@ -2331,7 +2350,10 @@ const useInteractiveProps = (
 
   return [controlRootProps, controlHostProps];
 };
-const splitControlProps = (props, { listenersOn }) => {
+const splitControlProps = (
+  props,
+  { listenersOn, listenersCalledByReactions },
+) => {
   const { ref } = props;
   const controlHostProps = {
     ref,
@@ -2344,6 +2366,9 @@ const splitControlProps = (props, { listenersOn }) => {
       continue;
     }
     if (isControlProp(key)) {
+      continue;
+    }
+    if (listenersCalledByReactions?.has(key)) {
       continue;
     }
     if (listenersOn === "host" && isDomListenerProp(key)) {

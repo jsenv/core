@@ -236,7 +236,7 @@ export const InputDuration = (props) => {
   const { required, readOnly, disabled, basePseudoState } = groupHostProps;
   const groupRef = useRef();
   useInputGroup(groupRef);
-  const clipboardProps = useClipboardProps(groupRef);
+  const clipboardProps = useClipboardProps(groupRef, groupRootProps);
 
   const visibleFields = [];
   if (showHours) visibleFields.push("hour");
@@ -326,7 +326,10 @@ const getVisibleFields = (container) => {
   );
 };
 
-const useClipboardProps = (groupRef) => {
+// Spread after the group's props, so the caller's listeners for these events
+// are called from here. Whatever they do, the group's own reading runs too, as
+// it does after a field's paste guard prevented the paste.
+const useClipboardProps = (groupRef, callerProps) => {
   const getClipboardPayload = () => {
     const groupEl = groupRef.current;
     if (!groupEl) {
@@ -395,6 +398,7 @@ const useClipboardProps = (groupRef) => {
   };
 
   const onCopy = (e) => {
+    callerProps.onCopy?.(e);
     if (!isFromDurationField(e)) {
       return;
     }
@@ -408,6 +412,7 @@ const useClipboardProps = (groupRef) => {
   };
 
   const onCut = (e) => {
+    callerProps.onCut?.(e);
     if (!isFromDurationField(e)) {
       return;
     }
@@ -421,6 +426,7 @@ const useClipboardProps = (groupRef) => {
   };
 
   const onPaste = (e) => {
+    callerProps.onPaste?.(e);
     if (!isFromDurationField(e)) {
       return;
     }

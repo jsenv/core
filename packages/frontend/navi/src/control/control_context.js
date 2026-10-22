@@ -97,11 +97,6 @@ export const CONTROL_PROP_SET = new Set([
   "autoFocusVisible",
   "autoFocusSelect",
 
-  "onMouseDown",
-  "onClick",
-  "onKeyDown",
-  "onPaste",
-  "onInput",
   "eventReactionDefinitions",
 
   "onCancel",

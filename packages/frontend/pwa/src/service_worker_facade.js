@@ -402,7 +402,14 @@ export const createServiceWorkerFacade = ({
     subscribe: (callback) => stateSignal.subscribe(callback),
     setRegistrationPromise: async (registrationPromise) => {
       try {
-        mutate({ error: null, readyState: "registering" });
+        // "registering" is written only while no registration is watched: on
+        // a returning visit init() may already watch the one register()
+        // resolves to, and readyState then describes its worker.
+        if (watchedRegistration) {
+          mutate({ error: null });
+        } else {
+          mutate({ error: null, readyState: "registering" });
+        }
         const registration = await registrationPromise;
         if (!registration) {
           // A browser's register() resolves to a registration or rejects:
