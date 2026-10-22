@@ -198,7 +198,7 @@ const putBack = (restoration) => {
     // The page is not whole yet: the last release puts it back.
     return;
   }
-  if (documentHoldCount) {
+  if (isDocumentHeld()) {
     pendingRestoration = null;
     return;
   }
@@ -214,19 +214,32 @@ const putBack = (restoration) => {
 // height, so the same pixels now fall on other rows. Put back after the list
 // has placed itself, they would undo it, in the very picture a route transition
 // takes. So the list holds the document while it is placing itself, and the
-// url's offset is not put back meanwhile. Counted: two lists can share one
-// document.
-let documentHoldCount = 0;
-export const holdDocumentScroll = () => {
-  documentHoldCount++;
-  let released = false;
+// url's offset is not put back meanwhile. One hold per list: two lists can
+// share one document.
+//
+// A hold is for the page its list is on, and mounted is not shown: a page kept
+// while its route transition plays still has its list when the page returned to
+// renders, and that list says nothing about where the page arriving goes. So a
+// hold is taken with the list's page (RoutePageContext), asked whether it is
+// shown when a position is due — `null` outside any route container: that list
+// is on whatever page is shown. Not a url: which page an address shows is the
+// routes' to say, and one page can be shown under several (its params moving
+// under it).
+const documentHolds = new Set();
+export const holdDocumentScroll = (routePage) => {
+  const hold = { routePage };
+  documentHolds.add(hold);
   return () => {
-    if (released) {
-      return;
-    }
-    released = true;
-    documentHoldCount--;
+    documentHolds.delete(hold);
   };
+};
+const isDocumentHeld = () => {
+  for (const { routePage } of documentHolds) {
+    if (routePage === null || routePage.isShown()) {
+      return true;
+    }
+  }
+  return false;
 };
 
 // What a page holds instead: not the place, which stays the url's, but the
@@ -485,9 +498,9 @@ const restoreScrollPosition = (url) => {
   if (!position) {
     return false;
   }
-  if (documentHoldCount) {
-    // There is a place to go back to, and the list holding the document is
-    // putting it back (see holdDocumentScroll).
+  if (isDocumentHeld()) {
+    // There is a place to go back to, and the list holding the document on
+    // that page is putting it back (see holdDocumentScroll).
     return true;
   }
   scrollTo(position);

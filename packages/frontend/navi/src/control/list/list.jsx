@@ -28,6 +28,7 @@ import {
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { stringifySpacingStyle } from "../../box/box_style_util.js";
 import { isLikelyPreactGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
+import { RoutePageContext } from "../../nav/route_page_context.js";
 import {
   forgetScrollerUnlessPageLeft,
   holdDocumentScroll,
@@ -2081,6 +2082,19 @@ const useListScrollSync = ({
     // eslint-disable-next-line no-unused-expressions
     virtualItemSizeSignal.value;
   }
+  // The hold ending — the user reaching for the list, something else moving
+  // it, the item it opens on never coming — ends its hold on the document with
+  // it (see holdDocumentScroll), rather than at the next render, which nothing
+  // owes: an offset put back on this page meanwhile is the reader's.
+  const releaseDocumentHoldRef = useRef(null);
+  const letGo = () => {
+    startPlaceRef.current.userTookOver = true;
+    const releaseDocumentHold = releaseDocumentHoldRef.current;
+    if (releaseDocumentHold) {
+      releaseDocumentHoldRef.current = null;
+      releaseDocumentHold();
+    }
+  };
   // Set around a scroll the list performs itself. What it protects against is
   // not the scroll event as such, but what the listener would conclude from it:
   // the position it is about to read was chosen to keep the items where they
@@ -2336,7 +2350,7 @@ const useListScrollSync = ({
         }
         openAt = scrolledFallback;
         if (openAt === "start" || openAt === undefined) {
-          startPlaceRef.current.userTookOver = true;
+          letGo();
           return;
         }
       } else {
@@ -2489,13 +2503,24 @@ const useListScrollSync = ({
   }, []);
   // Held on an item of a list scrolling the document: where the document goes is
   // this list's to say, measured on the item, not the url's offset in pixels
-  // (see holdDocumentScroll).
+  // (see holdDocumentScroll). The hold read again: a layout effect of this
+  // commit may have let go already (see placeWhereHeld).
+  const routePage = useContext(RoutePageContext);
   useLayoutEffect(() => {
-    if (!heldSomewhere || getScroller() !== document.scrollingElement) {
+    if (
+      !heldSomewhere ||
+      startPlaceRef.current.userTookOver ||
+      getScroller() !== document.scrollingElement
+    ) {
       return undefined;
     }
-    return holdDocumentScroll();
-  }, [heldSomewhere, scrollerElResolved]);
+    const releaseDocumentHold = holdDocumentScroll(routePage);
+    releaseDocumentHoldRef.current = releaseDocumentHold;
+    return () => {
+      releaseDocumentHoldRef.current = null;
+      releaseDocumentHold();
+    };
+  }, [heldSomewhere, scrolledWanted, scrollerElResolved]);
   // What to do when the list's own geometry moves under it, kept fresh for the
   // observer below (which is installed once).
   const onGeometryChangeRef = useRef(null);
@@ -2533,16 +2558,13 @@ const useListScrollSync = ({
       return undefined;
     }
     const scrollerEl = getScroller();
-    const takeOver = () => {
-      startPlaceRef.current.userTookOver = true;
-    };
     const takeOverEvents = ["wheel", "touchstart", "pointerdown", "keydown"];
     for (const type of takeOverEvents) {
-      scrollerEl.addEventListener(type, takeOver, { passive: true });
+      scrollerEl.addEventListener(type, letGo, { passive: true });
     }
     return () => {
       for (const type of takeOverEvents) {
-        scrollerEl.removeEventListener(type, takeOver);
+        scrollerEl.removeEventListener(type, letGo);
       }
     };
   }, [scrolledWanted, scrollerElResolved]);
@@ -3203,7 +3225,7 @@ const useListScrollSync = ({
       const low = way.from < way.to ? way.from : way.to;
       const high = way.from < way.to ? way.to : way.from;
       if (position < low - 1 || position > high + 1) {
-        place.userTookOver = true;
+        letGo();
       }
     };
     // A page-level scroller does not emit "scroll" on the element itself
