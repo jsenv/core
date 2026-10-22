@@ -217,9 +217,6 @@ export const getRelativeDay = (date, { now = new Date() } = {}) => {
   return Math.round((dateMidnight - nowMidnight) / DAY);
 };
 
-/**
- * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
- */
 // ── Placeholder helpers ────────────────────────────────────────────────────
 // Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
 // using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
@@ -340,6 +337,11 @@ export const formatDatetimePlaceholder = ({
 
 // ── End placeholder helpers ────────────────────────────────────────────────
 
+/**
+ * Formats a whole number of days from today (what `getRelativeDay` returns) as a
+ * locale-aware label: "hier", "aujourd'hui", "demain", "après-demain",
+ * "dans 3 jours", "il y a 5 jours".
+ */
 export const formatDayRelative = (offset, { lang = getRuntimeLang() } = {}) => {
   return memoIntl("RelativeTimeFormat", lang, {
     numeric: "auto",

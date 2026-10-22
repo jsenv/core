@@ -94,9 +94,11 @@ if (import.meta.hot) {
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
  * @param {boolean} [options.autoFix=false] - Hold the repaired value instead of the refused one: a number
  *   clamped to `min`/`max` and rounded to `step`, a value outside `oneOf` replaced by the signal's
- *   default value (an enumeration has no nearest value, and its order says nothing). Without it the
- *   refused value is held as-is, marked invalid, and `validSignal` reads `undefined`. When the value
- *   came from the address, the address is rewritten with the repaired one (a replace).
+ *   default value, or made absent when the signal has no default (an enumeration has no nearest
+ *   value, and its order says nothing). The default must therefore pass the rules itself: one of
+ *   `oneOf`. Without it the refused value is held as-is, marked invalid, and `validSignal` reads
+ *   `undefined`. When the value came from the address, the address is rewritten with the repaired
+ *   one (a replace).
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
  *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
  *   value, and it goes back to the default value when the route stops matching. Use it for params like an
@@ -260,6 +262,21 @@ export const stateSignal = (defaultValue, options = {}) => {
     // processValue, below) so a dynamic default is read where it stands.
     fallback: () => getDefaultValue(false),
   });
+  if (import.meta.dev && autoFix && staticDefaultValue !== undefined) {
+    const [defaultValidity, validateDefault] = createValidity({
+      type,
+      min,
+      max,
+      step,
+      oneOf,
+    });
+    validateDefault(staticDefaultValue);
+    if (!defaultValidity.valid) {
+      console.warn(
+        `stateSignal "${signalIdString}": autoFix has nothing to repair to, the default ${JSON.stringify(staticDefaultValue)} is refused by the signal's own rules. Declare a default they accept (one of oneOf), or none.`,
+      );
+    }
+  }
   const readFromLocalStorage = persists
     ? () => {
         const raw = window.localStorage.getItem(localStorageKey);
@@ -366,6 +383,14 @@ export const stateSignal = (defaultValue, options = {}) => {
       return undefined;
     }
     updateValidity(value);
+    // A state without a default is repaired to absent. validity cannot suggest
+    // it: `undefined` is "no suggestion" there and its rules refuse it, while a
+    // state never validates its absence (above).
+    if (autoFix && !validity.valid && getDefaultValue(false) === undefined) {
+      validity.valid = true;
+      validity.autoFixed = true;
+      return undefined;
+    }
     // Always return the coerced value (type coercion applies), even if invalid.
     // Invalid values are preserved as-is so the UI can display them and the URL
     // can reflect the current input state without silently correcting it.

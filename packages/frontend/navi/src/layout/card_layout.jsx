@@ -69,7 +69,6 @@ const css = /* css */ `
       var(--layout-padding-x, var(--layout-padding))
     );
     background: var(--layout-background);
-    background-color: var(--layout-background-color, var(--layout-background));
     border-width: var(--layout-border-width);
     border-style: solid;
     border-color: var(--layout-border-color);
@@ -87,7 +86,6 @@ const CardLayoutStyleCSSVars = {
   borderWidth: "--layout-border-width",
   borderColor: "--layout-border-color",
   background: "--layout-background",
-  backgroundColor: "--layout-background-color",
   padding: "--layout-padding",
   paddingTop: "--layout-padding-top",
   paddingBottom: "--layout-padding-bottom",
@@ -127,6 +125,7 @@ export const CardLayout = ({
   children,
   alignX = "center",
   alignY = "center",
+  backgroundColor,
   ...props
 }) => {
   import.meta.css = css;
@@ -142,7 +141,16 @@ export const CardLayout = ({
       visualSelector=".navi_card"
       {...props}
     >
-      <Box flex="y" className="navi_card" alignX={alignX} alignY={alignY}>
+      {/* Inline on the card, over its background shorthand: derived from
+          --layout-background it would be invalid for anything but a lone
+          color, and paint transparent over the shorthand's own color. */}
+      <Box
+        flex="y"
+        className="navi_card"
+        alignX={alignX}
+        alignY={alignY}
+        backgroundColor={backgroundColor}
+      >
         {children}
       </Box>
     </Box>

@@ -15,7 +15,7 @@ const css = /* css */ `
     white-space: nowrap;
     --font-size: 0.7em;
     --x-background: var(--background);
-    --x-background-color: var(--background-color, var(--x-background));
+    --x-background-color: var(--background-color);
     --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
     --badge-count-padding-x-default: 0.5em;
@@ -88,7 +88,6 @@ const css = /* css */ `
       padding-bottom: var(--x-badge-count-padding-bottom);
       padding-left: var(--x-badge-count-padding-left);
       background: var(--x-background);
-      background-color: var(--x-background-color);
       border-radius: 1em;
 
       /* For ellipse + single char force the circle aspect as it's prettier */
@@ -133,7 +132,6 @@ const css = /* css */ `
       align-items: center;
       justify-content: center;
       background: var(--x-background);
-      background-color: var(--x-background-color);
       border-radius: 100em;
 
       &[data-single-char] {
@@ -159,6 +157,14 @@ const css = /* css */ `
       .navi_badge_count_text {
         font-size: var(--x-number-font-size);
       }
+    }
+
+    /* Only when backgroundColor is given, never derived from --background: a
+       shorthand that is not a lone color is invalid as a background-color,
+       which then paints transparent over the shorthand's own color. Not
+       inline like Badge's, so that data-loading still clears it. */
+    &[data-background-color] {
+      background-color: var(--x-background-color);
     }
   }
 `;
@@ -317,6 +323,9 @@ const BadgeCountEllipse = ({
       data-ellipse=""
       data-value-overflow={hasOverflow ? "" : undefined}
       data-loading={loading ? "" : undefined}
+      data-background-color={
+        props.backgroundColor === undefined ? undefined : ""
+      }
       data-single-char={charCount === 1 ? "" : undefined}
       {...props}
       styleCSSVars={BadgeCountStyleCSSVars}
@@ -346,6 +355,9 @@ const BadgeCountCircle = ({
       data-circle=""
       bold
       data-loading={loading ? "" : undefined}
+      data-background-color={
+        props.backgroundColor === undefined ? undefined : ""
+      }
       data-single-char={charCount === 1 ? "" : undefined}
       data-two-chars={charCount === 2 ? "" : undefined}
       data-three-chars={charCount === 3 ? "" : undefined}

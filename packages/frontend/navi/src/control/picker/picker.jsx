@@ -1699,6 +1699,164 @@ const PickerFirstResolver = (props) => {
   return <Next {...props} />;
 };
 
+// Every picker type is resolved into one of these before it gets here (see
+// PickerTypeResolver and resolveInputProps): a native input type, or navi_js
+// for the ones whose value is a whole object. Anything else is a type nobody
+// implements — the picker then behaves as a plain text one, silently, and an
+// object value reaches the DOM as "[object Object]".
+const PICKER_RESOLVED_TYPE_SET = new Set([
+  "text",
+  "search",
+  "tel",
+  "url",
+  "email",
+  "password",
+  "number",
+  "range",
+  "date",
+  "month",
+  "week",
+  "time",
+  "datetime-local",
+  "color",
+  "file",
+  "checkbox",
+  "radio",
+  "hidden",
+  "navi_js",
+]);
+const pickerTypeWarnedSet = new Set();
+// A headless picker draws nothing at all — no value, no slot — so anything a
+// caller wrote for either is silently dropped. Said out loud, because a prop
+// that renders nowhere looks exactly like a prop that does not work.
+let uiDrawnByNobodyWarned = false;
+const warnOnUIDrawnByNobody = (props) => {
+  if (!import.meta.dev || uiDrawnByNobodyWarned) {
+    return;
+  }
+  const { ui, variant } = props;
+  if (variant !== "headless" || ui === undefined || ui === "default") {
+    return;
+  }
+  if (pickerUIIsNaviOwn(ui)) {
+    // What a `type` resolver puts there for a picker that did not name a
+    // drawing (see picker_types.jsx). Nobody wrote it, so there is nobody to
+    // tell that it is not drawn.
+    return;
+  }
+  uiDrawnByNobodyWarned = true;
+  console.warn(
+    `[navi] <Picker variant="headless" ui={…}> — a headless picker draws nothing, so this "ui" is never rendered. ` +
+      `For a trigger that is one icon of your own: <Picker variant="icon" ui={<YourSvg />}>.`,
+  );
+};
+
+// `clearable` is "put the cross in the right slot", and a picker without one is
+// handed the prop and drops it. Said out loud, because a caller asking for a
+// cross and getting none has no way to tell "ignored here" from "broken".
+const clearableWithoutSlotWarnedSet = new Set();
+const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { clearable, variant, icon, rightSlot, picksNothing } = props;
+  if (!clearable || hasRightSlot) {
+    return;
+  }
+  // What took the slot away: what the message names, and what makes two
+  // pickers the same case.
+  const cause = picksNothing
+    ? "picks-nothing"
+    : rightSlot === null
+      ? "rightSlot={null}"
+      : icon
+        ? "icon"
+        : `variant="${variant}"`;
+  if (clearableWithoutSlotWarnedSet.has(cause)) {
+    return;
+  }
+  clearableWithoutSlotWarnedSet.add(cause);
+  if (picksNothing) {
+    console.warn(
+      `[navi] <Picker type="confirm" clearable> — a picker that picks nothing holds nothing to clear, so no cross is drawn.`,
+    );
+    return;
+  }
+  console.warn(
+    `[navi] <Picker ${cause} clearable> — that leaves no right slot, so no cross is drawn. ` +
+      `Draw it where it belongs instead: <Picker ${cause} ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
+      `It is the same cross, and it takes itself away when there is nothing left to clear.`,
+  );
+};
+
+let chevronOffBareWarned = false;
+const warnOnChevronOffBare = (props, isBare) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { chevron, variant } = props;
+  if (chevron === undefined || isBare || chevronOffBareWarned) {
+    return;
+  }
+  chevronOffBareWarned = true;
+  console.warn(
+    `[navi] <Picker variant="${variant}" chevron="${chevron}"> — \`chevron\` places the chevron of a bare picker, whose drawing has no slot beside it. ` +
+      `This variant draws its chevron in its right slot already (rightSlotIcon, rightSlot to change it); \`chevron\` is ignored.`,
+  );
+};
+
+const warnOnUnknownPickerType = (props) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { type } = props;
+  if (type === undefined || PICKER_RESOLVED_TYPE_SET.has(type)) {
+    return;
+  }
+  if (pickerTypeWarnedSet.has(type)) {
+    return;
+  }
+  pickerTypeWarnedSet.add(type);
+  console.warn(
+    `[navi] <Picker type="${type}"> — "${type}" is not a picker type. ` +
+      `The picker holds a single text value instead, so an object given to it is written as "[object Object]". ` +
+      `Types are: date, month, week, time, datetime, duration, color, file, text, array, object, confirm — ` +
+      `"object" being the one for a popup holding several named controls.`,
+  );
+};
+
+// PickerFirstResolver comes before the presets so a preset reads the
+// min/max/step a bound signal fills in (resolveInputProps); a preset type
+// therefore has no row in NAVI_TYPE_DEFAULTS (resolve_input_props.js).
+const PickerResolved = /*#__PURE__*/ createComponentResolver([
+  PickerFirstResolver,
+  PickerPresetResolver,
+  PickerConfirmResolver,
+  PickerCustomResolver,
+  PickerTypeResolver,
+  PickerButton,
+]);
+
+const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
+  Date: PickerDateUI,
+  Time: PickerTimeUI,
+  Duration: PickerDurationUI,
+  Week: PickerWeekUI,
+  Datetime: PickerDatetimeUI,
+  File: PickerFileUI,
+  Color: PickerColorUI,
+  Object: PickerObjectUI,
+  Multiple: PickerArrayUI,
+
+  PencilSvg,
+  ChevronDownSvg,
+  ClockSvg,
+  DurationSvg,
+  CalendarSvg,
+  FileSvg,
+  ColorSvg,
+});
+
 /**
  * Button-like trigger that opens a picker (native or custom popup) when clicked.
  *
@@ -2273,164 +2431,6 @@ const PickerFirstResolver = (props) => {
  *   `type="confirm"`) never builds them early: its popup holds no value, there
  *   is nothing to read.
  */
-// Every picker type is resolved into one of these before it gets here (see
-// PickerTypeResolver and resolveInputProps): a native input type, or navi_js
-// for the ones whose value is a whole object. Anything else is a type nobody
-// implements — the picker then behaves as a plain text one, silently, and an
-// object value reaches the DOM as "[object Object]".
-const PICKER_RESOLVED_TYPE_SET = new Set([
-  "text",
-  "search",
-  "tel",
-  "url",
-  "email",
-  "password",
-  "number",
-  "range",
-  "date",
-  "month",
-  "week",
-  "time",
-  "datetime-local",
-  "color",
-  "file",
-  "checkbox",
-  "radio",
-  "hidden",
-  "navi_js",
-]);
-const pickerTypeWarnedSet = new Set();
-// A headless picker draws nothing at all — no value, no slot — so anything a
-// caller wrote for either is silently dropped. Said out loud, because a prop
-// that renders nowhere looks exactly like a prop that does not work.
-let uiDrawnByNobodyWarned = false;
-const warnOnUIDrawnByNobody = (props) => {
-  if (!import.meta.dev || uiDrawnByNobodyWarned) {
-    return;
-  }
-  const { ui, variant } = props;
-  if (variant !== "headless" || ui === undefined || ui === "default") {
-    return;
-  }
-  if (pickerUIIsNaviOwn(ui)) {
-    // What a `type` resolver puts there for a picker that did not name a
-    // drawing (see picker_types.jsx). Nobody wrote it, so there is nobody to
-    // tell that it is not drawn.
-    return;
-  }
-  uiDrawnByNobodyWarned = true;
-  console.warn(
-    `[navi] <Picker variant="headless" ui={…}> — a headless picker draws nothing, so this "ui" is never rendered. ` +
-      `For a trigger that is one icon of your own: <Picker variant="icon" ui={<YourSvg />}>.`,
-  );
-};
-
-// `clearable` is "put the cross in the right slot", and a picker without one is
-// handed the prop and drops it. Said out loud, because a caller asking for a
-// cross and getting none has no way to tell "ignored here" from "broken".
-const clearableWithoutSlotWarnedSet = new Set();
-const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
-  if (!import.meta.dev) {
-    return;
-  }
-  const { clearable, variant, icon, rightSlot, picksNothing } = props;
-  if (!clearable || hasRightSlot) {
-    return;
-  }
-  // What took the slot away: what the message names, and what makes two
-  // pickers the same case.
-  const cause = picksNothing
-    ? "picks-nothing"
-    : rightSlot === null
-      ? "rightSlot={null}"
-      : icon
-        ? "icon"
-        : `variant="${variant}"`;
-  if (clearableWithoutSlotWarnedSet.has(cause)) {
-    return;
-  }
-  clearableWithoutSlotWarnedSet.add(cause);
-  if (picksNothing) {
-    console.warn(
-      `[navi] <Picker type="confirm" clearable> — a picker that picks nothing holds nothing to clear, so no cross is drawn.`,
-    );
-    return;
-  }
-  console.warn(
-    `[navi] <Picker ${cause} clearable> — that leaves no right slot, so no cross is drawn. ` +
-      `Draw it where it belongs instead: <Picker ${cause} ui={<YourDrawing>… <Picker.Clear /></YourDrawing>}>. ` +
-      `It is the same cross, and it takes itself away when there is nothing left to clear.`,
-  );
-};
-
-let chevronOffBareWarned = false;
-const warnOnChevronOffBare = (props, isBare) => {
-  if (!import.meta.dev) {
-    return;
-  }
-  const { chevron, variant } = props;
-  if (chevron === undefined || isBare || chevronOffBareWarned) {
-    return;
-  }
-  chevronOffBareWarned = true;
-  console.warn(
-    `[navi] <Picker variant="${variant}" chevron="${chevron}"> — \`chevron\` places the chevron of a bare picker, whose drawing has no slot beside it. ` +
-      `This variant draws its chevron in its right slot already (rightSlotIcon, rightSlot to change it); \`chevron\` is ignored.`,
-  );
-};
-
-const warnOnUnknownPickerType = (props) => {
-  if (!import.meta.dev) {
-    return;
-  }
-  const { type } = props;
-  if (type === undefined || PICKER_RESOLVED_TYPE_SET.has(type)) {
-    return;
-  }
-  if (pickerTypeWarnedSet.has(type)) {
-    return;
-  }
-  pickerTypeWarnedSet.add(type);
-  console.warn(
-    `[navi] <Picker type="${type}"> — "${type}" is not a picker type. ` +
-      `The picker holds a single text value instead, so an object given to it is written as "[object Object]". ` +
-      `Types are: date, month, week, time, datetime, duration, color, file, text, array, object, confirm — ` +
-      `"object" being the one for a popup holding several named controls.`,
-  );
-};
-
-// PickerFirstResolver comes before the presets so a preset reads the
-// min/max/step a bound signal fills in (resolveInputProps); a preset type
-// therefore has no row in NAVI_TYPE_DEFAULTS (resolve_input_props.js).
-const PickerResolved = /*#__PURE__*/ createComponentResolver([
-  PickerFirstResolver,
-  PickerPresetResolver,
-  PickerConfirmResolver,
-  PickerCustomResolver,
-  PickerTypeResolver,
-  PickerButton,
-]);
-
-const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
-  Date: PickerDateUI,
-  Time: PickerTimeUI,
-  Duration: PickerDurationUI,
-  Week: PickerWeekUI,
-  Datetime: PickerDatetimeUI,
-  File: PickerFileUI,
-  Color: PickerColorUI,
-  Object: PickerObjectUI,
-  Multiple: PickerArrayUI,
-
-  PencilSvg,
-  ChevronDownSvg,
-  ClockSvg,
-  DurationSvg,
-  CalendarSvg,
-  FileSvg,
-  ColorSvg,
-});
-
 // Assembled in pure expressions rather than written onto Picker afterwards
 // (`Picker.Chip = PickerChip`): what createComponentResolver returns is an object
 // a bundler cannot see through, so a property assigned to it later is a side

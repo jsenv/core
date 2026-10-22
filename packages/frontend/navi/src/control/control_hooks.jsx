@@ -212,11 +212,21 @@ const LISTENERS_CALLED_BY_REACTIONS = new Set([
  *   the control opens, so that a listener hears the control as a whole.
  *   `onMouseDown`, `onClick`, `onKeyDown`, `onPaste` and `onInput` stay the
  *   host's either way: the control's own reactions to them call them.
+ * @param {"host"|"root"} [options.nameOn] Where `aria-label` and
+ *   `aria-labelledby` land: where the role is. `"host"`, the default, for every
+ *   control whose host is what is announced; `"root"` for a control whose role
+ *   is on its root and whose host is an `aria-hidden` carrier (a wheel).
  * @returns {[controlRootProps, controlHostProps, { uiStateController }]}
  */
 export const useControlProps = (
   props,
-  { controlType, persists, uiActionInternal, listenersOn = "host" },
+  {
+    controlType,
+    persists,
+    uiActionInternal,
+    listenersOn = "host",
+    nameOn = "host",
+  },
 ) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
@@ -313,6 +323,7 @@ export const useControlProps = (
     boundAction,
     controlInfo,
     listenersOn,
+    nameOn,
     listenersCalledByReactions: LISTENERS_CALLED_BY_REACTIONS,
   });
 
@@ -1686,12 +1697,14 @@ const useInteractiveProps = (
     boundAction,
     controlInfo,
     listenersOn,
+    nameOn,
     listenersCalledByReactions,
   },
 ) => {
   const { ref } = props;
   const [controlRootProps, controlHostProps] = splitControlProps(props, {
     listenersOn,
+    nameOn,
     listenersCalledByReactions,
   });
   controlRootProps["navi-control"] = controlInfo.controlType;
@@ -2350,9 +2363,10 @@ const useInteractiveProps = (
 
   return [controlRootProps, controlHostProps];
 };
+const NAME_ATTRIBUTE_SET = new Set(["aria-label", "aria-labelledby"]);
 const splitControlProps = (
   props,
-  { listenersOn, listenersCalledByReactions },
+  { listenersOn, nameOn, listenersCalledByReactions },
 ) => {
   const { ref } = props;
   const controlHostProps = {
@@ -2360,6 +2374,10 @@ const splitControlProps = (
   };
   const controlRootProps = {};
   for (const key of Object.keys(props)) {
+    if (nameOn === "root" && NAME_ATTRIBUTE_SET.has(key)) {
+      controlRootProps[key] = props[key];
+      continue;
+    }
     const attributeName = controlAttributeFromProp(key);
     if (attributeName) {
       controlHostProps[attributeName] = props[key];

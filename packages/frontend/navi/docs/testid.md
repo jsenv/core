@@ -76,11 +76,14 @@ Navi hands the host the props it knows belong there (`id`, `name`, `type`,
 root box instead — so a `data-test-id` or a `data-qa` of your own would name
 the wrapper, which is the second reason to keep the standard spelling.
 
-`aria-label` and `aria-labelledby` take the same road, and for the reason the
-section above gives: the name has to be where the role is. The root box has no
-role — it is a wrapper — so a name left on it would be announced by nothing and
-found by nothing, while the host is what the user focuses and what
-`getByRole(role, { name })` and `getByLabel()` read.
+`aria-label` and `aria-labelledby` follow the role, for the reason the section
+above gives: the name has to be where the role is. For most controls that is the
+host. The root box has no role — it is a wrapper — so a name left on it would be
+announced by nothing and found by nothing, while the host is what the user
+focuses and what `getByRole(role, { name })` and `getByLabel()` read. A `Wheel`
+is the other way round: its root is the `spinbutton` the user focuses, and its
+host is an `aria-hidden` input carrying the value, so the name lands on the
+root.
 
 ```jsx
 <Picker variant="icon" aria-label="Aide" ui={<Icon>…</Icon>}>

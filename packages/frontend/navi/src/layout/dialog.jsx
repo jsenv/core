@@ -2160,8 +2160,10 @@ const useDialogProps = (props) => {
       // gap — the same thing its CSS width/height say (see [data-expand-x],
       // [data-expand-y]) — so the placement derives it instead of measuring
       // it: a measurement here lays out the dialog's whole content, rows and
-      // all, for a number already known.
-      const fill = expandX && expandY;
+      // all, for a number already known. A cap (maxWidth/maxHeight, a Picker's
+      // anchor ceiling) stretches it to less than that, and only a measured
+      // box can be centred.
+      const fill = expandX && expandY && !isSizeCapped(dialogEl);
       const pickOptions = {
         positionArea,
         container: positionedAncestor,
@@ -2775,6 +2777,17 @@ const switchTransitionsOff = (dialogEl) => {
 const switchTransitionsOn = (dialogEl) => {
   dialogEl.style.transitionProperty = "";
   dialogEl.removeAttribute("navi-transitions-off");
+};
+
+// Reads style, not layout: an unset cap is the guaranteed-invalid value its
+// @property gives it, and reads back as "". Catches a cap written inline by
+// the prop as well as one set from a stylesheet.
+const isSizeCapped = (dialogEl) => {
+  const computedStyle = getComputedStyle(dialogEl);
+  return (
+    computedStyle.getPropertyValue("--dialog-max-width") !== "" ||
+    computedStyle.getPropertyValue("--dialog-max-height") !== ""
+  );
 };
 
 const DIALOG_PSEUDO_CLASSES = [

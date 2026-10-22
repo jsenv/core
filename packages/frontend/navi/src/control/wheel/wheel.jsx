@@ -1336,8 +1336,9 @@ function WheelUI(props) {
       {
         controlType: "input",
         // The host is the hidden input carrying the value: the container is
-        // what is focused and spun.
+        // what is focused and spun, and the spinbutton its name has to name.
         listenersOn: "root",
+        nameOn: "root",
       },
     );
   const uiStateController = getUIStateControllerById(controlHostProps.id);

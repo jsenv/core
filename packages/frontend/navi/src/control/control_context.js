@@ -26,9 +26,11 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "spellcheck",
   "autoCorrect",
   "aria-controls",
-  // The name goes where the role is: the root box has none, so an aria-label
-  // left on it names nothing at all, while the host is what the user focuses
-  // and what a screen reader announces (and what getByRole({ name }) reads).
+  // The name goes where the role is: for most controls the root box has none,
+  // so an aria-label left on it names nothing at all, while the host is what
+  // the user focuses and what a screen reader announces (and what
+  // getByRole({ name }) reads). A control whose role is on its root says so
+  // with `nameOn: "root"` (see useControlProps).
   "aria-label",
   "aria-labelledby",
   "tabIndex",

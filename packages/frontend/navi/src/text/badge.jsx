@@ -50,7 +50,6 @@ const css = /* css */ `
     );
 
     --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
-    --x-background-color: var(--background-color, var(--x-background));
     /* Default: white text — works on colored backgrounds.
        Overridden to dark when the bg is light enough (data-accent-needs-dark-fg)
        or when no background prop is passed (data-badge-default-bg). */
@@ -70,8 +69,11 @@ const css = /* css */ `
        and the text is exactly centered. Space between wrapped lines is left
        untouched, unlike a line-height tweak. */
     text-box: trim-both cap alphabetic;
+    /* backgroundColor is written inline by Box, over this shorthand — never
+       derived from --background here: a shorthand that is not a lone color is
+       invalid as a background-color, which then paints transparent over the
+       shorthand's own color. */
     background: var(--x-background);
-    background-color: var(--x-background-color);
     border-radius: 1em;
 
     /* Light colored background needs dark text */
@@ -200,7 +202,6 @@ const BadgeStyleCSSVars = {
   paddingRight: "--badge-padding-right",
   paddingBottom: "--badge-padding-bottom",
   paddingLeft: "--badge-padding-left",
-  backgroundColor: "--background-color",
   background: "--background",
   borderColor: "--border-color",
   color: "--color",

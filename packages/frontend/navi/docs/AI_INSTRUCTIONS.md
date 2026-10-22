@@ -26,7 +26,9 @@ source of knowledge has one job:
 - **The built code, `dist/jsenv_navi.js`** — the exhaustive truth about the API,
   JSDoc included, always under `node_modules/@jsenv/navi/`. When a signature, a
   default or an accepted value is what you need, read it there rather than
-  guessing.
+  guessing. The formatters navi re-exports from `@jsenv/humanize` (`format*`,
+  `createI18n`, `interpolateText`) are a re-export there: their JSDoc is in
+  `node_modules/@jsenv/humanize/dist/browser/jsenv_humanize_browser.js`.
 - **Sources, demos and tests** — how an export is really used:
   `src/**/demos/*_demo.html` exercise one component per page, prop by prop. They
   are not published to npm, so they live only in the repo

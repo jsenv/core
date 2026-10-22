@@ -54,6 +54,55 @@ const loadPrefreshBabelPlugin = () => {
   return prefreshBabelPluginPromise;
 };
 
+// "@babel/plugin-transform-react-jsx" inserts its import right after the last
+// import of the module. A comment between that import and the next statement is
+// attached to both, and babel prints it with the first one it meets: above the
+// inserted import, away from the statement it documents. A bundler then drops it
+// with the comments of the import, which is how the JSDoc of a component
+// exported right after the imports goes missing from a build.
+// A comment starting on a line of its own is handed back to the statement after;
+// one on the same line as the import stays with it.
+const babelPluginKeepCommentsAcrossInsertedStatements = () => {
+  return {
+    visitor: {
+      Program: {
+        exit(programPath) {
+          const statements = programPath.node.body;
+          let index = 0;
+          while (index < statements.length) {
+            const statement = statements[index];
+            // only the statements a plugin inserted have no location
+            if (statement.loc || index === 0) {
+              index++;
+              continue;
+            }
+            const statementBefore = statements[index - 1];
+            while (index < statements.length && !statements[index].loc) {
+              index++;
+            }
+            const statementAfter = statements[index];
+            if (
+              !statementAfter ||
+              !statementBefore.loc ||
+              !statementBefore.trailingComments ||
+              !statementAfter.leadingComments
+            ) {
+              continue;
+            }
+            const lineBefore = statementBefore.loc.end.line;
+            statementBefore.trailingComments =
+              statementBefore.trailingComments.filter(
+                (comment) =>
+                  comment.loc.start.line === lineBefore ||
+                  !statementAfter.leadingComments.includes(comment),
+              );
+          }
+        },
+      },
+    },
+  };
+};
+
 export const jsenvPluginPreact = ({
   jsxTranspilation = true,
   refreshInstrumentation = false,
@@ -178,6 +227,7 @@ export const jsenvPluginPreact = ({
                       ...(urlInfo.context.dev ? { sourceSelf: true } : {}),
                     },
                   ],
+                  babelPluginKeepCommentsAcrossInsertedStatements,
                 ]
               : []),
             ...(hookNamesEnabled
