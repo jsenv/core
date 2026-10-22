@@ -2521,6 +2521,25 @@ const useListScrollSync = ({
       releaseDocumentHold();
     };
   }, [heldSomewhere, scrolledWanted, scrollerElResolved]);
+  // A page kept while its route transition plays is hidden until it is taken
+  // down: nothing of the list can be measured there any more, and its scroller
+  // shows the page arriving (see route_page_context.js). So the list lets go of
+  // it, and stops answering its resizes and scrolls: measured hidden, every
+  // item stands at 0×0, and the top item put back where it was would scroll
+  // the page arriving by that item's offset. Kept mounted on purpose, so the
+  // listeners stay; what they would do is what ends.
+  const pageLeftRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!routePage) {
+      return undefined;
+    }
+    return routePage.leavingSignal.subscribe((leaving) => {
+      if (leaving) {
+        pageLeftRef.current = true;
+        letGo();
+      }
+    });
+  }, []);
   // What to do when the list's own geometry moves under it, kept fresh for the
   // observer below (which is installed once).
   const onGeometryChangeRef = useRef(null);
@@ -2726,6 +2745,9 @@ const useListScrollSync = ({
       }
     };
     const observer = new ResizeObserver((entries) => {
+      if (pageLeftRef.current) {
+        return;
+      }
       // A box that grows may be a box that starts to scroll — the scroller is
       // resolved again before anything is done about the resize, so that a
       // list which has outgrown a bounded ancestor stops holding on to the
@@ -3162,6 +3184,9 @@ const useListScrollSync = ({
     }
     const scrollerEl = getScroller();
     const onScroll = () => {
+      if (pageLeftRef.current) {
+        return;
+      }
       // Which way the user is going, read before the position is stored: what
       // the window keeps ahead is ahead of this.
       const previousScroll = currentScrollRef.current;
