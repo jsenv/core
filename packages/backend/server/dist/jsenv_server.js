@@ -5899,37 +5899,36 @@ const createResourcePattern = (pattern) => {
     });
   }
 
-  const patternEndsWithSlash = pathnamePatternString.endsWith("/");
+  // "/docs/*" also answers the directory itself ("/docs/" and "/docs") with an
+  // empty star, so one route serves a directory and its index. Only a star
+  // widens a pattern: "/docs/" is that one path and "/" the home page.
+  const directoryPattern = pathnamePatternString.endsWith("/*")
+    ? PATTERN.create(pathnamePatternString.slice(0, -1), {
+        namedGroupDelimiter: "/",
+      })
+    : null;
   // a pattern constraining nothing: every resource matches it, so whoever uses
   // it cannot name the resource that matched
   const matchesEveryResource =
     !searchPattern &&
     !hashPattern &&
-    (pathnamePatternString === "*" ||
-      pathnamePatternString === "/" ||
-      pathnamePatternString === "/*");
+    (pathnamePatternString === "*" || pathnamePatternString === "/*");
 
   return {
     matchesEveryResource,
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
       let decodedPathname = decodeURIComponent(pathname);
-      let result;
-      if (patternEndsWithSlash && !searchPattern && !hashPattern) {
-        // also match the path without trailing slash (e.g. /foo matches /foo/)
-        const pathnamePatternWithoutSlash = pathnamePatternString.slice(0, -1);
-        if (decodedPathname === pathnamePatternWithoutSlash) {
-          result = { named: {}, stars: [""] };
-        } else if (!decodedPathname.startsWith(pathnamePatternString)) {
-          return null;
-        } else {
-          result = {
-            named: {},
-            stars: [decodedPathname.slice(pathnamePatternString.length)],
-          };
+      let result = pathnamePattern.match(decodedPathname);
+      if (!result && directoryPattern) {
+        result = directoryPattern.match(
+          decodedPathname.endsWith("/")
+            ? decodedPathname
+            : `${decodedPathname}/`,
+        );
+        if (result) {
+          result.stars = [...(result.stars || []), ""];
         }
-      } else {
-        result = pathnamePattern.match(decodedPathname);
       }
       if (!result) {
         return null;
@@ -6318,9 +6317,7 @@ const createRouter = (
     };
   };
   const forEachMethodAllowed = (route, onMethodAllowed) => {
-    const supportedMethods =
-      route.method === "*" ? HTTP_METHODS : [route.method];
-    for (const supportedMethod of supportedMethods) {
+    for (const supportedMethod of route.methods) {
       onMethodAllowed(supportedMethod);
     }
   };
@@ -6553,10 +6550,12 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         }
         if (!route.matchMethod(request.method)) {
           // a 405 asserts the resource exists with other methods: a route
-          // matching every resource ("GET *", "GET /") names no resource, so
+          // matching every resource ("GET *", "GET /*") names no resource, so
           // it cannot make that assertion and an unknown address stays a 404
           if (!route.isFallback && !route.matchesEveryResource) {
-            wouldHaveMatched.methodSet.add(route.method);
+            for (const routeMethod of route.methods) {
+              wouldHaveMatched.methodSet.add(routeMethod);
+            }
           }
           continue;
         }
@@ -6877,6 +6876,14 @@ const createRoute = ({
   ) {
     availableMediaTypes.push(extensionWellKnownContentType);
   }
+  // HEAD is GET without the body (RFC 9110 §9.3.2): a GET route answers it and
+  // the server drops the body when sending
+  const methods =
+    method === "*"
+      ? HTTP_METHODS
+      : method === "GET"
+        ? ["GET", "HEAD"]
+        : [method];
   const resourcePattern = createResourcePattern(resource);
   const headersPattern = headers ? createHeadersPattern(headers) : null;
 
@@ -6896,8 +6903,11 @@ const createRoute = ({
     availableVersions,
     availableEncodings,
     acceptedMediaTypes,
+    methods,
     matchMethod:
-      method === "*" ? () => true : (requestMethod) => requestMethod === method,
+      method === "*"
+        ? () => true
+        : (requestMethod) => methods.includes(requestMethod),
     matchResource:
       resource === "*"
         ? () => true
@@ -6949,6 +6959,7 @@ const createRoute = ({
       }
       return {
         method,
+        methods,
         resource,
         description,
         availableMediaTypes,
@@ -7318,7 +7329,10 @@ const TIMING_NOOP = () => {
  *   - `endpoint` {string} — Required. `"GET /users/:id"`: an http method (or `*` for any)
  *     and a resource pattern. `:name` captures a segment and `*` a run of segments, both
  *     land in `request.params`; `?page=:page` captures a search param. `"*"` alone
- *     matches everything. An endpoint ending in `.websocket` marks a websocket route.
+ *     matches everything. Only `*` widens a pattern: `GET /` is the root alone and
+ *     `GET /docs/` that one path, while `GET /docs/*` answers `/docs`, `/docs/` and
+ *     everything under it (`request.params[0]` is `""` for the first two): declare the
+ *     routes it covers before it. An endpoint ending in `.websocket` marks a websocket route.
  *   - `fetch` {Function} — Required. `(request, helpers) => response`, async or not.
  *     Returns a `Response`, a plain `{ status, statusText, statusMessage, headers, body,
  *     timing }` object (`status` defaults to 404, `statusMessage` feeds the body of 4xx/5xx
@@ -7358,8 +7372,10 @@ const TIMING_NOOP = () => {
  *   host is answered 403: a page served elsewhere cannot read the responses by rebinding
  *   its DNS name to this machine. `true` disables the check.
  * @param {Object|false} [params.https=false] - `{ certificate, privateKey }` (PEM strings) to serve https.
- * @param {boolean} [params.redirectHttpToHttps] - With https, answer http requests with a 301
- *   to the https origin. Defaults to true unless `allowHttpRequestOnHttps` is set.
+ * @param {boolean|Function} [params.redirectHttpToHttps] - With https, answer http requests
+ *   with a 301 to https, on the host the request was sent to. Defaults to true unless
+ *   `allowHttpRequestOnHttps` is set. `({ resource }) => boolean` redirects only the requests
+ *   it returns true for; the others are served over http.
  * @param {boolean} [params.allowHttpRequestOnHttps=false] - With https, also serve plain http
  *   requests on the same port (`request.origin` tells them apart).
  * @param {boolean} [params.http2=false] - Serve http2 (needs `https`, http/1.1 clients are still
@@ -8053,6 +8069,10 @@ const startServer = async ({
   };
 
   {
+    const shouldRedirectHttpToHttps =
+      typeof redirectHttpToHttps === "function"
+        ? redirectHttpToHttps
+        : () => redirectHttpToHttps;
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
       const requestTarget = readRequestTarget(nodeRequest.url);
       if (!requestTarget) {
@@ -8070,9 +8090,17 @@ const startServer = async ({
         nodeResponse.end("Host not allowed");
         return;
       }
-      if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
+      if (
+        !nodeRequest.connection.encrypted &&
+        shouldRedirectHttpToHttps(requestTarget)
+      ) {
         nodeResponse.writeHead(301, {
-          location: `${serverOrigin}${requestTarget.resource}`,
+          location: httpsUrlFromHttpRequest({
+            requestHost,
+            resource: requestTarget.resource,
+            port,
+            serverOrigin,
+          }),
         });
         nodeResponse.end();
         return;
@@ -8314,6 +8342,25 @@ const createNodeServer = async ({
   }
   const { createServer } = await import("node:http");
   return createServer();
+};
+
+// http and https share the port (see server_polyglot.js): only the scheme
+// changes, the host stays the one the client used. The server origin would
+// send a phone that typed the network ip to its own loopback.
+const httpsUrlFromHttpRequest = ({
+  requestHost,
+  resource,
+  port,
+  serverOrigin,
+}) => {
+  const httpsUrlString = `https://${requestHost}`;
+  // no host header (http/1.0), or any host at all with `allowedHosts: true`
+  if (requestHost === undefined || !URL.canParse(httpsUrlString)) {
+    return `${serverOrigin}${resource}`;
+  }
+  const httpsUrl = new URL(httpsUrlString);
+  httpsUrl.port = port;
+  return `${httpsUrl.origin}${resource}`;
 };
 
 const REQUEST_BODY_LINGER_MS = 5_000;

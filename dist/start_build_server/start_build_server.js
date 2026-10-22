@@ -144,7 +144,7 @@ const startBuildServer = async ({
     routes: [
       ...routes,
       {
-        endpoint: "GET /",
+        endpoint: "GET /*",
         description: "Serve build files",
         fetch: ribbon
           ? withRibbonInjectedInHtml(fileSystemFetch, ribbon)

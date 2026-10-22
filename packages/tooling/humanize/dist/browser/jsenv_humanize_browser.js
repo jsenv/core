@@ -1996,11 +1996,13 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  *   day-of-month ("mardi 18"), `{ weekday: false }` the date without its
  *   anchor ("18 juillet"). At least one part must stay — with all three
  *   dropped, Intl falls back to its own default date spelling.
- * @param {boolean|"auto"} [options.year=true]
- *   Whether the `"numeric"` spelling writes the year: `false` drops it
- *   ("30/07", the day/month order still following the locale), `"auto"` drops
- *   it only when the date is in the current year (`now`'s year). The spelled
- *   formats never write the year, so they ignore it.
+ * @param {boolean|"auto"} [options.year]
+ *   Whether the year is written. `"auto"` writes it only when the date is not
+ *   in the current year (`now`'s year), the way a calendar does: "lundi 11
+ *   mai", but "samedi 1 janvier 2050". `false` drops it ("30/07", the
+ *   day/month order still following the locale). Defaults to `"auto"` for the
+ *   spelled formats and to `true` for `"numeric"`. The year qualifies a month,
+ *   so a spelling without one (`{ month: false }`) never writes it.
  * @param {string} [options.timeZone]
  *   IANA zone the instant is worded in ("Europe/Paris"); defaults to the
  *   runtime's own zone. The case is a server wording an instant for readers
@@ -2014,6 +2016,8 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
  * formatDay(new Date(), { lang: "fr", format: "numeric", year: false }) // "11/05"
+ * formatDay(new Date(2050, 0, 1), { lang: "fr" })          // "samedi 1 janvier 2050"
+ * formatDay(new Date(), { lang: "fr", year: true })       // "lundi 11 mai 2026"
  * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  * formatDay(new Date(), { lang: "fr", format: { day: false, month: false } }) // "mercredi"
  * formatDay(new Date(), { lang: "fr", format: { month: false } })             // "mercredi 2"
@@ -2023,7 +2027,7 @@ const formatDay = (
   {
     lang = getRuntimeLang(),
     format = "long",
-    year = true,
+    year,
     now = new Date(),
     timeZone,
   } = {},
@@ -2039,10 +2043,11 @@ const formatDay = (
     });
   }
   if (format === "numeric") {
-    const yearWritten =
-      year === "auto"
-        ? readYear(date, timeZone) !== readYear(now, timeZone)
-        : year !== false;
+    const yearWritten = isYearWritten(year === undefined ? true : year, {
+      date,
+      now,
+      timeZone,
+    });
     return memoIntl("DateTimeFormat", lang, {
       day: "2-digit",
       month: "2-digit",
@@ -2055,11 +2060,16 @@ const formatDay = (
     day = true,
     month = "long",
   } = typeof format === "string" ? { weekday: format, month: format } : format;
+  // The year qualifies a month: "mardi 18" and "mardi" have none to carry it.
+  const yearWritten =
+    month !== false &&
+    isYearWritten(year === undefined ? "auto" : year, { date, now, timeZone });
   // a `false` part is omitted, not passed: Intl rejects false as a value
   return memoIntl("DateTimeFormat", lang, {
     ...(weekday === false ? {} : { weekday }),
     ...(day === false ? {} : { day: "numeric" }),
     ...(month === false ? {} : { month }),
+    ...(yearWritten ? { year: "numeric" } : {}),
     timeZone,
   }).format(date);
 };
@@ -2094,9 +2104,6 @@ const getRelativeDay = (date, { now = new Date() } = {}) => {
   return Math.round((dateMidnight - nowMidnight) / DAY);
 };
 
-/**
- * Formats a relative day offset (-1/0/1) as a locale-aware label: "hier", "aujourd'hui", "demain".
- */
 // ── Placeholder helpers ────────────────────────────────────────────────────
 // Derive locale-aware format placeholders from Intl.DateTimeFormat.formatToParts
 // using a sentinel date whose parts are unambiguous (day=28, month=11, year=9999).
@@ -2217,6 +2224,11 @@ const formatDatetimePlaceholder = ({
 
 // ── End placeholder helpers ────────────────────────────────────────────────
 
+/**
+ * Formats a whole number of days from today (what `getRelativeDay` returns) as a
+ * locale-aware label: "hier", "aujourd'hui", "demain", "après-demain",
+ * "dans 3 jours", "il y a 5 jours".
+ */
 const formatDayRelative = (offset, { lang = getRuntimeLang() } = {}) => {
   return memoIntl("RelativeTimeFormat", lang, {
     numeric: "auto",
@@ -2500,7 +2512,8 @@ const resolveTimeRangePrecision = (
  * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
  *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
  *   Past 24 hours the default promotes to days, which reads better but hides
- *   the unit the caller works in.
+ *   the unit the caller works in. Ignored for a fractional value, which has
+ *   no single-unit spelling.
  * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
  *   represents a time-of-day rather than a real duration (used by
  *   `<Time type="time">`, see time.jsx's own TimeTime). A clock's "0" is a
@@ -2561,6 +2574,10 @@ const formatMinuteDuration = (
     // magnitude and putting the sign back is the only reading that works
     return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, pad, precision, forceUnit })}`;
   }
+  if (!Number.isInteger(minutes)) {
+    // a fractional value has no single-unit spelling, it needs its seconds
+    return formatSecondDuration(Math.round(minutes * 60), { lang, format });
+  }
   if (forceUnit || (minutes === 0 && !clockStyle)) {
     // a zero has nothing to promote to, and rendering it as an empty string
     // would be indistinguishable from a missing value
@@ -2612,16 +2629,45 @@ const formatMinuteDuration = (
   return `${dStr}${hStr}${hSym}${String(m).padStart(2, "0")}`;
 };
 
+// Intl.DurationFormat takes integers only (Temporal's duration fields), so a
+// fraction goes down to the next smaller unit as a whole count of it, rounded
+// there: [whole, carried]. 1.9999 hours is [2, 0], never 1 hour and 60 minutes.
+const carryFraction = (value, ratio) => {
+  const total = Math.round(value * ratio);
+  const carried = total % ratio;
+  return [(total - carried) / ratio, carried];
+};
+// A fraction of a second goes down as milliseconds, which this option has Intl
+// write back as the decimals of the seconds, with the reader's separator:
+// "1,234 seconde", not "1 seconde et 234 millisecondes".
+const FRACTIONAL_SECONDS = { milliseconds: "numeric" };
+// The `decimals` option rounds the seconds itself rather than handing Intl its
+// `fractionalDigits`, which truncates (1.96 → "1,9") and pads a whole value
+// ("12,0 secondes").
+const roundSeconds = (seconds, decimals) => {
+  if (decimals === undefined) {
+    return seconds;
+  }
+  const factor = 10 ** decimals;
+  return Math.round(seconds * factor) / factor;
+};
+
 // "forceUnit": stay in the unit the value is expressed in, however big it gets
 const formatSingleUnit = (value, unit, { lang, format }) => {
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    return memoIntl("DurationFormat", lang, {
+    const options = {
       style: format,
       // Intl drops a zero-valued unit, and "0 minute" is the whole point here
       [`${unit}sDisplay`]: "always",
-    }).format({
-      [`${unit}s`]: value,
-    });
+    };
+    const duration = { [`${unit}s`]: value };
+    // the bigger units turn a fraction into the unit below before landing
+    // here, seconds are the one unit Intl can write one on
+    if (unit === "second" && !Number.isInteger(value)) {
+      [duration.seconds, duration.milliseconds] = carryFraction(value, 1000);
+      Object.assign(options, FRACTIONAL_SECONDS);
+    }
+    return memoIntl("DurationFormat", lang, options).format(duration);
   }
   const symbol = humanizeI18n(`time.duration.${unit}_symbol`, undefined, {
     lang,
@@ -2670,9 +2716,13 @@ const formatHourDuration = (hours, options = {}) => {
  * "compact" uses our own symbol-based notation.
  *
  * @param {number} seconds
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean, decimals?: number }} [options]
  * @param {boolean} [options.forceUnit=false] - Keep the value in seconds
  *   however big it gets ("90 000 secondes" instead of "1 jour et 1 heure").
+ * @param {number} [options.decimals] - How many decimals a fraction of a
+ *   second keeps, rounded: with `decimals: 1`, 1.234 reads "1,2 seconde" and
+ *   1.96 "2 secondes". A whole value is never padded. Without it the fraction
+ *   is written to the millisecond, the finest unit written here.
  *
  * @example
  * formatSecondDuration(90, { lang: "fr" })                       // "1 minute 30 secondes" (long, default)
@@ -2683,35 +2733,49 @@ const formatHourDuration = (hours, options = {}) => {
  */
 const formatSecondDuration = (
   seconds,
-  { lang = getRuntimeLang(), format = "long", forceUnit = false } = {},
+  {
+    lang = getRuntimeLang(),
+    format = "long",
+    forceUnit = false,
+    decimals,
+  } = {},
 ) => {
   format = resolveFormat(format, {
     fnName: "formatSecondDuration",
     reads: ["long", "short", "narrow", "compact"],
   });
+  seconds = roundSeconds(seconds, decimals);
   if (seconds < 0) {
     // the d/h/m/s split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
-    return `-${formatSecondDuration(-seconds, { lang, format, forceUnit })}`;
+    return `-${formatSecondDuration(-seconds, { lang, format, forceUnit, decimals })}`;
   }
   if (forceUnit || seconds === 0) {
     return formatSingleUnit(seconds, "second", { lang, format });
   }
-  const totalHours = Math.floor(seconds / 3600);
+  const [totalSeconds, ms] = carryFraction(seconds, 1000);
+  const totalHours = Math.floor(totalSeconds / 3600);
   const d = Math.floor(totalHours / 24);
   const h = totalHours % 24;
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = memoIntl("DurationFormat", lang, { style: format });
+    const fmt = memoIntl(
+      "DurationFormat",
+      lang,
+      ms > 0 ? { style: format, ...FRACTIONAL_SECONDS } : { style: format },
+    );
     const duration = {};
     if (d > 0) duration.days = d;
     if (h > 0) duration.hours = h;
     if (m > 0) duration.minutes = m;
     if (s > 0 || (d === 0 && h === 0 && m === 0)) duration.seconds = s;
+    if (ms > 0) {
+      duration.milliseconds = ms;
+    }
     return fmt.format(duration);
   }
-  // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s"
+  // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s", "1,5s"
   const dSym = humanizeI18n("time.duration.day_symbol", undefined, { lang });
   const hSym = humanizeI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = humanizeI18n("time.duration.minute_symbol", undefined, { lang });
@@ -2722,8 +2786,25 @@ const formatSecondDuration = (
   if (d > 0) parts.push(`${formatCompactNumber(d, lang)}${dSym}`);
   if (h > 0) parts.push(`${h}${hSym}`);
   if (m > 0) parts.push(`${m}${mSym}`);
-  if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
+  if (ms > 0) {
+    // decimals take the reader's separator: "1,5s" in French
+    parts.push(`${formatCompactNumber(s + ms / 1000, lang)}${sSym}`);
+  } else if (s > 0 || parts.length === 0) {
+    parts.push(`${s}${sSym}`);
+  }
   return parts.join("");
+};
+
+// What a unit is worth in the next one of UNIT_KEYS, for the pairs whose ratio
+// is fixed: a month has no fixed count of weeks, and milliseconds are the
+// smallest unit written here, so a fraction on those has nowhere to go.
+const RATIO_TO_NEXT_UNIT = {
+  years: 12,
+  weeks: 7,
+  days: 24,
+  hours: 60,
+  minutes: 60,
+  seconds: 1000,
 };
 
 /**
@@ -2739,7 +2820,9 @@ const formatSecondDuration = (
  *   minutes reads "90 minutes", never "1 heure 30" — the variants that
  *   promote a count into bigger units are {@link formatMinuteDuration},
  *   {@link formatHourDuration} and {@link formatSecondDuration}.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", decimals?: number }} [options]
+ * @param {number} [options.decimals] - How many decimals a fraction of a
+ *   second keeps, rounded — see {@link formatSecondDuration}.
  *
  * @example
  * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr" })                       // "2 heures 15 minutes" (long, default)
@@ -2752,7 +2835,7 @@ const formatSecondDuration = (
  */
 const formatDuration = (
   duration,
-  { lang = getRuntimeLang(), format = "long" } = {},
+  { lang = getRuntimeLang(), format = "long", decimals } = {},
 ) => {
   format = resolveFormat(format, {
     fnName: "formatDuration",
@@ -2764,35 +2847,47 @@ const formatDuration = (
     duration = { seconds: duration };
   }
   const has = (key) => duration[key] !== undefined && duration[key] !== null;
+  if (decimals !== undefined && has("seconds") && isFinite(duration.seconds)) {
+    duration = {
+      ...duration,
+      seconds: roundSeconds(Number(duration.seconds), decimals),
+    };
+  }
 
-  // "long" and "narrow" delegate to Intl.DurationFormat when available and all values are numeric.
-  //
-  // "short" always uses our own compact symbols ("2h15", "45min") because:
-  // 1. We omit the minute symbol when hours are also present ("2h15" not "2h 15 min"),
-  //    which Intl.DurationFormat style:"narrow" does not do.
-  // 2. Non-numeric mid-edit values (e.g. { hours: "2a" }) must render as-is with their
-  //    unit symbol — Intl.DurationFormat only accepts integers.
+  // "long", "short" and "narrow" delegate to Intl.DurationFormat when
+  // available, which takes integers only (Temporal's duration fields). A
+  // fraction is first carried down to the next unit (see carryFraction); what
+  // Intl still cannot take — a non-numeric mid-edit value ({ hours: "2a" }), a
+  // fraction with no fixed unit below it ({ months: 1.5 }) — is written in the
+  // compact notation below, with its unit symbol.
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const intlDuration = {};
-    let allNumeric = true;
+    let allIntegers = true;
     let hasNegative = false;
     let hasPositive = false;
-    for (const key of [
-      "years",
-      "months",
-      "weeks",
-      "days",
-      "hours",
-      "minutes",
-      "seconds",
-      "milliseconds",
-    ]) {
-      if (!has(key)) {
+    let fractionalSeconds = false;
+    // a whole count of `key` handed down by the fraction of the unit above
+    let carried = 0;
+    for (const key of UNIT_KEYS) {
+      if (!has(key) && carried === 0) {
         continue;
       }
-      const n = Number(duration[key]);
+      let n = has(key) ? Number(duration[key]) : 0;
       if (!isFinite(n)) {
-        allNumeric = false;
+        allIntegers = false;
+        break;
+      }
+      n += carried;
+      carried = 0;
+      const ratio = RATIO_TO_NEXT_UNIT[key];
+      if (ratio && !Number.isInteger(n)) {
+        [n, carried] = carryFraction(n, ratio);
+        if (key === "seconds" && carried !== 0) {
+          fractionalSeconds = true;
+        }
+      }
+      if (!Number.isInteger(n)) {
+        allIntegers = false;
         break;
       }
       if (n < 0) {
@@ -2805,7 +2900,7 @@ const formatDuration = (
     // Temporal requires all components to share the same sign.
     // Mixed-sign values (e.g. { hours: -1, minutes: 15 }) throw a RangeError.
     if (
-      allNumeric &&
+      allIntegers &&
       Object.keys(intlDuration).length > 0 &&
       !(hasNegative && hasPositive)
     ) {
@@ -2815,11 +2910,15 @@ const formatDuration = (
           format,
         });
       }
-      return memoIntl("DurationFormat", lang, { style: format }).format(
-        intlDuration,
-      );
+      return memoIntl(
+        "DurationFormat",
+        lang,
+        fractionalSeconds
+          ? { style: format, ...FRACTIONAL_SECONDS }
+          : { style: format },
+      ).format(intlDuration);
     }
-    // Fall through to compact notation when values are non-numeric or mixed-sign
+    // Fall through to compact notation when values are not integers or mixed-sign
   }
 
   // A component explicitly present but numerically zero (e.g. the demo's own
@@ -3195,6 +3294,13 @@ const readClock = (date, timeZone) => {
     }
   }
   return { hours, minutes };
+};
+
+const isYearWritten = (year, { date, now, timeZone }) => {
+  if (year === "auto") {
+    return readYear(date, timeZone) !== readYear(now, timeZone);
+  }
+  return year !== false;
 };
 
 // Reads the calendar year of an instant in `timeZone` (the runtime's own zone

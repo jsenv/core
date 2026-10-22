@@ -6,11 +6,17 @@ run({
 })
 ```
 
-# 1/2 write 2 files into "./output/"
+# 1/3 console.warn
+
+```console
+"@jsenv/server" is installed in 17.7.0 but package.json declares 17.7.2 in dependencies, run npm install
+```
+
+# 2/3 write 2 files into "./output/"
 
 see [./output/](./output/)
 
-# 2/2 resolve
+# 3/3 resolve
 
 ```js
 undefined

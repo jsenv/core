@@ -713,10 +713,10 @@ const getRuntimeLang = () => runtimeLangSource();
  *   ```
  *
  * @param {string} [options.fallbackLang]
- *   Language consulted when the active language has no translation for a key
- *   — per key, not per language: a partially translated language falls through
- *   to `fallbackLang` only for the keys it is missing. Without it, a missing
- *   translation returns the key itself.
+ *   Language consulted for a key none of the requested languages translates,
+ *   before giving up and returning the key itself. Set it to a language holding
+ *   every key whenever keys are opaque: without it, a reader whose languages
+ *   all miss a key sees that key's raw name.
  *
  * @param {string|string[]} [options.runtimeLang]
  *   The active language (BCP 47 tag or ordered array of tags) — named
@@ -759,19 +759,27 @@ const getRuntimeLang = () => runtimeLangSource();
  *
  * **`i18n(key, values?, { lang? })`** — the translation for `key`, with
  * `[placeholder]` occurrences replaced from `values` (see `interpolateText`).
- * Returns `key` itself when nothing matches, so an untranslated string still
- * renders something readable. `i18n.format` is an alias of this call.
+ * `i18n.format` is an alias of this call.
  *
- * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists,
- * i.e. how to tell "no translation" apart from "translation equal to the key".
+ * The language is resolved per key, not once for the whole registry: each
+ * requested language in order (`lang`, else `runtimeLang` — a regional tag
+ * reaching its registered parent, `"de-DE"` → `"de"`), then `fallbackLang`;
+ * the first one translating `key` wins. A language translated for only part of
+ * the keys therefore reads its own words where it has them and the next
+ * language's everywhere else. When none translates it, `key` itself comes
+ * back, so an untranslated string still renders something readable.
+ *
+ * **`i18n.has(key, { lang? })`** — whether a translation genuinely exists in
+ * one of the languages above, i.e. how to tell "no translation" apart from
+ * "translation equal to the key".
  *
  * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
  */
 const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
-  // Bumped by addLangKeys — the only thing besides the active lang itself
-  // that could change what getActiveLang()/getResolvedFallbackLang() below
-  // resolve to, so it's what invalidates their own small caches.
+  // Bumped by addLangKeys — the only thing besides the requested lang itself
+  // that could change what resolveLangChain() below resolves to, so it's what
+  // invalidates its small cache.
   let languageMapVersion = 0;
 
   // Without an explicit runtimeLang, the runtime language source is re-read
@@ -779,49 +787,39 @@ const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   // ignore an app-wide language change (see runtime_lang.js) for the rest of
   // this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
-
-  // matchBestLang does real work (a Map lookup per candidate, a possible
-  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
-  // format()/has() call in the common case, since what it resolves to only
-  // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when the runtime lang itself changes (see
-  // runtime_lang.js; an installed source is expected to keep its reference
-  // stable while nothing changed, and the default one caches its string) —
-  // comparing those two cheaply (===) is enough to know the cached result
-  // below is still valid.
-  let cachedActiveLang;
-  let cachedActiveLangRuntimeLang;
-  let cachedActiveLangVersion = -1;
-  const getActiveLang = () => {
-    const currentRuntimeLang = hasExplicitRuntimeLang
-      ? runtimeLang
-      : getRuntimeLang();
-    if (
-      cachedActiveLangVersion === languageMapVersion &&
-      cachedActiveLangRuntimeLang === currentRuntimeLang
-    ) {
-      return cachedActiveLang;
-    }
-    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
-    cachedActiveLangVersion = languageMapVersion;
-    cachedActiveLangRuntimeLang = currentRuntimeLang;
-    return cachedActiveLang;
+  const getDefaultLang = () => {
+    return hasExplicitRuntimeLang ? runtimeLang : getRuntimeLang();
   };
 
-  // fallbackLang is a plain, never-reactive option set once at creation —
-  // its own resolution only ever needs recomputing when languageMap does.
-  let cachedResolvedFallbackLang;
-  let cachedResolvedFallbackLangVersion = -1;
-  const getResolvedFallbackLang = () => {
-    if (!fallbackLang) {
-      return null;
+  // Walked per key rather than one language picked for the whole registry: a
+  // registry is rarely translated evenly (@jsenv/humanize ships German time
+  // words, navi ships its buttons in en/fr only), and a single language would
+  // show the raw name of every key it lacks. Cached on the lang reference,
+  // which the runtime lang source keeps stable while nothing changed.
+  let cachedLangChain;
+  let cachedLangChainLang;
+  let cachedLangChainVersion = -1;
+  const resolveLangChain = (lang) => {
+    if (
+      cachedLangChainVersion === languageMapVersion &&
+      cachedLangChainLang === lang
+    ) {
+      return cachedLangChain;
     }
-    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
-      return cachedResolvedFallbackLang;
+    const langChain = [];
+    for (const candidate of [
+      ...toLangList(lang),
+      ...toLangList(fallbackLang),
+    ]) {
+      const match = matchLang(candidate, languageMap);
+      if (match && !langChain.includes(match)) {
+        langChain.push(match);
+      }
     }
-    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
-    cachedResolvedFallbackLangVersion = languageMapVersion;
-    return cachedResolvedFallbackLang;
+    cachedLangChain = langChain;
+    cachedLangChainLang = lang;
+    cachedLangChainVersion = languageMapVersion;
+    return langChain;
   };
 
   const addLangKeys = (lang, translations) => {
@@ -860,47 +858,25 @@ const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
     }
   };
 
-  const _getTemplate = (key, lang) => {
-    // matchBestLang, not matchLang directly: lang can be an ordered array of
-    // preferences, and matchLang alone assumes a plain string, throwing on
-    // .split() otherwise.
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      const translated = translations[key];
+  const getTemplate = (key, lang) => {
+    for (const resolvedLang of resolveLangChain(lang)) {
+      const translated = languageMap.get(resolvedLang)[key];
       if (translated !== undefined) {
         return translated;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      const fallbackTranslated = fallbackTranslations[key];
-      if (fallbackTranslated !== undefined) {
-        return fallbackTranslated;
       }
     }
     // No translation found — return key as-is (opaque fallback)
     return key;
   };
 
-  const format = (key, values, { lang = getActiveLang() } = {}) => {
-    const template = _getTemplate(key, lang);
+  const format = (key, values, { lang = getDefaultLang() } = {}) => {
+    const template = getTemplate(key, lang);
     return interpolateText(template, values);
   };
 
-  const has = (key, { lang = getActiveLang() } = {}) => {
-    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
-    if (resolvedLang) {
-      const translations = languageMap.get(resolvedLang);
-      if (translations && key in translations) {
-        return true;
-      }
-    }
-    const resolvedFallbackLang = getResolvedFallbackLang();
-    if (resolvedFallbackLang) {
-      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-      if (fallbackTranslations && key in fallbackTranslations) {
+  const has = (key, { lang = getDefaultLang() } = {}) => {
+    for (const resolvedLang of resolveLangChain(lang)) {
+      if (key in languageMap.get(resolvedLang)) {
         return true;
       }
     }
@@ -935,19 +911,15 @@ const matchLang = (lang, languageMap) => {
   return null;
 };
 
-// lang can be a string or an ordered array of preference strings
-const matchBestLang = (lang, languageMap) => {
+// lang can be a string, an ordered array of preference strings, or nothing
+const toLangList = (lang) => {
   if (!lang) {
-    return null;
+    return [];
   }
-  const candidates = Array.isArray(lang) ? lang : [lang];
-  for (const candidate of candidates) {
-    const match = matchLang(candidate, languageMap);
-    if (match) {
-      return match;
-    }
+  if (Array.isArray(lang)) {
+    return lang;
   }
-  return null;
+  return [lang];
 };
 
 /**
@@ -967,6 +939,11 @@ const matchBestLang = (lang, languageMap) => {
  * — the opposite of what an app is advised to do for its own texts; navi's
  * `docs/i18n.md` explains why.
  *
+ * English translates every key, so it is the `fallbackLang`: the other
+ * languages cover part of the keys only (German has the `time.*` words, not
+ * navi's buttons), and a key the reader's languages all lack reads in English
+ * rather than as its raw name.
+ *
  * @example
  * import { humanizeI18n } from "@jsenv/humanize";
  *
@@ -976,7 +953,7 @@ const matchBestLang = (lang, languageMap) => {
  * // Teach a language that is not shipped:
  * humanizeI18n.addLangKeys("ja", { "time.midnight": "真夜中" });
  */
-const humanizeI18n = createI18n();
+const humanizeI18n = createI18n({ fallbackLang: "en" });
 
 // What the time formatters in ../time/format_time.js write in words:
 // relative wording, the midnight word, the mark between the two bounds of a
@@ -3911,81 +3888,295 @@ function getTokenAttr(token, attrName) {
 }
 
 // Adapted from https://github.com/mathiasbynens/he/blob/36afe179392226cf1b6ccdb16ebbb7a5a844d93a/src/he.js#L106-L134
-const decodeMap = new Map([
-    [0, 65_533],
-    // C1 Unicode control character reference replacements
-    [128, 8364],
-    [130, 8218],
-    [131, 402],
-    [132, 8222],
-    [133, 8230],
-    [134, 8224],
-    [135, 8225],
-    [136, 710],
-    [137, 8240],
-    [138, 352],
-    [139, 8249],
-    [140, 338],
-    [142, 381],
-    [145, 8216],
-    [146, 8217],
-    [147, 8220],
-    [148, 8221],
-    [149, 8226],
-    [150, 8211],
-    [151, 8212],
-    [152, 732],
-    [153, 8482],
-    [154, 353],
-    [155, 8250],
-    [156, 339],
-    [158, 382],
-    [159, 376],
-]);
 /**
- * Replace the given code point with a replacement character if it is a
- * surrogate or is outside the valid range. Otherwise return the code
- * point unchanged.
+ * C1 Unicode control character reference replacements (code points 128–159).
+ * Index i gives the replacement for code point 128+i; 0 means "no replacement".
+ */
+const c1 = [
+    8364, 0, 8218, 402, 8222, 8230, 8224, 8225, 710, 8240, 352, 8249, 338, 0,
+    381, 0, 0, 8216, 8217, 8220, 8221, 8226, 8211, 8212, 732, 8482, 353, 8250,
+    339, 0, 382, 376,
+];
+/**
+ * True for NUL, UTF-16 surrogates, and values past U+10FFFF.
+ * @param codePoint Unicode code point to check.
+ */
+function isInvalidCodePoint(codePoint) {
+    return (codePoint === 0 ||
+        (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) ||
+        codePoint > 0x10_ff_ff);
+}
+/**
+ * Replace the given code point with U+FFFD if it is NUL (0), a surrogate, or
+ * outside the valid Unicode range. Code points in the C1 controls range
+ * (128–159) are remapped to their Windows-1252 equivalents, following the
+ * HTML spec. All other code points are returned unchanged.
  * @param codePoint Unicode code point to convert.
  */
 function replaceCodePoint(codePoint) {
-    if ((codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) ||
-        codePoint > 0x10_ff_ff) {
+    if (isInvalidCodePoint(codePoint)) {
         return 0xff_fd;
     }
-    return decodeMap.get(codePoint) ?? codePoint;
+    if (codePoint >= 128 && codePoint <= 159) {
+        return c1[codePoint - 128] || codePoint;
+    }
+    return codePoint;
+}
+/**
+ * XML numeric character references are the referenced Unicode code point.
+ * Invalid values still become U+FFFD; the HTML Windows-1252 C1 remap is not
+ * applied.
+ * @see https://www.w3.org/TR/xml/#NT-CharRef
+ * @param codePoint Unicode code point to convert.
+ */
+function replaceCodePointXML(codePoint) {
+    return isInvalidCodePoint(codePoint) ? 0xff_fd : codePoint;
 }
 
-/**
- * Shared base64 decode helper for generated decode data.
- * Assumes global atob is available.
- * @param input Input string to encode or decode.
+/*
+ * Inverse of the encoder's SAFE alphabet (0x21..0x7E minus 0x22, 0x24, 0x5C),
+ * precomputed once at module load. Entries for excluded chars stay 0 but
+ * are never read.
  */
-function decodeBase64(input) {
-    const binary = atob(input);
-    const evenLength = binary.length & -2; // Round down to even length
-    const out = new Uint16Array(evenLength / 2);
-    for (let index = 0, outIndex = 0; index < evenLength; index += 2) {
-        const lo = binary.charCodeAt(index);
-        const hi = binary.charCodeAt(index + 1);
-        out[outIndex++] = lo | (hi << 8);
+const BASE91_INVERSE = /* #__PURE__ */ (() => {
+    const table = new Uint8Array(127);
+    let code = 0;
+    for (let char = 0x21; char <= 0x7e; char++) {
+        if (char !== 0x22 && char !== 0x24 && char !== 0x5c) {
+            table[char] = code++;
+        }
+    }
+    return table;
+})();
+/**
+ * Decode a dictionary-encoded trie string back into its Uint16Array.
+ *
+ * Stream layout (consumed in this order):
+ *   1. dict1 atoms — `dict1AtomCount` uint16 values, delta+RLE encoded.
+ *   2. dict2 atoms — `atomCount - dict1AtomCount` values, delta+RLE.
+ *   3. dict2 ngrams — `ngramCount - (dictSize - dict1AtomCount)` entries,
+ *      each a pair of slot codes that resolve to earlier slots.
+ *   4. dict1 ngrams — `dictSize - dict1AtomCount` entries, same shape.
+ *   5. data — slot codes, each expanding to one or more uint16 values.
+ *
+ * Codes use a 91-char base (printable ASCII minus `"`, `$`, `\`):
+ *   - char1 < dictSize  → 1-char code, slot = char1
+ *   - char1 ≥ dictSize  → 2-char code, slot = dictSize + (char1 - dictSize)*91 + char2
+ *
+ * Slot index → token kind:
+ *   [0, A)                  dict1 atoms     (1-char codes)
+ *   [A, dictSize)           dict1 ngrams    (1-char codes)
+ *   [dictSize, dictSize+D)  dict2 atoms     (2-char codes)
+ *   [dictSize+D, end)       dict2 ngrams    (2-char codes)
+ *
+ * Both atom dicts decode before any ngram, and dict2 ngrams decode before
+ * dict1 ngrams. So every ngram entry references slots whose contents are
+ * already filled — no forward references to handle.
+ *
+ * This runs on library import. Flat typed arrays store each slot as either
+ * a plain value (`single`, covering every atom) or a range in a shared
+ * `pool` (ngrams).
+ * @param input Packed trie string.
+ * @param resultLength Expected number of uint16 values in the output.
+ * @param atomCount Total number of distinct uint16 values in the trie.
+ * @param dict1AtomCount Atoms in the 1-char range (`A` above).
+ * @param ngramCount Total number of ngram entries (dict1 + dict2).
+ * @param dictSize Number of 1-char code slots; the rest of `BASE - dictSize`
+ *   first-byte values are 2-char codes.
+ */
+function decodeTrieDict(input, resultLength, atomCount, dict1AtomCount, ngramCount, dictSize) {
+    const base = 91;
+    const inputLength = input.length;
+    // For 2-char codes, slot = char1 * base - twoCharBias + char2.
+    const twoCharBias = dictSize * (base - 1);
+    let pos = 0;
+    /** Read one slot code at `pos` and return its slot index, advancing pos. */
+    const readSlotCode = () => {
+        const c1 = BASE91_INVERSE[input.charCodeAt(pos++)];
+        return c1 < dictSize
+            ? c1
+            : c1 * base - twoCharBias + BASE91_INVERSE[input.charCodeAt(pos++)];
+    };
+    const dict2AtomCount = atomCount - dict1AtomCount;
+    const slotCount = atomCount + ngramCount;
+    /*
+     * Per-slot contents: atoms (always a single value) live directly in
+     * `single`; ngram slots hold -1 there and expand to
+     * `pool[start[slot] .. start[slot] + length[slot])`.
+     */
+    const single = new Int32Array(slotCount);
+    single.fill(-1, dict1AtomCount, dictSize);
+    single.fill(-1, dictSize + dict2AtomCount, slotCount);
+    const start = new Int32Array(slotCount);
+    const length = new Int32Array(slotCount);
+    /**
+     * Decode `count` ascending uint16 values from a delta+RLE stream into
+     * `single[off..off+count)`.
+     *
+     *   code < 89   → delta = code
+     *   code == 89  → run-length: next char encodes runLength-2; emit `runLength` consecutive +1 values
+     *   code == 90, next < 90  → escape: delta = 89 + next * BASE + after-next
+     *   code == 90, next == 90 → double-escape: extra char for very large deltas
+     * @param count
+     * @param off
+     */
+    function decodeDelta(count, off) {
+        let previous = 0;
+        let slot = off;
+        const end = off + count;
+        while (slot < end) {
+            const code = BASE91_INVERSE[input.charCodeAt(pos++)];
+            if (code < 89) {
+                previous += code;
+                single[slot++] = previous;
+            }
+            else if (code === 89) {
+                let runLength = BASE91_INVERSE[input.charCodeAt(pos++)] + 2;
+                while (runLength--)
+                    single[slot++] = ++previous;
+            }
+            else {
+                const next = BASE91_INVERSE[input.charCodeAt(pos++)];
+                previous +=
+                    89 +
+                        // eslint-disable-next-line unicorn/prefer-minimal-ternary -- branches read a different number of side-effecting input bytes
+                        (next < 90
+                            ? next * base + BASE91_INVERSE[input.charCodeAt(pos++)]
+                            : BASE91_INVERSE[input.charCodeAt(pos++)] * 8281 +
+                                BASE91_INVERSE[input.charCodeAt(pos++)] * base +
+                                BASE91_INVERSE[input.charCodeAt(pos++)]);
+                single[slot++] = previous;
+            }
+        }
+    }
+    // Streams 1 & 2: atoms decoded into their slot ranges.
+    decodeDelta(dict1AtomCount, 0);
+    decodeDelta(dict2AtomCount, dictSize);
+    /*
+     * Streams 3 & 4 are read in two passes: first collect every ngram's two
+     * references and derive its expanded length (each ref resolves to an earlier
+     * slot, so lengths are already known), which sizes the shared pool.
+     * Pool ranges are handed out in decode order, so the second pass fills
+     * the pool contiguously with a single write cursor.
+     */
+    const references = new Int32Array(ngramCount * 2);
+    let poolSize = 0;
+    let ngramIndex = 0;
+    /**
+     * Read `count` ngram entries (each = 2 slot-code references) for the slots
+     * starting at `startSlot`, recording references and assigning pool ranges.
+     * @param count
+     * @param startSlot
+     */
+    function readNgramReferences(count, startSlot) {
+        for (let index = 0; index < count; index++) {
+            const slot = startSlot + index;
+            const a = readSlotCode();
+            const b = readSlotCode();
+            references[ngramIndex * 2] = a;
+            references[ngramIndex * 2 + 1] = b;
+            ngramIndex += 1;
+            start[slot] = poolSize;
+            const entryLength = (single[a] < 0 ? length[a] : 1) +
+                (single[b] < 0 ? length[b] : 1);
+            length[slot] = entryLength;
+            poolSize += entryLength;
+        }
+    }
+    readNgramReferences(ngramCount - dictSize + dict1AtomCount, dictSize + dict2AtomCount);
+    readNgramReferences(dictSize - dict1AtomCount, dict1AtomCount);
+    // Second pass: concatenate each ngram's two halves into the pool.
+    const pool = new Uint16Array(poolSize);
+    let write = 0;
+    for (let index = 0; index < ngramIndex; index++) {
+        for (let half = 0; half < 2; half++) {
+            const source = references[index * 2 + half];
+            const value = single[source];
+            if (value < 0) {
+                let read = start[source];
+                const readEnd = read + length[source];
+                while (read < readEnd)
+                    pool[write++] = pool[read++];
+            }
+            else {
+                pool[write++] = value;
+            }
+        }
+    }
+    // Stream 5: data. Each code expands to its slot's stored values.
+    const out = new Uint16Array(resultLength);
+    let outIndex = 0;
+    while (pos < inputLength) {
+        let slot = BASE91_INVERSE[input.charCodeAt(pos++)];
+        if (slot >= dictSize) {
+            slot =
+                slot * base -
+                    twoCharBias +
+                    BASE91_INVERSE[input.charCodeAt(pos++)];
+        }
+        const value = single[slot];
+        if (value < 0) {
+            let read = start[slot];
+            const readEnd = read + length[slot];
+            while (read < readEnd)
+                out[outIndex++] = pool[read++];
+        }
+        else {
+            out[outIndex++] = value;
+        }
     }
     return out;
 }
 
 // Generated using scripts/write-decode-map.ts
 /** Packed HTML decode trie data. */
-const htmlDecodeTree = /* #__PURE__ */ decodeBase64("QR08ALkAAgH6AYsDNQR2BO0EPgXZBQEGLAbdBxMISQrvCmQLfQurDKQNLw4fD4YPpA+6D/IPAAAAAAAAAAAAAAAAKhBMEY8TmxUWF2EYLBkxGuAa3RsJHDscWR8YIC8jSCSIJcMl6ie3Ku8rEC0CLjoupS7kLgAIRU1hYmNmZ2xtbm9wcnN0dVQAWgBeAGUAaQBzAHcAfgCBAIQAhwCSAJoAoACsALMAbABpAGcAO4DGAMZAUAA7gCYAJkBjAHUAdABlADuAwQDBQHIiZXZlAAJhAAFpeW0AcgByAGMAO4DCAMJAEGRyAADgNdgE3XIAYQB2AGUAO4DAAMBA8CFoYZFj4SFjcgBhZAAAoFMqAAFncIsAjgBvAG4ABGFmAADgNdg43fAlbHlGdW5jdGlvbgCgYSBpAG4AZwA7gMUAxUAAAWNzpACoAHIAAOA12Jzc6SFnbgCgVCJpAGwAZABlADuAwwDDQG0AbAA7gMQAxEAABGFjZWZvcnN1xQDYANoA7QDxAPYA+QD8AAABY3LJAM8AayNzbGFzaAAAoBYidgHTANUAAKDnKmUAZAAAoAYjeQARZIABY3J0AOAA5QDrAGEidXNlAACgNSLuI291bGxpcwCgLCFhAJJjcgAA4DXYBd1wAGYAAOA12Dnd5SF2ZdhiYwDyAOoAbSJwZXEAAKBOIgAHSE9hY2RlZmhpbG9yc3UXARoBHwE6AVIBVQFiAWQBZgGCAakB6QHtAfIBYwB5ACdkUABZADuAqQCpQIABY3B5ACUBKAE1AfUhdGUGYWmg0iJ0KGFsRGlmZmVyZW50aWFsRAAAoEUhbCJleXMAAKAtIQACYWVpb0EBRAFKAU0B8iFvbgxhZABpAGwAO4DHAMdAcgBjAAhhbiJpbnQAAKAwIm8AdAAKYQABZG5ZAV0BaSJsbGEAuGB0I2VyRG90ALdg8gA5AWkAp2NyImNsZQAAAkRNUFRwAXQBeQF9AW8AdAAAoJkiaSJudXMAAKCWIuwhdXMAoJUiaSJtZXMAAKCXIm8AAAFjc4cBlAFrKndpc2VDb250b3VySW50ZWdyYWwAAKAyImUjQ3VybHkAAAFEUZwBpAFvJXVibGVRdW90ZQAAoB0gdSJvdGUAAKAZIAACbG5wdbABtgHNAdgBbwBuAGWgNyIAoHQqgAFnaXQAvAHBAcUB8iJ1ZW50AKBhIm4AdAAAoC8i7yV1ckludGVncmFsAKAuIgABZnLRAdMBAKACIe8iZHVjdACgECJuLnRlckNsb2Nrd2lzZUNvbnRvdXJJbnRlZ3JhbAAAoDMi7yFzcwCgLypjAHIAAOA12J7ccABDoNMiYQBwAACgTSKABURKU1phY2VmaW9zAAsCEgIVAhgCGwIsAjQCOQI9AnMCfwNvoEUh9CJyYWhkAKARKWMAeQACZGMAeQAFZGMAeQAPZIABZ3JzACECJQIoAuchZXIAoCEgcgAAoKEhaAB2AACg5CoAAWF5MAIzAvIhb24OYRRkbAB0oAciYQCUY3IAAOA12AfdAAFhZkECawIAAWNtRQJnAvIjaXRpY2FsAAJBREdUUAJUAl8CYwJjInV0ZQC0YG8AdAFZAloC2WJiJGxlQWN1dGUA3WJyImF2ZQBgYGkibGRlANxi7yFuZACgxCJmJWVyZW50aWFsRAAAoEYhcAR9AgAAAAAAAIECjgIAABoDZgAA4DXYO91EoagAhQKJAm8AdAAAoNwgcSJ1YWwAAKBQIuIhbGUAA0NETFJVVpkCqAK1Au8C/wIRA28AbgB0AG8AdQByAEkAbgB0AGUAZwByAGEA7ADEAW8AdAKvAgAAAACwAqhgbiNBcnJvdwAAoNMhAAFlb7kC0AJmAHQAgAFBUlQAwQLGAs0CciJyb3cAAKDQIekkZ2h0QXJyb3cAoNQhZQDlACsCbgBnAAABTFLWAugC5SFmdAABQVLcAuECciJyb3cAAKD4J+kkZ2h0QXJyb3cAoPon6SRnaHRBcnJvdwCg+SdpImdodAAAAUFU9gL7AnIicm93AACg0iFlAGUAAKCoInAAQQIGAwAAAAALA3Iicm93AACg0SFvJHduQXJyb3cAAKDVIWUlcnRpY2FsQmFyAACgJSJuAAADQUJMUlRhJAM2AzoDWgNxA3oDciJyb3cAAKGTIUJVLAMwA2EAcgAAoBMpcCNBcnJvdwAAoPUhciJldmUAEWPlIWZ00gJDAwAASwMAAFIDaSVnaHRWZWN0b3IAAKBQKWUkZVZlY3RvcgAAoF4p5SJjdG9yQqC9IWEAcgAAoFYpaSJnaHQA1AFiAwAAaQNlJGVWZWN0b3IAAKBfKeUiY3RvckKgwSFhAHIAAKBXKWUAZQBBoKQiciJyb3cAAKCnIXIAcgBvAPcAtAIAAWN0gwOHA3IA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YwAAoN8i4SFycnCgtiEAoD0pgKIqImJjZG9zACsVMBU6FT4VQRVyImNhcAAAoEgqAAFhdTQVNxVwAACgRipwAACgSipvAHQAAKCNInIAAKBFKgDgKiIA/gACYWxydksVURVuFXMVcgByAG2gtyEAoDwpeQCAAWV2dwBYFWUVaRVxAHACXxUAAAAAYxVyAGUA4wAXFXUA4wAZFWUAZQAAoM4iZSJkZ2UAAKDPImUAbgA7gKQApEBlI2Fycm93AAABbHJ7FX8V5SFmdACgtiFpImdodAAAoLchZQDkAG0VAAFjaYsVkRVvAG4AaQBuAPQAkwFuAHQAAKAxImwiY3R5AACgLSOACUFIYWJjZGVmaGlqbG9yc3R1d3oAuBW7Fb8V1RXgFegV+RUKFhUWHxZUFlcWZRbFFtsW7xb7FgUXChdyAPIAtAJhAHIAAKBlKQACZ2xyc8YVyhXOFdAV5yFlcgCgICDlIXRoAKA4IfIA9QxoAHagECAAoKMiawHZFd4VYSJyb3cAAKAPKWEA4wBfAgABYXnkFecV8iFvbg9hNGQAoUYhYW/tFfQVAAFnciEC8RVyAACgyiF0InNlcQAAoHcqgAFnbG0A/xUCFgUWO4CwALBAdABhALRjcCJ0eXYAAKCxKQABaXIOFhIW8yFodACgfykA4DXYId1hAHIAAAFschsWHRYAoMMhAKDCIYACYWVnc3YAKBauAjYWOhY+Fm0AAKHEIm9zLhY0Fm4AZABzoMQi9SFpdACgZiZhIm1tYQDdY2kAbgAAoPIiAKH3AGlvQxZRFmQAZQAAgfcAO29KFksW90BuI3RpbWVzAACgxyJuAPgAUBZjAHkAUmRjAG8CXhYAAAAAYhZyAG4AAKAeI28AcAAAoA0jgAJscHR1dwBuFnEWdRaSFp4W7CFhciRgZgAA4DXYVd0AotkCZW1wc30WhBaJFo0WcQBkoFAibwB0AACgUSJpIm51cwAAoDgi7CF1cwCgFCLxInVhcmUAoKEiYgBsAGUAYgBhAHIAdwBlAGQAZwDlANcAbgCAAWFkaAClFqoWtBZyAHIAbwD3APUMbwB3AG4AYQByAHIAbwB3APMA8xVhI3Jwb29uAAABbHK8FsAWZQBmAPQAHBZpAGcAaAD0AB4WYgHJFs8WawBhAHIAbwD3AJILbwLUFgAAAADYFnIAbgAAoB8jbwBwAACgDCOAAWNvdADhFukW7BYAAXJ55RboFgDgNdi53FVkbAAAoPYp8iFvaxFhAAFkcvMW9xZvAHQAAKDxImkA5qC/JVsSAAFhaP8WAhdyAPIANQNhAPIA1wvhIm5nbGUAoKYpAAFjaQ4XEBd5AF9k5yJyYXJyAKD/JwAJRGFjZGVmZ2xtbm9wcXJzdHV4MRc4F0YXWxcyBF4XaRd5F40XrBe0F78X2RcVGCEYLRg1GEAYAAFEbzUXgRZvAPQA+BUAAWNzPBdCF3UAdABlADuA6QDpQPQhZXIAoG4qAAJhaW95TRdQF1YXWhfyIW9uG2FyAGOgViI7gOoA6kDsIW9uAKBVIk1kbwB0ABdhAAFEcmIXZhdvAHQAAKBSIgDgNdgi3XKhmipuF3QXYQB2AGUAO4DoAOhAZKCWKm8AdAAAoJgqgKGZKmlscwCAF4UXhxfuInRlcnMAoOcjAKATIWSglSpvAHQAAKCXKoABYXBzAJMXlheiF2MAcgATYXQAeQBzogUinxcAAAAAoRdlAHQAAKAFInAAMaADIDMBqRerFwCgBCAAoAUgAAFnc7AXsRdLYXAAAKACIAABZ3C4F7sXbwBuABlhZgAA4DXYVt2AAWFscwDFF8sXzxdyAHOg1SJsAACg4yl1AHMAAKBxKmkAAKG1A2x21RfYF28AbgC1Y/VjAAJjc3V24BfoF/0XEBgAAWlv5BdWF3IAYwAAoFYiaQLuFwAAAADwF+0ADQThIW50AAFnbPUX+Rd0AHIAAKCWKuUhc3MAoJUqgAFhZWkAAxgGGAoYbABzAD1gcwB0AACgXyJ2AESgYSJEAACgeCrwImFyc2wAoOUpAAFEYRkYHRhvAHQAAKBTInIAcgAAoHEpgAFjZGkAJxgqGO0XcgAAoC8hbwD0AIwCAAFhaDEYMhi3YzuA8ADwQAABbXI5GD0YbAA7gOsA60BvAACgrCCAAWNpcABGGEgYSxhsACFgcwD0ACwEAAFlb08YVxhjAHQAYQB0AGkAbwDuABoEbgBlAG4AdABpAGEAbADlADME4Ql1GAAAgRgAAIMYiBgAAAAAoRilGAAAqhgAALsYvhjRGAAA1xgnGWwAbABpAG4AZwBkAG8AdABzAGUA8QBlF3kARGRtImFsZQAAoEAmgAFpbHIAjRiRGJ0Y7CFpZwCgA/tpApcYAAAAAJoYZwAAoAD7aQBnAACgBPsA4DXYI93sIWlnAKAB++whaWcA4GYAagCAAWFsdACvGLIYthh0AACgbSZpAGcAAKAC+24AcwAAoLElbwBmAJJh8AHCGAAAxhhmAADgNdhX3QABYWvJGMwYbADsAGsEdqDUIgCg2SphI3J0aW50AACgDSoAAWFv2hgiGQABY3PeGB8ZsQPnGP0YBRkSGRUZAAAdGbID7xjyGPQY9xj5GAAA+xg7gL0AvUAAoFMhO4C8ALxAAKBVIQCgWSEAoFshswEBGQAAAxkAoFQhAKBWIbQCCxkOGQAAAAAQGTuAvgC+QACgVyEAoFwhNQAAoFghtgEZGQAAGxkAoFohAKBdITgAAKBeIWwAAKBEIHcAbgAAoCIjYwByAADgNdi73IAIRWFiY2RlZmdpamxub3JzdHYARhlKGVoZXhlmGWkZkhmWGZkZnRmgGa0ZxhnLGc8Z4BkjGmygZyIAoIwqgAFjbXAAUBlTGVgZ9SF0ZfVhbQBhAOSgswM6FgCghipyImV2ZQAfYQABaXliGWUZcgBjAB1hM2RvAHQAIWGAoWUibHFzAMYEcBl6GfGhZSLOBAAAdhlsAGEAbgD0AN8EgKF+KmNkbACBGYQZjBljAACgqSpvAHQAb6CAKmyggioAoIQqZeDbIgD+cwAAoJQqcgAA4DXYJN3noGsirATtIWVsAKA3IWMAeQBTZIChdyJFYWoApxmpGasZAKCSKgCgpSoAoKQqAAJFYWVztBm2Gb0ZwhkAoGkicABwoIoq8iFveACgiipxoIgq8aCIKrUZaQBtAACg5yJwAGYAAOA12FjdYQB2AOUAYwIAAWNp0xnWGXIAAKAKIW0AAKFzImVs3BneGQCgjioAoJAqAIM+ADtjZGxxco0E6xn0GfgZ/BkBGgABY2nvGfEZAKCnKnIAAKB6Km8AdAAAoNci0CFhcgCglSl1ImVzdAAAoHwqgAJhZGVscwAKGvQZFhrVBCAa8AEPGgAAFBpwAHIAbwD4AFkZcgAAoHgpcQAAAWxxxAQbGmwAZQBzAPMASRlpAO0A5AQAAWVuJxouGnIjdG5lcXEAAOBpIgD+xQAsGgAFQWFiY2Vma29zeUAaQxpmGmoabRqDGocalhrCGtMacgDyAMwCAAJpbG1yShpOGlAaVBpyAHMA8ABxD2YAvWBpAGwA9AASBQABZHJYGlsaYwB5AEpkAKGUIWN3YBpkGmkAcgAAoEgpAKCtIWEAcgAAoA8h6SFyYyVhgAFhbHIAcxp7Gn8a8iF0c3WgZSZpAHQAAKBlJuwhaXAAoCYg4yFvbgCguSJyAADgNdgl3XMAAAFld4wakRphInJvdwAAoCUpYSJyb3cAAKAmKYACYW1vcHIAnxqjGqcauhq+GnIAcgAAoP8h9CFodACgOyJrAAABbHKsGrMaZSRmdGFycm93AACgqSHpJGdodGFycm93AKCqIWYAAOA12Fnd4iFhcgCgFSCAAWNsdADIGswa0BpyAADgNdi93GEAcwDoAGka8iFvaydhAAFicNca2xr1IWxsAKBDIOghZW4AoBAg4Qr2GgAA/RoAAAgbExsaGwAAIRs7GwAAAAA+G2IbmRuVG6sbAACyG80b0htjAHUAdABlADuA7QDtQAChYyBpeQEbBhtyAGMAO4DuAO5AOGQAAWN4CxsNG3kANWRjAGwAO4ChAKFAAAFmcssCFhsA4DXYJt1yAGEAdgBlADuA7ADsQIChSCFpbm8AJxsyGzYbAAFpbisbLxtuAHQAAKAMKnQAAKAtIuYhaW4AoNwpdABhAACgKSHsIWlnM2GAAWFvcABDG1sbXhuAAWNndABJG0sbWRtyACthgAFlbHAAcQVRG1UbaQBuAOUAyAVhAHIA9AByBWgAMWFmAACgtyJlAGQAtWEAoggiY2ZvdGkbbRt1G3kb4SFyZQCgBSFpAG4AdKAeImkAZQAAoN0pZABvAPQAWxsAoisiY2VscIEbhRuPG5QbYQBsAACguiIAAWdyiRuNG2UAcgDzACMQ4wCCG2EicmhrAACgFyryIW9kAKA8KgACY2dwdJ8boRukG6gbeQBRZG8AbgAvYWYAAOA12FrdYQC5Y3UAZQBzAHQAO4C/AL9AAAFjabUbuRtyAADgNdi+3G4AAKIIIkVkc3bCG8QbyBvQAwCg+SJvAHQAAKD1Inag9CIAoPMiaaBiIOwhZGUpYesB1hsAANkbYwB5AFZkbAA7gO8A70AAA2NmbW9zdeYb7hvyG/Ub+hsFHAABaXnqG+0bcgBjADVhOWRyAADgNdgn3eEhdGg3YnAAZgAA4DXYW93jAf8bAAADHHIAAOA12L/c8iFjeVhk6yFjeVRkAARhY2ZnaGpvcxUcGhwiHCYcKhwtHDAcNRzwIXBhdqC6A/BjAAFleR4cIRzkIWls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ZmdobG1vcHJzdHV3CiwNLBEsHSwnLDEsQCxLLFIsYix6LIQsjyzLLOgs7Sz/LAotcgDyAAkDYQByAACgYykAAWNyFSwbLHUAdABlADuA+gD6QPIACQ1yAOMBIywAACUseQBeZHYAZQBtYQABaXkrLDAscgBjADuA+wD7QENkgAFhYmgANyw6LD0scgDyANEO7CFhY3FhYQDyAOAOAAFpckQsSCzzIWh0AKB+KQDgNdgy3XIAYQB2AGUAO4D5APlAYQFWLF8scgAAAWxyWixcLACgvyEAoL4hbABrAACggCUAAWN0Zix2LG8CbCwAAAAAcyxyAG4AZaAcI3IAAKAcI28AcAAAoA8jcgBpAACg+CUAAWFsfiyBLGMAcgBrYTuAqACoQAABZ3CILIssbwBuAHNhZgAA4DXYZt0AA2FkaGxzdZksniynLLgsuyzFLHIAcgBvAPcACQ1vAHcAbgBhAHIAcgBvAPcA2A5hI3Jwb29uAAABbHKvLLMsZQBmAPQAWyxpAGcAaAD0AF0sdQDzAKYOaQAAocUDaGzBLMIs0mNvAG4AxWPwI2Fycm93cwCgyCGAAWNpdADRLOEs5CxvAtcsAAAAAN4scgBuAGWgHSNyAACgHSNvAHAAAKAOI24AZwBvYXIAaQAAoPklYwByAADgNdjK3IABZGlyAPMs9yz6LG8AdAAAoPAi7CFkZWlhaQBmoLUlAKC0JQABYW0DLQYtcgDyAMosbAA7gPwA/EDhIm5nbGUAoKcpgAdBQkRhY2RlZmxub3Byc3oAJy0qLTAtNC2bLZ0toS2/LcMtxy3TLdgt3C3gLfwtcgDyABADYQByAHag6CoAoOkqYQBzAOgA/gIAAW5yOC08LechcnQAoJwpgANla25wcnN0AJkpSC1NLVQtXi1iLYItYQBwAHAA4QAaHG8AdABoAGkAbgDnAKEXgAFoaXIAoSmzJFotbwBwAPQAdCVooJUh7wD4JgABaXVmLWotZwBtAOEAuygAAWJwbi14LXMjZXRuZXEAceCKIgD+AODLKgD+cyNldG5lcQBx4IsiAP4A4MwqAP4AAWhyhi2KLWUAdADhABIraSNhbmdsZQAAAWxyki2WLeUhZnQAoLIiaSJnaHQAAKCzInkAMmThIXNoAKCiIoABZWxyAKcttC24LWKiKCKuLQAAAACyLWEAcgAAoLsicQAAoFoi7CFpcACg7iIAAWJ0vC1eD2EA8gBfD3IAAOA12DPddAByAOkAlS1zAHUAAAFicM0t0C0A4IIi0iAA4IMi0iBwAGYAAOA12GfdcgBvAPAAWQt0AHIA6QCaLQABY3XkLegtcgAA4DXYy9wAAWJw7C30LW4AAAFFZXUt8S0A4IoiAP5uAAABRWV/LfktAOCLIgD+6SJnemFnAKCaKYADY2Vmb3BycwANLhAuJS4pLiMuLi40LukhcmN1YQABZGkULiEuAAFiZxguHC5hAHIAAKBfKmUAcaAnIgCgWSLlIXJwAKAYIXIAAOA12DTdcABmAADgNdho3WWgQCJhAHQA6ABqD2MAcgAA4DXYzNzjCuQRUC4AAFQuAABYLmIuAAAAAGMubS5wLnQuAAAAAIguki4AAJouJxIqEnQAcgDpAB0ScgAA4DXYNd0AAUFhWy5eLnIA8gDnAnIA8gCTB75jAAFBYWYuaS5yAPIA4AJyAPIAjAdhAPAAeh5pAHMAAKD7IoABZHB0APgReS6DLgABZmx9LoAuAOA12GnddQDzAP8RaQBtAOUABBIAAUFhiy6OLnIA8gDuAnIA8gCaBwABY3GVLgoScgAA4DXYzdwAAXB0nS6hLmwAdQDzACUScgDpACASAARhY2VmaW9zdbEuvC7ELsguzC7PLtQu2S5jAAABdXm2LrsudABlADuA/QD9QE9kAAFpecAuwy5yAGMAd2FLZG4AO4ClAKVAcgAA4DXYNt1jAHkAV2RwAGYAAOA12GrdYwByAADgNdjO3AABY23dLt8ueQBOZGwAO4D/AP9AAAVhY2RlZmhpb3N38y73Lv8uAi8MLxAvEy8YLx0vIi9jInV0ZQB6YQABYXn7Lv4u8iFvbn5hN2RvAHQAfGEAAWV0Bi8KL3QAcgDmAB8QYQC2Y3IAAOA12DfdYwB5ADZk5yJyYXJyAKDdIXAAZgAA4DXYa91jAHIAAOA12M/cAAFqbiYvKC8AoA0gagAAoAwg");
+const htmlDecodeTree = /* #__PURE__ */ decodeTrieDict("!}.&u%}'&}*'~!6*)%&,~!J~!J~%L~y<~!R,~~%Lu~~#GD~~#|)1#%}^%}2%+#.##%##%}&%##%'#%##&%#%#'%#&#%#&#'#%%#&#%##%#)%''%&%#%#'%#%%#%%}%%%#%#&(23#%%#&-%0%('1#(##%#'##+%'*.:1}#%#6-+(%'%%#%%%}#L'2351&('%}&/N'(0(/*-%(%%}#'+&T%7.2}#&%&#%#36/5##%&%%#&#%%#))2%%##%&&'0~!#*+&'%1~!%).'3q?&%'1~!.##%6(~!+%%%(Gw'rT~!E#<nA%#jZ~!H%(~!42##~!*31&~!G%U~#)5~#`3~!J~!Z~%]~%Y~%C~!q~!u~#kz~%#~!6'~!D~!U~!?~#T~!c%~!G#'~%7|~!G~!J~!G&~#pb~(Df}#%}*&}#%##%##%##&#-}&'#'&%#.++}%mI,#,@&(}*%}*'%&##&#%##%}&0}#.},U},%}+%}&%}#%##&}B%(}(%}+%)})%##%#&}&%##%&}<%}>%#%&}*%}(%}9%}/%})%}*%}*%}?&}&%}3%}&*#%})%#%#)}#&#-#+*%E%%'%'#%}#*V##&##I}#&&##%&%#&&Qf%%))w/0+&%#(#.%-''''++++7}>%4'',##1,#%#&%##&#'##&#*#9)%&%}#*}%,#+P(%A&%#'&##wSD',9E00#y#@}(+}&%&>~!#~!X}#*}(&&}(&}(,%}%&#+&}#&}I%#%}%)#(},'%#*}4%%#%}(''}#/##(##),%-##%%)#&}(.}&%#&}%%}*&#%},&&}&%}#%*'#%})%}D&}&%}-&}6&#&}-,%}#%})-(~+`~,=?~I9'9%~!,#%})%})%}@%}?%}(~!?~#<~#pP~#BG~#=1#%K+~#?#~%;)~#A~#mF1~#A'~'X%'~#lR~#N~'N~#r~#m#-~#i'?%#'%~#B%##%,%#~#_%#0%~#]732~,w~2+#:&#%&'0%&>%}#>##F+)#%&&#(+_}4&}-%}(&}@&}O7Fdf0@+/v4}&WU##&/0#&'('B#%}.%}'+#%}#%%&#&%#%##+#&#)#6#'#.},%}c%},%#%##%&#&%#&~#>'*-.%##%##%}#%%}%'~#)D1}#%*&~#_%%'(~#S2%'.}#~#=##*'*-%}&'%'##&&~'E%.#&~#M4}%%##&'%#~#O1##%&#'+~#<B%##%%'%+~#;#@%}#&%#&&%#(~#H1}'%'##&&~#?A}&'~#D#%32}'&&&&~#[}'(#%}'~#;C})&}%%#%~#=&%,3}%'(#%%~#^'#&&)#%'~#Y%-~#d-%'~#^%%&#&&&}#~#b~2t*&'~&(~&@~0%~e~3}%*''0})&}+~!9##-}#%-hD*)1fC#%/&/fB#40~!+#)*4~!+~!K'&:~!/*7~!.#~!H~!L':~%x&~!H#~!*~%1~!I#~!+A~#p'~!F~~#-#~,,(~.Z~!V~%;'B'mq-W~!N~%I%#&&#&}#%},%%}'%}+X#%}#&}(%}'%}<%}#%}%%'}'%}:~![)9@~%>~#UA%-%##&~!C%~!-.9:~!1~!-^2/:a~!y,D*J#-5)/4~%23,~#G~!L1~!0X3`~!2+~!!0-~&E~!W~!o,>Y&]~%cZx_&~#O*9#A#'#+I'%#)~!0B*-5A+-((F&*M#)(-7-5+'-3a5Vi~!Y~!?+[)%3),ERHm~!+:D,VG.+)?fB%%*(%)'(#&80%1'8`K8?`+'Z#&O&'H5#*9)A%%5&3))0%39+.*7#()&&*=4@**L)<'_&*+..;(#*+)./&0#3)%')-8(4ixD(&.}%,('aI:,)%,k2231T)I'#/-W7,/'Q#.'Y24+h')37</31&83##&0#),H(?'&?/1##%#&&#%''-%&&&#(&''&#.-'%#%%(,')*'&#&#'##%(%(#%('#&##%%%%('%#%#%%#%#&%##h>w+v<ayvyvcg.uuhKr}g/v|g>u9i[~>g5uI~=RvdwEg;v/g;uk!!TTSx]@RT!U!#!@VBRUU!'UTe-d0c`e&gSdicedFcrdTaqb.kYcAohdYd@a3e+d}dMdtd.aJ#bqcK`dle/e.e'dwdPdodddjbEb}ogd^ofdpduc6j?l%d{drdqc)d7bacOdQ%T#Y)X.sR[yH>6Vyv3[xwLu>vo'!*.[yBacahoj>6Rew3[xqdZa#!a&#^(X-[yG>6Vyu3[xvg3sEr|g.u/Ri9db0T#^(Xa)!-[y;>6Vylg4wKs{JwNZt3@3r=c4Z([xlg;wKt!cpq's@v7A'*a(a+!-a#[y<3Dt?3Dt'>6Vym3[xmg9rxsNJwLZt4~?r?db1T#`-!(Xa,!0[yS>6Vz%NuQs.g4wKtnJwNZtS@3r>c4Z([y%g;wKtrdga8!a(!#&T*Y-Xa#!a0<or[yc3Dtq>6Vz43[y3JwNZtf@3s!Ju}!%Dti:pm3c_%X#tjB5pkd6q!r]u?voC'*-a.a2!0a&a+[yI3DtI3Ds~3DtH>6Vyw3[xx;:s#~<5pKJwNZtE@3r~d`a)!a2T#a.(!+U.X1[yT3Dt`3Dtv>6Vz&3[y&g9rxwzcxstPu.<rAJwLZtT~?r@dZa%!a.&^*Za(/Reu[ya>6Vz23[y1g3sEr}wkg{NuQRg{ci(U#5@b`~,cg#U(2WnH5wugcRh7dX#T(Y,a'Ta!!a,[yZ<]mj>6Vz,3[y+Pv#5ReZKu+=,%!H}7ABwkaS?Rh:BcW(X#<]mrj:ubv/ARekdg%!(!a.*Ta(Y.X1!#sP>Rl*Dt6[y>>6Vyo3Wf*jOvuumvuRgRJuq*!:9<B@bX~3jVv&v@s@5Re[d/rQt{uAvo&a&a*)a2!,0Wf!3Dt0=Bs'>6Re}3[xy~<5s%JwJZt1~Gs)c;&!#2sJkNuXvzq7rxu,Re8dka4!a8(aEZ+a@Y.X1Xa)[yd=Bs(3DtP>6Vz53[y4cX#X&Re:avRe9~<5s&JwJZtQ~Gs*i^rzvdRg+Jv{%!2sbB@bX}kdga,!Za?&^*T1/!a'Dt+[y6>6Vyf3Wf%g/u;s4hGu6?Rh-JvZ,!c%#&RoX54Rivj7uyvf8RgTKvZB%*!2sGh<vu5Rgq<=C::9bb~#dZ#T&Ta6Y.X*Dt>[y93Wf)coZ(T,6VyifluvRgC@95@B@bX~/hFu34cC#T,k/unq8w8Q5RkUklwQuzunq8w8Q5Rk8d/rJu?v8w9)-&!a0a;a&aIWejg3sEr/h1s<DtDJvyZqY5aws3Jvy!&Wei~Hr1:au5@Bag>23E~5c:Z&bX};kKv?w&unuVu5Rjc;>bs)#~@:Rh.=ay<a]C;b`}Vd6s/t{uAvoaxa()!a,a7%-a#a2Dt,[yF2Wo[>6Vyt3[xuNuPRi&NuPwpi#RoWh?vf8Ri%Jv]!%Ri:KvxD!.'2WeAjZu`q9rxu,Re7woeAg-unLq(qA_/*2Wg_g3u5q^9:4E}/jTrxrzv=Wkkd~0UX#^^Xa-a1a5T&a=U1a'*aEa]!a*aPaA-adok[y54Rn>;:p3~Dp5g9rpsFNvZqjg3uJp4~<5p0Pw;5qlJwNZt*@3p1Pw:5p/Ou!5p2JvG'!6Vye=<qnJvh_[xhg3v,Rh3kOwOw-sDuev/Re^dha[a%!%!a+#Ta7)-5TaCaO!aka!a)sf[yb2>Rl!9ARiq5E}Qg=ucRkBE|oJrJ_@Wk~@Wk{JrJ_@Wk|@WkyJrJ_@Wk}@WkzJvO_[y2g-vMRmiKuYC!)&>Ri;>Ri<@3RkNc](X#@9Rk=g5vuRmhKvDB!+'=]meg3u4Rmgd)#Y'Vz3CARmfd`a+!%T'!+#Ta1Ta6TaM-sTDt9[yA9sYd'%Y#s[[xpj:ueunaXRgEjRq,v-vuqdd2'`#6Rev<32@5>:2<E}5xIo9a*X#Y(;5RePJvD_g>vyRgNj8w)v8<wggs:RgXiZt|vjx,hSq3ah!-(~@:Ro/Ou!5RhWj^v(pyw8unRhUdx-UY#^Ua.a3a70!)%UX1TaDa)'omRiRRhE[y:3Dsz=Br,>6Vyj3[xkg6ruwjcqsrPw;5r*Ku]D'Zt-@3r(~?r.i[vwv]dU1a--U#`a4(g/vsRhPOu!5RhLj:rmu9Wo!~@:wdh@g/vsRiTjXuvvNr}:RhBj^v(pyw8unRn]dz1UYa'a+^Y(!aETZalaRY.Ta?a4[yDJw1!#qLsW>6Vyrfzq-pLflpwRe|Js>%!Dt@3Dt&Jvy_[xs~HrnjMuwpsw'RecKu+D#'!t<~Grl~?rjg5u-x,gwp{ah!-(~@:Rg~Ou!5Rh'jXuvvNr}:Rh#cW#X/c;&!#2sLi[v7u7RgpJv)(!iLrxu,Re6j7v@s@5Se[e7d`aW!Za(a`T.a#!a3!&aDa-!9)Dt_=6s+3[x~~DR|h~DS6avhGun5RkZj3w)v-]mkKunB!&*]kb97R|i<ARk<c:Z(6Vy}Juh'!wziMRoS:F|vkLuauJv5vtvQRh1d='T+Y#VyO~DR|jcF#T'7R|g97R|kJv3'!ay<Rj,Jvh&!:ReXcsa6*a+#a#_aIRf9aLRf?c,Z&Rf5Rf7c.Z&Rf;Rf>cQ#%T'p-Rf8Rf=ct#%'(*!,p,Rf4p+Rf6Rf:Rf<d~'Ua%U*^UYa(!a,-!#a4YaTalaEX0a8a<Weo3Dt/3Dsx=Br93Wen~Dr;~<5p<JwNZt2@3p=Pw:5p;Ou!5r3c7&!#:p>3Ds}KvGB)_6Vyk2sM=<r7x'eovA(!hFu1ARf}cV#X&@r5j6rvwQa^Rf3c=Za'wkghJv__g;unRggA53B9=b^}%j6uduo5Jq;!(hIv%2Re`Ou4ARe_e%a#^^^Xa&!a*a2!&a6YaP!*ad!#a:aE/5Rn?[y@>6Vyp;:pE~DrY~<5pBJwNZt8@3pCh=rt3rWPw:5pAJup_[xoNuPpF9c!#'45pD5ARn)d8#X'X*3@rU72s]h>v<<sSjJpqvewOJq/(!hNw'5ReBk0s2u3w/w'5ReE5@Jq.!a+JQ!&WeU23d(#Y&RjG5]jBk!u7w&u0udARjEe#+^^^Ub#!a2/a`Z(agT1!a-a;|@TaG!aS[yV=Re~fow'RguNuPRe?bz#'>RoUWeL>:Cbb|?JwPZtVg6ruRmzJvD'!6Vz(g/vmRh~Jvy_[y(g9voRgyx*cy(#2>Ri2B9b]~9kIw9u7rluJu3Rg]dI#a%UY'@=p%CAx.gQZ&RhwwygtRm{x5g_Z'+ABqR9Woa=Bp&dV#^*Xa'!&@o{g4v]Rk;Jv{!%Rk[wkkiA5RkiwwfUB=x,fUuqC&*!>RfTg8v0RfV~ARfSd;rJsAuAv9wR'ae+/aO!a@aza/a#[yQ@Wg!2Wemg3sEr0JvB_g>uvReWg2v+Re=KupB_+[y!2AbY~-~Hr2AJwD!(h<~El>h<~El?Kun@+_:9b`}Kg-v/Ri3g;vtwyk_9]k_d=&T#*U.6qh@Ab`|K9:H|CJv[!&3Dtex'fDwC%!Rf[9WlMd[(^X,!a%Z06Vz!@WgBg=v~Rgvg,QRe@awd,#Y+jTv|Q~EfWj]uNr|~FRfXdy#Y&^Ua%!aO.!(a)Ua;=!a@aKap!a-,a!Ta]a[rSa]p?[y82sK=Bq~;:p:~<5p8Pw:5p7d'#Y'Wf(;RnRi[u4w&RgJJvG'!6Vyh=<r#ijuuv/sIKuYD'ZtG@3p9~Gr&d2#`(g<vtRgFj`u5w&rqpxRf2CJuY!+:wfnTOu!5Rg}jNs1ucv&RfwJvA!&3@q|BDcC#T,k/unq8w8Q5RkTklwQuzunq8w8Q5Rk9dga#!a'!a=#a0!:+Tb*b@aO.a4!aba8aFJv^}?!VyR~Dr<g;u%Rn.~<5p[x'e`wNZtR@3p]Pw:5pZhNvjBp.woe_g5u-r4JwF!%DtO3:ooc7&!#:p^3DtpLuGw(!+%)Dtk6Vz#2sd=<r8d'#Y([y#<x3gJt`w@!)%}MRiowzikRij=]ilxAf3,U(#B2Rf#g0v-Rm[ck{`U#]giKv3>)!&6Ri154s,KuGB_%@r68r:dJ|t`#X(9<E|u2@H|rx3gJu?w'!+'1Nu7Reg4=H~+9<wxgY95Rm]xLggZ-`(X}U2:Ri4h<uOawRmsJv__5@bb{jbV~3dka#a'a]!,#a+U=a>b6a3b%!/aKa/)!arwve^VyJ;:pR~DpTg3uJpS~<5pOPw;5qmPw:5pNOu!5pQJvG'!6Vyx=<qoJvA!{~Jup!%@qk7Rn/KvyD!}''[xz;>wkh'?Rh,x8gyt`w5D!&),(SgyccRgztJ@3pPB5p#d'(Y#<]mmifubw&RgoJvE&!82s^JvF&!8Rf,ADb]~;x=h'rNu]vK!,%'*0RnORh)4Rh*AqQg-vaRnNg;wHwkh'ba~4cE#Ta*x3gctyw@'!+%RnFRnD<4Rn@hFvK5RnCxWg[#`&a0Ua()`1Rm75Rg[c]%X#qi8Rg^NvdRj>BwzgZauwji7Rm6A4wgg]d1#&(*,.0a#Rm;Rm<Rm=Rm>Rm?Rm@RmARmBe%#^^^Xaea?aC/b+(,!a+a#!a/!>a&Ta<aKbD!2wphBRnk[yPw}hE|.=Br-3Dtm>6Vy~g6urRf.x,hPrNav!%'RnqRo%Ro#Nu;q[Pw;5r+JwNZtM@3r)d'#Y'Weh;xChL#`&RnmRnoKu}>%(!Rne~Bs-;2wjcussJv+'!aYSO}6@B<5?ba~8LrNvj!.%*ROwungw~ng~:9;Ri^>wtnig;wHRnixDh@|(UZ.x1h@|)!#:2<H|*xHn]#-UX'3Ro)z=iT}6ARns=Bwsn_wpnaRncw]aR(#UXa&Ua*a/=]iPd'#Y&Ro'WnXf{QRm2hNvj]nZd`'T~&1`{|`#9b]{}c:'!#Wl{>@=be}]?cl{{U#:5Abb}Jds#^YaF!a*b4a#a3aPa>&Tb!bH!*a_!Eau?/a&RjY<]gj>6Vz*;:pe~DrZg,QRj1JwNZtX@wihspcJvZ&!VyX9WmOJu|!|N2WmHJvh&!]ht~Bpbcn&T(!#RmQ<s7Nu;padH#X'`+WmJ@>RmKCARhnKup=!)&Wf+:RhqNuPpf9c!#'45pd5AwghpARn(Ls@w!%,)!RmP@Wfe<E|IJva!&WmNg8vsRmLd`*.`#Y'Xa!axRn*]hrA8Rhug5s@rXg8u!RmMd8#X'X*3@rV72smdI*#UY&RmICARho~GsgxVgd)Ta'U-Y&Xa!T#RnEWnA@Wffg1uDRi0hFvK5RnBxGnG&#`%owp)@wsf+bX}Ze-*1!a*^^^Ua|!#a.aq&Ya2!a>.a6!a:aO`aJDtL[y`@Wg#>6Vz12@wzoYRoZNuPRi!NuPRhzg=ucRi,@=b`{Yg=ucRi-ACJvB!&Sh[ebSh]ebi`wUuFRm4Jw2_[y0JvB!.<Ju(!&SoG}6Shd}6<Ju(!&SoH}6She}6Kur@._g5vHRieJvx!{L2G{Kx6gd'T#?Rh82Wi5cZ#X(g1w)Rm5dW-Y(Ta#!a)!#aYa=wnfE=su2>>bU{0j9udv:<svj8uQv-7RgHdE%#^'sq9sp=>Bb_{TJv`!&g/r|snj6v(us5d,#Y(56H}[978H}]Jw5!&g1rushJvB!+j;v{u5?zDhd}6}bj;v{u5?zDhe}6}ce*#`(^^^a[aea!=!a6a*aoXb1a.!aAbL!b>,b'aL!aV@Wf|2Wlg3[y/JwNZt^@3piPw:5pgJunZou3@rsJva&!Vy_g<v~Rm#JvG'!6Vz0=<r{Ju{%!:pj@WfsiXuJu3Rm:JvZ&!WfA~Bph@c4Z&Dtwax5rubx(#:awRk1@d,#Y&RfjRfid1#,Y(@Wfp2Wlrg5s@ryKu[@!,'=]ig9wlk?Rk>g5u-rqJvy'!@9RkQcH(T#=>Ri~@<wkj(Wj(KuZB*!&<7rw@9RkRcH(T#=>Ri}@<wkj)Wj)dg(Ta2Xa9X#`-!a*CARhg@@=I}d9x;c~#X%so=<sj>2@@=aybb}XjWv0Q~EfEj3vLv;<d,#Y(56H}`978H}_dgaPaFa'a/!#a3Y0a_a;a|!1(a7-[yE3[xt;:pJNvZrrg3uJrvJwNZt=@3pIh=rt3rxPw:5pGOu!5rpJvG'!6Vys=<rz@c4Z&Dt(ax5rtJvZ!&~BpH@wsfNg-vaRlNci*U#=<wei<F}a5@Jq.!a*JQ!%@qZ23d(#Y&RjH5]jCk!u7w&u0udARjFd/prq=tyvpaEa(a:.!a1aZ(@@=I}:9wpd%=<sX55w_h}@@=I{t=ay<aU@@=I}T=ay<2@@=I})?C9:9au@9Cb]}DP~=x-fAZ(2Wl1=ay<aU@@=I}>5@d##Y+jTv|vV~EfFj]uNpn~FRfGdgaK!Z2&!a8a-Tb({E!acTbM*!a(DtY[yYd'%Y#sl[y*hHvh>Re5x2c{Z}.j4uCvcawRiMd+#X+_x&d!},<5RkX;2Hzw@x,gavfB-!{CcF&T#Roe;RodwWbBg5urRgaKvHC*_6Vz+<4opieuew&Rmq@d]&Y)X,T#X0Rh}<BqP=4qS9:ReMg/ujReNJw0!/<Jui%!bd{kawwnemRelAxUa?a3#*.&UX(Ya+a/RhvRnQ<o}9Wmtd-#Y&RgSRmw9;Rmxay=Rmyg-vaRmuxEhSrNu,v-voC!%(aR.a(a7+1Ro1>Ro5CE{A9b]{@;5x#eO{:g;urRi+KrNA!%(Ro3>Ro79;Ri_Ku@>{;&!x%gX|{KunA_+g5QRj/g3u5Rj#g>uERj%wio/xRhS&!,!#^1U}wba{8>>@=be}qC@:D5ba{7Ku+A&!}x?ba}t>>@=be}se(aA^^^Uat!b0#{pa+awUazbGa#aLb9bgaWac'a5TbS=Br!d1#`%scp_Jvl!#rT>Re0JvX&!VyN=H{Fcm#U&:pY=ReaJv2&!]h0=]nUJvG'!6Vy|=<r%JrM_=]h2@Wlud'#)U'Wf'b]{i=]h/Jvh!&~BpWg=v]RnMx+ny#'Nu;pVwjnu=]nwxJnx,T#`&Reqwjnt=]nvieu9vrRjLLuYwP(#+!th@wih5pX~Gr'g5v/Rh4KunA'!-CARnP@wwiN:Rm_9x'cvw>!|l=<saKvAA!0&3@q}>w^e1bp#&Re2Re3BDx7gH#T|f5H|eKuZ>!%(:qNAH{]Jv6!+3B2B9=b^{X<5<B92:E{ZLvhwA(a;a%!igQuyRmad+#Y}m@3Rh5d8#X'X*:AqUAHzmaxwbh<aXRnVcF}RT#Nw&cj#U(BWnug/vsRntdka)(a3+.Zb7aYYan1!bVa@Xa}[y^@b[{G=H{+hFu73Rj&Pv#5ReQcK%T#sig1v{Rj'Ku+D#'!t]~Grm~?rkKuMB!01d5#`'Vy.ta3Dtu~Hroc8#'{^45s85AwZbP&!#Rn!wghxWn#KvEA!)&2RlA2RlBx:h|#(T,=]j09Wobz>x]z/@awRoTd+#Y(az]hFhCrm4d,#Y+jTv|Q~EfMj]uNr|~FRfOdCa!Xa9_X#@<plJvf!%b`{(9;Rgwc;.!#2x7cw#T|UDb]|T5Ju={(!=@E{&Jv)&!Ab`{'awJvf!~*>>@=be{#KuY>!+&4Ezyi[ugv&RjIdea+T)#UXa&T-T&a!Rh9auRmW=]kLg5vuRn+g3u4Rn-Ow6ARn,hHus5xNk?#UX(U~)/g8v0RkD~AwkkF?Ri.OuNBwkkA?Ri/d|a2`a*^UYa.!aBTZaTa'Xa;!(!2!-a#b2[yC>6Vyq3[xr2Wi?g1rusVh%s?DtF~<5rbJs;%!DtBfswKtCj[uvuSsEu3RgVx3o:u+wN'*Zt;@3rd~Grh~?rfg8w)Lq)qE&-a%!>bI|`jWv0vV~EfCjTv|vV~Ef@j]uNpn~FRfBcK#T']gWNu7x,k7q4ai(0!hHv8<RhmkMu9vrsBuev/RhlCJvB!,g<v{wchh~@:Rhji[vrv{wchi~@:RhkdS&a5UY#Ta!RgPwwiI5BwciI~@:Rh`x'iJvj'!5]iJPu8Bwch]~@:Rhach)U#h3rp]gLh@t|Ax,hTq3ah!-(~@:Ro0Ou!5RhXj^v(pyw8unRhVd|)`,^UYas!a?/a2Z'a^Ta{Tb7Ta(a#!a,Wf&9sZ3DtAadamov=Bqt3[xig8vsRm~>waiL2b`{QJv*_Ouv2qgj<v]v2BqfdR'X*X#Y-@3qr~Gqv~?p6hHv-]glPup5Lq+q?_%*b_{qF{n9b^{rOu4ARhpKvCD!+&~Bqp:5Dbb}nwoiKl&unuTuBv]v+ueunaXRf0=Jvh!0nKufu8v1w&w7q%w&uHrz:Rgnj5w,uxDJq/(!hNw'5ReCk0s2u3w/w'5ReFd>Za&!*UaA=<wkgsRnSJv^!%Refifw3vyRgOKu_B'!,<]gkiiu:w&Rh<=C@a^<B57@2F{[<B5@aW:=3away9A5aW=<B=C@a^<B57@2F{Ie-#`(^^^bCara.b8aza6!/bZ,!adTbnTbOb+aFaS!aAT9@Wf~2Wli3Dtl2@d,#Y&RfnRfmJwJZtN~GqyJva&!VyMg<v~Rm%iXuJu3Rm9Jv[_=]ih9wlkDRkCd1#`(@Wg>2Wls3cH#T(@<Rj*=>Ri|b~'#23s9h<~El.d'#Y&Dtxi^rzvdRl#d*#U%(o|B2s`hJwSaxRmDKv4B&!1:Rmdd5#`'Vx}to~Hq{x'f1v3(!BA5ba|bJv_&!Wfug1v]ReIdO+U/Y#&G}-8wze=Rh{g1v]ReHg/uQRf/by#)ibQwERl/cH#T(@<Rj+=>Ri{cNu+vlax-!(#a0qa9<Rii2;;bU{H;x<i=&X#Rk`<4wwi=C9H~8xAI(Y#<azRi@45wXI<B9;5bb~7dL(X#Xa(+!aL6Vy{g5QqOau:5au2@ay547EzbxOcU(UX-T#Ta#:Cbb|A?wjh/b_|SOw6ARgtihr}u7Rhy<d1#T)X1@@=I|~=ay<2@@=aybb}Sj3vLv;<d,#Y(56H}A978H}@dGpvs@uAu`vcw9*!aFa+ai%(b!aXa8.a?a[ozWey=sU2@G}Nch&U#Rf_WexKu+D#'!t:~Gr`~?r^j]uNr|~FRg*j^psurwJt|RmcKv)@&!)7Rkv~Br[@wxfO:Rl3co#U'6Rezj_q#vIuavjRltwzeyh@vr5JqD0!>aY?C9:9au@9Cb]}9cl#U*5;5<H||jbuus1ucv&Rfvg1v~d/pppzqFr^a--a~!aMat1(hFv;Wiz@@=Izoj5uuv-7Rix~Cw`fk2WlVcZ#X,k)u3vWs@u2]ktg;wEx'fBq(_2Wg/jTv|vV~EfoJv]!15x'hzqG!(P~EfU~CRl_j6v(us5x4i-#T(2WmZ?C2F|d>Kq<aj1!*jTqIsBv=Wl`~Cw`fi2WlWj`v0u*~>RlR=c>Z,k#u3vWs@u2]kr<c1Z+jTqIsBv=Wla~Cw`fm2WlXdmb3!a{(arZa`bkTa%TbQTa-a9+c'!aM!/[yL=Bqug.w'RifhFvyDRj.g>vgwyk^9]k^Jv3_@WfbAARkhJw2_[x|JvB_wkoIRoKwkoJRoLd'(Y#<]gm=<9<H|yd'%_X#skDtb3awwqkgNulRkgdB#^',9:p'hJwSaxRmEBwVb8@4=H|qLu+w50&!)@3qs~?pU>Awwn;;Rn=c:Z'ARn<=<qwKvC@!/&~BqqJv6!&]eVb^z^xRge'/a%+^`#Sge}6<4Rn3=]n0Pw2>Rn8Jw0!&>Rn:>Rn6cY#a7+!a&=<wkaNw~h3z_c5Z{=wjh#=]nLKv^D!&)Vyz=bW|swYb<WetcG#T(2wxa@qVx@gD#Y&b^|V5JwG&!5bb|pg/w&RgD@x=kHs=uAvn!a%%/'+RmSRh694Ro`g-vaRmRhHv-]mlxCcS#`&ba~.5cD#Ta)P~=d,#Y(56H{>978H{Dd_#{2^Y%_+qbbb{6g3sERhsbU{?dfa.,`a(Xa<!aiX#(55RiG54RiHcI#T'WiU3RiVNvdwtfcRlKNvdd,#Y&RlHRlExQgf.1*^T'X#Sgf}6Wn4=]hfPrk>Rn7Jw0!&>Rn5>Rn9Lunw?&a2!,5<oq@@wqfdRlJj5Q~=d,#Y(~ARfcOuN]fdDKw;ay(}i!547E}j?cI#T(@5bV}iCbV}hdv(^^Tb?a40,b##Tbo!a*bR!a<b|a/!aKai!aU[yK=]o^g:v>ReGJwPZtK<7Rh+h<~El,Pv#5ReR@awwxjCg,ulRjDJv6&!]j!z?aQeeg>w=Sh<eeJw;!&axEzOg,Qosc!#*:wkeJ]eJ>x'h-u(!%Ro.w~h.zPdNZ(X,Ya![x{;9ReY;wkgxRiF:x?ap#Y&RmUg<s2Rkod]+UY0TZ'!a&A9sw<=bczLNvuw{gqzNhJwSaxRmCKuLay!#&s_Rf-55b^{uJvZa!!c%#(55Ri654wmiu5RiuawLu,vp!+}^%b_}Y9;wkgxba}o>A9:=b^}zKuh=a''!3awRk3c*'!#aHRk6c+Z&Rk5Rk4Jv)&!awRjSawd9*`#0?C2@EzMj8u<uJ5RmbjQrquJu3x,k>uq@_+=ayb^|W~ARkEOuN]k@7dhzV^X/X&a-#zRzSb`zXcJzTT#2WkVKvDBzW!%FzY9;5bbzWjQrquJu3Jw3%!b`zU=ayb^zQd:#X(T-a!6Vyywxh}=b]{Jg=u1RiAdGp~qHtzv!w(wA+a+a;<!aJaYai'anasb(=azRmV:Cbb{MLq2vb!%')RjuRjrRjtRjqx3jnqCw3!%')Rk(Rk+Rk&Rk)Lq2vb!%')Rj{RjxRjzRjwLq2vb!%')RjsRjpRjfRjex3jcqCw3!%')Rk'Rk*RjkRjl9<CbbzfOu4ARhxLq2vb!%')RjyRjvRjhRjgx=joq*uKvb!%')+-Rk.Rk%Rj~Rk-Rk#Rj}x=jdq*uKvb!%')+-Rk,Rk!Rj|RjmRjjRjidAq&qKs@uAv8Aa.'*-a@a&0!aM@a5[y73Dsy3Ds|3Dt):wxgI2sHJwJZt.~Gqxwsf0ikrzt}Rl0Jvy_[xj~HqzKv_A|D!&WfP8axRoVcf,U#k(v]v+ueunaXRf1Ju}'!g8u#Ri=jQw!sCunLprq>!,')~<5qeGzq9F{W=c##%s5au:5aU3CBE|;d4#X(D!a&6Vygx(b;#(=]ed?C2F{N<capoq2r[a&!aPa9,'Pw;5s:@@=I|,55w_h|@@=IzcP~=x'fCqB_2Wl2>aU@@=I|1OuNBc1Z+jTqIsBv=Wlc~Cw`fl2WlZ~AcTa%!Z+jTqIsBv=Wlb~Cw`fh2WlYk+uNqJsBv=WlSg,u3dca3#UXaMYa)TaB-=cM|7T#<bI}l5@B932:aV2G{BOuNBJq:|M!5Ezt=<B=C@a^<B57@2F{v>cB{/T#=ay<bI{3Jv6!a.6BKq0ah&+!5E}HP~Ef{978BaU@@=Iza<7d#.Y#978BaU@@=IzH~AJq0!(@@=IzG978BaU@@=IzFe,aU*Y&^^^bvJb,b:bFad!a,c2Ta>aL.bo6!a#CbTa'T#Re{2Wlh2@G{yg6t~Ro_NvdRfticuRQRllJv3&!x&c|zs@Jw3!%RflwpfkRlpKuL;%(!Re<@G|C2GzdhIvuBwgjAg-u0RjAKQB%!(GzZ@G|5NuuRl7d='T+Y#Vy[g<v~Rm!==G|>JvA!)@wma=]m1ifuaw&RmnLs@vT'!|/+[y,g:v>ReTJw1!#qX=x!eC{bLu+wT&)ZtZauq_~Graci&U#F|89:r_Lupvq!.)&2RlG8RfaC=x!eF{_h?rpWlmd&'!#X|&]k::xJey#`'T|+<E|&2@H|%dE#(^,g;u.RiEg6vjRiC9xCkA{O|zY#g=ucRmXKs0@!&*@G|m@awRknJuh!,3d(}gY}eJvj!%Rm):Jw3!%Rm+Rm-Ls0w(&!a(a#@b[|6cZ#X'7RkxWgAOu4ARn'dH'U#Y*Vz-Wm'CARm}d]*#a%^a*T'aK!a<9bV{PC=p*Jw4!&SgxcbB5r]idw(wBRmF7xFkt#&`(Rm/Rm8E|!JuY_9:Rl5=wrgr2:bbxd@xXfB(a*#T+!.X0X1Ta/a'T&RlDRfL>RlyARl9b[z[>RfZ:RlL:RfRwlg/ARl;9;RlxKv,A/!%7s69<74=BA5ba{-8Bde#`a<XaKYa1,a'P~=wxfB2bZ}}?C972@@=I}r8@55B9;5bb}G978B2@@=aybb}3j3vLv;<Jw3&!>Rfk=ayb^}4~Ad1#`*@@=aybb{w2@>==<bbz]dx+UY#^UaF!a9!bB'Ya1.!ajXa#%olRhD[y=3Dt#Ov5BrHKuMB%!(Rf^Wep~HrJwkiQjKr|~FRg)Ku+D#'!t5~GrF~?rDdV)UY,Z/_7RkuG{<~BrBg,rlsO:235B@bX}|d?a1!#`(6Vyn5@d##Y+jTv|vV~EfIj]uNpn~FRfH7Lq2vb1!a9-978BaU@@=Iz9978BbU}#~AJq0!(@@=Iz8978BaU@@=Iz7~AJQ|}!978BbU}!JvkaK!AdUa21-U#`a+(g/vsRn~Ou!5RPj:rmu9WhOjXuvvNr}:RhAj^v(pyw8unRn[kPr}p|u7vwv]RiSBd;pppzq@qHQa?(b.!a.a`@.|xa(hFv;Wiyj5uuv-7Riw~Cw`fg2WlU978BbU|wOuNBJqG!(P~EfD~CRlQcZ#X,k)u3vWs@u2]ksg;wEx'f@q1_2Wg.j]uNpn~FRfqJv]!15x'h{qG!(@@=IzK~CRl^j6v(us5x4i,#T(2WmY?C2F{1>Kq<aj1!*jTqIsBv=Wld~Cw`fj2Wl[j`v0u*~>RlT=c>Z,k#u3vWs@u2]kq<c1Z+jTqIsBv=Wle~Cw`fn2Wl]dn1#c(a(b^a2!b/bAT(bj!aDa7bu,a_a{c0!2T0g:v>ReD2@G{42@G{5~DpM~<5rc=Bx6i>{RT#RnI@zCx]y]z:2Jv[!zr5Awyk]9]k]dD(Y+X#6Vz.g=wKtgwhaCwgmTWj2Lu,w%_+/[y-B;b^xeg3u3Rj-2@bX{*KrJ<!+'@Wg(g?QRlC@Jv`!%b[zIwsfII}8JQ_@w|kW|=Jv(%!AqcOuNBJvEzh!bYzjLs@wP#(0!oy@>RkdJwMZtc3Dtd@BcG#T'9bWxg2@2Fznd*#Y+;2x'c}w<zizixNgwa#Z'U+!/!a'!a+w~g~z6wcn{Rn}wcnzRn|5Rh%=]nJg5vuRmvNvdRlvcprJu}w*az*a#!%.a.'Bot9qT]kj@Wg'ay2Gzv@Jv`!%b[zEwsfHI}1;ck#Ux`<Cbbx_Lu+w!a&0*!wko*wwo,So,}6Juqxf!E}PigQuyRm`d3(`#8>Rn%:A5B;bZ~%KvhCa!a2!x>k7#Uxb@b{#xaRk7Jw0!)>wwhlShl}6>wwhmShm}6CJvB!.x'hhvj{!!5Bwkhhbaz}x'hivjz~!5Bwkhibaz|xEhTrNu,v-vpD!a%&/)a3a.,%Ro2t[CE{)@3re9b]{%wjo09:rgc:Z&Ro6=<riifuaw&RmoKrNA!%(Ro4>Ro89;Ri`dSaL'UYzxZb)7Rka3xRhT&!,!#^1U}vbaz{>>@=be}yC@:D5bazzKu+A&!}{?ba}y>>@=be}wxBh[t`u~vJvr!%a!a()a,a0a4RoC=]o;Ju(!%RoGRhdwjh`=]oAg>w#Ro?g5vuRo=NvdRl|Ku]C.!&;RoEJvB!%RoORoMBx'h[v+_?w~h`}~5?w~hd~!xKh]oiptu-utv.vp!#%&a30a@a'a+(a/aOp(o~p!RoDJu(!%RoHRhewjha=]oBNvdRl}g>w#Ro@g5vuRo>c[#X']o<CauRoRAd-#Y':RkpauRoQKu]C.!&;RoFJvB!%RoNRoPBx'h]v+_?w~ha}t5?w~he}ue!/UbhYacXaW^Tc&a;b:a-c/#b&aja1(!cL+!bKbt!bmcRc9aIc?8[yW3Dtt94Rg`Jv}!&SiRMzBhEebShEMNuPRe>x7gL#TzuwjirRipc<Z&>on;>z=h-MSh.Mwqczx'a7vj&!>Re4@=ResJt__NuPRi*NuPRi)j]uNr|~FRfzKrJ>_+@Wfy@Wf]2WocKrJ<!+'@Wg%g/QRl@@Jv`!&awRl<wsfFIzgLu(w*!.*&ShBMwvhIRhI9;RhNx1hK'!#Sn]Mx1hK~0!#:2<H~7cNu+w7D*'1ZtW>Rn1~?rOc:Z&Rn2=<rQ<7wjh&=BSnLMc]#X(6Vz)w[b=a!U#9wzgMc3#&(RgMRitRis<x,gKt`ax!&+SioM=BSilMc3#&(RgKRinRimKurB,!&SiQMzBhDebShDM6BJQ!(P~Efx978B2@@=I}WLrJw!!,a*&@G}O@9wkibRid@@x'fKwC!&SlDMSfLMjUv~Q~EfKKv3@a+!(hFv-]mpx/hYZ(C5RiWz<o/MwkhY?So/M@x,gbvfB*&!SgEM:SoeeehFu3:Rgbda(,^TZa)X/7Sg[eb:2RgI~BrMC@wgkc:wwkcRerx3h(uUvK!&*,SnOM4Sh*MArRg;wHRh(x=h;rJvPwI!a4',a'0@Wg&=BSh/Mg>w=Rh=g3w*wwgGRgGcW(X#;Sg}M2Gzk@Jv`!&awRl=wsfGIz`dKZ*T'Y-:RhR7RhQg5u-p`j6v(us5d,#Y+~Awkia?RicOuNBwkibba}Ld6p~tyu_vbAa'a+!a/'a3aEa8a!>Sh,ebJv{!&Sh@ebSaReb9;SgwebNuPRi(NvdRl)NuPRi'hHu^<Rm^Jvv_@Wl(g;u1Si/ebKu'B&!*Sh?eb@Wl'z@aPeb95Si.ebcpputyvjB)!,&a+0a%ShAMWeK@G}C@WfJ9;RhMwvhH9w{ia}ix,hJvRA1(!zAn[MRhHx1hJ~*!#hFv(BSn[MBJQ!(@@=I~'978B2@@=I}2db.Ua<'X}+T#a0XaG2G}E;wkg|wuh!Rh!x,hZu,@)!&So0MVy)C5RiXACJvB!&5RiY5RiZg8w)cG}*T#2@bU}=KsA>(!a.3wkhZba~(x,h^u(A!&(SoCMRhb5Bz=h[eb?w~hb~6x,h_u(A!&(SoDMRhc5Bz=h]eb?w~hc~6e)aA1T#T,^^^c-bMb&blcPaP(a/!0!bA=b5c@a(!bfbrc#2afwmhARnjwchORnp2Wlf3DtsNvdRl-2@wpa<]m0bx(#:awRk2@Jw3!%RfhwpfgRlnKQB%!(G{V@G|'NuuRl6d='T+Y#VyUg<v~Rl~==G|<Jv+'!aYShC}6@B<5?ba~8@Jw3'!g2QRljhLrpWlOd+#Y'g.w'rIg>w*wgj@g-u0Rj@Lu+wT&)ZtUauq]~GrGci&U#F|39:rELrNvj!.%*RhCwunfw~nf~:9;Ri]>wtnhg;wHRnhx3hDs@v~!/+'@Wfr@9RkSNu&Rlo=@<5GzoKs0@_+@Wl+@awRkmJuh!-3d(}pY#qWJvj!%Rm(:Jw3!%Rm,Rm*de&!1U-U#`)Re;@G|.@9Ri82@wjfvRlq=@<5GzpLvOvr!).&2RlF8Rf`C=x!eE{.Jw3_g2QRlkhLrpWlPde(!#U{s,UXa*Ta'[y'g:v>ReS;x0PZ&RnlRnn~HrKJw1}f!=x!eB|2w]aP(#Xa&a*Ta.Ua2a7=]iOd'#Y&Ro&WnWg;u.RiDg6vjRiBNvdRlzhNvj]nYJuW_2Wm3x)kFze{9d])!a.!,Y01!#&aC!a3RndC=ox~BrC@2b^{pg,rlse7x'ksuq!%Rm.E{xidw(wBRmGx9o+)X#wwo-So-}69:Rl4@xSf@a#XZ'X)X,Ta(/ARl8b[xc>RfY:RlI:RfQwlg.ARl:9;Rlwdn'#^XafaQa1X1TaHTa)@b[{zcZ#X'7RkwWg@Ou4ARn&x)kG#{,g7u/RkGdH'U#Y*Vz'Wm&CARm|bx#(A]gUbUzJj9Q~=d,#Y(56H}l978H{U7d,0#U*2>ABb_xZ978BbU{e~AJQ{g!978BbU{hxMh?ad{oUYZ.x1h?{l!#:2<H{mx3n[t{vl!,&a%3Ro(z=iS}6ARnr=Bwsn^wvn`Rnbd`*T}B0!#^X'BG{c9b]{a>>@=be}F?JvS!&BG{d7BG}(Bde#`a1X,Ya@!a'P~=wxf@2bZ}I56B2@@=aybb}08@55B9;5bb}<j3vLv;<Jw3&!>Rfg=ayb^}&OuNBKuLA!)a!P~=x#fD{f2@>==<bbzl?C972@@=Ix^d6rSu,v7w*C(0a)a6#B+a%!sQ[y?3Dt%3[xn~<5rLOu!5p@Ku+D#'!t7~GrP~?rNKvlaya7'!h+v-5qMg=t|cd,U#5AAaa5Abb{S@52B5@a[@52B5Gx[iXueu;d<#`a(!/549C;ag>23ExY5@Dah89b^~689Jv)!~2b[~1Lv'w(%*!a#bX|aPrmawRe]keu7uhv-q6rxu,q`xTo]/a5aU!bNaDXbi!b-!ao!b<bwA!#5@B932:aV2G|:d-)Y#hJrL>RhG<7@C5<H|_=Cau:5aj5@B932:bJ|ng>vIbs)#?C2F|9jPv0w.vISh-MKvUaz(.!9ABbb|[5;5<H|Eg>unwfh;9:4E|YjQsBt|vjx'hYq3!(?C2F|J:2<BaY?C2F|GOu!5x,g|p{ah!-(?C2F|c9:4E|OjXuvvNr}:Rh&i[w*t|cd+U#jJvsu)vsSn~Mkfrmu9p}u7vwv]So!McW#Xa!ax5@A5aY:5;5<H|>kJv~vYrquJu3x4ib#T)2@SmZM?C2F|Bj:rmu9@xPhI(a*a#U#`a3-5Abb|L~@:RhK9:4E|0@52B5G|#C::aY?C2F|-:2<BaY?C2F|.5Jvk!a)javYrquJu3x4ia#T)2@SmYM?C2F|HAxPhH(!a#U#`a*-5Abb|4~@:RhJ9:4E|R@52B5G|F:2<BaY?C2F|Sc^#Xa2j=Qq5CJvB!-g<v{z;hhM?C2F|Zi[vrv{z;hiM?C2F|XKsA>!a)-g<v{z;h[eb?C2F|]i[vrv{z;h]eb?C2F|^iZu.vix,hZq3ah!.(?C2F|QOu!5ShXM:2<BaY?C2F|P", 13_494, 2713, 49, 25, 61);
+
+// Generated using scripts/write-decode-map.ts
+/** Packed XML decode trie data. */
+const xmlDecodeTree = /* #__PURE__ */ new Uint16Array([
+    512, 26_465, 29_036, 7, 0, 2, 4, 116, 24_638, 116, 24_636, 8693, 29_807,
+    24_610, 621, 1, 0, 0, 3, 112, 24_614, 111, 115, 24_615,
+]);
 
 /**
  * Bit flags & masks for the binary trie encoding used for entity decoding.
  *
- * Bit layout (16 bits total):
- * 15..14 VALUE_LENGTH   (+1 encoding; 0 => no value)
- * 13     FLAG13.        If valueLength>0: semicolon required flag (implicit ';').
- *                       If valueLength==0: compact run flag.
- * 12..7  BRANCH_LENGTH  Branch length (0 => single branch in 6..0 if jumpOffset==char) OR run length (when compact run)
- * 6..0   JUMP_TABLE     Jump offset (jump table) OR single-branch char code OR first run char
+ * The trie is a flat `Uint16Array`. Every node starts with one header word:
+ *
+ *   15..14 VALUE_LENGTH   Number of words the value occupies, +1.
+ *                         0 = no value; 1 = value inline in bits 12..0;
+ *                         2/3 = value in the 1/2 words after the header.
+ *   13     FLAG13         If VALUE_LENGTH > 0: semicolon required ("strict"
+ *                         entity; `;` is never stored as a branch).
+ *                         If VALUE_LENGTH == 0: this node is a compact run.
+ *   12..7  BRANCH_LENGTH  Number of branches (or run length for runs).
+ *   6..0   JUMP_TABLE     Jump-table offset / single-branch char / first
+ *                         run char (see below).
+ *
+ * Branch data follows the header and any value words. Its shape is selected
+ * by (JUMP_TABLE, BRANCH_LENGTH) in the header:
+ *
+ *   Single branch  JUMP_TABLE = the only child's char, BRANCH_LENGTH = 0.
+ *                  No branch words; the child node follows immediately.
+ *   Jump table     JUMP_TABLE = first covered char (> 0), BRANCH_LENGTH =
+ *                  table length. One word per covered char: 0 = no branch,
+ *                  otherwise the child's offset from the END of the table,
+ *                  +1 (so 0 stays the no-branch sentinel).
+ *   Dictionary     JUMP_TABLE = 0, BRANCH_LENGTH = number of branches.
+ *                  ceil(n/2) words of sorted keys packed two per word
+ *                  (low byte first), then n pointer words storing the
+ *                  child's offset from the END of the branch data.
+ *   Compact run    VALUE_LENGTH = 0, FLAG13 set. BRANCH_LENGTH = run
+ *                  length (3..63), JUMP_TABLE = first char; remaining run
+ *                  chars packed two per word after the header. The target
+ *                  node follows the packed words immediately.
+ *
+ * Pointers are end-relative (rather than relative to the pointer's own
+ * position) because that makes the common "child encoded right after the
+ * branch data" case a small constant, which compresses far better. Offsets
+ * to already-encoded (shared) nodes wrap via uint16 modulo arithmetic; the
+ * decoder masks navigation results with `& 0xff_ff` to match.
  */
 var BinTrieFlags;
 (function (BinTrieFlags) {
@@ -3993,46 +4184,46 @@ var BinTrieFlags;
     BinTrieFlags[BinTrieFlags["FLAG13"] = 8192] = "FLAG13";
     BinTrieFlags[BinTrieFlags["BRANCH_LENGTH"] = 8064] = "BRANCH_LENGTH";
     BinTrieFlags[BinTrieFlags["JUMP_TABLE"] = 127] = "JUMP_TABLE";
+    /** Bits 12..0: the inline value of a VALUE_LENGTH = 1 header word. */
+    BinTrieFlags[BinTrieFlags["VALUE_MASK"] = 8191] = "VALUE_MASK";
 })(BinTrieFlags || (BinTrieFlags = {}));
 
 var CharCodes;
 (function (CharCodes) {
+    CharCodes[CharCodes["AMP"] = 38] = "AMP";
     CharCodes[CharCodes["NUM"] = 35] = "NUM";
     CharCodes[CharCodes["SEMI"] = 59] = "SEMI";
     CharCodes[CharCodes["EQUALS"] = 61] = "EQUALS";
     CharCodes[CharCodes["ZERO"] = 48] = "ZERO";
     CharCodes[CharCodes["NINE"] = 57] = "NINE";
     CharCodes[CharCodes["LOWER_A"] = 97] = "LOWER_A";
-    CharCodes[CharCodes["LOWER_F"] = 102] = "LOWER_F";
     CharCodes[CharCodes["LOWER_X"] = 120] = "LOWER_X";
-    CharCodes[CharCodes["LOWER_Z"] = 122] = "LOWER_Z";
-    CharCodes[CharCodes["UPPER_A"] = 65] = "UPPER_A";
-    CharCodes[CharCodes["UPPER_F"] = 70] = "UPPER_F";
-    CharCodes[CharCodes["UPPER_Z"] = 90] = "UPPER_Z";
 })(CharCodes || (CharCodes = {}));
 /** Bit that needs to be set to convert an upper case ASCII character to lower case */
 const TO_LOWER_BIT = 0b10_0000;
+/**
+ * Unsigned subtraction trick: (code - lo) >>> 0 wraps negatives to large
+ * values, so a single `<=` covers the entire [lo..hi] range check.
+ * @param code Code point to check.
+ */
 function isNumber(code) {
-    return code >= CharCodes.ZERO && code <= CharCodes.NINE;
+    return (code - CharCodes.ZERO) >>> 0 <= 9;
 }
 function isHexadecimalCharacter(code) {
-    return ((code >= CharCodes.UPPER_A && code <= CharCodes.UPPER_F) ||
-        (code >= CharCodes.LOWER_A && code <= CharCodes.LOWER_F));
+    return ((code | TO_LOWER_BIT) - CharCodes.LOWER_A) >>> 0 <= 5; // F - a
 }
-function isAsciiAlphaNumeric$1(code) {
-    return ((code >= CharCodes.UPPER_A && code <= CharCodes.UPPER_Z) ||
-        (code >= CharCodes.LOWER_A && code <= CharCodes.LOWER_Z) ||
-        isNumber(code));
+function isAlpha(code) {
+    return ((code | TO_LOWER_BIT) - CharCodes.LOWER_A) >>> 0 <= 25; // Z - a
 }
 /**
  * Checks if the given character is a valid end character for an entity in an attribute.
  *
  * Attribute values that aren't terminated properly aren't parsed, and shouldn't lead to a parser error.
  * See the example in https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state
- * @param code Code point to decode.
+ * @param code Code point to check.
  */
 function isEntityInAttributeInvalidEnd(code) {
-    return code === CharCodes.EQUALS || isAsciiAlphaNumeric$1(code);
+    return code === CharCodes.EQUALS || isAlpha(code) || isNumber(code);
 }
 var EntityDecoderState;
 (function (EntityDecoderState) {
@@ -4061,17 +4252,42 @@ class EntityDecoder {
     decodeTree;
     emitCodePoint;
     errors;
-    constructor(
-    /** The tree used to decode entities. */
+    /** The current state of the decoder. */
+    state = EntityDecoderState.EntityStart;
+    /** Characters that were consumed while parsing an entity. */
+    consumed = 1;
+    /**
+     * The result of the entity.
+     *
+     * For named entities: the trie index of the best legacy match so far
+     * (0 = none). For numeric entities: the accumulated code point.
+     */
+    result = 0;
+    /** The current index in the decode tree. */
+    treeIndex = 0;
+    /**
+     * Characters consumed since the last recorded legacy match, plus one.
+     * Invariant at the top of the `stateNamedEntity` loop: `excess` equals
+     * the number of unrecorded consumed characters + 1.
+     */
+    // biome-ignore lint/correctness/noUnusedPrivateClassMembers: False positive (read via destructuring)
+    excess = 1;
+    /** The mode in which the decoder is operating. */
+    decodeMode = DecodingMode.Strict;
+    /** The number of characters that have been consumed in the current run. */
     // biome-ignore lint/correctness/noUnusedPrivateClassMembers: False positive
+    runConsumed = 0;
+    constructor(
+    /** The predefined HTML or XML decode tree. */
     decodeTree, 
     /**
      * The function that is called when a codepoint is decoded.
      *
-     * For multi-byte named entities, this will be called multiple times,
-     * with the second codepoint, and the same `consumed` value.
+     * For named entities that decode to multiple code points, this will
+     * be called multiple times, with the second codepoint, and the same
+     * `consumed` value.
      * @param codepoint The decoded codepoint.
-     * @param consumed The number of bytes consumed by the decoder.
+     * @param consumed The number of characters consumed by the decoder.
      */
     emitCodePoint, 
     /** An object that is used to produce errors. */
@@ -4080,25 +4296,6 @@ class EntityDecoder {
         this.emitCodePoint = emitCodePoint;
         this.errors = errors;
     }
-    /** The current state of the decoder. */
-    state = EntityDecoderState.EntityStart;
-    /** Characters that were consumed while parsing an entity. */
-    consumed = 1;
-    /**
-     * The result of the entity.
-     *
-     * Either the result index of a numeric entity, or the codepoint of a
-     * numeric entity.
-     */
-    result = 0;
-    /** The current index in the decode tree. */
-    treeIndex = 0;
-    /** The number of characters that were consumed in excess. */
-    excess = 1;
-    /** The mode in which the decoder is operating. */
-    decodeMode = DecodingMode.Strict;
-    /** The number of characters that have been consumed in the current run. */
-    runConsumed = 0;
     /**
      * Resets the instance to make it reusable.
      * @param decodeMode Entity decoding mode to use.
@@ -4116,7 +4313,7 @@ class EntityDecoder {
      * Write an entity to the decoder. This can be called multiple times with partial entities.
      * If the entity is incomplete, the decoder will return -1.
      *
-     * Mirrors the implementation of `getDecoder`, but with the ability to stop decoding if the
+     * Mirrors the non-streaming `decodeWithTrie`, but with the ability to stop decoding if the
      * entity is incomplete, and resume when the next string is written.
      * @param input The string containing the entity (or a continuation of the entity).
      * @param offset The offset at which the entity begins. Should be 0 if this is not the first call.
@@ -4142,7 +4339,8 @@ class EntityDecoder {
             case EntityDecoderState.NumericHex: {
                 return this.stateNumericHex(input, offset);
             }
-            case EntityDecoderState.NamedEntity: {
+            default: {
+                // NamedEntity — the only remaining state.
                 return this.stateNamedEntity(input, offset);
             }
         }
@@ -4155,6 +4353,7 @@ class EntityDecoder {
      * @param offset The current offset.
      * @returns The number of characters that were consumed, or -1 if the entity is incomplete.
      */
+    // eslint-disable-next-line unicorn/consistent-class-member-order
     stateNumericStart(input, offset) {
         if (offset >= input.length) {
             return -1;
@@ -4170,49 +4369,67 @@ class EntityDecoder {
     /**
      * Parses a hexadecimal numeric entity.
      *
-     * Equivalent to the `Hexademical character reference state` in the HTML spec.
+     * Equivalent to the `Hexademical character reference state` in the HTML
+     * spec. Digit parsing matches the hex loop in `parseNumericEntity`.
+     * The accumulated value is preserved for numeric validation callbacks.
      * @param input The string containing the entity (or a continuation of the entity).
      * @param offset The current offset.
      * @returns The number of characters that were consumed, or -1 if the entity is incomplete.
      */
     stateNumericHex(input, offset) {
-        while (offset < input.length) {
+        const inputLength = input.length;
+        // Local accumulators; flushed before any exit (see stateNamedEntity).
+        let { result } = this;
+        let { consumed } = this;
+        while (offset < inputLength) {
             const char = input.charCodeAt(offset);
             if (isNumber(char) || isHexadecimalCharacter(char)) {
                 // Convert hex digit to value (0-15); 'a'/'A' -> 10.
                 const digit = char <= CharCodes.NINE
                     ? char - CharCodes.ZERO
                     : (char | TO_LOWER_BIT) - CharCodes.LOWER_A + 10;
-                this.result = this.result * 16 + digit;
-                this.consumed++;
-                offset++;
+                result = result * 16 + digit;
+                consumed += 1;
+                offset += 1;
             }
             else {
+                this.result = result;
+                this.consumed = consumed;
                 return this.emitNumericEntity(char, 3);
             }
         }
+        this.result = result;
+        this.consumed = consumed;
         return -1; // Incomplete entity
     }
     /**
      * Parses a decimal numeric entity.
      *
-     * Equivalent to the `Decimal character reference state` in the HTML spec.
+     * Equivalent to the `Decimal character reference state` in the HTML
+     * spec. Digit parsing matches the decimal loop in `parseNumericEntity`.
+     * The accumulated value is preserved for numeric validation callbacks.
      * @param input The string containing the entity (or a continuation of the entity).
      * @param offset The current offset.
      * @returns The number of characters that were consumed, or -1 if the entity is incomplete.
      */
     stateNumericDecimal(input, offset) {
-        while (offset < input.length) {
-            const char = input.charCodeAt(offset);
-            if (isNumber(char)) {
-                this.result = this.result * 10 + (char - CharCodes.ZERO);
-                this.consumed++;
-                offset++;
+        const inputLength = input.length;
+        // Local accumulators; flushed before any exit (see stateNamedEntity).
+        let { result } = this;
+        let { consumed } = this;
+        while (offset < inputLength) {
+            const digit = input.charCodeAt(offset) - CharCodes.ZERO;
+            if (digit >>> 0 > 9) {
+                this.result = result;
+                this.consumed = consumed;
+                return this.emitNumericEntity(digit + CharCodes.ZERO, 2);
             }
-            else {
-                return this.emitNumericEntity(char, 2);
-            }
+            result = result * 10 + digit;
+            consumed += 1;
+            offset += 1;
         }
+        this.result = result;
+        this.consumed = consumed;
         return -1; // Incomplete entity
     }
     /**
@@ -4240,7 +4457,9 @@ class EntityDecoder {
         else if (this.decodeMode === DecodingMode.Strict) {
             return 0;
         }
-        this.emitCodePoint(replaceCodePoint(this.result), this.consumed);
+        this.emitCodePoint((this.decodeTree === xmlDecodeTree
+            ? replaceCodePointXML
+            : replaceCodePoint)(this.result), this.consumed);
         if (this.errors) {
             if (lastCp !== CharCodes.SEMI) {
                 this.errors.missingSemicolonAfterCharacterReference();
@@ -4248,6 +4467,29 @@ class EntityDecoder {
             this.errors.validateNumericCharacterReference(this.result);
         }
         return this.consumed;
+    }
+    /**
+     * Flush locally-tracked walk state back to the fields, then emit the
+     * recorded legacy match or reject (cold path — at most once per
+     * entity). Called after failed navigation (leaf node, branch miss, or
+     * compact-run mismatch). In attribute mode, reject if no legacy was
+     * recorded at the current node, if we descended past it, or if the
+     * pending input character is an invalid attribute terminator.
+     * @param consumed Locally-tracked consumed count.
+     * @param excess Locally-tracked excess count.
+     * @param char Pending input character (may be the mismatching char).
+     * @param valueLength Value length at the current trie node.
+     */
+    flushAndEmitLegacyOrReject(consumed, excess, char, valueLength) {
+        this.consumed = consumed;
+        this.excess = excess;
+        return this.result === 0 ||
+            (this.decodeMode === DecodingMode.Attribute &&
+                (valueLength === 0 ||
+                    excess > 1 ||
+                    isEntityInAttributeInvalidEnd(char)))
+            ? 0
+            : this.emitNotTerminatedNamedEntity();
     }
     /**
      * Parses a named entity.
@@ -4259,97 +4501,167 @@ class EntityDecoder {
      */
     stateNamedEntity(input, offset) {
         const { decodeTree } = this;
-        let current = decodeTree[this.treeIndex];
-        // The length is the number of bytes of the value, including the current byte.
-        let valueLength = (current & BinTrieFlags.VALUE_LENGTH) >> 14;
-        while (offset < input.length) {
-            // Handle compact runs (possibly inline): valueLength == 0 and SEMI_REQUIRED bit set.
-            if (valueLength === 0 && (current & BinTrieFlags.FLAG13) !== 0) {
-                const runLength = (current & BinTrieFlags.BRANCH_LENGTH) >> 7; /* 2..63 */
-                // If we are starting a run, check the first char.
-                if (this.runConsumed === 0) {
-                    const firstChar = current & BinTrieFlags.JUMP_TABLE;
-                    if (input.charCodeAt(offset) !== firstChar) {
-                        return this.result === 0
-                            ? 0
-                            : this.emitNotTerminatedNamedEntity();
+        const inputLength = input.length;
+        const isStrict = this.decodeMode === DecodingMode.Strict;
+        /*
+         * Local copies of the resumable walk state avoid per-character
+         * field writes. They are flushed back to the fields
+         * on every exit (chunk end, and before any emit helper that reads
+         * them). `this.result` is only written at the (rare) record points,
+         * so it stays a direct field write.
+         *
+         * Legacy-match recording happens in two idempotent places: at the
+         * loop top when sitting on a value node, and in the chunk-end
+         * epilogue (so `end()` sees matches that land exactly on a chunk
+         * boundary). Recording applies `consumed += excess - 1; excess = 1`,
+         * which is a no-op when repeated — the loop-top invariant is
+         * `excess` = unrecorded consumed characters + 1.
+         */
+        let { treeIndex } = this;
+        let { excess } = this;
+        let { consumed } = this;
+        let current = decodeTree[treeIndex];
+        while (offset < inputLength) {
+            /*
+             * Descend through value-less jump-table nodes (including the
+             * single-branch encoding) inline, mirroring `decodeWithTrie`:
+             * this avoids a `determineBranch` call per level for the
+             * dominant node shape — including the root on the first write.
+             */
+            while ((current &
+                (BinTrieFlags.VALUE_LENGTH | BinTrieFlags.FLAG13)) ===
+                0 &&
+                (current & BinTrieFlags.JUMP_TABLE) !== 0) {
+                const char = input.charCodeAt(offset);
+                const jumpOffset = current & BinTrieFlags.JUMP_TABLE;
+                const branchCount = (current & BinTrieFlags.BRANCH_LENGTH) >> 7;
+                if (branchCount === 0) {
+                    // Single branch encoded inline in the jump offset bits.
+                    if (char !== jumpOffset) {
+                        return this.flushAndEmitLegacyOrReject(consumed, excess, char, 0);
                     }
-                    offset++;
-                    this.excess++;
-                    this.runConsumed++;
+                    treeIndex += 1;
                 }
-                // Check remaining characters in the run.
-                while (this.runConsumed < runLength) {
-                    if (offset >= input.length) {
+                else {
+                    const slot = char - jumpOffset;
+                    if (slot >>> 0 >= branchCount) {
+                        return this.flushAndEmitLegacyOrReject(consumed, excess, char, 0);
+                    }
+                    const stored = decodeTree[treeIndex + 1 + slot];
+                    if (stored === 0) {
+                        return this.flushAndEmitLegacyOrReject(consumed, excess, char, 0);
+                    }
+                    // End-relative: branch data ends at treeIndex+1+branchCount.
+                    treeIndex = (treeIndex + branchCount + stored) & 0xff_ff;
+                }
+                current = decodeTree[treeIndex];
+                offset += 1;
+                excess += 1;
+                /*
+                 * `charCodeAt` past the end returns NaN, which would alias
+                 * to slot 0 after `>>> 0` — bail out explicitly.
+                 */
+                // eslint-disable-next-line unicorn/no-break-in-nested-loop
+                if (offset >= inputLength)
+                    break;
+            }
+            if (offset >= inputLength)
+                break;
+            // Handle compact runs (resumable across chunks).
+            if ((current &
+                (BinTrieFlags.VALUE_LENGTH | BinTrieFlags.FLAG13)) ===
+                BinTrieFlags.FLAG13) {
+                const runLength = (current & BinTrieFlags.BRANCH_LENGTH) >> 7; /* 3..63 */
+                let { runConsumed } = this;
+                // If we are starting a run, check the first char.
+                if (runConsumed === 0) {
+                    const char = input.charCodeAt(offset);
+                    if (char !== (current & BinTrieFlags.JUMP_TABLE)) {
+                        return this.flushAndEmitLegacyOrReject(consumed, excess, char, 0);
+                    }
+                    offset += 1;
+                    excess += 1;
+                    runConsumed = 1;
+                }
+                // Check remaining characters in the run (packed two per uint16 word).
+                while (runConsumed < runLength) {
+                    if (offset >= inputLength) {
+                        this.treeIndex = treeIndex;
+                        this.excess = excess;
+                        this.consumed = consumed;
+                        this.runConsumed = runConsumed;
                         return -1;
                     }
-                    const charIndexInPacked = this.runConsumed - 1;
-                    const packedWord = decodeTree[this.treeIndex + 1 + (charIndexInPacked >> 1)];
-                    const expectedChar = charIndexInPacked % 2 === 0
-                        ? packedWord & 0xff
-                        : (packedWord >> 8) & 0xff;
-                    if (input.charCodeAt(offset) !== expectedChar) {
+                    const charIndexInPacked = runConsumed - 1;
+                    const packedWord = decodeTree[treeIndex + 1 + (charIndexInPacked >> 1)];
+                    const expectedChar = (packedWord >> ((charIndexInPacked & 1) << 3)) & 0xff;
+                    const char = input.charCodeAt(offset);
+                    if (char !== expectedChar) {
                         this.runConsumed = 0;
-                        return this.result === 0
-                            ? 0
-                            : this.emitNotTerminatedNamedEntity();
+                        return this.flushAndEmitLegacyOrReject(consumed, excess, char, 0);
                     }
-                    offset++;
-                    this.excess++;
-                    this.runConsumed++;
+                    offset += 1;
+                    excess += 1;
+                    runConsumed += 1;
                 }
                 this.runConsumed = 0;
-                this.treeIndex += 1 + (runLength >> 1);
-                current = decodeTree[this.treeIndex];
-                valueLength = (current & BinTrieFlags.VALUE_LENGTH) >> 14;
+                treeIndex += 1 + (runLength >> 1);
+                current = decodeTree[treeIndex];
+                // Loop top handles the landed-on node (record/emit/branch).
+                continue;
             }
-            if (offset >= input.length)
-                break;
+            // Header plus out-of-line value words; 0 means no value.
+            const valueLength = current >>> 14;
             const char = input.charCodeAt(offset);
-            /*
-             * Implicit semicolon handling for nodes that require a semicolon but
-             * don't have an explicit ';' branch stored in the trie. If we have
-             * a value on the current node, it requires a semicolon, and the
-             * current input character is a semicolon, emit the entity using the
-             * current node (without descending further).
-             */
-            if (char === CharCodes.SEMI &&
-                valueLength !== 0 &&
-                (current & BinTrieFlags.FLAG13) !== 0) {
-                return this.emitNamedEntityData(this.treeIndex, valueLength, this.consumed + this.excess);
-            }
-            this.treeIndex = determineBranch(decodeTree, current, this.treeIndex + Math.max(1, valueLength), char);
-            if (this.treeIndex < 0) {
-                return this.result === 0 ||
-                    // If we are parsing an attribute
-                    (this.decodeMode === DecodingMode.Attribute &&
-                        // We shouldn't have consumed any characters after the entity,
-                        (valueLength === 0 ||
-                            // And there should be no invalid characters.
-                            isEntityInAttributeInvalidEnd(char)))
-                    ? 0
-                    : this.emitNotTerminatedNamedEntity();
-            }
-            current = decodeTree[this.treeIndex];
-            valueLength = (current & BinTrieFlags.VALUE_LENGTH) >> 14;
-            // If the branch is a value, store it and continue
             if (valueLength !== 0) {
-                // If the entity is terminated by a semicolon, we are done.
-                if (char === CharCodes.SEMI) {
-                    return this.emitNamedEntityData(this.treeIndex, valueLength, this.consumed + this.excess);
+                // Record a legacy match (FLAG13 clear = semicolon optional).
+                if (!isStrict && (current & BinTrieFlags.FLAG13) === 0) {
+                    this.result = treeIndex;
+                    consumed += excess - 1;
+                    excess = 1;
                 }
-                // If we encounter a non-terminated (legacy) entity while parsing strictly, then ignore it.
-                if (this.decodeMode !== DecodingMode.Strict &&
-                    (current & BinTrieFlags.FLAG13) === 0) {
-                    this.result = this.treeIndex;
-                    this.consumed += this.excess;
-                    this.excess = 0;
+                /*
+                 * Implicit semicolon handling: emit immediately. Covers both
+                 * strict (FLAG13 set) and legacy entities — neither stores
+                 * an explicit `;` branch in the trie.
+                 */
+                if (char === CharCodes.SEMI) {
+                    return this.emitNamedEntityData(treeIndex, valueLength, consumed + excess);
+                }
+                /*
+                 * `valueLength === 1` packs the codepoint into the header
+                 * word's low 13 bits, where branch metadata also lives. Skip
+                 * the branch lookup on leaves so those value bits aren't
+                 * reinterpreted as branch offsets.
+                 */
+                if (valueLength === 1) {
+                    return this.flushAndEmitLegacyOrReject(consumed, excess, char, valueLength);
                 }
             }
-            // Increment offset & excess for next iteration
-            offset++;
-            this.excess++;
+            // Value-bearing or dictionary node: dispatch through determineBranch.
+            const next = determineBranch(decodeTree, current, treeIndex + (valueLength || 1), char);
+            if (next < 0) {
+                return this.flushAndEmitLegacyOrReject(consumed, excess, char, valueLength);
+            }
+            treeIndex = next;
+            current = decodeTree[treeIndex];
+            offset += 1;
+            excess += 1;
         }
+        /*
+         * Chunk exhausted. Record a legacy match we may be sitting on, so a
+         * subsequent `end()` emits it, then persist the walk state.
+         */
+        if (!isStrict &&
+            current >>> 14 !== 0 &&
+            (current & BinTrieFlags.FLAG13) === 0) {
+            this.result = treeIndex;
+            consumed += excess - 1;
+            excess = 1;
+        }
+        this.treeIndex = treeIndex;
+        this.excess = excess;
+        this.consumed = consumed;
         return -1;
     }
     /**
@@ -4358,7 +4670,7 @@ class EntityDecoder {
      */
     emitNotTerminatedNamedEntity() {
         const { result, decodeTree } = this;
-        const valueLength = (decodeTree[result] & BinTrieFlags.VALUE_LENGTH) >> 14;
+        const valueLength = decodeTree[result] >>> 14;
         this.emitNamedEntityData(result, valueLength, this.consumed);
         this.errors?.missingSemicolonAfterCharacterReference();
         return this.consumed;
@@ -4366,18 +4678,17 @@ class EntityDecoder {
     /**
      * Emit a named entity.
      * @param result The index of the entity in the decode tree.
-     * @param valueLength The number of bytes in the entity.
+     * @param valueLength Encoded value length (header plus any value words).
      * @param consumed The number of characters consumed.
      * @returns The number of characters consumed.
      */
     emitNamedEntityData(result, valueLength, consumed) {
         const { decodeTree } = this;
         this.emitCodePoint(valueLength === 1
-            ? decodeTree[result] &
-                ~(BinTrieFlags.VALUE_LENGTH | BinTrieFlags.FLAG13)
+            ? decodeTree[result] & BinTrieFlags.VALUE_MASK
             : decodeTree[result + 1], consumed);
         if (valueLength === 3) {
-            // For multi-byte values, we need to emit the second byte.
+            // Emit the second UTF-16 code unit.
             this.emitCodePoint(decodeTree[result + 2], consumed);
         }
         return consumed;
@@ -4409,8 +4720,8 @@ class EntityDecoder {
                 this.errors?.absenceOfDigitsInNumericCharacterReference(this.consumed);
                 return 0;
             }
-            case EntityDecoderState.EntityStart: {
-                // Return 0 if we have no entity.
+            default: {
+                // EntityStart or unknown — return 0.
                 return 0;
             }
         }
@@ -4419,48 +4730,62 @@ class EntityDecoder {
 /**
  * Determines the branch of the current node that is taken given the current
  * character. This function is used to traverse the trie.
+ *
+ * See `BinTrieFlags` for the branch-data layouts handled here.
  * @param decodeTree The trie.
- * @param current The current node.
- * @param nodeIndex Index immediately after the current node header.
+ * @param current The current node's header word.
+ * @param nodeIndex Index of the node's first branch-data word (the header
+ *   plus any value words have been skipped by the caller).
  * @param char The current character.
  * @returns The index of the next node, or -1 if no branch is taken.
  */
 function determineBranch(decodeTree, current, nodeIndex, char) {
     const branchCount = (current & BinTrieFlags.BRANCH_LENGTH) >> 7;
     const jumpOffset = current & BinTrieFlags.JUMP_TABLE;
-    // Case 1: Single branch encoded in jump offset
-    if (branchCount === 0) {
-        return jumpOffset !== 0 && char === jumpOffset ? nodeIndex : -1;
-    }
-    // Case 2: Multiple branches encoded in jump table
+    // Case 1: Single branch or jump table (jumpOffset encodes the first/only char code).
     if (jumpOffset) {
-        const value = char - jumpOffset;
-        return value < 0 || value >= branchCount
+        if (branchCount === 0) {
+            // Single branch encoded inline in the jump offset bits.
+            return char === jumpOffset ? nodeIndex : -1;
+        }
+        /*
+         * Jump table: branchCount consecutive slots starting at jumpOffset.
+         * Unsigned comparison handles both < 0 and >= branchCount in one check.
+         */
+        const slot = char - jumpOffset;
+        if (slot >>> 0 >= branchCount)
+            return -1;
+        const stored = decodeTree[nodeIndex + slot];
+        /*
+         * 0 = empty slot (no branch); otherwise the child's offset from the
+         * end of the branch array, +1 (end-relative pointers compress
+         * better). `& 0xff_ff` mirrors the encoder's uint16 wrap for
+         * backreferences to already-encoded nodes.
+         */
+        return stored === 0
             ? -1
-            : decodeTree[nodeIndex + value] - 1;
+            : (nodeIndex + branchCount + stored - 1) & 0xff_ff;
     }
-    // Case 3: Multiple branches encoded in packed dictionary (two keys per uint16)
-    const packedKeySlots = (branchCount + 1) >> 1;
     /*
-     * Treat packed keys as a virtual sorted array of length `branchCount`.
-     * Key(i) = low byte for even i, high byte for odd i in slot i>>1.
+     * Case 2: Packed dictionary. Linear scan — over 90% of dict nodes have
+     * <= 4 branches in the HTML trie, where the constant-factor savings
+     * dominate over binary search's asymptotic edge.
      */
-    let lo = 0;
-    let hi = branchCount - 1;
-    while (lo <= hi) {
-        const mid = (lo + hi) >>> 1;
-        const slot = mid >> 1;
-        const packed = decodeTree[nodeIndex + slot];
-        const midKey = (packed >> ((mid & 1) * 8)) & 0xff;
-        if (midKey < char) {
-            lo = mid + 1;
+    if (branchCount === 0)
+        return -1;
+    const packedKeySlots = (branchCount + 1) >> 1;
+    const branchEnd = nodeIndex + packedKeySlots + branchCount;
+    for (let index = 0; index < branchCount; index++) {
+        const packed = decodeTree[nodeIndex + (index >> 1)];
+        const key = (packed >> ((index & 1) << 3)) & 0xff;
+        if (key === char) {
+            const pointerIndex = nodeIndex + packedKeySlots + index;
+            // Pointers are relative to the end of the branch data.
+            return (branchEnd + decodeTree[pointerIndex]) & 0xff_ff;
         }
-        else if (midKey > char) {
-            hi = mid - 1;
-        }
-        else {
-            return decodeTree[nodeIndex + packedKeySlots + mid];
-        }
+        // Keys are sorted; if we've passed `char`, no match is possible.
+        if (key > char)
+            return -1;
     }
     return -1;
 }

@@ -2902,11 +2902,24 @@ function requireWebsocket () {
 	      this._redirects = 0;
 
 	      if (protocols === undefined) {
-	        protocols = [];
+	        if (!options || options.protocols === undefined) {
+	          protocols = [];
+	        } else if (Array.isArray(options.protocols)) {
+	          protocols = options.protocols;
+	        } else {
+	          protocols = [options.protocols];
+	        }
 	      } else if (!Array.isArray(protocols)) {
 	        if (typeof protocols === 'object' && protocols !== null) {
 	          options = protocols;
-	          protocols = [];
+
+	          if (options.protocols === undefined) {
+	            protocols = [];
+	          } else if (Array.isArray(options.protocols)) {
+	            protocols = options.protocols;
+	          } else {
+	            protocols = [options.protocols];
+	          }
 	        } else {
 	          protocols = [protocols];
 	        }
@@ -3145,7 +3158,6 @@ function requireWebsocket () {
 	      return;
 	    }
 
-	    this._readyState = WebSocket.CLOSING;
 	    this._sender.close(code, data, !this._isServer, (err) => {
 	      //
 	      // This error is handled by the `'error'` listener on the socket. We only
@@ -3163,6 +3175,7 @@ function requireWebsocket () {
 	      }
 	    });
 
+	    this._readyState = WebSocket.CLOSING;
 	    setCloseTimer(this);
 	  }
 
@@ -3508,6 +3521,7 @@ function requireWebsocket () {
 	    socketPath: undefined,
 	    hostname: undefined,
 	    protocol: undefined,
+	    protocols: undefined,
 	    timeout: undefined,
 	    method: 'GET',
 	    host: undefined,

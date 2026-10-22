@@ -853,6 +853,18 @@ main {
   font-weight: 700;
 }
 
+.route_also_method {
+  color: #fff;
+  text-shadow: 0 1px #0000001a;
+  background: var(--method-color);
+  border-radius: 3px;
+  margin-left: 6px;
+  padding: 3px 6px;
+  font-family: sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .route_resource {
   word-break: break-word;
   margin-top: 0;
@@ -897,7 +909,7 @@ main {
   opacity: .85;
 }
 
-.route_details[data-forbidden] .route_method {
+.route_details[data-forbidden] .route_method, .route_details[data-forbidden] .route_also_method {
   opacity: .7;
   filter: grayscale(60%);
 }
@@ -1835,6 +1847,7 @@ const routesLoadingSignal = M$1(false);
       const RouteDetails = ({
         meta,
         method,
+        methods,
         resource,
         description,
         availableMediaTypes,
@@ -1858,6 +1871,10 @@ const routesLoadingSignal = M$1(false);
         if (selectedPackageName && packageName !== selectedPackageName) {
           return null;
         }
+        // what the router answers beyond the declared method (a GET route
+        // also answers HEAD); a "*" route answers everything, its chip says so
+        const alsoMethods =
+          method === "*" ? [] : methods.filter((m) => m !== method);
 
         return p$3`<details
             class="route_details"
@@ -1867,6 +1884,14 @@ const routesLoadingSignal = M$1(false);
           >
             <summary class="route_summary_container">
               <span class="route_method">${method}</span>
+              ${alsoMethods.map(
+                (alsoMethod) => p$3`<span
+                    class="route_also_method"
+                    style="--method-color: var(--method-${alsoMethod.toLowerCase()}-color)"
+                    title="Also answers ${alsoMethod}"
+                    >+${alsoMethod}</span
+                  >`,
+              )}
               <p class="route_resource">${resource}</p>
               ${method === "GET" && !forbidden
                 ? p$3`<a

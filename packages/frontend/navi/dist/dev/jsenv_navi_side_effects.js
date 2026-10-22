@@ -1,4 +1,4 @@
-import { getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled, setVirtualKeyboardOverlaysContent, setPlacementViewportInsets } from "@jsenv/dom";
+import { getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled, setPlacementViewportInsets } from "@jsenv/dom";
 import { signal, computed, effect } from "@preact/signals";
 
 const installImportMetaCssBuild = (importMeta) => {
@@ -321,6 +321,8 @@ const SAFE_AREA_CSS = /* css */ `@property --navi-app-inset-top {
     --navi-fixed-bar-space-bottom: 0px;
     --navi-fixed-bar-space-left: 0px;
     --navi-keyboard-inset-bottom: env(keyboard-inset-height, 0px);
+    --navi-keyboard-strip-allowance: min(var(--navi-keyboard-inset-bottom),
+        64px);
     --navi-app-inset-top: max(0px,
         (var(--navi-vvh) - var(--navi-app-max-height, var(--navi-vvh))) / 2);
     --navi-app-inset-bottom: calc(var(--navi-app-inset-top) + var(--navi-keyboard-inset-bottom));
@@ -337,59 +339,32 @@ const SAFE_AREA_CSS = /* css */ `@property --navi-app-inset-top {
           max(env(safe-area-inset-left), var(--navi-fixed-bar-space-left)));
     scroll-padding-top: var(--navi-safe-area-inset-top);
     scroll-padding-right: var(--navi-safe-area-inset-right);
-    scroll-padding-bottom: var(--navi-safe-area-inset-bottom);
+    scroll-padding-bottom: calc(var(--navi-safe-area-inset-bottom) +
+          var(--navi-keyboard-strip-allowance));
     scroll-padding-left: var(--navi-safe-area-inset-left);
   }
 
   [data-navi-safe-area] {
     padding-top: var(--navi-safe-area-inset-top);
     padding-right: var(--navi-safe-area-inset-right);
-    padding-bottom: var(--navi-safe-area-inset-bottom);
+    padding-bottom: calc(var(--navi-safe-area-inset-bottom) +
+          var(--navi-keyboard-strip-allowance));
     padding-left: var(--navi-safe-area-inset-left);
     scroll-padding-top: var(--navi-safe-area-inset-top);
     scroll-padding-right: var(--navi-safe-area-inset-right);
-    scroll-padding-bottom: var(--navi-safe-area-inset-bottom);
+    scroll-padding-bottom: calc(var(--navi-safe-area-inset-bottom) +
+          var(--navi-keyboard-strip-allowance));
     scroll-padding-left: var(--navi-safe-area-inset-left);
+  }
+
+  :root:not(:has([data-navi-safe-area])):after {
+    height: calc(var(--navi-keyboard-inset-bottom) + var(--navi-keyboard-strip-allowance));
+    content: "";
+    display: block;
   }
 }
 `;
 import.meta.css = [SAFE_AREA_CSS, "@jsenv/navi/src/layout/safe_area.js"];
-
-/**
- * navi's stance on the on-screen keyboard: it overlays the app rather than
- * resizing the viewport, wherever the browser can be told so (the
- * VirtualKeyboard API — Chromium only). See virtual_keyboard.js in @jsenv/dom
- * for what that trades away and what it gives back.
- *
- * Turned on rather than offered, because navi already sizes everything that
- * escapes normal flow against the app's own rectangle rather than against the
- * window (--navi-app-width/height, see navi_css_vars.js), and
- * --navi-keyboard-inset-bottom (safe_area.js) puts the keyboard into exactly
- * that rectangle. So the two mechanisms reach the same numbers here, and the
- * overlay reaches them without reflowing the page underneath — a resizing
- * viewport is a resize of everything, fired transiently every time focus goes
- * from one input to the next.
- *
- * An app that built its own layout around the viewport shrinking can say so
- * with disableVirtualKeyboardOverlay(), and gets the behavior Firefox and
- * Safari give it anyway.
- *
- * The one thing it hands back to the app: scrolling the focused field into
- * view. A viewport that shrinks makes the browser do it; a keyboard that
- * merely paints over the page leaves whatever is under it under it. navi
- * answers that for what it places itself — a popup is sized and positioned
- * against the app rectangle the keyboard was just subtracted from — and for
- * anything marked [data-navi-safe-area], whose scroll-padding-bottom counts
- * the keyboard in (safe_area.js). A field in a scroller the app never marked
- * is the app's own to handle.
- */
-
-
-setVirtualKeyboardOverlaysContent(true);
-
-const disableVirtualKeyboardOverlay = () => {
-  setVirtualKeyboardOverlaysContent(false);
-};
 
 installImportMetaCssBuild(import.meta);
 
@@ -446,6 +421,7 @@ const css = /* css */ `@layer navi {
     --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
     --navi-backdrop-lift-background: #060a14e0;
     --navi-backdrop-lift-backdrop-filter: blur(4px);
+    --navi-popup-theme-color: auto;
     --navi-link-color: #00e;
     --navi-link-color-pressed: red;
     --navi-link-current-indicator-color: #cd3425;
@@ -496,12 +472,8 @@ const css = /* css */ `@layer navi {
     --navi-placeholder-font-style: normal;
   }
 
-  .navi_popover, .navi_dialog {
+  .navi_popover, .navi_dialog, .navi_callout {
     --navi-color-primary: var(--navi-popup-color);
-  }
-
-  .navi_callout {
-    --navi-color-primary: CanvasText;
   }
 
   :root, .navi_popover, .navi_dialog, .navi_callout {
@@ -562,10 +534,10 @@ effect(() => {
 // that positions popups (pickPositionRelativeTo in @jsenv/dom) computes
 // against the visual viewport narrowed by the app's own bands, so a dialog
 // centers on the app column and a side panel docks flush against the app's
-// edge rather than the window's. Here rather than in each component, for the
-// same reason as virtual_keyboard.js above: one decision about the whole
-// window.
+// edge rather than the window's. Here rather than in each component: it is
+// one decision about the whole window, and this is the module that makes
+// those.
 setPlacementViewportInsets(getAppInsets);
 
-export { coarsePointerSignal, disableVirtualKeyboardOverlay, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
+export { coarsePointerSignal, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

@@ -35,16 +35,14 @@ const initDropToOpen = ({ rootDirectoryUrl }) => {
     }
   });
   document.addEventListener("drop", (event) => {
-    let handler;
     for (const candidate of dataTransferCandidates) {
       const dataTransferHandler = candidate(event.dataTransfer);
       if (dataTransferHandler) {
-        handler = dataTransferHandler;
-        break;
+        event.preventDefault();
+        dataTransferHandler();
+        return;
       }
     }
-    event.preventDefault();
-    handler();
   });
 };
 
