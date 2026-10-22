@@ -72,6 +72,8 @@ const css = /* css */ `
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
       --picker-border-width: var(--navi-control-border-width);
+      /* The name a Group reads its members' border width under (group.jsx). */
+      --border-width: var(--picker-border-width);
       /* Focus outline */
       --picker-outline-width: var(--navi-focus-outline-width);
       --picker-outline-offset: calc(-0.5 * var(--picker-outline-width));
@@ -134,6 +136,187 @@ const css = /* css */ `
          Declared on every root all the same, so a picker in a popup does not
          inherit it from the variant around it. */
       --picker-text-align-default: initial;
+
+      /* Layered, the font and the line: an app's own typography on the picker
+         wins without having to go through the --picker-* variables, as on a
+         button (see button_ui.jsx). */
+      font-size: var(--picker-font-size);
+      font-family: var(--picker-font-family);
+      /* The control line, like the control font: a picker is drawn by hand next
+         to inputs that sit on it, and its box is sized in lh — the same number
+         of pixels, or a picker and an input in one row are not the same height
+         and their text is not on the same row. */
+      line-height: var(--navi-control-line-height);
+    }
+
+    /* A variant states what the caller did NOT: it moves the DEFAULTS
+       (--picker-*) and never the resolved values (--x-picker-*), so a
+       backgroundColor/borderColor/padding prop — which lands inline on this
+       same element — still wins, and so does an app's own rule on the picker,
+       as it does over the defaults above. The per-state defaults are
+       re-pointed at the base one too, otherwise the formulas above (hover = 5%
+       black over the background, disabled = 5% grey) would repaint a box the
+       variant just took away. */
+    /* icon: an icon trigger with nothing painted around it. The shape is the
+       icon prop's, which this variant carries (see [data-icon] below); what it
+       adds is the absence of a surface. */
+    .navi_picker[data-variant="icon"] {
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+      --picker-icon-color: currentColor;
+    }
+    /* discrete: no box at rest, a background on hover — the same word Button
+       uses, and the same drawing. What is read is the value, not the field
+       around it; the chevron in the right slot is what still says it opens. */
+    .navi_picker[data-variant="discrete"] {
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--picker-background-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+    }
+    .navi_picker[data-variant="headless"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      /* No focus ring either: the input behind is focused for the platform's
+         sake (a tap opens iOS's picker by focusing it, see showNativePicker
+         in picker_custom.jsx), and being editable it would ring on any focus
+         (rule 1 in pseudo_styles.js). What shows the focus of a headless
+         picker is whatever stands in front of it. */
+      --picker-outline-width: 0px;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+      --picker-icon-color: currentColor;
+    }
+    /* bare: the caller's drawing IS the trigger. No frame, no control line, no
+       slot beside it, no clamp on it — the picker takes the size of what the ui
+       draws, to the pixel, and does nothing to it but catch the press. What the
+       drawing needs in it — the cross of a clearable — the drawing places
+       itself (<Picker.Clear />). For a picker that is a whole piece of a layout
+       (a column of a card, a tile) rather than a field: the same drawing can
+       then sit alone somewhere else and be the same box in both places. */
+    .navi_picker[data-variant="bare"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      /* The box holds the drawing rather than placing it inside itself: a
+         height the caller gave the picker belongs to the drawing too. */
+      --picker-align-y-default: stretch;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+      --picker-icon-color: currentColor;
+
+      /* The drawing is the caller's, so it is written on the page's line at
+         the page's size — the control font and the control line belong to the
+         field-like drawings, which this one is not. Layered with the root's
+         font, which it has to beat: a rule of the app's own still wins. */
+      font-size: inherit;
+      font-family: inherit;
+      line-height: inherit;
+    }
+    /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
+       and the --navi-button-* vars) — its surface, its padding, a centered
+       label, its washed-out read-only and disabled — for a picker that IS a
+       button with a popup behind it (a confirm). The value slot draws the
+       label (the ui prop), and no slot follows it: nothing says "this opens",
+       what it opens says it. Hover keeps the picker's own formulas, which are
+       the button's already. */
+    .navi_picker[data-variant="button"] {
+      --picker-padding-x-default: var(--navi-button-padding-x-default);
+      --picker-padding-y-default: var(--navi-button-padding-y-default);
+      --picker-align-x-default: center;
+      --picker-background-color: var(--navi-button-background-color);
+      /* Read-only / disabled: fading toward the surface, not toward
+         transparent — the button's own rule. */
+      --picker-border-color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 30%,
+        var(--navi-surface-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-color-readonly: color-mix(
+        in srgb,
+        var(--picker-color) 30%,
+        transparent
+      );
+      --picker-border-color-disabled: var(--picker-border-color-readonly);
+      --picker-background-color-disabled: var(
+        --picker-background-color-readonly
+      );
+      --picker-color-disabled: var(--picker-color-readonly);
+      /* A label sits in the middle of its button, and it is the text that has
+         to move: --picker-align-x-default centers the box, which already fills
+         the button. */
+      --picker-text-align-default: center;
+    }
+    /* text: a word in a sentence, marked by the dotted line under it — the way
+       a term one can ask about is marked. No box, no slot; the font is the
+       sentence's own, so the word sits in its line like the ones around it. */
+    .navi_picker[data-variant="text"] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
+      --picker-border-color: transparent;
+      --picker-border-color-hover: var(--picker-border-color);
+      --picker-border-color-readonly: var(--picker-border-color);
+      --picker-border-color-disabled: var(--picker-border-color);
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+
+      /* Layered with the root's font, which it has to beat: a rule of the
+         app's own still wins. */
+      font-size: inherit;
+      font-family: inherit;
+    }
+    /* The trigger is one icon: its box is that icon's box plus whatever padding
+       was asked for, and nothing else — no gutter for a slot it does not have,
+       and none of the control line a field is held to. So it measures the same
+       as <Button icon> and can stand in a row of icon buttons.
+       A shape rather than a surface, like the button's own icon prop: it says
+       nothing about the paint, so any variant can be drawn as one and keep its
+       own (a discrete icon trigger keeps the discrete hover wash). After the
+       variants on purpose — they move the same defaults, and the shape is the
+       more precise ask. */
+    .navi_picker[data-icon] {
+      --picker-padding-x-default: 0;
+      --picker-padding-y-default: 0;
+      /* A width/height the caller gave it is a target area, not a text column:
+         the icon belongs in its middle. A default, so alignX still wins. */
+      --picker-align-x-default: center;
     }
   }
 
@@ -209,18 +392,12 @@ const css = /* css */ `
     display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
-    /* Inherited properties stay here: a caller's own size/color lands on this
-       element, and re-declaring them on the box below would override what it
-       would otherwise inherit. */
+    /* Inherited properties stay on this root (the font and the line too, in
+       the layer above): a caller's own size/color lands on this element, and
+       re-declaring them on the box below would override what it would
+       otherwise inherit. */
     color: var(--x-picker-color);
-    font-size: var(--picker-font-size);
-    font-family: var(--picker-font-family);
     text-align: inherit;
-    /* The control line, like the control font: a picker is drawn by hand next
-       to inputs that sit on it, and its box is sized in lh — the same number
-       of pixels, or a picker and an input in one row are not the same height
-       and their text is not on the same row. */
-    line-height: var(--navi-control-line-height);
     /* The frame is drawn by the box, but its radius is declared here, on the
        control root, like every other navi control does — so anything styling
        the picker from the outside (a Group squaring the corners it joins) has
@@ -622,107 +799,15 @@ const css = /* css */ `
       --x-picker-border-color: var(--callout-color);
     }
 
-    /* A variant states what the caller did NOT: it moves the DEFAULTS
-       (--picker-*) and never the resolved values (--x-picker-*), so a
-       backgroundColor/borderColor/padding prop — which lands inline on this
-       same element — still wins. The per-state defaults are re-pointed at the
-       base one too, otherwise the @layer formulas (hover = 5% black over the
-       background, disabled = 5% grey) would repaint a box the variant just
-       took away. */
-    /* icon: an icon trigger with nothing painted around it. The shape is the
-       icon prop's, which this variant carries (see [data-icon] below); what it
-       adds is the absence of a surface. */
-    &[data-variant="icon"] {
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-      --picker-icon-color: currentColor;
-    }
-    /* discrete: no box at rest, a background on hover — the same word Button
-       uses, and the same drawing. What is read is the value, not the field
-       around it; the chevron in the right slot is what still says it opens. */
-    &[data-variant="discrete"] {
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      /* The hover wash is mixed INTO the background instead of replacing it:
-         over the transparent default it is exactly the 8% of currentColor it
-         has always been, and over a backgroundColor the caller gave it darkens
-         that color rather than erasing it. */
-      --picker-background-color-hover: color-mix(
-        in srgb,
-        currentColor 8%,
-        var(--picker-background-color)
-      );
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-    }
+    /* Variants: their defaults are in the layer above. */
     &[data-variant="headless"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      /* No focus ring either: the input behind is focused for the platform's
-         sake (a tap opens iOS's picker by focusing it, see showNativePicker
-         in picker_custom.jsx), and being editable it would ring on any focus
-         (rule 1 in pseudo_styles.js). What shows the focus of a headless
-         picker is whatever stands in front of it. */
-      --picker-outline-width: 0px;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-      --picker-icon-color: currentColor;
-
       > .navi_picker_box {
         position: absolute;
         inset: 0;
         z-index: -1;
       }
     }
-    /* bare: the caller's drawing IS the trigger. No frame, no control line, no
-       slot beside it, no clamp on it — the picker takes the size of what the ui
-       draws, to the pixel, and does nothing to it but catch the press. What the
-       drawing needs in it — the cross of a clearable — the drawing places
-       itself (<Picker.Clear />). For a picker that is a whole piece of a layout
-       (a column of a card, a tile) rather than a field: the same drawing can
-       then sit alone somewhere else and be the same box in both places. */
     &[data-variant="bare"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      /* The box holds the drawing rather than placing it inside itself: a
-         height the caller gave the picker belongs to the drawing too. */
-      --picker-align-y-default: stretch;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-      --picker-icon-color: currentColor;
-
-      /* The drawing is the caller's, so it is written on the page's line at
-         the page's size — the control font and the control line belong to the
-         field-like drawings, which this one is not. */
-      font-size: inherit;
-      font-family: inherit;
-      line-height: inherit;
-
       > .navi_picker_box {
         /* A field is at least one line tall whatever it holds; this is not a
            field, so its height is the drawing's and nothing else. */
@@ -778,59 +863,7 @@ const css = /* css */ `
         }
       }
     }
-    /* button: drawn as a Button is, from the same tokens (see button_ui.jsx
-       and the --navi-button-* vars) — its surface, its padding, a centered
-       label, its washed-out read-only and disabled — for a picker that IS a
-       button with a popup behind it (a confirm). The value slot draws the
-       label (the ui prop), and no slot follows it: nothing says "this opens",
-       what it opens says it. Hover keeps the picker's own formulas, which are
-       the button's already. */
-    &[data-variant="button"] {
-      --picker-padding-x-default: var(--navi-button-padding-x-default);
-      --picker-padding-y-default: var(--navi-button-padding-y-default);
-      --picker-align-x-default: center;
-      --picker-background-color: var(--navi-button-background-color);
-      /* Read-only / disabled: fading toward the surface, not toward
-         transparent — the button's own rule. */
-      --picker-border-color-readonly: color-mix(
-        in srgb,
-        var(--picker-border-color) 30%,
-        var(--navi-surface-color)
-      );
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-color-readonly: color-mix(
-        in srgb,
-        var(--picker-color) 30%,
-        transparent
-      );
-      --picker-border-color-disabled: var(--picker-border-color-readonly);
-      --picker-background-color-disabled: var(
-        --picker-background-color-readonly
-      );
-      --picker-color-disabled: var(--picker-color-readonly);
-      /* A label sits in the middle of its button, and it is the text that has
-         to move: --picker-align-x-default centers the box, which already fills
-         the button. */
-      --picker-text-align-default: center;
-    }
-    /* text: a word in a sentence, marked by the dotted line under it — the way
-       a term one can ask about is marked. No box, no slot; the font is the
-       sentence's own, so the word sits in its line like the ones around it. */
     &[data-variant="text"] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      --picker-border-width: 0px; /* must carry a unit (px) — used in calc() to offset the custom input overlay */
-      --picker-border-color: transparent;
-      --picker-border-color-hover: var(--picker-border-color);
-      --picker-border-color-readonly: var(--picker-border-color);
-      --picker-border-color-disabled: var(--picker-border-color);
-      --picker-background-color: transparent;
-      --picker-background-color-hover: var(--picker-background-color);
-      --picker-background-color-readonly: var(--picker-background-color);
-      --picker-background-color-disabled: var(--picker-background-color);
-
-      font-size: inherit;
-      font-family: inherit;
       text-decoration: underline dotted;
       text-underline-offset: 0.2em;
 
@@ -838,22 +871,8 @@ const css = /* css */ `
         text-decoration-style: solid;
       }
     }
-    /* The trigger is one icon: its box is that icon's box plus whatever padding
-       was asked for, and nothing else — no gutter for a slot it does not have,
-       and none of the control line a field is held to. So it measures the same
-       as <Button icon> and can stand in a row of icon buttons.
-       A shape rather than a surface, like the button's own icon prop: it says
-       nothing about the paint, so any variant can be drawn as one and keep its
-       own (a discrete icon trigger keeps the discrete hover wash). After the
-       variants on purpose — they move the same defaults, and the shape is the
-       more precise ask. */
+    /* The icon trigger (defaults in the layer above). */
     &[data-icon] {
-      --picker-padding-x-default: 0;
-      --picker-padding-y-default: 0;
-      /* A width/height the caller gave it is a target area, not a text column:
-         the icon belongs in its middle. A default, so alignX still wins. */
-      --picker-align-x-default: center;
-
       > .navi_picker_box {
         /* A field is at least one line tall whatever it holds; an icon is as
            tall as it is drawn. */
@@ -1891,7 +1910,7 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   openWhileReadOnly?: boolean,
  *   error?: boolean | string,
  *   uiAction?: (value: any, event: Event) => void,
- *   action?: (value: any, event: Event) => void,
+ *   action?: (value: any, { event, signal }: { event: Event, signal: AbortSignal }) => void,
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog" | "callout",
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],

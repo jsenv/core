@@ -125,6 +125,22 @@ already open — a tab pointing at the current page cannot be clicked. The defau
 section has no segment, so its literal route is the **parent** of the
 parameterized one, and still does not inherit the param.
 
+The default section can also have an address of its own, when the bare address
+is another page:
+
+```js
+export const PROFILE_ROUTE = route("/me");
+export const ADDRESS_BOOK_ROUTE = route(`/me/:section=${bookSectionSignal}`); // default "players"
+export const PLAYERS_ROUTE = route("/me/players");
+export const GROUPS_ROUTE = route("/me/groups");
+```
+
+Declaring both `/me` and a literal for the default is what says so: the param
+is then required, `/me` is the profile alone, and `ADDRESS_BOOK_ROUTE.buildUrl()`
+gives `/me/players` or `/me/groups`, never `/me`. A visit to the profile leaves
+the section where it was. Leave out the literal for the default and `/me` is the
+default section, as with `/games/me` above.
+
 That the literals exist is what tells navi these values name pages. Where none is
 declared, the value stays a qualifier, carried by an ancestor url:
 
@@ -157,8 +173,10 @@ export const GAME_ROUTE = route(`/:gameId=${gameIdSignal}`, {
 This is what lets a param sit at the root without swallowing every single-segment
 address: `/cgu` stays another route's url, `<Route fallback>` is reachable, and
 no signal is written for a url this route has nothing to do with. A constrained
-param is also **required**: `/:gameId` does not match `/`. The accepted forms are
-in `route()`'s JSDoc.
+param is also **required**: `/:gameId` does not match `/` — unless its default
+stands for the bare address, as `/games/me` does for `/games/me/:section` (see
+[Declaring the sections](#declaring-the-sections-is-what-makes-them-places)).
+The accepted forms are in `route()`'s JSDoc.
 
 #### Constrain the shape, never the existence
 
@@ -258,6 +276,9 @@ export const HOME_ROUTE = route("/", { searchParams: { vue: vueSignal } });
 The signal and the URL are the same state: never keep a `useState` beside a route
 param for the same fact. Declared on the **root route**, a search param holds
 wherever one is in the application; declared on one route, it exists only there.
+A route declared "this and below" (`/map/`) lends its params to every address
+below it; `/places` lends nothing, so a `?q=` of its own and the `?q=` of
+`/places/clubs` are two states, even with a `/places/:section` matching both.
 
 Writing it AMENDS the history entry one is on rather than stacking a new one: a
 param that qualifies a screen is not a place, and one entry per write turns a

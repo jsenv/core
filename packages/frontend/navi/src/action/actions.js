@@ -1024,6 +1024,11 @@ export const createAction = (callback, rootOptions = {}) => {
      *   asks nothing.
      */
     const bindParams = (newParamsOrSignal, options = {}) => {
+      if (newParamsOrSignal === null) {
+        // A signal's `null` becomes `undefined` in mergeActionParams; a static
+        // one never goes through it, so it is said the same way here.
+        newParamsOrSignal = undefined;
+      }
       const { debounce, ...optionsWithoutDebounce } = options;
       if (debounce) {
         if (!isSignal(newParamsOrSignal)) {
@@ -1624,7 +1629,9 @@ const createActionProxyFromSignal = (
   const inheritsAnswer =
     inheritData && getActionPrivateProperties(action).inheritData;
   const createTarget = (params) => {
-    if (inheritsAnswer) {
+    // `undefined` is "nothing to ask": no answer is coming to replace a stand-in,
+    // and that one instance is shared by every binding of the action.
+    if (inheritsAnswer && params !== undefined) {
       const previousActionTarget = actionTargetPreviousWeakRef?.deref();
       const previousTarget = previousActionTarget || action;
       return action.bindParams(params, {

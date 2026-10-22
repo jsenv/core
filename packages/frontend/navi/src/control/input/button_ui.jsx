@@ -28,6 +28,8 @@ const css = /* css */ `
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
       --button-border-width: var(--navi-control-border-width);
+      /* The name a Group reads its members' border width under (group.jsx). */
+      --border-width: var(--button-border-width);
       --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
@@ -102,14 +104,132 @@ const css = /* css */ `
          the same label without one. The page's line, like the page's font. */
       line-height: var(--navi-control-line-height);
     }
-    /* bare: the drawing is the caller's, so it is written on the page's line
-       at the page's size — the control font and the control line belong to
-       the drawings navi makes, which this one is not. In the layer for the
-       same reason as above: a rule of the app's own still wins. */
+
+    /* A variant states what the caller did NOT: the frameless ones below move
+       the DEFAULTS (--button-*) and never the resolved values (--x-button-*),
+       so a backgroundColor/background/borderColor prop — which lands inline on
+       this same element — still wins, and so does an app's own rule on the
+       button, as it does over the defaults above. The per-state defaults are
+       re-pointed at the base one too, otherwise the formulas above (hover = 5%
+       black over the background, readonly = the same) would repaint a box the
+       variant just took away. */
+
+    /* discrete: background on hover, and nothing else — no box at rest (and no
+       shrink where a pointer can hover, see below). */
+    .navi_button[data-variant="discrete"] {
+      --button-border-width: 0;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-border-color-current: var(--button-border-color);
+      --button-border-color-readonly: var(--button-border-color);
+      --button-border-color-disabled: var(--button-border-color);
+      --button-background-color: transparent;
+      /* The hover wash is mixed INTO the background instead of replacing it:
+         over the transparent default it is exactly the 8% of currentColor it
+         has always been, and over a backgroundColor the caller gave it darkens
+         that color rather than erasing it. */
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
+    }
+    /* bare: no frame at all — no border, no background even on hover, no
+       padding, and the page's typography. For a control whose own drawing IS
+       the button (a carousel bullet, a swatch, a badge), where a box around it
+       would be the button showing through the only thing one is supposed to
+       see. It stays a button in every other way: focusable, ringed on focus,
+       commandable. */
     .navi_button[data-variant="bare"] {
+      --button-padding-x-default: 0;
+      --button-padding-y-default: 0;
+      --button-border-width: 0;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-border-color-current: var(--button-border-color);
+      --button-border-color-readonly: var(--button-border-color);
+      --button-border-color-disabled: var(--button-border-color);
+      --button-background-color: transparent;
+      --button-background-color-hover: var(--button-background-color);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
+
+      /* The drawing is the caller's, so it is written on the page's line at
+         the page's size — the control font and the control line belong to the
+         drawings navi makes, which this one is not. Layered like the button's
+         own font: a rule of the app's own still wins. */
       font-size: inherit;
       font-family: inherit;
       line-height: inherit;
+    }
+    /* discrete-border: border on hover (drawn outside the layer, below) */
+    .navi_button[data-variant="discrete-border"] {
+      --button-background-color: transparent;
+      --button-background-color-hover: var(--button-background-color);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
+    }
+    /* border variant: no background, border only */
+    .navi_button[data-variant="border"] {
+      --button-background-color: transparent;
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(--button-background-color);
+    }
+    .navi_button[data-icon] {
+      --button-padding: 0;
+    }
+    /* cta: call-to-action — a filled button whose border matches its fill.
+       Like the variants above it moves the DEFAULTS, so a backgroundColor /
+       borderColor / color prop still wins; and its per-state formulas are
+       re-pointed at the base variables, so they compose with whatever color it
+       ends up filled with. A CTA lightens toward white where an ordinary
+       button darkens toward black: it is already the darkest thing around. */
+    .navi_button[data-cta] {
+      --button-background-color: var(--button-cta-background-color);
+      --button-border-color: var(--button-cta-background-color);
+      --button-color: white;
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-background-color) 85%,
+        white
+      );
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 85%,
+        white
+      );
+      --button-background-color-readonly: color-mix(
+        in srgb,
+        var(--button-background-color) 50%,
+        white
+      );
+      --button-border-color-readonly: color-mix(
+        in srgb,
+        var(--button-border-color) 50%,
+        white
+      );
+      --button-background-color-disabled: color-mix(
+        in srgb,
+        var(--button-background-color) 40%,
+        white
+      );
+      --button-border-color-disabled: color-mix(
+        in srgb,
+        var(--button-border-color) 40%,
+        white
+      );
+      --button-color-disabled: color-mix(
+        in srgb,
+        var(--button-color) 60%,
+        transparent
+      );
     }
   }
 
@@ -335,41 +455,15 @@ const css = /* css */ `
       --x-button-border-color: var(--callout-color);
     }
 
-    /* A variant states what the caller did NOT: the frameless ones below move
-       the DEFAULTS (--button-*) and never the resolved values (--x-button-*),
-       so a backgroundColor/background/borderColor prop — which lands inline on
-       this same element — still wins. The per-state defaults are re-pointed at
-       the base one too, otherwise the @layer formulas (hover = 5% black over
-       the background, readonly = the same) would repaint a box the variant
-       just took away. */
+    /* Variants: their defaults are in the layer above. */
 
-    /* discrete: background on hover, and nothing else — no box at rest, and no
-       shrink when pressed where a pointer can hover. What is drawn IS the
-       content (a chevron, a number, a word), and shrinking it under a cursor
-       reads as the content itself flinching rather than as a button being
-       pressed; the wash on hover is what answers the press there. A touch
-       screen has no hover, so the shrink stays: it is the only answer a
-       finger gets. */
+    /* discrete: no shrink when pressed where a pointer can hover. What is
+       drawn IS the content (a chevron, a number, a word), and shrinking it
+       under a cursor reads as the content itself flinching rather than as a
+       button being pressed; the wash on hover is what answers the press there.
+       A touch screen has no hover, so the shrink stays: it is the only answer
+       a finger gets. */
     &[data-variant="discrete"] {
-      --button-border-width: 0;
-      --button-border-color: transparent;
-      --button-border-color-hover: var(--button-border-color);
-      --button-border-color-current: var(--button-border-color);
-      --button-border-color-readonly: var(--button-border-color);
-      --button-border-color-disabled: var(--button-border-color);
-      --button-background-color: transparent;
-      /* The hover wash is mixed INTO the background instead of replacing it:
-         over the transparent default it is exactly the 8% of currentColor it
-         has always been, and over a backgroundColor the caller gave it darkens
-         that color rather than erasing it. */
-      --button-background-color-hover: color-mix(
-        in srgb,
-        currentColor 8%,
-        var(--button-background-color)
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
-
       @media (hover: hover) {
         &[data-pressed] {
           .navi_button_content {
@@ -378,42 +472,20 @@ const css = /* css */ `
         }
       }
     }
-    /* bare: no frame at all — no border, no background even on hover, no
-       padding, and the page's typography (in the layer above). For a control
-       whose own drawing IS the button (a carousel bullet, a swatch, a badge),
-       where a box around it would be the button showing through the only thing
-       one is supposed to see. It stays a button in every other way: focusable,
-       ringed on focus, commandable. */
+    /* bare: no shrink at all — the drawing is the caller's, not a button's. */
     &[data-variant="bare"] {
-      --button-padding-x-default: 0;
-      --button-padding-y-default: 0;
-      --button-border-width: 0;
-      --button-border-color: transparent;
-      --button-border-color-hover: var(--button-border-color);
-      --button-border-color-current: var(--button-border-color);
-      --button-border-color-readonly: var(--button-border-color);
-      --button-border-color-disabled: var(--button-border-color);
-      --button-background-color: transparent;
-      --button-background-color-hover: var(--button-background-color);
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
-
       &[data-pressed] {
         .navi_button_content {
           transform: none;
         }
       }
     }
-    /* discrete-border: border on hover */
     &[data-variant="discrete-border"] {
-      --button-background-color: transparent;
-      --button-background-color-hover: var(--button-background-color);
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
       /* The border is the whole point of this variant: it is absent at rest
          and drawn on hover, so only the resting color goes transparent — the
          hover one keeps the @layer formula, now mixed from whatever
-         borderColor the caller gave. */
+         borderColor the caller gave. A resolved value, not a default: it has
+         to beat the unlayered resolution at the top of this rule. */
       --x-button-border-color: transparent;
 
       &[data-hover] {
@@ -423,17 +495,6 @@ const css = /* css */ `
       &[data-disabled] {
         --x-button-border-color: transparent;
       }
-    }
-    /* border variant: no background, border only */
-    &[data-variant="border"] {
-      --button-background-color: transparent;
-      --button-background-color-hover: color-mix(
-        in srgb,
-        currentColor 8%,
-        var(--button-background-color)
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-background-color-disabled: var(--button-background-color);
     }
     /* Last word on the shrink, over whatever the variant decided: the variant
        guesses from how the button is drawn, and that guess is wrong as soon as
@@ -451,58 +512,11 @@ const css = /* css */ `
     }
 
     &[data-icon] {
-      --button-padding: 0;
       /* A width/height the caller gave it is a target area: the icon belongs
          in its middle, whatever the padding. Defaults the alignX/alignY props
          override; the content frame inherits both. */
       align-items: center;
       justify-content: center;
-    }
-    /* cta: call-to-action — a filled button whose border matches its fill.
-       Like the variants above it moves the DEFAULTS, so a backgroundColor /
-       borderColor / color prop still wins; and its per-state formulas are
-       re-pointed at the base variables, so they compose with whatever color it
-       ends up filled with. A CTA lightens toward white where an ordinary
-       button darkens toward black: it is already the darkest thing around. */
-    &[data-cta] {
-      --button-background-color: var(--button-cta-background-color);
-      --button-border-color: var(--button-cta-background-color);
-      --button-color: white;
-      --button-background-color-hover: color-mix(
-        in srgb,
-        var(--button-background-color) 85%,
-        white
-      );
-      --button-border-color-hover: color-mix(
-        in srgb,
-        var(--button-border-color) 85%,
-        white
-      );
-      --button-background-color-readonly: color-mix(
-        in srgb,
-        var(--button-background-color) 50%,
-        white
-      );
-      --button-border-color-readonly: color-mix(
-        in srgb,
-        var(--button-border-color) 50%,
-        white
-      );
-      --button-background-color-disabled: color-mix(
-        in srgb,
-        var(--button-background-color) 40%,
-        white
-      );
-      --button-border-color-disabled: color-mix(
-        in srgb,
-        var(--button-border-color) 40%,
-        white
-      );
-      --button-color-disabled: color-mix(
-        in srgb,
-        var(--button-color) 60%,
-        transparent
-      );
     }
   }
 `;

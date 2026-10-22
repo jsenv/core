@@ -67,6 +67,18 @@ const readSignalForUrlBuild = (connection) => {
 };
 
 /**
+ * Whether a pattern catches the addresses below its own: "/map/", "/map/*" and
+ * the root "/" do, "/places" does not. Only such a route lends its search
+ * params to the routes below it: it is on screen wherever they are, so its
+ * state holds there too. Declared on "/places", a search param belongs to
+ * that address alone — "/places/:section" beside it also matches
+ * "/places/clubs", and borrowing the list's search would hand it to the clubs.
+ */
+const coversAddressesBelow = (patternObj) => {
+  return patternObj.pattern.trailingSlash || patternObj.pattern.wildcard;
+};
+
+/**
  * Creates a custom route pattern matcher
  */
 export const createRoutePattern = (
@@ -188,11 +200,13 @@ export const createRoutePattern = (
       }
     }
 
-    // Inherit search parameters from ancestry chain
-    // Search params are global and should be inherited from any matching ancestor
-    // regardless of path segment relationships
+    // Search params lent by the ancestors covering this route
     let ancestorPatternObj = patternObject.parent;
     while (ancestorPatternObj) {
+      if (!coversAddressesBelow(ancestorPatternObj)) {
+        ancestorPatternObj = ancestorPatternObj.parent;
+        continue;
+      }
       for (const [
         paramName,
         ancestorConnection,
@@ -277,7 +291,12 @@ export const createRoutePattern = (
           childParam,
           childConnection,
         ] of childPatternObj.queryConnectionMap) {
-          if (childParam in resolvedParams) {
+          // a name this route declares is its own state's, whatever a child
+          // declares under the same name
+          if (
+            childParam in resolvedParams ||
+            queryConnectionMap.has(childParam)
+          ) {
             continue;
           }
           const childSignalValue = readSignalForUrlBuild(childConnection);
@@ -323,7 +342,9 @@ export const createRoutePattern = (
    * - own connection signals (path + query, inherited query included)
    * - ancestor path params pinned by this pattern's own literals: being on
    *   "/admin/settings" MEANS section=settings, whatever the signal says
-   * - ancestor query signals holding custom values
+   * - custom values of the search params lent by the ancestors covering this
+   *   route (coversAddressesBelow). Another ancestor's search params ride
+   *   only on that ancestor's own url (see buildMostPreciseUrl)
    * - reachable descendants' connection signals. A descendant is reachable
    *   when its literals agree with the state collected so far (a tab value
    *   is unreachable while section conflicts with the tab route's literals)
@@ -448,6 +469,10 @@ export const createRoutePattern = (
         if (selfSeg && selfSeg.type === "literal") {
           setEntry(seg.name, selfSeg.value, conn, seg.index, "ancestor", false);
         }
+      }
+      if (!coversAddressesBelow(ancestor)) {
+        ancestor = ancestor.parent;
+        continue;
       }
       for (const [name, conn] of ancestor.queryConnectionMap) {
         if (intended.has(name)) {
@@ -593,6 +618,10 @@ export const createRoutePattern = (
             continue;
           }
           if (!queryReachable || value === undefined) {
+            continue;
+          }
+          // a name this route declares is its own state's (see resolveParams)
+          if (queryConnectionMap.has(paramName)) {
             continue;
           }
           if (conn.isCustomValue(value)) {
@@ -854,20 +883,50 @@ export const createRoutePattern = (
     );
   };
 
+  // An ancestor's url is that ancestor's address: it carries the search params
+  // declared there, including those it lends to nobody (coversAddressesBelow).
+  // Each ancestor climbed past adds its own, so a higher one must keep them too.
+  const withOwnSearchParams = (ancestorPattern, intended) => {
+    let intendedWithOwn = intended;
+    for (const [name, conn] of ancestorPattern.queryConnectionMap) {
+      if (intendedWithOwn.has(name)) {
+        continue;
+      }
+      const value = readSignalForUrlBuild(conn);
+      if (value === undefined || !conn.isCustomValue(value)) {
+        continue;
+      }
+      if (intendedWithOwn === intended) {
+        intendedWithOwn = new Map(intended);
+      }
+      intendedWithOwn.set(name, {
+        value,
+        connection: conn,
+        segmentIndex: undefined,
+        owner: "ancestor",
+        explicit: false,
+        pageNaming: false,
+      });
+    }
+    return intendedWithOwn;
+  };
+
   const buildMostPreciseUrl = (params = {}) => {
     const { intended, reachableDescendants } = buildIntendedState(params);
     // ancestors: start at the immediate parent, climb while urls keep round-
     // tripping, keep the highest one ("/" is never a target)
     let ancestorUrl = null;
     let ancestor = patternObject.parent;
+    let ancestorIntended = intended;
     while (ancestor && ancestor.originalPattern !== "/") {
       if (!isAncestorCollapseAllowed(ancestor, intended)) {
         break;
       }
-      const url = buildCandidateUrl(ancestor, intended, {
+      ancestorIntended = withOwnSearchParams(ancestor, ancestorIntended);
+      const url = buildCandidateUrl(ancestor, ancestorIntended, {
         dropMissing: true,
       });
-      if (!url || !verifyUrl(url, intended)) {
+      if (!url || !verifyUrl(url, ancestorIntended)) {
         break;
       }
       debug(
@@ -2050,11 +2109,15 @@ export const setupRoutePatterns = (routePatterns) => {
     }
     routePattern.familyRoot = root;
   }
-  // Phase 3: Inherit search parameter connections from ancestors
-  // Search params are global and should be inherited by descendants regardless of path segments
+  // Phase 3: Inherit the search param connections of the ancestors covering
+  // the addresses below them (see coversAddressesBelow)
   for (const routePattern of routePatternSet) {
     let ancestorRoutePattern = routePattern.parent;
     while (ancestorRoutePattern) {
+      if (!coversAddressesBelow(ancestorRoutePattern)) {
+        ancestorRoutePattern = ancestorRoutePattern.parent;
+        continue;
+      }
       // For each ancestor's query connection, check if it should be inherited
       for (const [
         paramName,
@@ -2164,23 +2227,6 @@ export const setupRoutePatterns = (routePatterns) => {
         continue;
       }
       const { index } = paramSegment;
-      const sharesPathUpTo = (otherSegments) => {
-        for (let i = 0; i < index; i++) {
-          const seg = routePattern.pattern.segments[i];
-          const otherSeg = otherSegments[i];
-          if (!otherSeg) {
-            return false;
-          }
-          if (seg.type === "literal" && otherSeg.type === "literal") {
-            if (seg.value !== otherSeg.value) {
-              return false;
-            }
-          } else if (seg.type !== otherSeg.type) {
-            return false;
-          }
-        }
-        return true;
-      };
       for (const otherPattern of routePatternSet) {
         if (otherPattern === routePattern) {
           continue;
@@ -2190,7 +2236,9 @@ export const setupRoutePatterns = (routePatterns) => {
         if (!otherSegment || otherSegment.type !== "literal") {
           continue;
         }
-        if (!sharesPathUpTo(otherSegments)) {
+        if (
+          !sharesPathUpTo(routePattern.pattern.segments, otherSegments, index)
+        ) {
           continue;
         }
         connection.namedByLiteralRoutes = true;
@@ -2198,11 +2246,90 @@ export const setupRoutePatterns = (routePatterns) => {
       }
     }
   }
+  // Phase 4c: A default with an address of its own. "/me/:section" defaulting
+  // to "players", beside "/me/players" and "/me": the default section has a
+  // segment, and the bare address is another page. The param is then required,
+  // and the address writes every value, the default included. Both routes must
+  // be declared: with none at the bare address, that address is the default's
+  // ("/admin" opens on "/admin/settings/:tab"); with no literal for the default,
+  // the bare address IS the default section ("/games/me").
+  // The state keeps its default (getDefaultValue): what the signal holds while
+  // another page of the family says nothing about it (see route.js).
+  for (const routePattern of routePatternSet) {
+    const { segments } = routePattern.pattern;
+    for (const connection of routePattern.pathConnectionMap.values()) {
+      const defaultValue = connection.getDefaultValue();
+      if (defaultValue === undefined) {
+        continue;
+      }
+      const paramSegment = segments.find(
+        (seg) => seg.type === "param" && seg.name === connection.paramName,
+      );
+      if (!paramSegment) {
+        continue;
+      }
+      const { index } = paramSegment;
+      let defaultHasLiteral = false;
+      let bareAddressTaken = false;
+      for (const otherPattern of routePatternSet) {
+        if (otherPattern === routePattern) {
+          continue;
+        }
+        const otherSegments = otherPattern.pattern.segments;
+        if (!sharesPathUpTo(segments, otherSegments, index)) {
+          continue;
+        }
+        const otherSegment = otherSegments[index];
+        if (otherSegment) {
+          if (
+            otherSegment.type === "literal" &&
+            otherSegment.value === String(defaultValue)
+          ) {
+            defaultHasLiteral = true;
+          }
+          continue;
+        }
+        // a route covering the addresses below it is a frame around the
+        // sections, not a page standing at the bare address
+        if (!coversAddressesBelow(otherPattern)) {
+          bareAddressTaken = true;
+        }
+      }
+      if (!defaultHasLiteral || !bareAddressTaken) {
+        continue;
+      }
+      paramSegment.optional = false;
+      // Both answer for the address: the url build, the signal -> url sync,
+      // and checkIfLiteralCanBeOptionalWithPatternObj ("/me" does not stand for
+      // "/me/players" either)
+      connection.isDefaultValue = (value) => value === undefined;
+      connection.isCustomValue = (value) => value !== undefined;
+    }
+  }
   // Phase 5: Calculate depths for all patterns
   for (const routePattern of routePatternSet) {
     calculatePatternDepth(routePattern);
   }
   debug("Pattern registry updated");
+};
+// Whether two patterns spell the same path before `index`: the same literals,
+// and a param wherever the other has one
+const sharesPathUpTo = (segments, otherSegments, index) => {
+  for (let i = 0; i < index; i++) {
+    const seg = segments[i];
+    const otherSeg = otherSegments[i];
+    if (!otherSeg) {
+      return false;
+    }
+    if (seg.type === "literal" && otherSeg.type === "literal") {
+      if (seg.value !== otherSeg.value) {
+        return false;
+      }
+    } else if (seg.type !== otherSeg.type) {
+      return false;
+    }
+  }
+  return true;
 };
 // Store the most specific parent (closest parent in hierarchy)
 const getPathSegmentCount = (pattern) => {

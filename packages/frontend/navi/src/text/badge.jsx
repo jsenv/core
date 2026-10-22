@@ -10,12 +10,13 @@ import { Text } from "./text.jsx";
 
 const css = /* css */ `
   @layer navi {
+    .navi_badge {
+      --font-size: 0.7em;
+      --badge-padding-x-default: 0.8em;
+      --badge-padding-y-default: 0.4em;
+    }
   }
   .navi_badge {
-    --font-size: 0.7em;
-    --badge-padding-x-default: 0.8em;
-    --badge-padding-y-default: 0.4em;
-
     /* Each side resolves the most specific value it was given, from the side
        itself down to the axis, the shorthand, then the default. Resolved once
        here because the close button below reuses these to cancel the badge

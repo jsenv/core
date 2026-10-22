@@ -22,6 +22,7 @@ them by hand — see [resource.md](./resource.md).
 
 - [Params: `bindParams`, and calling the action](#params-bindparams-and-calling-the-action)
   - [The answer is kept on the instance that ran](#the-answer-is-kept-on-the-instance-that-ran)
+  - [Nothing to ask, and coming back](#nothing-to-ask-and-coming-back)
   - [The in-between states of a gesture are real params](#the-in-between-states-of-a-gesture-are-real-params)
 - [Running: `run`, `rerun`, `prerun`, `reset`](#running-run-rerun-prerun-reset)
   - [Aborting saves resources, it does not undo](#aborting-saves-resources-it-does-not-undo)
@@ -123,6 +124,28 @@ simply has no numbers in it. The same holds for the instance a control runs
 verb — `computed(() => ME.GET.dataSignal.value)` — only works for a verb
 something runs **directly**, with no params; anything else derives from the
 instance: `computed(() => COUNTS.dataSignal.value)`.
+
+### Nothing to ask, and coming back
+
+A binding has nothing to ask while its params as a whole are `undefined` or
+`null` — a question computed from a form still missing a field.
+`{ id: undefined }` is not that: it is a question, and it is asked. With nothing
+to ask, the binding reads an instance holding nothing, idle: no data, no wait.
+The previous answer stands in only while a newer one is coming, and none is.
+
+What the previous params got stays on the instance that ran. A run still out
+for them is called off by `actionRunEffect` (so by a route action) and carries
+on under a plain binding; either way nothing is reset — an action does not
+start over because its params went away.
+
+Whether coming back to those params finds that answer depends on the instance
+still being there. Without `keep` it lives as long as something references it,
+and once nothing does it goes at a moment nothing in the code decides: coming
+back may find it or ask again, and neither is something to build on.
+`createAction(callback, { keep: { ms } })` is what decides. The answer stays
+good for `ms` from the moment it landed, and the first screen asking for those
+params after that asks again: a read worth asking at each visit — a
+measurement, a quota — declares a short one.
 
 ### The in-between states of a gesture are real params
 

@@ -33,6 +33,9 @@ let isUpdatingRoutesFromUrl = false;
  *   are the same state: writing the signal rewrites the address, an address
  *   arriving from outside writes the signal, and the param disappears from the
  *   url while the signal holds its default.
+ *   They exist on this route's address only, unless the pattern catches the
+ *   addresses below it (`/map/`, `/map/*`, the root): then they hold on every
+ *   route below as well. `/places` does not lend its `?q=` to `/places/clubs`.
  *   `{ signal, default }` says what that state is worth ON THIS ROUTE: the same
  *   step opens a creation wizard on its first question and an edition one on
  *   its summary, each address staying clean on the step its page opens on. One
@@ -51,7 +54,9 @@ let isUpdatingRoutesFromUrl = false;
  *   whose param declines the segment does not match at all: no signal is
  *   written, `<Route fallback>` is reachable, and `/:gameId` can sit at the root
  *   without swallowing `/cgu`. A constrained param is also required — no segment
- *   is not one of the values it accepts — so `/:gameId` does not match `/`.
+ *   is not one of the values it accepts — so `/:gameId` does not match `/`,
+ *   unless its default stands for the bare address (see docs/navigation.md,
+ *   "Declaring the sections is what makes them places").
  *
  *   Constrain the shape, not the existence: whether that game exists is for the
  *   route action and the page to answer, on a route that did match.

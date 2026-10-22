@@ -21,6 +21,7 @@
 import { useId, useRef, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { isTypoProp } from "@jsenv/navi/src/box/box_style_util.js";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
@@ -43,6 +44,13 @@ const css = /* css */ `
 
     > .navi_group {
       flex: 1 1 auto;
+
+      /* The main half (the chevron half sits in .navi_split_button_menu): a
+         width given to the split button is the pair's, so what the chevron
+         leaves goes to the main half rather than after the chevron. */
+      > .navi_button {
+        flex: 1 1 auto;
+      }
     }
   }
   /* The chevron half is a button with a headless picker behind it: the picker
@@ -51,6 +59,14 @@ const css = /* css */ `
   .navi_split_button_menu {
     position: relative;
     display: flex;
+    /* The group pulls this member back by its border width, but the border is
+       the chevron half's, inside: that half is the one pulled back, by its own
+       width, whatever variant or borderWidth it was given. */
+    --border-width: 0px;
+
+    > .navi_button {
+      margin-left: calc(var(--border-width) * -1);
+    }
   }
 `;
 
@@ -60,15 +76,16 @@ const css = /* css */ `
  *   value?: any,
  *   defaultValue?: any,
  *   label?: import("preact").ComponentChildren,
- *   action?: (value: any, event: Event) => void | Promise<void>,
+ *   action?: (value: any, { event, signal }: { event: Event, signal: AbortSignal }) => void | Promise<void>,
  *   command?: string,
  *   commandFor?: string,
  *   prefetch?: boolean,
- *   onValueChange?: (value: any, event: Event) => void,
+ *   onValueChange?: (value: any, { event }: { event: Event }) => void,
  *   chooseEffect?: "select" | "run",
  *   menuLabel?: string,
  *   menuIcon?: import("preact").ComponentChildren,
  *   menuIconSize?: number | string,
+ *   menuTestId?: string,
  *   loading?: boolean,
  *   readOnly?: boolean,
  *   disabled?: boolean,
@@ -113,10 +130,12 @@ const css = /* css */ `
  * @param {import("preact").ComponentChildren} [label] What the button says, when
  *   that is not the name of the entry it stands for — a button that keeps one
  *   name whatever the menu does.
- * @param {(value: any, event: Event) => void} [action] Do the thing, for the
- *   entry given. Pressed on the button it is the entry the button stands for;
- *   with `chooseEffect="run"` it is also the entry just chosen. Awaited: the
- *   whole split button is busy until it settles.
+ * @param {(value: any, { event, signal }) => void} [action] Do the thing, for
+ *   the entry given. Pressed on the button it is the entry the button stands
+ *   for; with `chooseEffect="run"` it is also the entry just chosen. Run as a
+ *   navi action: the second argument is the run's (see docs/actions.md), the
+ *   press being its `event`. Awaited: the whole split button is busy until it
+ *   settles.
  * @param {string} [command] What a press on the button does once its `action`
  *   is done, as on a `<Button>` (with `commandFor`, and `command-value` when
  *   what the command is about is not the entry the button stands for). A
@@ -136,6 +155,8 @@ const css = /* css */ `
  *   through `menuLabel`.
  * @param {number|string} [menuIconSize] How big that icon is drawn. Defaults to
  *   the button's own font size.
+ * @param {string} [menuTestId] The `data-testid` of the chevron half, which
+ *   navi builds and the caller has no other way to name.
  * @param {"popover"|"dialog"} [mode="popover"] What the menu is drawn as. A
  *   picker left to itself turns into a dialog on a small screen; a split
  *   button's menu stays hung off the button there, so this says popover unless
@@ -156,8 +177,12 @@ const css = /* css */ `
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
  * An `aria-*` attribute describes the button and reaches the main half —
  * `aria-pressed` for a split button whose main half toggles a mode;
- * `aria-hidden` excepted, which hides the whole control. Anything else lands
- * on the split button's own box.
+ * `aria-hidden` excepted, which hides the whole control. How the words are
+ * written (`size`, `bold`, `lineHeight`, `noWrap`…) reaches both halves, and so
+ * does vertical padding (`paddingY`, `paddingTop`, `paddingBottom`); the rest
+ * of the padding is the main half's — the chevron half keeps its own, which
+ * gives it its width. Anything else (`className`, `width`, margins, `data-*`)
+ * lands on the split button's own box.
  */
 export const SplitButton = (props) => {
   import.meta.css = css;
@@ -177,6 +202,7 @@ export const SplitButton = (props) => {
     menuLabel = buttonI18n("button.more_actions"),
     menuIcon = <ChevronDownSvg />,
     menuIconSize,
+    menuTestId,
     loading,
     readOnly,
     disabled,
@@ -196,11 +222,19 @@ export const SplitButton = (props) => {
     ...rest
   } = props;
   // Everything the popup answers to travels to the Picker; an aria-* describes
-  // the button a screen reader meets, which is the main half; everything else
-  // is the split button's own box (margins, width, data-*). Sorted by name
-  // rather than named one by one so a Picker popup prop is forwarded by adding
-  // it to that list, not by threading it through here.
-  const [popupProps, buttonAriaProps, boxProps] = sortRestProps(rest);
+  // the button a screen reader meets, which is the main half; how the words are
+  // written and how far they sit from the edge belong to the halves, since a
+  // <button> inherits neither from the box around it; everything else is the
+  // split button's own box (margins, width, data-*). Sorted by name rather
+  // than named one by one so a Picker popup prop is forwarded by adding it to
+  // that list, not by threading it through here.
+  const [
+    popupProps,
+    buttonAriaProps,
+    halfStyleProps,
+    mainPaddingProps,
+    boxProps,
+  ] = sortRestProps(rest);
   // A split button is a control on the page, not a place one goes: its menu
   // hangs off it even on a phone, where a picker left to itself would decide a
   // small screen means a dialog. Passing mode="dialog" asks for that back.
@@ -259,6 +293,7 @@ export const SplitButton = (props) => {
     borderColor,
     borderWidth,
     borderRadius,
+    ...halfStyleProps,
     pressEffect,
     loading: loadingResolved,
     readOnly,
@@ -270,7 +305,7 @@ export const SplitButton = (props) => {
   return (
     <Box
       ref={rootRef}
-      className="navi_split_button"
+      baseClassName="navi_split_button"
       borderRadius={borderRadius}
       {...boxProps}
     >
@@ -289,6 +324,7 @@ export const SplitButton = (props) => {
           command-value={commandValue}
           prefetch={prefetch}
           {...buttonAriaProps}
+          {...mainPaddingProps}
           {...halfProps}
         >
           {label === undefined ? optionShown?.label : label}
@@ -299,6 +335,7 @@ export const SplitButton = (props) => {
             paddingX="s"
             expandY
             aria-label={menuLabel}
+            data-testid={menuTestId}
             command="--navi-open"
             commandFor={menuId}
             {...halfProps}
@@ -425,9 +462,25 @@ const POPUP_PROP_SET = new Set([
   "popupBorderRadius",
   "animation",
 ]);
+// Vertical padding is said about both halves so they stay the same height; the
+// horizontal one is the main half's alone, the chevron half's own (paddingX="s")
+// being what gives it its width.
+const HALF_PADDING_PROP_SET = new Set([
+  "paddingY",
+  "paddingTop",
+  "paddingBottom",
+]);
+const MAIN_PADDING_PROP_SET = new Set([
+  "padding",
+  "paddingX",
+  "paddingLeft",
+  "paddingRight",
+]);
 const sortRestProps = (props) => {
   const popupProps = {};
   const buttonAriaProps = {};
+  const halfStyleProps = {};
+  const mainPaddingProps = {};
   const boxProps = {};
   for (const key of Object.keys(props)) {
     if (POPUP_PROP_SET.has(key)) {
@@ -436,9 +489,19 @@ const sortRestProps = (props) => {
       // aria-hidden hides a subtree rather than describing a button: on the
       // main half alone it would leave the chevron half exposed.
       buttonAriaProps[key] = props[key];
+    } else if (isTypoProp(key) || HALF_PADDING_PROP_SET.has(key)) {
+      halfStyleProps[key] = props[key];
+    } else if (MAIN_PADDING_PROP_SET.has(key)) {
+      mainPaddingProps[key] = props[key];
     } else {
       boxProps[key] = props[key];
     }
   }
-  return [popupProps, buttonAriaProps, boxProps];
+  return [
+    popupProps,
+    buttonAriaProps,
+    halfStyleProps,
+    mainPaddingProps,
+    boxProps,
+  ];
 };

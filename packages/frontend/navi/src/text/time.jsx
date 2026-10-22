@@ -110,6 +110,13 @@ import { Text } from "./text.jsx";
  *   instead of the default "1 jour et 12 heures". The default promotes to the
  *   largest fitting unit because it reads better; force the unit when the unit
  *   itself is the information (a quota, a counter).
+ * @param {number} [decimals]
+ *   `type="duration"` and `type="second"` only — how many decimals a fraction
+ *   of a second keeps, rounded: with `decimals={1}`, 1.234 reads "1,2 seconde"
+ *   and 1.96 "2 secondes"; a whole value is never padded ("12 secondes").
+ *   Without it the fraction is written to the millisecond ("1,234 seconde"). A
+ *   duration measured in milliseconds rarely comes out whole, and its last
+ *   digits are usually noise.
  * @param {boolean} [pad=true]
  *   `type="time"` + `format="compact"` only — whether the clock is written at a
  *   fixed width. `true` (default) zero-pads the hour and always writes the
@@ -338,6 +345,18 @@ const TimeMinute = ({
   if (!Number.isFinite(minutes)) {
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
+  if (!Number.isInteger(minutes)) {
+    // a fraction of a minute is read in seconds, the way formatMinuteDuration
+    // writes it ("1 minute et 30 secondes")
+    const clock = formatClock(Math.round(minutes * 60));
+    return (
+      <TimeText dateTime={clock} {...props}>
+        {format === "timestring"
+          ? clock
+          : formatMinuteDuration(minutes, { lang, format, forceUnit })}
+      </TimeText>
+    );
+  }
 
   const totalHours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
@@ -363,6 +382,7 @@ const TimeSecond = ({
   lang = languagesSignal.value,
   format = "long",
   forceUnit = false,
+  decimals,
   ...props
 }) => {
   if (children === undefined || children === null) {
@@ -377,17 +397,13 @@ const TimeSecond = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const dateTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-
+  const dateTime = formatClock(seconds);
   let text;
   if (format === "timestring") {
     // Always HH:MM:SS to avoid ambiguity with HH:MM time-of-day format
-    text = dateTime;
+    text = formatClock(seconds, decimals);
   } else {
-    text = formatSecondDuration(seconds, { lang, format, forceUnit });
+    text = formatSecondDuration(seconds, { lang, format, forceUnit, decimals });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -433,6 +449,7 @@ const TimeDuration = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  decimals,
   ...props
 }) => {
   if (children === undefined || children === null) {
@@ -469,7 +486,7 @@ const TimeDuration = ({
     // formatDuration reads the raw values and appends compact unit symbols.
     return (
       <TimeText {...props}>
-        {formatDuration(duration, { lang, format })}
+        {formatDuration(duration, { lang, format, decimals })}
       </TimeText>
     );
   }
@@ -477,7 +494,7 @@ const TimeDuration = ({
     return <TimeText {...props}>{"0"}</TimeText>;
   }
 
-  const text = formatDuration(duration, { lang, format });
+  const text = formatDuration(duration, { lang, format, decimals });
   return (
     <TimeText dateTime={isoString} {...props}>
       {text}
@@ -595,4 +612,22 @@ export const TimeRange = ({
       <Time {...boundProps}>{to}</Time>
     </Text>
   );
+};
+
+// "HH:MM:SS", the fraction of a second after a period ("00:00:01.234"): the
+// shape a `datetime` attribute reads, which takes up to 3 decimals.
+const formatClock = (seconds, decimals = 3) => {
+  const factor = 10 ** decimals;
+  const total = Math.round(seconds * factor);
+  const fraction = total % factor;
+  const totalSeconds = (total - fraction) / factor;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const clock = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  if (fraction === 0) {
+    return clock;
+  }
+  const digits = String(fraction).padStart(decimals, "0").replace(/0+$/, "");
+  return `${clock}.${digits}`;
 };

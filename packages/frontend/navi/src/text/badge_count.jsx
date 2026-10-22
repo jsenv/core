@@ -9,20 +9,31 @@ import { TextAnchor } from "./text_anchor.jsx";
 
 const css = /* css */ `
   @layer navi {
+    .navi_text.navi_badge_count {
+      --font-size: 0.7em;
+      --badge-count-padding-x-default: 0.5em;
+      /* Ink to edge: ~6px above and below the digits at the default size, for
+         ~7px on the sides — a little less than the sides, which is what reads
+         as balanced on a pill; 0.2em read as squashed. */
+      --badge-count-padding-y-default: 0.3em;
+
+      /* The single-char ellipse and the circle take their shape from their
+         own size, not from a padding: a padding prop grows them from the
+         outside. */
+      &[data-ellipse][data-single-char],
+      &[data-circle] {
+        --badge-count-padding-x-default: 0;
+        --badge-count-padding-y-default: 0;
+      }
+    }
   }
   .navi_text.navi_badge_count {
     /* Important to prevent anchor from breaking to a new line */
     white-space: nowrap;
-    --font-size: 0.7em;
     --x-background: var(--background);
     --x-background-color: var(--background-color);
     --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
-    --badge-count-padding-x-default: 0.5em;
-    /* Ink to edge: ~6px above and below the digits at the default size, for
-       ~7px on the sides — a little less than the sides, which is what reads
-       as balanced on a pill; 0.2em read as squashed. */
-    --badge-count-padding-y-default: 0.3em;
 
     /* Each side resolves the most specific value it was given, from the side
        itself down to the axis, the shorthand, then the default. */
@@ -92,14 +103,10 @@ const css = /* css */ `
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
-        /* The digit sits in a square content box that the radius rounds into a
-           circle, so no padding is needed to obtain the shape. Sizing is
-           content-box: a padding prop then grows the square from the outside —
-           a bigger circle, or a pill on one axis — instead of eating into it
-           and pushing the digit out. */
-        --badge-count-padding-x-default: 0;
-        --badge-count-padding-y-default: 0;
-
+        /* No padding by default (in the layer above). Sizing is content-box: a
+           padding prop then grows the square from the outside — a bigger
+           circle, or a pill on one axis — instead of eating into it and pushing
+           the digit out. */
         display: inline-block;
         box-sizing: content-box;
         width: 1.6em;
@@ -115,11 +122,9 @@ const css = /* css */ `
     /* Circle */
     &[data-circle] {
       --x-number-font-size: var(--font-size);
+
       /* Same as the single char ellipse: the radius comes from the number of
          characters, padding grows it from the outside. */
-      --badge-count-padding-x-default: 0;
-      --badge-count-padding-y-default: 0;
-
       display: inline-flex;
       box-sizing: content-box;
       aspect-ratio: 1/1;

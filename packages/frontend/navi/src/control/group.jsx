@@ -9,6 +9,11 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 const css = /* css */ `
   .navi_group {
     --group-border-width: var(--navi-control-border-width);
+    /* A seam reads the member's own --border-width, which a control declares
+       on its root. A member that declares none would otherwise inherit one
+       from around the group — the picker whose popup the group sits in — and
+       take it for its own. */
+    --border-width: initial;
 
     /* Two ways of asking for a square corner, and no selector ever reaching
        inside a member:

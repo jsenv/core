@@ -768,6 +768,7 @@ export const getVisualChildStylePropStrategy = (name) => {
 };
 
 export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
+export const isTypoProp = (name) => TYPO_PROP_NAME_SET.has(name);
 
 const getStringifier = (key) => {
   if (SPACING_PROP_SET.has(key)) {
