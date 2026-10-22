@@ -42,7 +42,10 @@ const css = /* css */ `
     [navi-field] {
       --spacing-with-control: var(--navi-xs);
 
-      .navi_checkbox {
+      /* A switch keeps its own margin (--switch-margin): its variant writes
+         --margin at this rule's weight, in this same layer, and sheet order
+         would pick between the two. */
+      .navi_checkbox:not([data-variant="switch"]) {
         --margin: 0;
       }
       .navi_radio {

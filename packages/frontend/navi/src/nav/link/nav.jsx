@@ -55,6 +55,7 @@ const rememberProgressAnimation = (navElement, travel) => {
 const css = /* css */ `
   @layer navi {
     .navi_nav {
+      --nav-width: fit-content;
       --nav-border: none;
       --nav-padding: 0px;
       --nav-border-radius: 0px;
@@ -191,7 +192,7 @@ const css = /* css */ `
 
   .navi_nav {
     display: flex;
-    width: fit-content;
+    width: var(--nav-width);
     padding-top: var(
       --nav-padding-top,
       var(--nav-padding-y, var(--nav-padding, unset))
@@ -213,12 +214,12 @@ const css = /* css */ `
     border: var(--nav-border);
     border-radius: var(--nav-border-radius);
     /* A row asked to scroll is a row that does not get to decide its own
-       width. fit-content above is what a nav is worth when nothing bounds it,
-       and a row of tabs is worth all of them: nothing wraps, so its min-content
-       IS its max-content, and fit-content resolves to the whole row however
-       narrow the box around it. The scroller would then have nothing to
-       scroll — a row hanging out of its container, clipped by whatever clips
-       first. The ceiling is what makes the overflow real. */
+       width. fit-content (--nav-width) is what a nav is worth when nothing
+       bounds it, and a row of tabs is worth all of them: nothing wraps, so its
+       min-content IS its max-content, and fit-content resolves to the whole
+       row however narrow the box around it. The scroller would then have
+       nothing to scroll — a row hanging out of its container, clipped by
+       whatever clips first. The ceiling is what makes the overflow real. */
     &[data-scrollable] {
       max-width: 100%;
 

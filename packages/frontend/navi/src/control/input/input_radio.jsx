@@ -91,6 +91,30 @@ const css = /* css */ `
       --button-border-color-disabled: var(--border-color-readonly);
       --button-background-color-disabled: var(--background-color-readonly);
     }
+
+    /* A variant moves the DEFAULTS and never the resolved values (--x-*), so
+       a prop (inline on this element) and an app's own rule on the radio still
+       win, as they do over the defaults above. */
+    .navi_radio[data-variant="icon"] {
+      --width: auto;
+      --height: auto;
+      --outline-offset: 2px;
+      --outline-width: 2px;
+    }
+    .navi_radio[data-variant="button"] {
+      --margin: 0;
+      --outline-offset: 0px;
+      --width: auto;
+      --height: auto;
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
+    }
   }
 
   .navi_radio {
@@ -254,29 +278,9 @@ const css = /* css */ `
       }
     }
 
-    /* Icon variant */
-    &[data-variant="icon"] {
-      --width: auto;
-      --height: auto;
-      --outline-offset: 2px;
-      --outline-width: 2px;
-    }
-
-    /* Button variant */
+    /* Button variant (its defaults, and the icon variant's, are in the layer
+       above) */
     &[data-variant="button"] {
-      --margin: 0;
-      --outline-offset: 0px;
-      --width: auto;
-      --height: auto;
-      --border-color: var(--button-border-color);
-      --border-color-hover: var(--button-border-color-hover);
-      --background-color: var(--button-background-color);
-      --background-color-hover: var(--button-background-color-hover);
-      --background-color-readonly: var(--button-background-color-readonly);
-      --background-color-disabled: var(--button-background-color-disabled);
-      --border-color-checked: var(--button-border-color);
-      --background-color-checked: var(--button-background-color);
-
       padding-top: var(
         --button-padding-top,
         var(

@@ -80,6 +80,48 @@ const css = /* css */ `
         black
       );
     }
+
+    /* A variant moves the DEFAULTS and never the resolved values (--x-*), so
+       a prop (inline on this element) and an app's own rule on the checkbox
+       still win, as they do over the defaults above. */
+    .navi_checkbox[data-variant="switch"] {
+      --margin: var(--switch-margin);
+      --width: var(--switch-outer-width);
+      --height: unset;
+      --border-radius: var(--switch-border-radius);
+      --background-color: var(--switch-background-color);
+      --background-color-hover: var(--switch-background-color-hover);
+      --background-color-readonly: var(--switch-background-color-readonly);
+      --background-color-disabled: var(--switch-background-color-disabled);
+      --background-color-checked: var(--switch-background-color-checked);
+      --background-color-hover-checked: var(
+        --switch-background-color-hover-checked
+      );
+      --background-color-readonly-checked: var(
+        --switch-background-color-readonly-checked
+      );
+      --background-color-disabled-checked: var(
+        --switch-background-color-disabled-checked
+      );
+    }
+    .navi_checkbox[data-variant="icon"] {
+      --margin: 0;
+      --width: auto;
+      --height: auto;
+    }
+    .navi_checkbox[data-variant="button"] {
+      --margin: 0;
+      --width: auto;
+      --height: auto;
+      --border-color: var(--button-border-color);
+      --border-color-hover: var(--button-border-color-hover);
+      --background-color: var(--button-background-color);
+      --background-color-hover: var(--button-background-color-hover);
+      --background-color-readonly: var(--button-background-color-readonly);
+      --background-color-disabled: var(--button-background-color-disabled);
+      --border-color-checked: var(--button-border-color);
+      --background-color-checked: var(--button-background-color);
+    }
   }
 
   .navi_checkbox {
@@ -239,26 +281,9 @@ const css = /* css */ `
     }
 
     /* Switch variant */
+    /* Its defaults are in the layer above. */
     &[data-variant="switch"] {
       --switch-outer-width: calc(var(--switch-width) + var(--switch-padding));
-      --margin: var(--switch-margin);
-      --width: var(--switch-outer-width);
-      --height: unset;
-      --border-radius: var(--switch-border-radius);
-      --background-color: var(--switch-background-color);
-      --background-color-hover: var(--switch-background-color-hover);
-      --background-color-readonly: var(--switch-background-color-readonly);
-      --background-color-disabled: var(--switch-background-color-disabled);
-      --background-color-checked: var(--switch-background-color-checked);
-      --background-color-hover-checked: var(
-        --switch-background-color-hover-checked
-      );
-      --background-color-readonly-checked: var(
-        --switch-background-color-readonly-checked
-      );
-      --background-color-disabled-checked: var(
-        --switch-background-color-disabled-checked
-      );
 
       position: relative;
       /* We compute ourselves the width + padding otherwise during */
@@ -272,27 +297,11 @@ const css = /* css */ `
     }
 
     &[data-variant="icon"] {
-      --margin: 0;
-      --width: auto;
-      --height: auto;
-
       background: none;
       border: none;
     }
 
     &[data-variant="button"] {
-      --margin: 0;
-      --width: auto;
-      --height: auto;
-      --border-color: var(--button-border-color);
-      --border-color-hover: var(--button-border-color-hover);
-      --background-color: var(--button-background-color);
-      --background-color-hover: var(--button-background-color-hover);
-      --background-color-readonly: var(--button-background-color-readonly);
-      --background-color-disabled: var(--button-background-color-disabled);
-      --border-color-checked: var(--button-border-color);
-      --background-color-checked: var(--button-background-color);
-
       padding-top: var(
         --button-padding-top,
         var(

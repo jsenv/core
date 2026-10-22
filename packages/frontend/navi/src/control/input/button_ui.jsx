@@ -231,6 +231,16 @@ const css = /* css */ `
         transparent
       );
     }
+
+    /* contentDisplay="contents": the frame has no box, so the button's own box
+       is the caller's drawing from edge to edge. Only the browser's button
+       look is taken away, and in the layer: the caller's own border, padding
+       or background on the button wins. */
+    .navi_button[data-content-display="contents"] {
+      padding: 0;
+      background: none;
+      border: none;
+    }
   }
 
   a.navi_button {
@@ -255,11 +265,7 @@ const css = /* css */ `
 
     position: relative;
     box-sizing: border-box;
-    aspect-ratio: inherit;
-    padding: 0;
     color: var(--x-button-color);
-    background: none;
-    border: none;
     /* Squared from the outside, corner by corner: a Group asks the member it
        joins for square corners along the seam, and the button it means may
        arrive wrapped (in a tooltip, in a link), so the ask travels down as
@@ -287,6 +293,15 @@ const css = /* css */ `
     touch-action: manipulation;
     user-select: none;
 
+    /* The browser's own button look, taken away: navi draws the button in the
+       frame below. :where() keeps it at the weight of one class; the frameless
+       button (contentDisplay="contents") gets it from the layer above. */
+    &:where(:not([data-content-display="contents"])) {
+      padding: 0;
+      background: none;
+      border: none;
+    }
+
     .navi_button_content {
       /* The ask stops here: this element is the button's frame, so what is
          inside it (a popover the button opens, a button of its own) is no
@@ -304,6 +319,9 @@ const css = /* css */ `
          so the rule reads as what the element is. */
       display: inherit;
       box-sizing: border-box;
+      /* The button's own ratio (its aspectRatio, an app's rule on it), which
+         the frame fills. Not inherited by the button itself: that would give
+         it the ratio of whatever box it sits in. */
       aspect-ratio: inherit;
       width: 100%;
       height: 100%;
@@ -426,8 +444,7 @@ const css = /* css */ `
     }
     /* The frame is out of the layout (contentDisplay="contents") and draws
        nothing any more, the focus ring included — so the button wears it
-       itself. Same box either way: the button has no padding and no border of
-       its own, so the frame's border box was already the button's. */
+       itself, around its own box, which is the caller's drawing. */
     &[data-content-display="contents"] {
       &[data-focus-visible] {
         outline: var(--button-outline-width) solid var(--button-outline-color);

@@ -72,6 +72,27 @@ const css = /* css */ `
       --link-current-indicator-spacing: 0;
       --link-current-indicator-color: var(--navi-link-current-indicator-color);
     }
+
+    /* A variant moves the DEFAULTS and never the resolved values (--x-*), so
+       a prop (inline on this element) and an app's own rule on the link still
+       win, as they do over the defaults above. */
+    .navi_link[data-variant="text"] {
+      --link-color: unset;
+      --link-text-decoration: none;
+    }
+    .navi_link[data-variant="icon"] {
+      --link-color: unset;
+      --link-text-decoration: none;
+    }
+    .navi_link[data-variant="tab"] {
+      --link-background-hover: color-mix(
+        in srgb,
+        var(--link-background, transparent),
+        var(--x-link-contrasting-color) 15%
+      );
+      --link-color: unset;
+      --link-text-decoration: none;
+    }
   }
 
   .navi_link {
@@ -123,7 +144,6 @@ const css = /* css */ `
     /* The one place the link's position is said: a state rule below must not
        repeat it (see [data-stretch]). */
     position: relative;
-    aspect-ratio: inherit;
     padding-top: var(--x-link-padding-top);
     padding-right: var(--x-link-padding-right);
     padding-bottom: var(--x-link-padding-bottom);
@@ -330,22 +350,8 @@ const css = /* css */ `
       margin-left: -0.1em;
     }
 
-    &[data-variant="text"] {
-      --link-color: unset;
-      --link-text-decoration: none;
-    }
-    &[data-variant="icon"] {
-      --link-color: unset;
-      --link-text-decoration: none;
-    }
+    /* Variants: their defaults are in the layer above. */
     &[data-variant="tab"] {
-      --link-background-hover: color-mix(
-        in srgb,
-        var(--link-background, transparent),
-        var(--x-link-contrasting-color) 15%
-      );
-      --link-color: unset;
-      --link-text-decoration: none;
       white-space: nowrap;
       user-select: none;
 

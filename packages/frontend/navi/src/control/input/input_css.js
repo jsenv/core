@@ -49,6 +49,65 @@ const inputCss = /* css */ `
       );
       --color-disabled: var(--color-dimmed);
     }
+
+    /* A transparent background is a resting look, not an editing one: while
+       the field has focus it turns solid so text is not typed over whatever
+       sits behind it. */
+    .navi_input[data-background-transparent] {
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--navi-surface-color);
+    }
+
+    /* A variant states what the caller did NOT: it moves the DEFAULTS and
+       never the resolved values (--x-*), so a backgroundColor/borderColor prop
+       — which lands inline on this same element — still wins, and so does an
+       app's own rule on the field, as it does over the defaults above. */
+    .navi_input[data-variant="discrete"],
+    .navi_input[data-variant="discrete-border"] {
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--navi-surface-color);
+
+      /* With an explicit background color the movement flips: colored at
+         rest and on hover, back to transparent while being edited. */
+      &[data-background] {
+        --background-color-focus: transparent;
+      }
+    }
+    /* The border is part of what makes a field look like a field, so a
+       discrete one does without it until it is interacted with — same idea
+       as the background above, and the two come back together.
+       discrete-border keeps the border: only the background recedes. */
+    .navi_input[data-variant="discrete"] {
+      --border-color: transparent;
+    }
+    /* The box of a field, without a field in it: the border is kept and made
+       invisible rather than dropped, and the background goes with it, so what
+       is left is text sitting exactly where the value would be — swap one for
+       the other and nothing on the page moves. The per-state variables are
+       re-pointed at the base ones, otherwise the hover wash and the disabled
+       grey would draw a box the variant just took away. */
+    .navi_input[data-variant="text"] {
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--background-color);
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
+      --border-color: transparent;
+      --border-color-hover: var(--border-color);
+      --border-color-readonly: var(--border-color);
+      --border-color-disabled: var(--border-color);
+    }
+    /* underline: the background goes to a default the caller can override,
+       with the per-state ones re-pointed at it so no box comes back on hover
+       or while disabled (the line itself is drawn outside the layer). */
+    .navi_input[data-variant="underline"] {
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--background-color);
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
+    }
   }
 
   .navi_input {
@@ -278,13 +337,9 @@ const inputCss = /* css */ `
       --x-outline-color: var(--callout-color);
     }
 
-    /* A transparent background is a resting look, not an editing one: while
-       the field has focus it turns solid so text is not typed over whatever
-       sits behind it. */
+    /* The background-transparent and variant defaults are in the layer above;
+       what is left here is how they resolve per state. */
     &[data-background-transparent] {
-      --background-color-hover: var(--background-color);
-      --background-color-focus: var(--navi-surface-color);
-
       &[data-focus] {
         --x-background-color: var(--background-color-focus);
       }
@@ -292,11 +347,6 @@ const inputCss = /* css */ `
 
     &[data-variant="discrete"],
     &[data-variant="discrete-border"] {
-      /* An inline backgroundColor prop overrides this default */
-      --background-color: transparent;
-      --background-color-hover: var(--background-color);
-      --background-color-focus: var(--navi-surface-color);
-
       &[data-focus] {
         --x-background-color: var(--background-color-focus);
       }
@@ -306,19 +356,8 @@ const inputCss = /* css */ `
       &[data-disabled] {
         --x-background-color: var(--background-color);
       }
-      /* With an explicit background color the movement flips: colored at
-         rest and on hover, back to transparent while being edited. */
-      &[data-background] {
-        --background-color-focus: transparent;
-      }
     }
-    /* The border is part of what makes a field look like a field, so a
-       discrete one does without it until it is interacted with — same idea
-       as the background above, and the two come back together.
-       discrete-border keeps the border: only the background recedes. */
     &[data-variant="discrete"] {
-      --border-color: transparent;
-
       &[data-focus] {
         --x-border-color: color-mix(
           in srgb,
@@ -328,38 +367,15 @@ const inputCss = /* css */ `
       }
     }
 
-    /* The box of a field, without a field in it: the border is kept and made
-       invisible rather than dropped, and the background goes with it, so what
-       is left is text sitting exactly where the value would be — swap one for
-       the other and nothing on the page moves. Defaults, like the variants
-       above: a backgroundColor / borderColor prop lands inline on this same
-       element and still wins, and the per-state variables are re-pointed at
-       the base ones, otherwise the hover wash and the disabled grey would draw
-       a box the variant just took away. */
     &[data-variant="text"] {
-      --background-color: transparent;
-      --background-color-hover: var(--background-color);
-      --background-color-focus: var(--background-color);
-      --background-color-readonly: var(--background-color);
-      --background-color-disabled: var(--background-color);
-      --border-color: transparent;
-      --border-color-hover: var(--border-color);
-      --border-color-readonly: var(--border-color);
-      --border-color-disabled: var(--border-color);
       cursor: inherit;
     }
 
-    /* The line under the field is the whole box: no background, no frame, only
-       the rule drawn by .navi_input_underline — which keeps reading
-       --x-border-color, so a borderColor prop still colors it. The background
-       goes to a default the caller can override, with the per-state ones
-       re-pointed at it so no box comes back on hover or while disabled. */
+    /* The line under the field is the whole box: no background (a default, in
+       the layer above), no frame, only the rule drawn by .navi_input_underline
+       — which keeps reading --x-border-color, so a borderColor prop still
+       colors it. */
     &[data-variant="underline"] {
-      --background-color: transparent;
-      --background-color-hover: var(--background-color);
-      --background-color-focus: var(--background-color);
-      --background-color-readonly: var(--background-color);
-      --background-color-disabled: var(--background-color);
       padding-right: 0;
       padding-left: 0;
 
