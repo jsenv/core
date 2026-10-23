@@ -22,6 +22,7 @@ import {
 } from "../control_context.js";
 import {
   ControlFacadeChildrenWrapper,
+  readOnlyHandedDown,
   useControlFacadeProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
@@ -261,6 +262,10 @@ const css = /* css */ `
     ) {
       --picker-padding-x-default: var(--navi-button-padding-x-default);
       --picker-padding-y-default: var(--navi-button-padding-y-default);
+      --picker-font-family: var(
+        --navi-button-font-family,
+        var(--navi-control-font-family, inherit)
+      );
       --picker-align-x-default: center;
       --picker-background-color: var(--navi-button-background-color);
       /* Read-only / disabled: fading toward the surface, not toward
@@ -805,15 +810,18 @@ const css = /* css */ `
 
       display: contents;
       /* What opens from a control is a page of its own, not part of that
-         control's type scale: it is written at the control font by name,
-         rather than by inheriting the size the picker itself is drawn at. A
-         caller who sizes a picker to the façade it holds (so the padding, the
-         corners and the chevron the picker draws in em land on the text the
-         caller actually wrote) would otherwise take the popup down with it:
-         its title, and everything in it that does not state a size of its
-         own. Same reason the popup is written on the page's line rather than
-         the control's — see .navi_popup in popup.jsx. */
-      font-size: var(--navi-control-font-size);
+         control's type scale: it is written at the page's size and weight by
+         name, as a Dialog opened from a Button is, rather than inheriting the
+         ones the picker itself is drawn at. A caller who sizes or bolds a
+         picker for the façade it holds (so the padding, the corners and the
+         chevron the picker draws in em land on the text the caller actually
+         wrote) would otherwise take the popup with it: its title, and
+         everything in it that does not state a size of its own. The controls
+         in there state the control size themselves. Same reason the popup is
+         written on the page's line rather than the control's — see
+         .navi_popup in popup.jsx. */
+      font-weight: initial;
+      font-size: 1rem;
       text-align: initial; /* Don't inherit picker text align */
     }
 
@@ -1121,9 +1129,13 @@ const PickerButton = (props) => {
   // The same chain useControlProps resolves (own prop first, then what the
   // group above says), for the two things it does not carry: the popup content,
   // which is read-only along with the picker, and the cursor, which stays a
-  // pointer on a picker that still opens.
+  // pointer on a picker that still opens. A hold of the network policy goes
+  // with it: what the popup changes is what the picker would send.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
-  const readOnlyResolved = readOnly || readOnlyFromAbove;
+  const readOnlyResolved = readOnlyHandedDown(
+    inputProps,
+    readOnly || readOnlyFromAbove,
+  );
   // Read off the controller rather than worked out again: what makes a
   // read-only picker open is settled once, where the gate reads it (see
   // createControlInfo's readOnlyOpens). Needed here for the cursor.

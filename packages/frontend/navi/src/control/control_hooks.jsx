@@ -180,6 +180,16 @@ export const ControlgroupChildrenWrapper = ({
     </ControlIdContext.Provider>
   </MessagePropsRefContext.Provider>
 );
+// The read-only state a control hands to what it holds. Held by the network
+// policy, it hands down the hold itself: what it holds writes into it, so it
+// is held for the same reason and must say the same words — read-only alone,
+// it would refuse in navi's generic ones.
+export const readOnlyHandedDown = (controlHostProps, readOnly) => {
+  if (controlHostProps["data-readonly-reason"] === "network-policy") {
+    return "network-policy";
+  }
+  return readOnly;
+};
 
 // What the caller writes for these is called from the control's own reactions
 // (see `reactions` below), so the split leaves them out of both sides.
@@ -1552,7 +1562,10 @@ export const useControlgroupProps = (
 
   const { basePseudoState } = controlgroupProps;
   const disabled = basePseudoState[":disabled"];
-  const readOnly = basePseudoState[":read-only"];
+  const readOnly = readOnlyHandedDown(
+    controlgroupProps,
+    basePseudoState[":read-only"],
+  );
   const loading = basePseudoState[":-navi-loading"];
 
   const controlgroupChildrenWrapperProps = useMemo(
@@ -1838,15 +1851,17 @@ const useInteractiveProps = (
       ),
     );
     // A write cannot leave under a network policy, so the control asking for
-    // one — or sitting in a form that does — refuses before the press and says
-    // why (see network_policy.js): a press that looks accepted and fails after
-    // is what the policy exists to avoid.
+    // one — sitting in a form that does, or in what a held control holds (a
+    // picker's popup) — refuses before the press and says why (see
+    // network_policy.js): a press that looks accepted and fails after is what
+    // the policy exists to avoid.
     const heldByNetworkPolicy =
       networkPolicyReason !== null &&
       (isWriteAction(boundAction) ||
         Boolean(
           zoneStateApplies && parentAction && isWriteAction(parentAction),
-        ));
+        ) ||
+        controlReadOnly === "network-policy");
     // Held back because the surface above already has as many runs in flight as
     // it allows (see parallel_guard.js). Only a control that would START one:
     // anything without an action of its own runs nothing and has nothing to

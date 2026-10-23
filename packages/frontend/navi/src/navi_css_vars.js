@@ -117,6 +117,10 @@ const css = /* css */ `
       /* Read by Button, and by whatever is drawn as one (a picker or a
          checkbox under variant="button"), so they keep the same surface. */
       --navi-button-background-color: light-dark(#f3f4f6, #2d3748);
+      /* A face for the buttons alone, read by the same three; unset, they
+         write in the control face. Undeclared here for the reason given for
+         --navi-control-font-family above: it inherits, so a subtree can say
+         it again. */
 
       /* What a callout says about its message, as a color — and what draws
          as one outside the callout too (the icon a picker in callout mode

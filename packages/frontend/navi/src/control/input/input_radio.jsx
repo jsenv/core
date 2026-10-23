@@ -70,7 +70,10 @@ const css = /* css */ `
       --border-color-checked-disabled: #d3d3d3;
       --background-color-disabled-checked: var(--background-color);
 
-      /* Button specific */
+      /* Button specific: a square around its icon or image, as big as it. */
+      --button-padding-x-default: 0;
+      --button-padding-y-default: 0;
+      --button-border-radius: var(--navi-control-border-radius);
       --button-border-width: 1px;
       --button-border-color: transparent;
       --button-background-color: transparent;

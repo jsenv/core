@@ -167,9 +167,11 @@ text and its buttons in one face, and the app's own `font-family` there wins.
 Controls carry no face of their own: they write in `inherit`, so what a
 container says reaches the button, the field and the picker inside it. To give
 them one, set `--navi-control-font-family` — on `:root` for the whole app, or
-on a subtree. A `Button` reads `--button-font-family`, which defaults to that
-token; a bare or text `Picker` writes in its container's face whatever the
-token says, its drawing being the caller's.
+on a subtree. What is drawn as a button — a `Button`, a checkbox or a `Picker`
+under `variant="button"` — writes in `--navi-button-font-family` when it is
+set, in the control face otherwise: set it, the same way, to give the buttons a
+face apart from the fields. A bare or text `Picker` writes in its container's
+face whatever the tokens say, its drawing being the caller's.
 
 A popup keeps the face of what opened it — a picker's popup, the picker's — so
 a menu needs no font of its own (see

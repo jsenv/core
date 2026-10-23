@@ -80,6 +80,10 @@ const css = /* css */ `
         var(--button-background-color) 95%,
         black
       );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-background-color-disabled: var(
+        --button-background-color-readonly
+      );
     }
 
     /* A variant moves the DEFAULTS and never the resolved values (--x-*), so
@@ -114,31 +118,52 @@ const css = /* css */ `
       --margin: 0;
       --width: auto;
       --height: auto;
+      --font-family: var(
+        --navi-button-font-family,
+        var(--navi-control-font-family, inherit)
+      );
       --border-color: var(--button-border-color);
       --border-color-hover: var(--button-border-color-hover);
       --background-color: var(--button-background-color);
       --background-color-hover: var(--button-background-color-hover);
       --background-color-readonly: var(--button-background-color-readonly);
       --background-color-disabled: var(--button-background-color-disabled);
-      --border-color-checked: var(--button-border-color);
-      --background-color-checked: var(--button-background-color);
-      /* The square around a checkmark or an icon is that drawing's own size. */
+    }
+    /* Without words: a square around its checkmark or its icon, as big as
+       that drawing. The checkmark says it is checked, so the square keeps the
+       button's surface and the mark is drawn in the button's ink. */
+    .navi_checkbox[data-variant="button"]:not([data-label]) {
       --button-padding-x-default: 0;
       --button-padding-y-default: 0;
+      --border-color-checked: var(--button-border-color);
+      --border-color-hover-checked: var(--button-border-color-hover);
+      --background-color-checked: var(--button-background-color);
+      --background-color-hover-checked: var(--button-background-color-hover);
+      --checkmark-color: currentColor;
     }
-    /* With words on it, it is the box of a Button: its padding, its radius
-       (the checkbox cap is for a ~1em square) and the control line. It says
-       it is pressed by its fill, the way a checkbox says it is checked: the
-       accent. Without words the checkmark says it, and the button keeps its
-       own surface. */
+    /* With words: the box of a Button — its padding, its radius (the
+       checkbox cap is for a ~1em square) and the control line. Checked, it
+       fills with the accent as any checkbox does: words that change say it
+       too, but not every label changes. */
     .navi_checkbox[data-variant="button"][data-label] {
       --border-radius: var(--navi-control-border-radius);
       --button-padding-x-default: var(--navi-button-padding-x-default);
       --button-padding-y-default: var(--navi-button-padding-y-default);
-      --border-color-checked: var(--accent-color);
-      --background-color-checked: var(--accent-color);
 
       line-height: var(--navi-control-line-height);
+    }
+    /* buttonVariant="discrete": the Button's discrete (button_ui.jsx) — no
+       box at rest, a wash on hover. Checked with words, it still fills. */
+    .navi_checkbox[data-variant="button"][data-button-variant="discrete"] {
+      --border-width: 0;
+      --button-border-color: transparent;
+      --button-border-color-hover: var(--button-border-color);
+      --button-background-color: transparent;
+      --button-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--button-background-color)
+      );
     }
   }
 
@@ -267,24 +292,25 @@ const css = /* css */ `
       --color-mix: var(--color-mix-light);
     }
 
+    /* The checkmark: in the checkbox, and in the button without words */
+    .navi_checkbox_marker {
+      opacity: 0;
+      stroke: var(--x-checkmark-color);
+      transform: scale(0.5);
+    }
+    &[data-checked] .navi_checkbox_marker {
+      opacity: 1;
+      transform: scale(1);
+      transition-property: opacity, transform;
+      transition-duration: 0.15s;
+      transition-timing-function: ease;
+    }
+
     /* Checkbox variant */
     &[data-variant="checkbox"] {
       .navi_checkbox_marker {
         width: 100%;
         height: 100%;
-        opacity: 0;
-        stroke: var(--x-checkmark-color);
-        transform: scale(0.5);
-      }
-
-      &[data-checked] {
-        .navi_checkbox_marker {
-          opacity: 1;
-          transform: scale(1);
-          transition-property: opacity, transform;
-          transition-duration: 0.15s;
-          transition-timing-function: ease;
-        }
       }
 
       &[data-accent-very-light] {
@@ -350,6 +376,13 @@ const css = /* css */ `
       );
       align-items: center;
       justify-content: center;
+
+      /* The square is as big as what it holds, and an svg has no size of its
+         own: the mark gets the 1em an icon gets. */
+      .navi_checkbox_marker {
+        width: 1em;
+        height: 1em;
+      }
 
       /* The words are written over the fill, in the ink the checkmark
          would have been drawn in. */
@@ -417,7 +450,14 @@ const InputCheckboxFieldInterface = (props) => {
   const {
     icon,
     switch: switchProp,
-    variant = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
+    buttonVariant,
+    variant = buttonVariant
+      ? "button"
+      : icon
+        ? "icon"
+        : switchProp
+          ? "switch"
+          : "checkbox", // "checkbox", "switch", "icon", "button"
     accentColor,
   } = props;
   const { basePseudoState, checked, children } = checkboxHostProps;
@@ -471,7 +511,9 @@ const InputCheckboxFieldInterface = (props) => {
       variant={undefined}
       switch={undefined}
       icon={undefined}
+      buttonVariant={undefined}
       data-variant={variant}
+      data-button-variant={variant === "button" ? buttonVariant : undefined}
       data-label={hasLabel ? "" : undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_control_input"

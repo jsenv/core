@@ -167,6 +167,9 @@ export const MessagePropsRefContext = createContext();
 export const ControlIdContext = createContext();
 export const ControlNameContext = createContext();
 export const DisabledContext = createContext();
+// Truthy when what is above is read-only, and "network-policy" when that is a
+// write held by the network policy: what it holds is held in turn, and says
+// so in the policy's words (see readOnlyHandedDown in control_hooks.jsx).
 export const ReadOnlyContext = createContext();
 export const RequiredContext = createContext();
 export const LoadingContext = createContext();

@@ -19,6 +19,7 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   boolean?: boolean,
  *   selectOnPress?: boolean,
  *   variant?: "checkbox" | "switch" | "icon" | "button",
+ *   buttonVariant?: "discrete",
  *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
  *   [key: string]: any,
  * }>}
@@ -34,6 +35,10 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   is a square around its checkmark (or its `icon`, which takes an
  *   `[off, on]` pair). Bound with `signal`, it follows whatever else writes
  *   that signal.
+ * @param {"discrete"} [buttonVariant] A checkbox drawn as a button, drawn as
+ *   that variant of `Button`: `"discrete"` has no box at rest and a wash on
+ *   hover (checked, its words still fill with the accent). Implies
+ *   `variant="button"`.
  * @param {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} [actionVerb] What a plain
  *   function `action` does to the server. A write verb puts the field under
  *   the network policy: held read-only up front, with the policy's message,
