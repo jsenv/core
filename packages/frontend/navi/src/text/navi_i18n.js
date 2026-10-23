@@ -495,7 +495,7 @@ const CONSTRAINT_MESSAGES = {
     en: "This password must contain at most [max] characters (it currently contains [count] characters).",
   },
   "constraint.max_length.email": {
-    fr: "Cette adresse e-mail doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
+    fr: "Cette adresse e-mail doit contenir au maximum [max] caractères (elle contient actuellement [count] caractères).",
     en: "This email address must contain at most [max] characters (it currently contains [count] characters).",
   },
   "constraint.max_length.default": {

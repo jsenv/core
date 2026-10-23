@@ -317,9 +317,9 @@ const useExpandableContext = (partName) => {
  *   closeKeyShortcut?: string,
  * }>}
  * @param ui - Shorthand for the common shape: renders `<Expandable.UI>{ui}</Expandable.UI>`
- *   above the content (children). Any markup is allowed (buttons, links,
- *   fields inside it keep their own behavior and do not toggle the
- *   expandable). A function receives `{ open }` to render differently per
+ *   above the content (children). Any markup is allowed: a button, a link, a
+ *   field, any navi control or `selfInteractions` claimant inside it keeps its
+ *   own behavior and does not toggle the expandable (see `isPressOnControl`). A function receives `{ open }` to render differently per
  *   state. For other orders/orientations, pass `<Expandable.UI>` and
  *   `<Expandable.Content>` as children instead.
  * @param open - Drives the state from outside: the expandable opens/closes to

@@ -93,7 +93,10 @@ elsewhere and drops its translate, or it would land twice as far as the hand
 went. A handler that draws nothing (a token on a free canvas) leaves the position
 baked into the element; one whose draw comes later than its answer returns the
 promise of that draw. Something that changes WHILE it is dragged, or must never
-be translated, is [`moving`](#while-it-is-being-moved-moving).
+be translated, is [`moving`](#while-it-is-being-moved-moving). A `transition` on
+`translate` would animate every move of the hand, and the element would trail
+behind it: a carried element transitions anything but `translate` — the way
+back to its place navi animates itself.
 
 **Where it may go.** A `move` stays inside what one can SEE of its scroll
 container — the nearest ancestor whose `overflow` is `auto` or `scroll`, the
