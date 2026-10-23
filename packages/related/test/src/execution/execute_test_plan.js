@@ -27,7 +27,7 @@ import {
   startMonitoringMemoryUsage,
 } from "@jsenv/os-metrics";
 import { URL_META } from "@jsenv/url-meta";
-import { urlIsOrIsInsideOf } from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -47,7 +47,7 @@ import { assertAndNormalizeWebServer } from "./web_server_param.js";
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
- * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took; on the next run "parallel.maxAhead" uses it to start the longest ones ahead of their turn
+ * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took; on the next run "parallel.maxAhead" uses it to start the longest ones ahead of their turn, and the logs show how long the previous run took
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
@@ -228,6 +228,8 @@ export const executeTestPlan = async ({
       teardownEnd: null,
       coverageTeardownEnd: null,
       end: null,
+      // "end" of the previous run with the same name (see "executionTimings")
+      previousRunEnd: null,
     },
     rootDirectoryUrl: String(rootDirectoryUrl),
     patterns: Object.keys(testPlan),
@@ -307,6 +309,7 @@ export const executeTestPlan = async ({
   const afterAllCallbackSet = new Set();
   let finalizeCoverage;
   let timingsMemory;
+  let runName;
 
   try {
     let logger;
@@ -751,6 +754,13 @@ To fix this warning:
           onlyWithinUrl = new URL(onlyWithin, rootDirectoryUrl);
         }
       }
+      // what the run is narrowed to decides how long it takes
+      runName = onlyWithinUrl
+        ? urlToRelativeUrl(onlyWithinUrl, rootDirectoryUrl) || "./"
+        : "./";
+      if (fragment) {
+        runName += `?fragment=${fragment}`;
+      }
 
       let index = 0;
       let lastExecution;
@@ -951,6 +961,9 @@ To fix this warning:
       countersInOrder.remaining =
       countersInOrder.waiting =
         executionPlanifiedArray.length;
+    if (timingsMemory) {
+      timings.previousRunEnd = timingsMemory.getRunDurationMs(runName);
+    }
     if (githubCheck) {
       const githubCheckRun = await startGithubCheckRun({
         logLevel: githubCheck.logLevel,
@@ -1368,15 +1381,20 @@ To fix this warning:
     }
     timings.teardownEnd = takeTiming();
 
-    if (timingsMemory) {
-      timingsMemory.write();
-    }
-
     if (finalizeCoverage) {
       await finalizeCoverage();
     }
     timings.coverageTeardownEnd = takeTiming();
     timings.end = takeTiming();
+
+    if (timingsMemory) {
+      // a run stopped before its end (aborted, failFast, an error) says nothing
+      // about how long the next one takes
+      if (timings.executionEnd !== null && !testPlanResult.aborted) {
+        timingsMemory.recordRun(runName, timings.end);
+      }
+      timingsMemory.write();
+    }
 
     osMemoryUsageMonitoring.end();
     processMemoryUsageMonitoring.end();

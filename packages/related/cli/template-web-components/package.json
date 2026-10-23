@@ -21,7 +21,7 @@
     "@jsenv/plugin-bundling": "2.10.34",
     "@jsenv/plugin-minification": "1.7.29",
     "@jsenv/eslint-config-relax": "2.0.11",
-    "@jsenv/test": "3.7.54",
+    "@jsenv/test": "3.7.55",
     "eslint": "10.10.0",
     "open": "11.0.2",
     "@playwright/browser-chromium": "1.63.0",

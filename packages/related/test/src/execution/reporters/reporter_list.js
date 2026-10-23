@@ -137,11 +137,19 @@ export const reporterList = ({
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
-          const duration = humanizeDuration(msEllapsed, {
+          let duration = humanizeDuration(msEllapsed, {
             short: true,
             decimals: 0,
             rounded: false,
           });
+          const { previousRunEnd } = testPlanResult.timings;
+          if (previousRunEnd !== null) {
+            duration += ` of ~${humanizeDuration(previousRunEnd, {
+              short: true,
+              decimals: 0,
+              rounded: false,
+            })}`;
+          }
           infos.push(ANSI.color(duration, ANSI.GREY));
           let memoryUsageColor = ANSI.GREY;
           const memoryHeapUsed = processMemoryUsage().heapUsed;
@@ -329,6 +337,16 @@ const renderIntro = (testPlanResult, logOptions) => {
   if (testPlanResult.fragment) {
     lines.push(
       `fragment: ${testPlanResult.fragment}, executing only ${testPlanResult.fragmentStart}:${testPlanResult.fragmentEnd}`,
+    );
+  }
+  const { previousRunEnd } = testPlanResult.timings;
+  if (previousRunEnd !== null) {
+    lines.push(
+      `previous run: ${
+        logOptions.mockFluctuatingValues
+          ? "<mock>s"
+          : humanizeDuration(previousRunEnd, { short: true })
+      }`,
     );
   }
   if (logOptions.platformInfo) {
