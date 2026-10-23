@@ -987,8 +987,13 @@ export const useOpenPropsEffectOnOpenController = (
             } else {
               // Under type "push" a cancel discards everything written while
               // the popup was open — it goes back with the entry; a confirmed
-              // close keeps those writes (see useNavState's own leave()).
-              leaveNavState({ isBack: Boolean(event?.detail?.isCancel) });
+              // close keeps those writes (see useNavState's own leave()). A
+              // close a link's press asked for is written by the navigation
+              // the link starts.
+              leaveNavState({
+                isBack: Boolean(event?.detail?.isCancel),
+                event,
+              });
             }
           }
           if (signal) {

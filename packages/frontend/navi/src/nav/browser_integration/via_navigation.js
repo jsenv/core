@@ -31,7 +31,7 @@
  * which is before the picture.
  */
 
-import { clickIsSuppressed } from "@jsenv/dom";
+import { clickIsSuppressed, findEvent } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 
 import { runUnwatched } from "../../action/run_unwatched.js";
@@ -52,10 +52,12 @@ import {
   stateWithNavDepthOnLoad,
 } from "./document_back_and_forward.js";
 import {
+  applyPressWrites,
   documentStateSignal,
   dropGeneratedIdKeys,
   resolveEffectiveDocumentState,
   updateDocumentState,
+  writePressWritesHere,
 } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
@@ -194,7 +196,16 @@ export const setupBrowserIntegrationViaNavigation = ({
   let abortController = null;
   const runRouting = (
     url,
-    { reason, navigationType, state, abortEvent, urlLeft, stateLeft, landing },
+    {
+      reason,
+      navigationType,
+      state,
+      abortEvent,
+      urlLeft,
+      stateLeft,
+      landing,
+      pressWrites,
+    },
   ) => {
     const redirectionUrl = resolveRouteRedirection(url);
     if (redirectionUrl) {
@@ -211,15 +222,18 @@ export const setupBrowserIntegrationViaNavigation = ({
       // The entry already exists (interception commits before the handler
       // runs), so the state is written onto it — and what the entry left held
       // is read by the caller, before that commit.
-      const effectiveState = resolveEffectiveDocumentState(state, {
-        navigationType,
-        isArrival: isArrival(url, { from: urlLeft }),
-        currentState: stateLeft,
-        sharedState: {
-          jsenv_visited_urls: Array.from(visitedUrlSet),
-          [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-        },
-      });
+      const effectiveState = applyPressWrites(
+        resolveEffectiveDocumentState(state, {
+          navigationType,
+          isArrival: isArrival(url, { from: urlLeft }),
+          currentState: stateLeft,
+          sharedState: {
+            jsenv_visited_urls: Array.from(visitedUrlSet),
+            [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+          },
+        }),
+        pressWrites,
+      );
       writeEntryState(effectiveState);
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
@@ -376,6 +390,40 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
   };
 
+  // What the press on a link asks of the history entry, handed to the
+  // navigation it starts (see via_history.js's carryByLinkNavigation), keyed by
+  // the link: the navigate event names the element pressed, not the click. It
+  // fires once the click has been dispatched and before any task, so a write
+  // still here when the next task runs belongs to a press that started no
+  // navigation in this document (a modifier asking for another tab, a
+  // refusal), and is made where it would have been made.
+  const linkPressWritesMap = new Map();
+  const carryByLinkNavigation = (event, pressWrite) => {
+    const clickEvent = findEvent(event, "click");
+    if (!clickEvent || clickEvent.eventPhase === Event.NONE) {
+      return false;
+    }
+    const linkElement = clickEvent.target.closest("a");
+    if (!linkElement) {
+      return false;
+    }
+    const pressWrites = linkPressWritesMap.get(linkElement);
+    if (pressWrites) {
+      pressWrites.push(pressWrite);
+      return true;
+    }
+    linkPressWritesMap.set(linkElement, [pressWrite]);
+    setTimeout(() => {
+      writePressWritesHere(takeLinkPressWrites(linkElement));
+    });
+    return true;
+  };
+  const takeLinkPressWrites = (element) => {
+    const pressWrites = linkPressWritesMap.get(element);
+    linkPressWritesMap.delete(element);
+    return pressWrites;
+  };
+
   navigation.addEventListener("navigate", (event) => {
     if (!event.canIntercept) {
       // Another origin, or a cross-document traversal: the browser's business.
@@ -498,13 +546,20 @@ export const setupBrowserIntegrationViaNavigation = ({
       return;
     }
 
+    // The element pressed, also for a press re-asked above (a replace link, a
+    // push behind a pending replace), which carries it in `info`.
+    const pressElement = event.sourceElement || event.info?.element;
+
     // A push to the entry next door is morally a traversal: taken as one, the
     // stack stays what the reader thinks it is and the page comes back where
     // they left it. Decided before anything commits — preventDefault is only
-    // legal here because a same-document push is cancelable.
+    // legal here because a same-document push is cancelable. A push with
+    // something of its own for its entry — a state, what the press handed
+    // over (see carryByLinkNavigation) — is a new entry.
     if (
       navigationType === "push" &&
       event.destination.getState() === undefined &&
+      !linkPressWritesMap.has(pressElement) &&
       url !== readAddress()
     ) {
       const key = adjacentEntryKey(url);
@@ -520,6 +575,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     // entry the state is read from — happens before the handler runs.
     const urlLeft = readAddress();
     const stateLeft = getDocumentState();
+    const pressWrites = takeLinkPressWrites(pressElement);
     const isSameUrl = url === urlLeft;
     const isLanding = Boolean(event.info && event.info.landOn);
     // A push or a replace onto the address already displayed (useNavState)
@@ -544,8 +600,7 @@ export const setupBrowserIntegrationViaNavigation = ({
         // route_transition.jsx). Both are the same facts via_history.js
         // announces; here the browser hands them over — sourceElement for a
         // press, info for a navTo() call.
-        element:
-          event.sourceElement || (event.info ? event.info.element : undefined),
+        element: pressElement,
         routeTransition: event.info ? event.info.routeTransition : undefined,
         // What the entry being reached holds — for a traversal, the crossing
         // that created it (see route_transition.jsx's readTraversalReplay).
@@ -579,7 +634,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             return;
           }
           if (isStateOnly) {
-            runStateOnly(navigationType, state, stateLeft);
+            runStateOnly(navigationType, state, stateLeft, pressWrites);
             return;
           }
           const { allResult } = runRouting(url, {
@@ -590,6 +645,7 @@ export const setupBrowserIntegrationViaNavigation = ({
             urlLeft,
             stateLeft,
             landing: isLanding,
+            pressWrites,
           });
           // The handler's promise IS the navigation for the browser (its
           // loading UI follows it) — but a routing that fails is displayed by
@@ -606,18 +662,21 @@ export const setupBrowserIntegrationViaNavigation = ({
     });
   });
 
-  const runStateOnly = (navigationType, state, stateLeft) => {
+  const runStateOnly = (navigationType, state, stateLeft, pressWrites) => {
     applyNavigationToNavDepth(navigationType, state);
-    const effectiveState = resolveEffectiveDocumentState(state, {
-      navigationType,
-      // The address does not change: the page stays.
-      isArrival: false,
-      currentState: stateLeft,
-      sharedState: {
-        jsenv_visited_urls: Array.from(visitedUrlSet),
-        [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-      },
-    });
+    const effectiveState = applyPressWrites(
+      resolveEffectiveDocumentState(state, {
+        navigationType,
+        // The address does not change: the page stays.
+        isArrival: false,
+        currentState: stateLeft,
+        sharedState: {
+          jsenv_visited_urls: Array.from(visitedUrlSet),
+          [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+        },
+      }),
+      pressWrites,
+    );
     writeEntryState(effectiveState);
     updateDocumentState(effectiveState);
   };
@@ -754,6 +813,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     navBack,
     navForward,
     getDocumentState,
+    carryByLinkNavigation,
     isVisited,
     visitedUrlsSignal,
   };

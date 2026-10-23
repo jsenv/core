@@ -47,6 +47,31 @@ export const resolveEffectiveDocumentState = (
   return { ...state, ...sharedState };
 };
 
+/**
+ * What a press on a link handed to the navigation it starts (see the
+ * integrations' `carryByLinkNavigation`): each write is an `editState` applied
+ * to the entry that navigation writes, and an `otherwise` that makes the write
+ * where it would have been made, for a press that starts no navigation here.
+ */
+export const applyPressWrites = (state, pressWrites) => {
+  if (!pressWrites) {
+    return state;
+  }
+  let stateWritten = state;
+  for (const { editState } of pressWrites) {
+    stateWritten = editState(stateWritten);
+  }
+  return stateWritten;
+};
+export const writePressWritesHere = (pressWrites) => {
+  if (!pressWrites) {
+    return;
+  }
+  for (const { otherwise } of pressWrites) {
+    otherwise();
+  }
+};
+
 // Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where the
 // mask is derived from render order within the nearest root/async boundary:
 // stable across re-renders of the same mount, but not across two mounts on the

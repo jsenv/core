@@ -451,8 +451,32 @@ const useNavStateBasic = (
   // that param for gone. Only with nothing of this document behind (the state
   // was entered on a cold-loaded url, navBack has nowhere to go) does it
   // rewrite in place.
-  const leave = ({ isBack } = {}) => {
+  //
+  // event: what asked for it. A leave the press of a link asks for (its
+  //   --navi-close) is made by the navigation that link starts: the entry the
+  //   link leads to does not hold the key, and every entry behind is left as
+  //   the reader saw it — a back finds the state still entered.
+  const leave = ({ isBack, event } = {}) => {
     enteredRef.current = false;
+    if (!Object.hasOwn(browserIntegration.getDocumentState() || {}, id)) {
+      return;
+    }
+    if (
+      event &&
+      browserIntegration.carryByLinkNavigation(event, {
+        editState: (state) => {
+          const stateWithoutKey = { ...state };
+          delete stateWithoutKey[id];
+          return stateWithoutKey;
+        },
+        otherwise: () => leaveEntry({ isBack }),
+      })
+    ) {
+      return;
+    }
+    leaveEntry({ isBack });
+  };
+  const leaveEntry = ({ isBack }) => {
     const currentStateCopy = browserIntegration.getDocumentState() || {};
     if (!Object.hasOwn(currentStateCopy, id)) {
       return;
@@ -510,6 +534,9 @@ const useNavStateBasic = (
  *     the value allows associating extra data when needed.
  *   - `leave()`: navigate AWAY FROM this state (removes `id` from document state,
  *     or goes back in history when `type` is "push").
+ *     `leave({ event })` with the event that asked for it: asked by the press
+ *     of a link that navigates, the key is left out of the entry the link
+ *     leads to, and the entry it leaves keeps it.
  */
 export const useNavState = import.meta.dev
   ? useNavStateWithWarnings

@@ -1,3 +1,4 @@
+import { findEvent } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 
 import { runUnwatched } from "../../action/run_unwatched.js";
@@ -26,9 +27,11 @@ import {
   stateWithNavDepthOnLoad,
 } from "./document_back_and_forward.js";
 import {
+  applyPressWrites,
   dropGeneratedIdKeys,
   resolveEffectiveDocumentState,
   updateDocumentState,
+  writePressWritesHere,
 } from "./document_state_signal.js";
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
@@ -152,6 +155,7 @@ export const setupBrowserIntegrationViaHistory = ({
         // Asked to go where we already are: an address that redirects is never
         // the one being displayed, so there is nothing to go to and nothing to
         // stack on the history.
+        writePressWritesHere(options.pressWrites);
         return undefined;
       }
       return handleRoutingTask(redirectionUrl, {
@@ -163,10 +167,13 @@ export const setupBrowserIntegrationViaHistory = ({
     // Decided before anything is announced: an elided push IS the traversal it
     // becomes, and the traversal will make its own announcements when the
     // browser answers — a before/after cycle here would be about a navigation
-    // that never happens.
+    // that never happens. A push with something of its own for its entry — a
+    // state, what the press handed over (see carryByLinkNavigation) — is a
+    // new entry, never one standing there already.
     if (
       options.navigationType === "push" &&
       options.state === undefined &&
+      !options.pressWrites &&
       url !== readAddress()
     ) {
       const delta = adjacentEntryDelta(url);
@@ -216,6 +223,7 @@ export const setupBrowserIntegrationViaHistory = ({
       redirected,
       landOn,
       debounce,
+      pressWrites,
     } = options;
     let { state } = options;
 
@@ -226,15 +234,18 @@ export const setupBrowserIntegrationViaHistory = ({
 
     if (navigationType === "push" || navigationType === "replace") {
       markUrlAsVisited(url);
-      const effectiveState = resolveEffectiveDocumentState(state, {
-        navigationType,
-        isArrival: isArrival(url, { from: urlLeft }),
-        currentState: getDocumentState(),
-        sharedState: {
-          jsenv_visited_urls: Array.from(visitedUrlSet),
-          [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-        },
-      });
+      const effectiveState = applyPressWrites(
+        resolveEffectiveDocumentState(state, {
+          navigationType,
+          isArrival: isArrival(url, { from: urlLeft }),
+          currentState: getDocumentState(),
+          sharedState: {
+            jsenv_visited_urls: Array.from(visitedUrlSet),
+            [NAV_DEPTH_STATE_KEY]: getNavDepth(),
+          },
+        }),
+        pressWrites,
+      );
       if (navigationType === "replace" && debounce && state === undefined) {
         // Nothing of its own for the entry: the address moves, the state is
         // carried over. The one kind of write allowed to lag, and only when
@@ -334,6 +345,36 @@ export const setupBrowserIntegrationViaHistory = ({
     return requestedResult;
   };
 
+  // A press on a link is one navigation, and what the press asks of the
+  // history entry is part of it: a popup the link's own command closes is
+  // closed on the entry the link leads to, while the one it leaves keeps what
+  // the reader was looking at — a back finds the popup open. The link's
+  // listeners run before the routing is asked (below), so a write they make
+  // is handed over, keyed by the click, rather than written onto the entry
+  // being left. Once the link has been answered there is nothing to hand
+  // over to: the navigation, when there was one, has already written its
+  // entry, and a write lands there by itself.
+  const linkPressWritesMap = new WeakMap();
+  const answeredLinkClickSet = new WeakSet();
+  const carryByLinkNavigation = (event, pressWrite) => {
+    const clickEvent = findEvent(event, "click");
+    if (
+      !clickEvent ||
+      clickEvent.eventPhase === Event.NONE ||
+      answeredLinkClickSet.has(clickEvent) ||
+      !clickEvent.target.closest("a")
+    ) {
+      return false;
+    }
+    const pressWrites = linkPressWritesMap.get(clickEvent);
+    if (pressWrites) {
+      pressWrites.push(pressWrite);
+    } else {
+      linkPressWritesMap.set(clickEvent, [pressWrite]);
+    }
+    return true;
+  };
+
   // A click on a link is answered on the link itself, after the link's own
   // listeners: a navi control decides there whether the press is allowed — it
   // refuses with preventDefault from its click reaction — and runs its command
@@ -341,34 +382,42 @@ export const setupBrowserIntegrationViaHistory = ({
   // is the order the Navigation API integration gets for free, where the
   // navigation starts once the click has been dispatched.
   const onLinkClick = (e) => {
+    answeredLinkClickSet.add(e);
+    const pressWrites = linkPressWritesMap.get(e);
+    linkPressWritesMap.delete(e);
+    if (!routeLinkClick(e, pressWrites)) {
+      writePressWritesHere(pressWrites);
+    }
+  };
+  const routeLinkClick = (e, pressWrites) => {
     if (e.button !== 0) {
       // Ignore non-left clicks
-      return;
+      return false;
     }
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
       // A modifier asks the browser for something other than this tab: a new
       // tab (meta on macOS, ctrl elsewhere), a new window (shift), a download
       // (alt).
-      return;
+      return false;
     }
     if (e.defaultPrevented) {
       // Refused — by the link itself, or by whoever came before it.
-      return;
+      return false;
     }
     const linkElement = e.currentTarget;
     if (linkElement.hasAttribute("data-readonly")) {
-      return;
+      return false;
     }
     if (linkOpensElsewhere(linkElement)) {
       // Another tab or window, or a download (see link_elsewhere.js).
-      return;
+      return false;
     }
     const href = linkElement.href;
     const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
       getHrefTargetInfo(href);
     if (isEmpty || !isSameOrigin) {
       // Let link to other origins be handled by the browser
-      return;
+      return false;
     }
     if (isAnchor) {
       // Fragment navigation belongs to the browser: it owns the indicated
@@ -380,13 +429,13 @@ export const setupBrowserIntegrationViaHistory = ({
         // change reaches whoever is waiting on the designated element.
         rearmUrlTarget();
       }
-      return;
+      return false;
     }
     if (linkAsksForDocument(linkElement)) {
       // The link says its address is another document of this origin (see
       // link_document.js). Routing to it would land on the fallback route
       // instead of loading the page.
-      return;
+      return false;
     }
     // Nothing here declared a route, so there is nothing to route to: the
     // page is a plain document and a link in it is a plain link. Taking it
@@ -394,7 +443,7 @@ export const setupBrowserIntegrationViaHistory = ({
     // the address bar moves and the page does not (see applyRouting's own
     // "not called yet" branch, which is where that used to end up).
     if (!isRouting()) {
-      return;
+      return false;
     }
     e.preventDefault();
     handleRoutingTask(href, {
@@ -408,7 +457,9 @@ export const setupBrowserIntegrationViaHistory = ({
       // whoever knows what to do with it, and it is the anchor itself —
       // resolved here, where it already is.
       element: linkElement,
+      pressWrites,
     });
+    return true;
   };
   // Wired from the capture phase on window, the first place a click is seen,
   // so that a link is answered whatever handler stops the click on its way up
@@ -588,6 +639,7 @@ export const setupBrowserIntegrationViaHistory = ({
     navBack,
     navForward,
     getDocumentState,
+    carryByLinkNavigation,
     isVisited,
     visitedUrlsSignal,
   };

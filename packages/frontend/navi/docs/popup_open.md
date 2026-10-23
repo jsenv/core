@@ -784,6 +784,11 @@ scroll reads the same rule
 A link inside the popup follows the same rule: one to the same path with other
 search params leaves the popup open on the entry it pushes. A link whose press
 is a choice that ends the popup says so itself, with `command="--navi-close"`.
+The close is part of the link's navigation: the popup is closed on the entry
+the link leads to, and the entry it leaves still holds it open, so Back finds
+it as the reader left it — what a link to another path gives without a command.
+A press that navigates nowhere in this document (a modifier key asking for
+another tab, a `target="_blank"`) closes it where it is.
 
 The two meet when the signal IS a route's: a search-param `stateSignal` given to
 `signal` puts the open state in the address itself, where a link can point at

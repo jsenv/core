@@ -592,7 +592,9 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   fetching on a hover.
  * @param {string} [props.command] - What the press asks of a control around
  *   the link — `"--navi-close"` on a link that leaves the sheet it is in.
- *   Triggered on the press, before the navigation.
+ *   Triggered on the press, before the navigation. A popup it closes that
+ *   keeps its open state in the history entry (`navState`) is closed on the
+ *   entry the navigation leads to: Back finds it open.
  * @param {Function} [props.action] - Work the press runs, before the
  *   navigation. Nothing waits for it — not the navigation, not `command`: what
  *   the next page must find has to be written synchronously (a draft in a
