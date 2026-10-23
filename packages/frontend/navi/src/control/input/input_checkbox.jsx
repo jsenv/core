@@ -66,9 +66,10 @@ const css = /* css */ `
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;
 
-      /* Button specific */
-      --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      /* Button specific: the tokens a Button reads, so an app theming its
+         buttons themes this one too. */
+      --button-border-color: var(--navi-control-border-color);
+      --button-background-color: var(--navi-button-background-color);
       --button-border-color-hover: color-mix(
         in srgb,
         var(--button-border-color) 70%,
@@ -121,13 +122,23 @@ const css = /* css */ `
       --background-color-disabled: var(--button-background-color-disabled);
       --border-color-checked: var(--button-border-color);
       --background-color-checked: var(--button-background-color);
+      /* The square around a checkmark or an icon is that drawing's own size. */
+      --button-padding-x-default: 0;
+      --button-padding-y-default: 0;
     }
-    /* With words on it, the button says it is pressed by its fill, the way a
-       checkbox says it is checked: the accent. Without words the checkmark
-       says it, and the button keeps its own surface. */
+    /* With words on it, it is the box of a Button: its padding, its radius
+       (the checkbox cap is for a ~1em square) and the control line. It says
+       it is pressed by its fill, the way a checkbox says it is checked: the
+       accent. Without words the checkmark says it, and the button keeps its
+       own surface. */
     .navi_checkbox[data-variant="button"][data-label] {
+      --border-radius: var(--navi-control-border-radius);
+      --button-padding-x-default: var(--navi-button-padding-x-default);
+      --button-padding-y-default: var(--navi-button-padding-y-default);
       --border-color-checked: var(--accent-color);
       --background-color-checked: var(--accent-color);
+
+      line-height: var(--navi-control-line-height);
     }
   }
 

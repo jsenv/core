@@ -447,6 +447,11 @@ const PickerCustom = (props) => {
   // closed (see onClose below) — a press that ran before the close would make
   // the picker busy, and a busy picker refuses the very close that follows.
   const confirmEventRef = useRef(null);
+  // The close is built once per opening (see useOpenController below), but
+  // these props answer how it ends: read through a ref, a render while open
+  // (a sheet turned into the next question) is heard by the close.
+  const closePropsRef = useRef(null);
+  closePropsRef.current = { canSendWhileUnchanged, onConfirm, onClose };
   // aria-controls + id
   const popupId = `${props.id}_picker_popup`;
   id: {
@@ -565,7 +570,7 @@ const PickerCustom = (props) => {
             // A press outside, Escape, the cross say nothing and keep skipping.
             const said =
               requestCloseEvent.detail.isSend || confirmEventRef.current;
-            if (!(canSendWhileUnchanged && said)) {
+            if (!(closePropsRef.current.canSendWhileUnchanged && said)) {
               // No action to run, but still allow the close.
               return;
             }
@@ -662,7 +667,7 @@ const PickerCustom = (props) => {
           const confirmEvent = confirmEventRef.current;
           confirmEventRef.current = null;
           if (confirmEvent && !closeEvent.detail.isCancel) {
-            onConfirm?.(confirmEvent);
+            closePropsRef.current.onConfirm?.(confirmEvent);
           }
           // After the value bookkeeping above — whoever listens reads the
           // picker's value as it ends up, committed or restored on a cancel —
@@ -673,7 +678,7 @@ const PickerCustom = (props) => {
           // spells into the address — a route param naming what was being
           // edited, cleared now that nothing is — has to be written before,
           // or the landing puts it back.
-          onClose?.(closeEvent);
+          closePropsRef.current.onClose?.(closeEvent);
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
           resetMode();

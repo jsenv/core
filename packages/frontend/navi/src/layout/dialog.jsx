@@ -1383,6 +1383,10 @@ const UncontrolledDialog = (props) => {
   // needs the dialog element to look at what it contains.
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
+  // The close is built once per opening (see useOpenController below): read
+  // through a ref, an onClose given by a render while open is the one called.
+  const onCloseRef = useRef(null);
+  onCloseRef.current = props.onClose;
   const openController = useOpenController((openEvent) => {
     const dialogEl = props.ref.current;
     debugPopup(openEvent, `dialog opened`);
@@ -1416,7 +1420,7 @@ const UncontrolledDialog = (props) => {
         requestCloseEvent.preventDefault();
       },
       onClose: (closeEvent) => {
-        props.onClose?.(closeEvent);
+        onCloseRef.current?.(closeEvent);
       },
     };
   });

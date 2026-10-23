@@ -752,6 +752,9 @@ const UncontrolledPopover = (props) => {
   // the popover element to read what it holds.
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
+  // Read at the close, not captured at the opening: see UncontrolledDialog.
+  const onCloseRef = useRef(null);
+  onCloseRef.current = props.onClose;
   // Same as Dialog's own UncontrolledDialog, for the same reasons — see it for
   // the full story: a popover is a surface, so the only thing it has to say
   // about closing is that what it contains must not be interrupted mid-action.
@@ -783,7 +786,7 @@ const UncontrolledPopover = (props) => {
         requestCloseEvent.preventDefault();
       },
       onClose: (closeEvent) => {
-        props.onClose?.(closeEvent);
+        onCloseRef.current?.(closeEvent);
       },
     };
   });
