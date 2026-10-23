@@ -1622,25 +1622,32 @@ export const useControlUIState = (ref, uiStateInitial) => {
     if (!element) {
       return undefined;
     }
-    // The host, not the box around it: a control is a whole little tree (a
-    // picker is a box holding an input) and the state is announced on the one
-    // element that holds it. Same resolution every request goes through, see
-    // ui_state_dom.js.
-    const host = findControlHost(element) || element;
-    // Asked once here rather than trusted from the props above: between the
-    // first render and this effect the control has read its own value prop, its
-    // defaultValue and any signal it was bound to, and settled which of them
-    // wins — the answer to that is on the element, not in what we were handed.
-    setUIState(getUIStateFromElement(host));
-    const onUIStateChange = (e) => {
-      setUIState(e.detail.value);
-    };
-    host.addEventListener("navi_ui_state_change", onUIStateChange);
-    return () => {
-      host.removeEventListener("navi_ui_state_change", onUIStateChange);
-    };
+    return subscribeToControlUIState(element, setUIState);
   }, [ref]);
   return uiState;
+};
+/**
+ * Calls `callback` with what the control `element` holds, right away and on
+ * every change. Returns the teardown.
+ */
+export const subscribeToControlUIState = (element, callback) => {
+  // The host, not the box around it: a control is a whole little tree (a
+  // picker is a box holding an input) and the state is announced on the one
+  // element that holds it. Same resolution every request goes through, see
+  // ui_state_dom.js.
+  const host = findControlHost(element) || element;
+  // Asked once here rather than trusted from props: by the time this runs the
+  // control has read its own value prop, its defaultValue and any signal it
+  // was bound to, and settled which of them wins — the answer to that is on
+  // the element.
+  callback(getUIStateFromElement(host));
+  const onUIStateChange = (e) => {
+    callback(e.detail.value);
+  };
+  host.addEventListener("navi_ui_state_change", onUIStateChange);
+  return () => {
+    host.removeEventListener("navi_ui_state_change", onUIStateChange);
+  };
 };
 
 /**

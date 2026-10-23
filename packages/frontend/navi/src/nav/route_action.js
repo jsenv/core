@@ -12,6 +12,7 @@ import {
 } from "../state/rest/kept_reads.js";
 import { readStateAsIf } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
 import {
   registerRoutePreload,
   registerRouteReload,
@@ -105,6 +106,13 @@ export const activeRouteReadsSignal = computed(() => {
   return reads;
 });
 
+// Besides `when` and `prefetch`, what the binding reads (actionRunEffect,
+// then bindParams).
+const ROUTE_ACTION_BINDING_OPTIONS = new Set([
+  "debounce",
+  "inheritData",
+  "rerunOnChange",
+]);
 /**
  * Binds an action to a route: it runs when the route matches, with the params
  * the effect reads off the address, runs again on a `reload()`, and is aborted
@@ -154,6 +162,9 @@ export const routeAction = (
   paramsEffect,
   { when, prefetch = true, ...options } = {},
 ) => {
+  if (import.meta.dev) {
+    warnUnknownOptions("routeAction", options, ROUTE_ACTION_BINDING_OPTIONS);
+  }
   if (typeof action === "function") {
     action = createAction(action);
   }

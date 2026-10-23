@@ -214,8 +214,10 @@ failed as failed: a second `import()` of the same address is refused without a
 request, for the life of the document. So a retry has nothing to do —
 `error.action.rerun()` fails again at once, on the same failure — and the one way
 out is a fresh document: **`window.location.reload()`**, which the screen offers
-in words the reader understands. navi does not reload on its own: a document
-reloading itself is a loop waiting to happen.
+in words the reader understands. Not navi's own `reload()`: it asks the route
+actions again inside this same document, and the import fails again at once.
+navi does not reload on its own: a document reloading itself is a loop waiting
+to happen.
 
 The page or the component reading its code says it where it stands, as above. A
 failure left to a boundary reaches it like a failed read does; a boundary that

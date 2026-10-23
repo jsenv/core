@@ -7,7 +7,6 @@ import {
   Link,
   Loading,
   Nav,
-  reload,
   Route,
   Text,
   useAsyncData,
@@ -165,7 +164,7 @@ const PlanSection = () => {
       {error ? (
         <>
           <Text style={{ color: "red" }}>{error.message}</Text>
-          <Button action={() => reload()}>Recharger</Button>
+          <Button action={() => window.location.reload()}>Recharger</Button>
         </>
       ) : null}
       {Plan ? <Plan /> : null}
@@ -201,7 +200,7 @@ const PageSkeleton = () => (
 const PageError = ({ error }) => (
   <Box flex="y" spacing="s">
     <Text style={{ color: "red" }}>{error.message}</Text>
-    <Button action={() => reload()}>Recharger</Button>
+    <Button action={() => window.location.reload()}>Recharger</Button>
   </Box>
 );
 

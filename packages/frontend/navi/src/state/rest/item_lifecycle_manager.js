@@ -34,11 +34,50 @@ export const resolveRerunOn = (rerunOn, inheritedRerunOn = defaultRerunOn) => {
   if (!rerunOn) {
     return inheritedRerunOn;
   }
+  assertRerunOnCanFire(rerunOn);
   return {
     GET: rerunOn.GET ?? inheritedRerunOn.GET,
     GET_MANY: rerunOn.GET_MANY ?? inheritedRerunOn.GET_MANY,
     GET_RANGE: rerunOn.GET_RANGE ?? inheritedRerunOn.GET_RANGE,
   };
+};
+// What can never fire throws, as a dependency name does (see
+// resolveDependency): a rerun that never happens leaves a read on its old
+// value with nothing to say so.
+const RERUN_READS = ["GET", "GET_MANY", "GET_RANGE"];
+const RERUN_VERBS = ["POST", "PUT", "PATCH", "DELETE", "*"];
+const assertRerunOnCanFire = (rerunOn) => {
+  for (const read of Object.keys(rerunOn)) {
+    if (!RERUN_READS.includes(read)) {
+      throw new Error(
+        `rerunOn: "${read}" is not a read that reruns — rerunOn takes GET, GET_MANY and GET_RANGE`,
+      );
+    }
+    const verbs = rerunOn[read];
+    if (
+      verbs === undefined ||
+      verbs === null ||
+      verbs === false ||
+      verbs === "*"
+    ) {
+      continue;
+    }
+    if (!Array.isArray(verbs)) {
+      throw new Error(
+        `rerunOn.${read}: ${JSON.stringify(verbs)} never fires — it takes false, "*" or a list of verbs`,
+      );
+    }
+    for (const verb of verbs) {
+      if (
+        typeof verb !== "string" ||
+        !RERUN_VERBS.includes(verb.toUpperCase())
+      ) {
+        throw new Error(
+          `rerunOn.${read}: ${JSON.stringify(verb)} never fires — rerunOn names verbs (POST, PUT, PATCH, DELETE or "*"): POST covers POST_MANY`,
+        );
+      }
+    }
+  }
 };
 
 // What a `dependencies` entry names are callbacks, not verbs (`rerunOn` names

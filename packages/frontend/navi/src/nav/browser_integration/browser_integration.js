@@ -188,6 +188,12 @@ export const stopLoad = (reason = "stopLoad() called") => {
  * actions of the routes matching the url run again (see routeAction), one that
  * failed included — what a "Retry" under a page that could not load calls.
  * The address, the history and the scroll stay as they are.
+ *
+ * Route actions only: a component's `useAsyncData(fn)`, or an action no route
+ * reads, is not asked again. Nor does it bring back code whose `import()`
+ * failed — the document refuses that address again without a request — so
+ * the way out of a failed import is a fresh document,
+ * `window.location.reload()` (docs/dynamic_import.md).
  */
 export const reload = browserIntegration.reload;
 /**

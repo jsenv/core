@@ -188,6 +188,14 @@ const css = /* css */ `
       /* Here to be overridable by box layout props such as flex */
       display: inline-block;
     }
+    /* Offered back: a group label in the flow (groupLabelSticky={false}) is a
+       boundary the app paints, so a groupLabelProps class of any weight takes
+       its display and background. A sticking label paints the list's own
+       background, outside the layer: it has items passing under it. */
+    .navi_list_item_group[data-label-in-flow] > .navi_list_item_group_label {
+      display: block;
+      background-color: transparent;
+    }
   }
 
   .navi_list_item_group_label {
@@ -794,16 +802,7 @@ const css = /* css */ `
     min-width: 100%;
 
     .navi_list_item_group_label {
-      position: sticky;
-      top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
-      z-index: var(--list-group-label-z-index);
-      display: block;
-      background-color: var(--list-group-label-background-color);
       user-select: none;
-
-      &[navi-stuck] {
-        z-index: var(--list-group-label-z-index-stuck);
-      }
 
       &[navi-default] {
         padding: 4px 12px 2px;
@@ -820,6 +819,17 @@ const css = /* css */ `
          pair as the items themselves. */
       &[aria-hidden="true"][inert] {
         opacity: 0;
+      }
+    }
+    &:not([data-label-in-flow]) > .navi_list_item_group_label {
+      position: sticky;
+      top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
+      z-index: var(--list-group-label-z-index);
+      display: block;
+      background-color: var(--list-group-label-background-color);
+
+      &[navi-stuck] {
+        z-index: var(--list-group-label-z-index-stuck);
       }
     }
     .navi_list_item_group_list {
@@ -840,6 +850,24 @@ const css = /* css */ `
         scroll-margin-top: calc(
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height)
         );
+      }
+    }
+
+    /* A label in the flow (groupLabelSticky={false}) scrolls away with what
+       is above the group: only the item right under it has it to keep in
+       view. A window cutting the group hides it rather than laying it over an
+       item, which only a label that sticks has a reason to accept. */
+    &[data-label-in-flow] {
+      .navi_list_item_group_list .navi_list_item {
+        scroll-margin-top: var(--x-list-scroll-spacing-top);
+      }
+      .navi_list_item_group_list > .navi_list_item:first-child {
+        scroll-margin-top: calc(
+          var(--x-list-scroll-spacing-top) + var(--list-group-label-height)
+        );
+      }
+      &[data-continued] > .navi_list_item_group_label {
+        visibility: hidden;
       }
     }
 
@@ -1806,6 +1834,16 @@ const useListScrollSync = ({
   // partly in view. After it, the quarter a window keeps behind the screen
   // (see evaluateWindow), until the screen sizes it around that item.
   const itemsAboveOpening = (openAt, windowSize) => {
+    // An item placed in the middle of the view, or at its end, has the items
+    // before it on screen from the first paint.
+    const align =
+      openAt && typeof openAt === "object" ? openAt.align : undefined;
+    if (align === "center") {
+      return Math.floor(windowSize / 2);
+    }
+    if (align === "end") {
+      return windowSize - 1;
+    }
     if (stageRef.current !== "steady") {
       return openAt && typeof openAt === "object" && openAt.offset > 0 ? 1 : 0;
     }
@@ -2390,28 +2428,47 @@ const useListScrollSync = ({
       return;
     }
     if (typeof openAt === "object" && openAt.id !== undefined) {
-      placeItem(findItemElement(getListEl(), openAt.id), openAt.offset || 0);
+      placeItem(
+        findItemElement(getListEl(), openAt.id),
+        openAt.offset || 0,
+        openAt.align,
+      );
     }
   };
   // An item is placed by measuring it where it is drawn — named, or at the
   // place a number says — so it lands where it should whatever the items
   // above it weigh, and wherever the list starts in the box that scrolls it.
   // The window frames it from the first commit on (see holdWindow).
-  const placeItem = (itemEl, offset) => {
+  const placeItem = (itemEl, offset, align = "start") => {
     if (!itemEl) {
       return;
     }
     const scrollerEl = getScroller();
+    // Measured in the scroller's own pixels, the ones a scroll is written in.
+    const scale = readScrollerScale(scrollerEl, horizontal);
     const viewportRect = getScrollerViewportRect(scrollerEl);
     const itemRect = itemEl.getBoundingClientRect();
+    const viewportSize =
+      (horizontal ? viewportRect.width : viewportRect.height) / scale;
+    const itemSize = (horizontal ? itemRect.width : itemRect.height) / scale;
+    const scrollInset = getItemScrollInset(scrollerEl, itemEl, horizontal);
+    // Centred in what the room at the start leaves of the view (a fixed bar,
+    // a sticky header), not in the whole of it.
+    const alignedOffset =
+      align === "center"
+        ? scrollInset + (viewportSize - scrollInset - itemSize) / 2
+        : align === "end"
+          ? viewportSize - itemSize
+          : scrollInset;
     const offsetWanted = resolveOpenOffset(
-      getItemScrollInset(scrollerEl, itemEl, horizontal) + offset,
-      horizontal ? viewportRect.width : viewportRect.height,
-      horizontal ? itemRect.width : itemRect.height,
+      alignedOffset + offset,
+      viewportSize,
+      itemSize,
     );
-    const offsetNow = horizontal
-      ? itemRect.left - viewportRect.left
-      : itemRect.top - viewportRect.top;
+    const offsetNow =
+      (horizontal
+        ? itemRect.left - viewportRect.left
+        : itemRect.top - viewportRect.top) / scale;
     const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
     const delta = offsetNow - offsetWanted;
     if (delta > -0.5 && delta < 0.5) {
@@ -3308,6 +3365,25 @@ const useListScrollSync = ({
 // The band of the scroller the user actually sees. A page-level scroller is
 // the viewport itself — its own box is the whole document, which says nothing
 // about what is on screen.
+// A scroller drawn under a transform (a popup scaling in from its trigger)
+// shows a rect of another size than the box it scrolls: the ratio of the two
+// turns what the screen measures into the scroller's own pixels. A rounding
+// of the box's size is not a scale.
+const readScrollerScale = (scrollerEl, horizontal) => {
+  if (scrollerEl === document.scrollingElement) {
+    return 1;
+  }
+  const size = horizontal ? scrollerEl.offsetWidth : scrollerEl.offsetHeight;
+  if (!size) {
+    return 1;
+  }
+  const rect = scrollerEl.getBoundingClientRect();
+  const scale = (horizontal ? rect.width : rect.height) / size;
+  if (!scale || (scale > 0.99 && scale < 1.01)) {
+    return 1;
+  }
+  return scale;
+};
 const getScrollerViewportRect = (scrollerEl) => {
   if (scrollerEl === document.scrollingElement) {
     const width = document.documentElement.clientWidth;
@@ -3415,7 +3491,7 @@ const canScrollerScroll = (scrollerEl, axis) => {
 // horizontally on mobile, where `overflow-x: clip` keeps that guarantee without
 // making a scroll container, or to let a wide table scroll sideways, where the
 // header cannot stick to both boxes.
-const STICKY_LIST_PART_SELECTOR = `.navi_list_item_header, .navi_list_item_footer, .navi_list_item_group_label`;
+const STICKY_LIST_PART_SELECTOR = `.navi_list_item_header, .navi_list_item_footer, .navi_list_item_group:not([data-label-in-flow]) > .navi_list_item_group_label`;
 const useStickyScrollportWarning = (ref, scroller, getScroller, horizontal) => {
   const doneRef = useRef(false);
   useLayoutEffect(() => {
@@ -5658,6 +5734,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
  *   groupLabelProps?: (item: any, index: number) => object,
+ *   groupLabelSticky?: boolean,
  *   pageSize?: number,
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
@@ -5722,6 +5799,12 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   its group (a day behind us, today, one ahead) rather than just naming it:
  *   the state then sits on the element the CSS styles, instead of being read
  *   back from a child.
+ * @param {boolean} [props.groupLabelSticky=true]
+ *   `false`: the label stays in the flow, a boundary scrolled past with its
+ *   group instead of riding the top of the screen — a thread of days whose
+ *   cards must not slide under a band, a "past" line in a list the page
+ *   scrolls. It paints nothing of its own then: its display and background
+ *   are defaults a `groupLabelProps` class takes back.
  * @param {number} [props.pageSize=100]
  *   How many items to ask for at a time. A turn of the wheel opens a hole three
  *   items wide; asking for exactly that would ask again at the next turn.
@@ -5901,6 +5984,7 @@ const useRunItems = (
     groupBy,
     renderGroupLabel,
     groupLabelProps,
+    groupLabelSticky = true,
     renderSkeleton,
     renderError,
   },
@@ -6191,6 +6275,7 @@ const useRunItems = (
         }
         label={group.label}
         labelProps={group.labelProps}
+        labelSticky={groupLabelSticky}
         continued={group.continued}
       >
         {group.children}
@@ -7261,6 +7346,7 @@ const useItemStore = ({
 export const ListItemGroup = ({
   label,
   labelProps,
+  labelSticky = true,
   hiddenWhileEmpty,
   continued,
   children,
@@ -7314,6 +7400,7 @@ export const ListItemGroup = ({
       role="presentation"
       data-hidden-while-empty={hiddenWhileEmpty ? "" : undefined}
       data-continued={continued}
+      data-label-in-flow={labelSticky ? undefined : ""}
     >
       <span
         {...labelRest}
@@ -7388,8 +7475,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   renderBudget?: number | string | {initial?: number | string, after?: number | string},
  *   virtualItemSize?: number,
  *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
- *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
- *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
+ *   scrolled?: "start" | "end" | number | {id: string, offset?: number, align?: "start" | "center" | "end"},
+ *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number, align?: "start" | "center" | "end"},
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
  *   hoverWhileScrolling?: boolean,
@@ -7493,7 +7580,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   are skeletons, the others hold their room. `0` says the list is already
  *   known to be empty: the empty `fallback` shows right away rather than an
  *   empty frame.
- * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, visibleCount?: number}} [props.defaultScrolled="start"]
+ * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, align?: "start"|"center"|"end", visibleCount?: number}} [props.defaultScrolled="start"]
  *   Where the list opens, after which the user owns the scroll — unless it is
  *   being come back to (see `scrollResetOnNavigation`). `"end"` is a
  *   thread read backwards — the last items are the ones to show, and the ones
@@ -7508,10 +7595,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   room has to be restated as a number by whoever asks. The `index` and
  *   `visibleCount` it also hands out say where to aim before the item is found,
  *   and how many items to draw before the first paint (see `renderBudget`).
+ *   `align: "center"` puts the item in the middle of the view instead (`"end"`:
+ *   at its far edge) — the chosen level of a horizontal scale opening on it —
+ *   and keeps it there while the box around it grows, until the user scrolls.
  *   A value that changes before anyone has moved the list is followed (a place
  *   read from a count that answered again): it is compared by value, so it can
  *   be computed at every render.
- * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, visibleCount?: number}} [props.scrolled]
+ * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, align?: "start"|"center"|"end", visibleCount?: number}} [props.scrolled]
  *   The same, but held: the list goes back there every time this changes, even
  *   after the user has scrolled — the caller owns where the list is (see
  *   `defaultScrolled` for the uncontrolled form, and `open`/`defaultOpen`

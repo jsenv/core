@@ -115,6 +115,14 @@ export const buttonI18n = /*#__PURE__*/ defineNaviMessages({
     en: "Remove",
     fr: "Retirer",
   },
+  "button.copy": {
+    en: "Copy",
+    fr: "Copier",
+  },
+  "button.copied": {
+    en: "Copied!",
+    fr: "Copié !",
+  },
 });
 
 // Spin messages — the ends of what one steps through when the control holding

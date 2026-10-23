@@ -693,6 +693,8 @@ const css = /* css */ `
  *   actually closes — not preventable: it is the close happening, not a
  *   request. What refuses a close is navi's: a control inside still
  *   running its action (see popup_busy.js for the runs that let it through).
+ *   `event.detail.isCancel` says the close meant "revert", and
+ *   `event.detail.isConfirm` that a `--navi-confirm` said yes.
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it
@@ -819,6 +821,7 @@ const UncontrolledPopover = (props) => {
       onnavi_request_close={(e) => {
         const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,
+          isConfirm: e.detail?.isConfirm,
         });
         if (!closing) {
           // Said back to whoever asked: --navi-close:all stops climbing here.

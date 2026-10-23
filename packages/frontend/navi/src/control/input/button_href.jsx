@@ -20,7 +20,7 @@ export const ButtonHrefResolver = (props) => {
 // Whether the href is the page one is on depends on the address, and re-renders
 // the button only when it flips (see useHrefTargetFlag). Whether it leaves the
 // site does not depend on the address.
-const ButtonWithHref = (props) => {
+const ButtonWithHref = ({ current, ...props }) => {
   const Next = useNextResolver();
   const { href, target, rel, pseudoState } = props;
   const isCurrent = useHrefTargetFlag(href, "isCurrent");
@@ -43,7 +43,10 @@ const ButtonWithHref = (props) => {
       // Under whatever the caller already says: a route knows better whether
       // it is the page one is on (see button_route.jsx), and a demo can force
       // the state.
-      pseudoState={{ ":-navi-href-current": isCurrent, ...pseudoState }}
+      pseudoState={{
+        ":-navi-href-current": current ?? isCurrent,
+        ...pseudoState,
+      }}
     />
   );
 };

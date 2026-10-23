@@ -1,16 +1,16 @@
 import { effect, signal } from "@preact/signals";
 
-export const localStorageSignal = (key) => {
-  const initialValue = localStorage.getItem(key);
+import {
+  readLocalStorage,
+  writeLocalStorage,
+} from "./guarded_local_storage.js";
 
-  const valueSignal = signal(initialValue === null ? undefined : initialValue);
+export const localStorageSignal = (key) => {
+  const valueSignal = signal(readLocalStorage(key));
   effect(() => {
     const value = valueSignal.value;
-    if (value === undefined) {
-      localStorage.removeItem(key);
-    } else {
-      localStorage.setItem(key, value);
-    }
+    // Storage keeps strings: a null written as is would come back as "null".
+    writeLocalStorage(key, value === null ? undefined : value);
   });
 
   return valueSignal;

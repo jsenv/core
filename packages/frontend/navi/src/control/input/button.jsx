@@ -130,8 +130,23 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
  *   optimistic?: boolean,
+ *   route?: object,
+ *   routeParams?: object,
+ *   current?: boolean,
+ *   currentExcept?: object | object[],
+ *   currentAlso?: object | object[],
  *   [key: string]: any,
  * }>}
+ * @param {object} [route] Where the press leads, as a `<Link route>` says it:
+ *   the button is drawn as an `<a>` to the route's url (with `routeParams`),
+ *   and says whether it is the page one is on — `[data-href-current]` for the
+ *   eye, `aria-current="page"` for assistive tech. A bar entry drawn as a
+ *   button for its press feedback.
+ * @param {boolean} [current] Forces that "current" state: `true` on, `false`
+ *   off. Left out, it is read from the route (or the `href`).
+ * @param {object|object[]} [currentExcept] Route(s) inside the button's own
+ *   that are NOT it, and `currentAlso` route(s) beside it that are: what they
+ *   mean on a `<Link>`.
  * @param {boolean} [replace] Go where the press leads — an `href`, a
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn

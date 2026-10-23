@@ -8,8 +8,8 @@
  * content scrolls.
  *
  * TextareaCharCount is the counter that goes with it, and the caller places
- * it: under the box, in a form footer, next to a label — fed with the same
- * value/signal as the textarea. The textarea draws no counter of its own.
+ * it: under the box, in a form footer, next to a label — pointed at the
+ * textarea by its id. The textarea draws no counter of its own.
  *
  * Styled as a `.navi_input` box (border, background, focus ring, readonly and
  * disabled fades, variants): one look for everything one types into. The
@@ -18,11 +18,16 @@
  */
 
 import { installInputCss } from "./input_css.js";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
+import {
+  ControlChildrenWrapper,
+  subscribeToControlUIState,
+  useControlProps,
+} from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../controller_registry.js";
 import {
   InputPseudoClasses,
   InputPseudoElements,
@@ -214,30 +219,60 @@ export const Textarea = ({
  * typed over how many the limit allows, the way Material writes it (just the
  * count when there is no `maxLength`). Where it goes is the caller's call,
  * which is why it is a separate component rather than something the textarea
- * draws: put it under the box, in a form footer, next to a label, and feed it
- * the same value or signal as the textarea.
+ * draws: put it under the box, in a form footer, next to a label, and point
+ * it at the textarea with `for`.
  *
  * @type {import("preact").FunctionComponent<{
+ *   for?: string,
  *   value?: string,
  *   signal?: import("@preact/signals").Signal<string>,
  *   maxLength?: number,
  *   [key: string]: any,
  * }>}
- * @param {string} [value] The text being counted. Say `signal` instead for a
- *   two-way bound textarea: reading it here subscribes the count to it.
+ * @param {string} [for] The `id` of the Textarea counted: the count reads
+ *   what it holds, so the field stays a plain one (`defaultValue={record.bio}`)
+ *   with no signal bound only for the counter's sake. The limit defaults to
+ *   that Textarea's `maxLength` (or `maxLengthGuard`).
+ * @param {string} [value] The text being counted, when it is not read from a
+ *   Textarea. Say `signal` instead to subscribe the count to it.
  * @param {number} [maxLength] The limit, shown after the count ("50/200").
  *   Without it the count stands alone.
  */
-export const TextareaCharCount = ({ value, signal, maxLength, ...rest }) => {
+export const TextareaCharCount = ({
+  for: controlId,
+  value,
+  signal,
+  maxLength,
+  ...rest
+}) => {
   import.meta.css = css;
-  const resolvedValue = signal ? signal.value : value;
+  const [controlText, controlMaxLength] = useTextOfControl(controlId);
+  const resolvedValue = controlId ? controlText : signal ? signal.value : value;
   const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
+  const limit = maxLength ?? controlMaxLength;
 
   return (
     <Box as="span" baseClassName="navi_textarea_char_count" {...rest}>
-      {maxLength === undefined ? length : `${length}/${maxLength}`}
+      {limit === undefined ? length : `${length}/${limit}`}
     </Box>
   );
+};
+const useTextOfControl = (controlId) => {
+  const [text, setText] = useState();
+  const [maxLength, setMaxLength] = useState();
+  useLayoutEffect(() => {
+    if (!controlId) {
+      return undefined;
+    }
+    const element = document.getElementById(controlId);
+    if (!element) {
+      return undefined;
+    }
+    const controlProps = getUIStateControllerById(controlId)?.props;
+    setMaxLength(controlProps?.maxLength ?? controlProps?.maxLengthGuard);
+    return subscribeToControlUIState(element, setText);
+  }, [controlId]);
+  return [text, maxLength];
 };
 
 // `field-sizing: content` sizes the box from the value, and an empty field has

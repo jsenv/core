@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { buttonI18n } from "../../text/navi_i18n.js";
 import { Icon } from "../../text/text.jsx";
 import { Button } from "./button.jsx";
 
@@ -33,7 +34,11 @@ const css = /* css */ `
   }
 `;
 
-export const ButtonCopyToClipboard = ({ children, ...props }) => {
+export const ButtonCopyToClipboard = ({
+  children,
+  "aria-label": ariaLabel = buttonI18n("button.copy"),
+  ...props
+}) => {
   import.meta.css = css;
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
@@ -47,15 +52,16 @@ export const ButtonCopyToClipboard = ({ children, ...props }) => {
 
   return (
     <Box className="navi_clipboard_container" {...props}>
-      <Box
-        className="navi_copied_notif"
-        aria-hidden={copied ? "false" : "true"}
-        opacity={copied ? 1 : 0}
-      >
-        Copié !
+      {/* A status: what it says when the copy lands is announced, which is
+          the only confirmation someone who cannot see the bubble gets. */}
+      <Box className="navi_copied_notif" role="status" opacity={copied ? 1 : 0}>
+        {copied ? buttonI18n("button.copied") : null}
       </Box>
       <Button
         className="navi_copy_button"
+        // The props land on the container; the name belongs to the button,
+        // which shows only an icon.
+        aria-label={ariaLabel}
         icon
         revealOnInteraction
         square

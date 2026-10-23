@@ -1,9 +1,14 @@
+import {
+  readLocalStorage,
+  writeLocalStorage,
+} from "./guarded_local_storage.js";
+
 export const valueInLocalStorage = (key, { type = "any" } = {}) => {
   const converter = TYPE_CONVERTERS[type];
 
   const get = () => {
-    let valueInLocalStorage = window.localStorage.getItem(key);
-    if (valueInLocalStorage === null) {
+    const valueInLocalStorage = readLocalStorage(key);
+    if (valueInLocalStorage === undefined) {
       return undefined;
     }
     let valueToReturn = valueInLocalStorage;
@@ -27,7 +32,7 @@ export const valueInLocalStorage = (key, { type = "any" } = {}) => {
 
   const set = (value) => {
     if (value === undefined) {
-      window.localStorage.removeItem(key);
+      writeLocalStorage(key, undefined);
       return;
     }
     let valueToStore = value;
@@ -35,10 +40,10 @@ export const valueInLocalStorage = (key, { type = "any" } = {}) => {
       const valueEncoded = converter.encode(valueToStore);
       valueToStore = valueEncoded;
     }
-    window.localStorage.setItem(key, valueToStore);
+    writeLocalStorage(key, valueToStore);
   };
   const remove = () => {
-    window.localStorage.removeItem(key);
+    writeLocalStorage(key, undefined);
   };
 
   return [get, set, remove];

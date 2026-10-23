@@ -1081,9 +1081,12 @@ const confirmCommand = (source, event) => {
         event,
         source: commandSource,
       });
+      // Carried by the close too: a Dialog or a Popover answers the yes in
+      // its onClose (detail.isConfirm), the twin of isCancel.
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
         source: commandSource,
+        isConfirm: true,
       });
     },
   };

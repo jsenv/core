@@ -455,7 +455,10 @@ None of them is "one popup per row of a list", which is what a picker is for.
 
 `onOpen` is called on every open (for when, see
 [above](#onopen-runs-before-the-popup-has-built-anything)), and `onClose` on
-every real close, with `detail.isCancel` when the close meant "revert". Neither
+every real close, with `detail.isCancel` when the close meant "revert" and
+`detail.isConfirm` when it was a `--navi-confirm` saying yes — so a shared Dialog
+asking a yes/no question after a gesture already over answers it there
+(`onClose={(e) => e.detail.isConfirm && release()}`). Neither
 can veto: `onClose` is the close happening, not a request to close. The refusals
 are navi's: a close over a control mid-action, and a `Picker`'s close over a
 value that does not validate.
@@ -922,6 +925,11 @@ opening is lost: the popup does not open at all, and dev says why. The other
 option is the component drawing its own wait
 (`useAsyncData(action, { loading: true })`); what is not an option is neither.
 Both are on `src/layout/demos/13_popup_loading_demo.html`.
+
+The failure has no boundary of its own either: delegated, it lands on the
+nearest `<ErrorBoundary>` above the popup — the one holding the page, whose
+fallback replaces the page under it. A read inside a popup takes `error: true`
+and says the failure where it stands.
 
 What the popup gains is everything a page has: the request leaves **with the
 screen**, in parallel with the rest of what the address needs, instead of behind

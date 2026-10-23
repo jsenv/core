@@ -142,7 +142,8 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *
  * @example <caption>Handle error inline</caption>
  * const [user, , error] = useAsyncData(userAction, { error: true });
- * if (error) return <ErrorCard message={error.message} />;
+ * // A failed refresh keeps `user`: only a first load has nothing else to show.
+ * if (error && user === undefined) return <ErrorCard message={error.message} />;
  *
  * @example <caption>Say the failure over the rows already on screen</caption>
  * const [items, , error, dismissError] = useAsyncData(listAction, { error: true });

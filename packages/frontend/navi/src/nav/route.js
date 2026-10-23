@@ -7,6 +7,7 @@ import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
 import {
   createRoutePattern,
   resolveRouteUrl,
@@ -22,6 +23,13 @@ const getRoutePrivateProperties = (route) => {
 const ROUTE_NOT_MATCHING_PARAMS = {};
 // Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
 let isUpdatingRoutesFromUrl = false;
+const ROUTE_OPTIONS = new Set([
+  "searchParams",
+  "params",
+  "redirectRoute",
+  "redirectRouteParams",
+  "dropSearchParams",
+]);
 /**
  * Declares a route from an url pattern.
  *
@@ -104,16 +112,17 @@ let isUpdatingRoutesFromUrl = false;
  *   route(`/games/:gameId=${gamePageIdSignal}`, { dropSearchParams: ["v"] });
  *   ```
  */
-export const route = (
-  pattern,
-  {
+export const route = (pattern, options = {}) => {
+  const {
     searchParams,
     params,
     redirectRoute,
     redirectRouteParams,
     dropSearchParams,
-  } = {},
-) => {
+  } = options;
+  if (import.meta.dev) {
+    warnUnknownOptions(`route("${pattern}")`, options, ROUTE_OPTIONS);
+  }
   const routePattern = createRoutePattern(pattern, { searchParams, params });
   if (DEBUG) {
     console.debug(`Creating route: ${pattern}`);

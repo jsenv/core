@@ -7,6 +7,7 @@ import { isSignal } from "../utils/is_signal.js";
 import { createJsValueWeakMap } from "../utils/js_value_weak_map.js";
 import { mergeTwoJsValues } from "../utils/merge_two_js_values.js";
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
+import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
 import { weakEffect } from "../utils/weak_effect.js";
 import {
   getActionPrivateProperties,
@@ -762,6 +763,33 @@ const mergeActionParams = (currentParams, newParams) => {
   return mergeTwoJsValues(currentParams, newParams);
 };
 
+// What createActionCore reads off the options (see warnUnknownOptions):
+// `{ dependencies: [X] }` would otherwise be accepted and never rerun anything.
+const OPTIONS_CREATE_ACTION_READS = new Set([
+  "keep",
+  "name",
+  "params",
+  "isPrerun",
+  "runningState",
+  "aborted",
+  "error",
+  "value",
+  "resultToValue",
+  "valueToData",
+  "provisionalValue",
+  "inheritData",
+  "dataDefault",
+  "data",
+  "completed",
+  "sideEffect",
+  "meta",
+  "outputSignal",
+  "completeSideEffect",
+]);
+const OPTIONS_CREATE_ACTION_HINTS = {
+  dependencies: `A read that follows writes is a resource (docs/actions.md, "Reruns").`,
+  rerunOn: `A read that follows writes is a resource (docs/actions.md, "Reruns").`,
+};
 const actionWeakMap = new WeakMap();
 /**
  * Wraps an async callback into an action: a question, its answer, and the
@@ -803,6 +831,14 @@ export const createAction = (callback, rootOptions = {}) => {
   const existing = actionWeakMap.get(callback);
   if (existing) {
     return existing;
+  }
+  if (import.meta.dev) {
+    warnUnknownOptions(
+      `createAction(${callback.name || "anonymous"})`,
+      rootOptions,
+      OPTIONS_CREATE_ACTION_READS,
+      OPTIONS_CREATE_ACTION_HINTS,
+    );
   }
 
   const keptAnswerRegistry = rootOptions.keep

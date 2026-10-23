@@ -518,8 +518,13 @@ const TRAVELS_NONE = [];
  *   vertical?: boolean,
  *   previousLabel?: string,
  *   nextLabel?: string,
+ *   previousTestId?: string,
+ *   nextTestId?: string,
  *   [key: string]: any,
  * }>}
+ * @param {string} [previousTestId] The `data-testid` of the way out to the
+ *   previous value, which navi builds and the caller has no other way to name.
+ *   `nextTestId` is its twin.
  * @param {any} [value] The value shown. Held from above: `uiAction` says when
  *   it should move. Say `signal` for a two-way binding instead, or
  *   `defaultValue` to let the spin hold the value itself.
@@ -601,6 +606,8 @@ export const Spin = ({
   maxLines,
   previousLabel,
   nextLabel,
+  previousTestId,
+  nextTestId,
   ...rest
 }) => {
   import.meta.css = css;
@@ -957,6 +964,7 @@ export const Spin = ({
             ? (nextLabel ?? spinI18n("spin.next"))
             : (previousLabel ?? spinI18n("spin.previous"))
         }
+        testId={isNext ? nextTestId : previousTestId}
         onPress={(e) => {
           focusMiddle();
           if (editable) {
@@ -1215,6 +1223,7 @@ const WayOut = ({
   unavailable,
   unavailableMessage,
   label,
+  testId,
   onPress,
   onPointerDown,
   children,
@@ -1252,6 +1261,7 @@ const WayOut = ({
       // nothing that way, so it keeps its place.
       role="button"
       aria-label={label}
+      data-testid={testId}
       aria-disabled={unavailable ? "true" : undefined}
       data-unavailable={unavailable ? "" : undefined}
       // At the chevron, not beside it: a callout aims its arrow at where the

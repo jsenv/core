@@ -388,7 +388,12 @@ section of pages shares one:
 <Route>
   <ErrorBoundary
     fallback={({ error, resetError }) => (
-      <ErrorScreen error={error} onRetry={resetError} />
+      <ErrorScreen
+        error={error}
+        // the rerun lifts the boundary; resetError only dismisses, and a
+        // page that never loaded has nothing to show once dismissed
+        onRetry={error.action ? () => error.action.rerun() : resetError}
+      />
     )}
   >
     <Loading fallback={<GameSkeleton />}>
@@ -452,6 +457,9 @@ with `currentAlso={[PLACE_ROUTE]}`, and `currentExcept` names a place under the
 section it does NOT stand for. Both amend what a link claims about itself and
 nothing else — neither is an answer to a route that lies about where the reader
 is (see [what its address may say](#a-layer-over-the-screen-what-its-address-may-say)).
+A bar entry drawn as a button for its press feedback says the same with
+`<Button route currentAlso currentExcept>`: it is drawn as a link and wears
+`aria-current="page"` from the same reading.
 
 The routing takes a plain click that moves this tab, and nothing else. A link
 with `target="_blank"` (or any `target` other than `_self`) opens the app in that

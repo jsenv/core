@@ -492,8 +492,8 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   those instead.
  * @param {string} [props.value] - Value emitted by the control facade
  *   (`navi_value`); defaults to `href`.
- * @param {boolean} [props.current] - Forces the "current" state on (otherwise
- *   derived from the href/route).
+ * @param {boolean} [props.current] - Forces the "current" state: `true` on,
+ *   `false` off. Left out, it is derived from the href/route.
  * @param {object|object[]} [props.currentExcept] -
  *   Route(s) inside this link's own that are NOT it: while one of them matches,
  *   the link is not current even though its route still is. A bar entry
@@ -652,7 +652,10 @@ const LinkWithRoute = ({
     except: currentExcept,
     also: currentAlso,
   });
-  const innerCurrent = current || linkMatching;
+  // Always a boolean from here: LinkPlain takes a given `current` as the
+  // answer, so an href matching the address cannot relight what
+  // currentExcept turned off.
+  const innerCurrent = current ?? linkMatching;
 
   // What a childless link shows is LinkPlain's call (hrefFallback); a route
   // only says it the way its pattern writes it, not as the resolved href.
@@ -736,7 +739,7 @@ const LinkPlain = (props) => {
   // A tab that is a SLIDE is current when the container is on it — which the
   // <Nav> around reads off that container, so nothing here has to be told.
   const innerCurrent =
-    current || (slide ? nav?.currentSlideArea === slide : isCurrent);
+    current ?? (slide ? nav?.currentSlideArea === slide : isCurrent);
   useReportCurrentToBinderItem(innerCurrent);
   controlHostProps.basePseudoState = {
     ...basePseudoState,

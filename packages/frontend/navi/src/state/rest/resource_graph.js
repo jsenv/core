@@ -8,6 +8,7 @@ import {
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
 import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
+import { warnUnknownOptions } from "../../utils/warn_unknown_options.js";
 import {
   arraySignalStore,
   primitiveCanBeId,
@@ -80,6 +81,24 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
+const RESOURCE_OPTIONS = new Set([
+  "idKey",
+  "uniqueKeys",
+  "rerunOn",
+  "dependencies",
+  "persist",
+  "GET",
+  "GET_MANY",
+  "GET_RANGE",
+  "POST",
+  "POST_MANY",
+  "PUT",
+  "PUT_MANY",
+  "PATCH",
+  "PATCH_MANY",
+  "DELETE",
+  "DELETE_MANY",
+]);
 /**
  * Creates a reactive REST resource backed by a shared signal store.
  * Returns a `stateFacade` exposing one action per REST callback provided
@@ -138,9 +157,8 @@ const debug = (...args) => {
  *   DELETE: ({ id }) => fetchJson(`/users/${id}`, { method: "DELETE" }),
  * });
  */
-export const resource = (
-  name,
-  {
+export const resource = (name, restCallbacks = {}) => {
+  const {
     // configuration options
     idKey = "id",
     uniqueKeys = [],
@@ -159,8 +177,10 @@ export const resource = (
     PATCH_MANY,
     DELETE,
     DELETE_MANY,
-  } = {},
-) => {
+  } = restCallbacks;
+  if (import.meta.dev) {
+    warnUnknownOptions(`resource(${name})`, restCallbacks, RESOURCE_OPTIONS);
+  }
   const declarationSite = getDeclarationSite();
   const setupCallbackSet = new Set();
   const addItemSetup = (callback) => {

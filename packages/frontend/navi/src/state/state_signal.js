@@ -2,6 +2,11 @@ import { createValidity } from "@jsenv/validity";
 import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
+import {
+  readLocalStorage,
+  writeLocalStorage,
+} from "./guarded_local_storage.js";
 
 // Global signal registry for route template detection
 export const globalSignalRegistry = new Map();
@@ -59,6 +64,26 @@ if (import.meta.hot) {
   });
 }
 
+// Read by stateSignal, or off the options it stores by route_pattern.js
+// (itemType).
+const STATE_SIGNAL_OPTIONS = new Set([
+  "id",
+  "type",
+  "itemType",
+  "min",
+  "max",
+  "step",
+  "oneOf",
+  "localStorageRepresentation",
+  "persists",
+  "debug",
+  "default",
+  "ignoreArrayOrder",
+  "autoFix",
+  "weak",
+  "history",
+  "debounceUrl",
+]);
 /**
  * Creates an advanced signal with dynamic default value, local storage persistence, and validation.
  *
@@ -201,6 +226,9 @@ export const stateSignal = (defaultValue, options = {}) => {
     history = "replace",
     debounceUrl = 0,
   } = options;
+  if (import.meta.dev) {
+    warnUnknownOptions(`stateSignal "${id}"`, options, STATE_SIGNAL_OPTIONS);
+  }
 
   if (history !== "replace" && history !== "push") {
     throw new TypeError(
@@ -278,27 +306,19 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
   }
   const readFromLocalStorage = persists
-    ? () => {
-        const raw = window.localStorage.getItem(localStorageKey);
-        if (raw === null) {
-          return undefined;
-        }
-        return raw;
-      }
+    ? () => readLocalStorage(localStorageKey)
     : () => undefined;
   const updateLocalStorage = persists
     ? () => {
-        const localStorageValue = validity.representations.localStorage.value;
-        if (localStorageValue === undefined) {
-          window.localStorage.removeItem(localStorageKey);
-        } else {
-          window.localStorage.setItem(localStorageKey, localStorageValue);
-        }
+        writeLocalStorage(
+          localStorageKey,
+          validity.representations.localStorage.value,
+        );
       }
     : () => {};
   const removeFromLocalStorage = persists
     ? () => {
-        window.localStorage.removeItem(localStorageKey);
+        writeLocalStorage(localStorageKey, undefined);
       }
     : () => {};
 

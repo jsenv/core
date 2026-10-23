@@ -38,6 +38,12 @@ the component reads:
 | `error: true`   | suspends                  | `error`, plus `dismissError` |
 | both            | `loading`                 | `error`                      |
 
+A delegated failure is thrown whatever the action still holds: a refresh that
+fails — the rerun when the app comes back to the foreground, a dependency's —
+takes rows that were on screen to the boundary, whose fallback replaces them. A
+reader with something to keep showing asks for `error: true`, and each reader of
+a shared action decides this on its own.
+
 The invariant that makes this worth relying on: **`loading: true` never
 suspends.** Not while the action runs, not while a debounced binding is
 settling, not while it holds params nobody has started yet, not after a failure

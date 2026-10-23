@@ -60,7 +60,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useId, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -430,23 +430,16 @@ six`}
       // ── TextareaCharCount ─────────────────────────────────────────────────
 
       const CharCountExample = ({ maxLength, maxLengthGuard, placement }) => {
-        const [text, setText] = useState("Déjà un début de message.");
+        const id = useId();
         const textarea = (
           <Textarea
-            value={text}
-            uiAction={(v) => {
-              setText(v);
-            }}
+            id={id}
+            defaultValue="Déjà un début de message."
             maxLength={maxLength}
             maxLengthGuard={maxLengthGuard}
           />
         );
-        const count = (
-          <TextareaCharCount
-            value={text}
-            maxLength={maxLength ?? maxLengthGuard}
-          />
-        );
+        const count = <TextareaCharCount for={id} />;
         if (placement === "beside") {
           return (
             <Box flex spacing="m" alignY="start">
@@ -472,8 +465,9 @@ six`}
         <div class="demo-section">
           <Heading id="char-count">TextareaCharCount</Heading>
           <p class="desc">
-            Le compteur est un composant à part : c'est l'appelant qui le place
-            et le nourrit de la même valeur que le textarea.
+            Le compteur est un composant à part : c'est l'appelant qui le place,
+            et il lit le textarea qu'il désigne par son id (for). La limite est
+            celle du textarea.
           </p>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="sous la boîte à droite, avec maxLength={100} : « 25/100 »">

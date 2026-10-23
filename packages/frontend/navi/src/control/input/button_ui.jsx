@@ -578,6 +578,11 @@ export const ButtonUI = (props) => {
   // Where the href leads next to the page one is on (the target, the rel, the
   // current state) is resolved above, by ButtonHrefResolver.
   const as = href === undefined ? "button" : "a";
+  // What `data-href-current` paints, said to assistive tech as a link says it.
+  const ariaCurrent =
+    as === "a" && props.pseudoState?.[":-navi-href-current"]
+      ? "page"
+      : undefined;
 
   // Worn as an attribute, like a link's (see link_replace.js): read off the
   // anchor by the click handler, off the source by --navi-nav-to.
@@ -613,6 +618,7 @@ export const ButtonUI = (props) => {
       // there, which is also what makes alignX/alignY place it. Before the
       // caller's props, so their own flex direction wins.
       flex={icon ? "x" : undefined}
+      aria-current={ariaCurrent}
       {...buttonControlRootProps}
       {...buttonControlHostProps}
       // eslint-disable-next-line react/no-children-prop

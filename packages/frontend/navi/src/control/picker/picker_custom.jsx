@@ -760,6 +760,7 @@ const PickerCustom = (props) => {
           allowed: () => {
             const closing = requestClose(e, {
               isCancel: e.detail.isCancel,
+              isConfirm: e.detail.isConfirm,
               isSend: e.detail.isSend,
             });
             if (!closing) {

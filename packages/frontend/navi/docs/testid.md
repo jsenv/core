@@ -149,7 +149,9 @@ or waits for it to show, targets what the row draws: a testid on its content.
 What navi builds itself is named through props. A `data-testid` on a `<Picker>`
 names the trigger; `popupTestId` names the popup it builds (the callout, under
 `mode="callout"`), and `confirmTestId` / `cancelTestId` the yes and no buttons
-of a `type="confirm"` picker's default body:
+of a `type="confirm"` picker's default body. Likewise `menuTestId` names a
+`SplitButton`'s chevron half, and `previousTestId` / `nextTestId` a `Spin`'s
+two ways out (a `DaySpin`'s, a `NumberSpin`'s):
 
 ```jsx
 <Picker data-testid="tie-break" popupTestId="tie-break-sheet">

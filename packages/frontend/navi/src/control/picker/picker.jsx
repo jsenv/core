@@ -84,6 +84,7 @@ const css = /* css */ `
       --picker-font-size: var(--navi-control-font-size);
       --picker-font-family: var(--navi-control-font-family, inherit);
       --picker-loader-color: var(--navi-loader-color);
+      --picker-cta-background-color: var(--navi-accent-color);
       --picker-border-color: var(--navi-control-border-color);
       --picker-background-color: white;
       --picker-color: currentColor;
@@ -253,7 +254,11 @@ const css = /* css */ `
        label (the ui prop), and no slot follows it: nothing says "this opens",
        what it opens says it. Hover keeps the picker's own formulas, which are
        the button's already. */
-    .navi_picker[data-variant="button"] {
+    .navi_picker:is(
+      [data-variant="button"],
+      [data-variant="border"],
+      [data-variant="discrete-border"]
+    ) {
       --picker-padding-x-default: var(--navi-button-padding-x-default);
       --picker-padding-y-default: var(--navi-button-padding-y-default);
       --picker-align-x-default: center;
@@ -280,6 +285,66 @@ const css = /* css */ `
          to move: --picker-align-x-default centers the box, which already fills
          the button. */
       --picker-text-align-default: center;
+    }
+    /* border, discrete-border, cta: the Button's other looks, its formulas
+       copied over (see button_ui.jsx) on top of "button" above, for a picker
+       taking the place of a Button that opened a popup. */
+    .navi_picker[data-variant="border"] {
+      --picker-background-color: transparent;
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        currentColor 8%,
+        var(--picker-background-color)
+      );
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+    }
+    /* Its border on hover only is drawn outside the layer, below. */
+    .navi_picker[data-variant="discrete-border"] {
+      --picker-background-color: transparent;
+      --picker-background-color-hover: var(--picker-background-color);
+      --picker-background-color-readonly: var(--picker-background-color);
+      --picker-background-color-disabled: var(--picker-background-color);
+    }
+    .navi_picker[data-cta] {
+      --picker-background-color: var(--picker-cta-background-color);
+      --picker-border-color: var(--picker-cta-background-color);
+      --picker-color: white;
+      --picker-background-color-hover: color-mix(
+        in srgb,
+        var(--picker-background-color) 85%,
+        white
+      );
+      --picker-border-color-hover: color-mix(
+        in srgb,
+        var(--picker-border-color) 85%,
+        white
+      );
+      --picker-background-color-readonly: color-mix(
+        in srgb,
+        var(--picker-background-color) 50%,
+        white
+      );
+      --picker-border-color-readonly: color-mix(
+        in srgb,
+        var(--picker-border-color) 50%,
+        white
+      );
+      --picker-background-color-disabled: color-mix(
+        in srgb,
+        var(--picker-background-color) 40%,
+        white
+      );
+      --picker-border-color-disabled: color-mix(
+        in srgb,
+        var(--picker-border-color) 40%,
+        white
+      );
+      --picker-color-disabled: color-mix(
+        in srgb,
+        var(--picker-color) 60%,
+        transparent
+      );
     }
     /* text: a word in a sentence, marked by the dotted line under it — the way
        a term one can ask about is marked. No box, no slot; the font is the
@@ -794,6 +859,21 @@ const css = /* css */ `
       --x-picker-icon-color: var(--picker-icon-color-disabled);
       --x-picker-cursor: default;
     }
+    /* discrete-border: the border is the whole point, absent at rest and
+       drawn on hover — a resolved value, as on a Button (see button_ui.jsx),
+       to beat the state rules above. Before the callout's, which still
+       draws its line. */
+    &[data-variant="discrete-border"] {
+      --x-picker-border-color: transparent;
+
+      &[data-hover] {
+        --x-picker-border-color: var(--picker-border-color-hover);
+      }
+      &[data-readonly],
+      &[data-disabled] {
+        --x-picker-border-color: transparent;
+      }
+    }
     /* Callout (info, warning, error) */
     &[data-callout] {
       --x-picker-border-color: var(--callout-color);
@@ -903,6 +983,7 @@ const PickerButton = (props) => {
   import.meta.css = css;
   warnOnUnknownPickerType(props);
   warnOnUIDrawnByNobody(props);
+  warnOnMaxLinesNotClamped(props);
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -912,6 +993,8 @@ const PickerButton = (props) => {
     // The trigger is one icon — its box is that icon's, the way <Button icon>
     // means it. A shape, so it composes with the variant painting around it.
     icon,
+    // A call to action, filled with the accent: what `cta` is on a Button.
+    cta,
     rightSlotIcon,
     rightSlotIconSize = "inherit",
     // What goes in the right slot as-is — no <Icon> around it, so a caller can
@@ -991,12 +1074,17 @@ const PickerButton = (props) => {
   const isBare = variant === "bare";
   const bareChevron = isBare && chevron !== undefined ? chevron : undefined;
   warnOnChevronOffBare(props, isBare);
+  // The Button's own looks: a label, no slot after it.
+  const drawnAsButton =
+    variant === "button" ||
+    variant === "border" ||
+    variant === "discrete-border";
   const hasRightSlot =
     !picksNothing &&
     rightSlot !== null &&
     !isIcon &&
     variant !== "headless" &&
-    variant !== "button" &&
+    !drawnAsButton &&
     variant !== "text" &&
     (!isBare || bareChevron !== undefined) &&
     ui !== "default";
@@ -1104,6 +1192,7 @@ const PickerButton = (props) => {
         baseClassName="navi_picker"
         pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
         data-variant={variant}
+        data-cta={cta ? "" : undefined}
         data-icon={isIcon ? "" : undefined}
         data-chevron={hasRightSlot ? bareChevron : undefined}
         navi-picker=""
@@ -1114,6 +1203,7 @@ const PickerButton = (props) => {
         basePseudoState={basePseudoState}
         styleCSSVars={PickerStyleCSSVars}
         variant={undefined}
+        cta={undefined}
         icon={undefined}
         // The caller's own role goes onto the host, beside the name (see
         // control_context.js): a role and a name on two different elements
@@ -1285,7 +1375,7 @@ const PickerButton = (props) => {
                 // looks empty stays theirs (documented on the ui prop below).
                 navi-placeholder={
                   (ui === undefined || pickerUIIsNaviOwn(ui)) &&
-                  variant !== "button" &&
+                  !drawnAsButton &&
                   variant !== "text" &&
                   uiStateHoldsNothing(value)
                     ? ""
@@ -1808,6 +1898,27 @@ const warnOnClearableWithoutSlot = (props, hasRightSlot) => {
   );
 };
 
+// A text or bare picker clamps nothing (see where maxLines is resolved), so a
+// `maxLines` written on one is dropped without a word.
+const maxLinesNotClampedWarnedSet = new Set();
+const warnOnMaxLinesNotClamped = (props) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  const { maxLines, variant } = props;
+  if (maxLines === undefined || (variant !== "text" && variant !== "bare")) {
+    return;
+  }
+  if (maxLinesNotClampedWarnedSet.has(variant)) {
+    return;
+  }
+  maxLinesNotClampedWarnedSet.add(variant);
+  console.warn(
+    `[navi] <Picker variant="${variant}" maxLines={${maxLines}}> — a ${variant} picker clamps nothing: its drawing is the caller's own. ` +
+      `Put maxLines on the Text in its ui: <Picker variant="${variant}" ui={<Text maxLines={${maxLines}}>…</Text>}>.`,
+  );
+};
+
 let chevronOffBareWarned = false;
 const warnOnChevronOffBare = (props, isBare) => {
   if (!import.meta.dev) {
@@ -1927,7 +2038,8 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   popupWidthFitContent?: boolean,
  *   loadingOutline?: "custom",
  *   loadingOutlineInset?: number,
- *   variant?: "icon" | "circle" | "headless" | "discrete" | "button" | "text" | "bare" | "picker",
+ *   variant?: "icon" | "circle" | "headless" | "discrete" | "button" | "border" | "discrete-border" | "text" | "bare" | "picker",
+ *   cta?: boolean,
  *   icon?: boolean,
  *   alignX?: "start" | "center" | "end",
  *   alignY?: "start" | "center" | "end" | "stretch",
@@ -2192,10 +2304,13 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   receives the cleared value like any other choice. A cut (Ctrl+X) on such a
  *   picker copies the value and leaves it in place: no clear without the
  *   question.
- * @param {"icon"|"headless"|"discrete"|"button"|"text"|"bare"|"picker"} [variant]
+ * @param {"icon"|"headless"|"discrete"|"button"|"border"|"discrete-border"|"text"|"bare"|"picker"} [variant]
  *   How the trigger is drawn. `"button"` is a Button's drawing — surface,
  *   padding, a centered label, no chevron — and what a `type="confirm"` picker
  *   draws unless told otherwise: nothing is picked, the popup is a question.
+ *   `"border"` and `"discrete-border"` are the Button's two other looks, from
+ *   its own formulas: a picker swapped in for a Button that opened a popup
+ *   looks the same at rest, on hover and read-only.
  *   `"text"` is a word in a sentence, underlined with dots, no box and no
  *   slot: what `mode="callout"` uses for a callout on a term rather than on an
  *   icon (`"icon"` being its default, with an info icon in place of the
@@ -2219,6 +2334,9 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   nearest positioned ancestor it happens to find. `"picker"` (or an explicit
  *   `variant={undefined}`) asks a confirm or callout picker for the field-like
  *   drawing every other picker has.
+ * @param {boolean} [cta] A call to action: filled with the accent, its border
+ *   matching, as `cta` draws a Button — for a confirm picker that is a row's
+ *   main action.
  * @param {"custom"} [loadingOutline] Who draws the loading outline while the
  *   action runs. Left unsaid, the picker does, around its own box. `"custom"`
  *   says someone else does — what it means on a `Button` too — for a picker

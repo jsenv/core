@@ -147,6 +147,17 @@ import { Text } from "./text.jsx";
  */
 export const Time = (props) => {
   const { type } = props;
+  if (
+    import.meta.dev &&
+    props.value !== undefined &&
+    props.children === undefined
+  ) {
+    // Otherwise drawn as the placeholder, a plausible screen with nothing wrong
+    // on it.
+    console.warn(
+      `<Time> reads what it writes from its children, not from "value": <Time type="${type}">{value}</Time>.`,
+    );
+  }
   if (type === "date") {
     return <TimeDate {...props} />;
   }
