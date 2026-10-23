@@ -57,6 +57,13 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-reason");
 
 const readOnlyMessage = (field) => {
+  // Read-only from above, in the words of what made it so (a picker's or a
+  // group's readOnlyMessage): what it holds says what it says — over the
+  // network policy's words too, as that control's own words win over them on
+  // itself.
+  if (field.readOnlyMessageFromAbove) {
+    return field.readOnlyMessageFromAbove;
+  }
   // Read-only for a reason the control named itself, read off the reason
   // rather than off the surrounding state: a button read-only for its own
   // reasons, inside a form that happens to be unchanged, is not waiting for

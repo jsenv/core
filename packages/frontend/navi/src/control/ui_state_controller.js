@@ -2558,6 +2558,8 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
       s.controller.controlHostProps = realUIStateController.controlHostProps;
       s.controller.readOnlyWithoutRun =
         realUIStateController.readOnlyWithoutRun;
+      s.controller.readOnlyMessageFromAbove =
+        realUIStateController.readOnlyMessageFromAbove;
       realUIStateController.pushStateDownToFacadeChild =
         s.controller.pushStateDownToChild;
 

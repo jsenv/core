@@ -13,9 +13,14 @@ import {
   renderResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { getNetworkPolicyReadOnlyMessage } from "@jsenv/navi/src/action/network_policy.js";
 import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
-import { ControlIdContext, ReadOnlyContext } from "../control_context.js";
+import {
+  ControlIdContext,
+  ReadOnlyContext,
+  ReadOnlyMessageContext,
+} from "../control_context.js";
 import { listItemBusyMessage } from "./list_item_blocked_message.js";
 import {
   ControlChildrenWrapper,
@@ -645,7 +650,12 @@ const ListItemSelectable = (props) => {
   // A list waiting on something is not unavailable, it is not answering yet —
   // busy rather than read-only (see BUSY_CONSTRAINT, which is asked first),
   // and the wait is about the same thing the read-only would be about.
+  //
+  // Unless what made the list read-only says it better: in words of its own (a
+  // picker's or a list's readOnlyMessage), or because it is the network
+  // policy holding the write the selection would make.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const readOnlyMessageFromAbove = useContext(ReadOnlyMessageContext);
   const readOnlyMessageKey = readOnlyFromAbove
     ? multiple
       ? `constraint.readonly.selection`
@@ -654,7 +664,11 @@ const ListItemSelectable = (props) => {
   // Handed to the row as well as to the control: whichever of the two catches
   // the press answers it, and they must not answer it differently.
   const readOnlyMessageResolved =
-    props.readOnlyMessage ?? constraintI18n(readOnlyMessageKey, props);
+    props.readOnlyMessage ??
+    (readOnlyFromAbove ? readOnlyMessageFromAbove : undefined) ??
+    (readOnlyFromAbove === "network-policy"
+      ? getNetworkPolicyReadOnlyMessage()
+      : constraintI18n(readOnlyMessageKey, props));
   const busyMessageResolved =
     props.busyMessage ??
     (loading

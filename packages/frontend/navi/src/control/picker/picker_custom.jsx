@@ -770,6 +770,11 @@ const PickerCustom = (props) => {
       // button) hangs its popup off the whole control instead.
       anchor: props.anchor || props.ref,
       openController,
+      // Before the content is built and shown, so it is laid out and placed
+      // at the size it is read at (see .navi_picker_content in picker.jsx).
+      onOpen: () => {
+        writeContainerFont(ref.current, popupRef.current);
+      },
       // A picker whose value was never given to it reads it off the control in
       // its popup (see useUIFacadeStateController), so that control is built as
       // soon as something reads the value: at mount when the picker sees the
@@ -1650,5 +1655,26 @@ const showNativePicker = (pickerInput, event) => {
     pickerInput.showPicker();
   } catch {
     pickerInput.click();
+  }
+};
+
+// The popup of a picker is opened where the picker stands, so it writes at the
+// size and weight of what is around it — the ones a Dialog rendered there
+// inherits — and never at the ones the trigger is drawn at. CSS cannot reach
+// past the picker's own: its root holds the popup and sets both. Written on the
+// holder only when they differ, so an opening that changes nothing invalidates
+// no style.
+const writeContainerFont = (pickerEl, popupEl) => {
+  const container = pickerEl?.parentElement;
+  const holder = popupEl?.closest("[data-picker-content]");
+  if (!container || !holder) {
+    return;
+  }
+  const { fontSize, fontWeight } = getComputedStyle(container);
+  if (holder.style.fontSize !== fontSize) {
+    holder.style.fontSize = fontSize;
+  }
+  if (holder.style.fontWeight !== fontWeight) {
+    holder.style.fontWeight = fontWeight;
   }
 };

@@ -79,6 +79,7 @@ import {
   LoadingContext,
   MessagePropsRefContext,
   ReadOnlyContext,
+  ReadOnlyMessageContext,
   RequiredContext,
 } from "./control_context.js";
 import { findControlHost, findControlRoot } from "./control_dom.js";
@@ -152,6 +153,7 @@ export const ControlgroupChildrenWrapper = ({
   required,
   disabled,
   readOnly,
+  readOnlyMessage,
   loading,
   boundAction,
   actionRequesterSignal,
@@ -161,7 +163,10 @@ export const ControlgroupChildrenWrapper = ({
       <ParentUIStateControllerContext.Provider value={uiGroupStateController}>
         <ControlNameContext.Provider value={name}>
           <DisabledContext.Provider value={disabled}>
-            <ReadOnlyContext.Provider value={readOnly}>
+            <ReadOnlyProvider
+              readOnly={readOnly}
+              readOnlyMessage={readOnlyMessage}
+            >
               <RequiredContext.Provider value={required}>
                 <LoadingContext.Provider value={loading}>
                   <ActionContext.Provider value={boundAction}>
@@ -173,23 +178,40 @@ export const ControlgroupChildrenWrapper = ({
                   </ActionContext.Provider>
                 </LoadingContext.Provider>
               </RequiredContext.Provider>
-            </ReadOnlyContext.Provider>
+            </ReadOnlyProvider>
           </DisabledContext.Provider>
         </ControlNameContext.Provider>
       </ParentUIStateControllerContext.Provider>
     </ControlIdContext.Provider>
   </MessagePropsRefContext.Provider>
 );
-// The read-only state a control hands to what it holds. Held by the network
-// policy, it hands down the hold itself: what it holds writes into it, so it
-// is held for the same reason and must say the same words — read-only alone,
-// it would refuse in navi's generic ones.
-export const readOnlyHandedDown = (controlHostProps, readOnly) => {
-  if (controlHostProps["data-readonly-reason"] === "network-policy") {
-    return "network-policy";
+// What a control hands to what it holds about being read-only: the state, and
+// the words it is said in. What it holds writes into it, so it is held for the
+// same reason and says what the control says. Held by the network policy, it
+// hands down the hold itself — read-only alone, what it holds would refuse in
+// navi's generic words. Read-only, it hands down its readOnlyMessage, or the
+// one it was handed.
+export const readOnlyHandedDown = (uiStateController, readOnly) => {
+  const { controlHostProps, props } = uiStateController;
+  const readOnlyResolved =
+    controlHostProps["data-readonly-reason"] === "network-policy"
+      ? "network-policy"
+      : readOnly;
+  if (!readOnlyResolved) {
+    return [readOnlyResolved, undefined];
   }
-  return readOnly;
+  return [
+    readOnlyResolved,
+    props.readOnlyMessage ?? uiStateController.readOnlyMessageFromAbove,
+  ];
 };
+export const ReadOnlyProvider = ({ readOnly, readOnlyMessage, children }) => (
+  <ReadOnlyContext.Provider value={readOnly}>
+    <ReadOnlyMessageContext.Provider value={readOnlyMessage}>
+      {children}
+    </ReadOnlyMessageContext.Provider>
+  </ReadOnlyContext.Provider>
+);
 
 // What the caller writes for these is called from the control's own reactions
 // (see `reactions` below), so the split leaves them out of both sides.
@@ -1562,8 +1584,8 @@ export const useControlgroupProps = (
 
   const { basePseudoState } = controlgroupProps;
   const disabled = basePseudoState[":disabled"];
-  const readOnly = readOnlyHandedDown(
-    controlgroupProps,
+  const [readOnly, readOnlyMessage] = readOnlyHandedDown(
+    uiGroupStateController,
     basePseudoState[":read-only"],
   );
   const loading = basePseudoState[":-navi-loading"];
@@ -1575,6 +1597,7 @@ export const useControlgroupProps = (
       required: controlgroupProps.required,
       disabled,
       readOnly,
+      readOnlyMessage,
       loading,
       boundAction,
       actionRequesterSignal,
@@ -1585,6 +1608,7 @@ export const useControlgroupProps = (
       controlgroupProps.required,
       disabled,
       readOnly,
+      readOnlyMessage,
       loading,
       boundAction,
       actionRequesterSignal,
@@ -1781,6 +1805,7 @@ const useInteractiveProps = (
   control_state_props: {
     const controlDisabledFromAbove = useContext(DisabledContext);
     const controlReadOnlyFromAbove = useContext(ReadOnlyContext);
+    const controlReadOnlyMessageFromAbove = useContext(ReadOnlyMessageContext);
     const controlRequired = useContext(RequiredContext);
     const controlLoadingFromAbove = useContext(LoadingContext);
     // A SIGNAL holding the element whose press the group's action is wearing
@@ -1827,8 +1852,15 @@ const useInteractiveProps = (
     // pressable on a game nobody may edit. Its own props still hold; only what
     // came from above is dropped (see self_interactions.js for the three modes).
     const zoneStateApplies = !selfInteractionsIgnoreBlock(props);
+    // A press that only leaves the popup it sits in writes nothing to the zone
+    // around it either, so that zone being read-only — or holding a write the
+    // network policy keeps — does not hold it: the popup answers the close
+    // itself. A read-only picker's popup then closes from its own button as
+    // it does from a press outside, and refuses both alike when it holds a
+    // change it cannot send.
+    const zoneReadOnlyApplies = zoneStateApplies && !pressOnlyLeaves(props);
     const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
-    const controlReadOnly = zoneStateApplies && controlReadOnlyFromAbove;
+    const controlReadOnly = zoneReadOnlyApplies && controlReadOnlyFromAbove;
     const controlLoading = zoneStateApplies && controlLoadingFromAbove;
 
     const disabledResolved = disabled || controlDisabled;
@@ -1859,7 +1891,7 @@ const useInteractiveProps = (
       networkPolicyReason !== null &&
       (isWriteAction(boundAction) ||
         Boolean(
-          zoneStateApplies && parentAction && isWriteAction(parentAction),
+          zoneReadOnlyApplies && parentAction && isWriteAction(parentAction),
         ) ||
         controlReadOnly === "network-policy");
     // Held back because the surface above already has as many runs in flight as
@@ -1892,6 +1924,12 @@ const useInteractiveProps = (
     // still read-only in the tick the run settles — the tick a form's
     // after-send `--navi-reset` asks the form to empty itself.
     uiStateController.readOnlyWithoutRun = Boolean(readOnlyBase);
+    // The words of what made this control read-only from above, when it gave
+    // some: read by READONLY_CONSTRAINT, and handed further down with the
+    // read-only state (see readOnlyHandedDown).
+    uiStateController.readOnlyMessageFromAbove = controlReadOnly
+      ? controlReadOnlyMessageFromAbove
+      : undefined;
     // Read-only, and what this control opens still opens: reading what is in
     // there changes nothing. Read by READONLY_CONSTRAINT, which lets an
     // interaction that only reads through on it.
@@ -2445,6 +2483,13 @@ const splitControlProps = (
   }
   return [controlRootProps, controlHostProps];
 };
+// What a press leaving a popup asks for: closing it, or cancelling it. Only on
+// a control running nothing of its own — one with an action writes, wherever
+// it then leads.
+const LEAVING_COMMAND_SET = new Set(["--navi-close", "--navi-cancel"]);
+const pressOnlyLeaves = (props) =>
+  LEAVING_COMMAND_SET.has(props.command) && !props.action;
+
 // `onPointerDown`, `onFocusOut`… but not navi's own events (`onnavi_command`),
 // which keep the element they are dispatched on.
 const isDomListenerProp = (key) => /^on[A-Z]/.test(key);

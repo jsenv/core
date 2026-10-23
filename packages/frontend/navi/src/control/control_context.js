@@ -171,6 +171,9 @@ export const DisabledContext = createContext();
 // write held by the network policy: what it holds is held in turn, and says
 // so in the policy's words (see readOnlyHandedDown in control_hooks.jsx).
 export const ReadOnlyContext = createContext();
+// The words that go with it, when what handed read-only down gave some (its
+// readOnlyMessage, or the ones it was handed in turn).
+export const ReadOnlyMessageContext = createContext();
 export const RequiredContext = createContext();
 export const LoadingContext = createContext();
 export const LoadingElementContext = createContext();

@@ -23,6 +23,7 @@ import {
 import {
   ControlFacadeChildrenWrapper,
   readOnlyHandedDown,
+  ReadOnlyProvider,
   useControlFacadeProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
@@ -810,16 +811,17 @@ const css = /* css */ `
 
       display: contents;
       /* What opens from a control is a page of its own, not part of that
-         control's type scale: it is written at the page's size and weight by
-         name, as a Dialog opened from a Button is, rather than inheriting the
-         ones the picker itself is drawn at. A caller who sizes or bolds a
-         picker for the façade it holds (so the padding, the corners and the
-         chevron the picker draws in em land on the text the caller actually
-         wrote) would otherwise take the popup with it: its title, and
+         control's type scale: it is written at the size and weight of what is
+         around the picker, as a Dialog rendered there is, rather than
+         inheriting the ones the picker itself is drawn at. A caller who sizes
+         or bolds a picker for the façade it holds (so the padding, the corners
+         and the chevron the picker draws in em land on the text the caller
+         actually wrote) would otherwise take the popup with it: its title, and
          everything in it that does not state a size of its own. The controls
-         in there state the control size themselves. Same reason the popup is
-         written on the page's line rather than the control's — see
-         .navi_popup in popup.jsx. */
+         in there state the control size themselves. Read off the container as
+         the popup opens (writeContainerFont in picker_custom.jsx); these hold
+         until then. Same reason the popup is written on the page's line rather
+         than the control's — see .navi_popup in popup.jsx. */
       font-weight: initial;
       font-size: 1rem;
       text-align: initial; /* Don't inherit picker text align */
@@ -1132,8 +1134,8 @@ const PickerButton = (props) => {
   // pointer on a picker that still opens. A hold of the network policy goes
   // with it: what the popup changes is what the picker would send.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
-  const readOnlyResolved = readOnlyHandedDown(
-    inputProps,
+  const [readOnlyResolved, readOnlyMessageResolved] = readOnlyHandedDown(
+    uiStateController,
     readOnly || readOnlyFromAbove,
   );
   // Read off the controller rather than worked out again: what makes a
@@ -1186,10 +1188,14 @@ const PickerButton = (props) => {
     /* Read-only crosses into everything the picker is made of: what it really
        holds is drawn by controls of their own — in the popup, and on the façade
        where an application puts its own affordances — and each of them refuses
-       in its own words once told. Said from the read-only state alone, never
+       once told, in the picker's words when it gave some (readOnlyMessage),
+       in its own otherwise. Said from the read-only state alone, never
        from the busy one — an action running for a moment is not the same thing
        as a value nobody may change. */
-    <ReadOnlyContext.Provider value={readOnlyResolved}>
+    <ReadOnlyProvider
+      readOnly={readOnlyResolved}
+      readOnlyMessage={readOnlyMessageResolved}
+    >
       <Box
         // A word in a sentence (variant="text") sits in a <p>, where a <div> is
         // not allowed: phrasing content there, block content elsewhere.
@@ -1471,7 +1477,7 @@ const PickerButton = (props) => {
           </ContentTag>
         </ControlFacadeChildrenWrapper>
       </Box>
-    </ReadOnlyContext.Provider>
+    </ReadOnlyProvider>
   );
 };
 /**
