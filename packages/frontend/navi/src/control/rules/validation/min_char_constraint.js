@@ -26,22 +26,11 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
       return null;
     }
 
-    if (min === 1) {
-      const type = field.controlHostProps.type;
-      if (type === "password") {
-        return constraintI18n("constraint.min_lower_letter.password.singular");
-      }
-      return constraintI18n("constraint.min_lower_letter.default.singular");
-    }
-    const key = (() => {
-      const type = field.controlHostProps.type;
-      if (type === "password") {
-        return "constraint.min_lower_letter.password.plural";
-      }
-      return "constraint.min_lower_letter.default.plural";
-    })();
-    return constraintI18n(key, {
+    const type = field.controlHostProps.type;
+    const context = type === "password" ? "password" : "default";
+    return constraintI18n(`constraint.min_lower_letter.${context}`, {
       min: String(min),
+      count: min,
     });
   },
 };
@@ -73,11 +62,9 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
 
     const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
-    if (min === 1) {
-      return constraintI18n(`constraint.min_upper_letter.${context}.singular`);
-    }
-    return constraintI18n(`constraint.min_upper_letter.${context}.plural`, {
+    return constraintI18n(`constraint.min_upper_letter.${context}`, {
       min: String(min),
+      count: min,
     });
   },
 };
@@ -109,11 +96,9 @@ export const MIN_DIGIT_CONSTRAINT = {
 
     const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
-    if (min === 1) {
-      return constraintI18n(`constraint.min_digit.${context}.singular`);
-    }
-    return constraintI18n(`constraint.min_digit.${context}.plural`, {
+    return constraintI18n(`constraint.min_digit.${context}`, {
       min: String(min),
+      count: min,
     });
   },
 };
@@ -150,13 +135,9 @@ export const MIN_SPECIAL_CHAR_CONSTRAINT = {
 
     const type = field.controlHostProps.type;
     const context = type === "password" ? "password" : "default";
-    if (min === 1) {
-      return constraintI18n(`constraint.min_special_char.${context}.singular`, {
-        charset: specialCharset,
-      });
-    }
-    return constraintI18n(`constraint.min_special_char.${context}.plural`, {
+    return constraintI18n(`constraint.min_special_char.${context}`, {
       min: String(min),
+      count: min,
       charset: specialCharset,
     });
   },

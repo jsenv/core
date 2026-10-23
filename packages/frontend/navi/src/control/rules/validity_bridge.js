@@ -59,10 +59,11 @@ export const constraintFromValidityRule = (rule, ruleConfig = {}) => {
 
 export const naviI18nFromValidityMessage = ({ key, params }) => {
   if (params && typeof params.max === "number") {
-    // Lets a template pluralize on the bound it names: "[max] retour[s]".
+    // What a template's plural forms count when the rule names no count of
+    // its own: the bound ("[max] retours à la ligne").
     return constraintI18n(`constraint.${key}`, {
+      count: params.max,
       ...params,
-      s: params.max > 1 ? "s" : "",
     });
   }
   return constraintI18n(`constraint.${key}`, params);

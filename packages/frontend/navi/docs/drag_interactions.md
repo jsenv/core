@@ -60,17 +60,33 @@ carry began with, for the release as well (unlike a swipe's), except for
 | `leave`          | `{ id, x, y }`                                                   |
 | `grab`           | `{ pointerType, gestureInfo }`                                   |
 | `release`        | `{ id, x, y, outcome }`                                          |
+| `settle`         | `{ id, outcome, refused }`                                       |
 | `refuse`         | `{ pointerType }`                                                |
 
 Items and places are named by their `id`. **What an outcome returns is waited
 on**: the gesture holds what it carries until that promise settles, and a
 rejection sends it home — a place the application would not accept must not stay
-on screen as if it had. `moving`, `grab`, `release` and `refuse` **report, they
-do not ask**: what they return is not waited on, and preventing their event
-calls nothing off.
+on screen as if it had. `moving`, `grab`, `release`, `settle` and `refuse`
+**report, they do not ask**: what they return is not waited on, and preventing
+their event calls nothing off.
+
+**A refusal says why, on the element, once it is home**: an error callout, the
+way a control says its action failed — a seat taken in the meantime is something
+the person has to read, not guess from a card flying back. What the outcome
+rejected with is read the way an `errorMapping` answer is
+([error_handling.md](./error_handling.md#someone-just-acted--a-controls-action)):
+an error, a string or an element is shown; `{ message, target }` is shown on
+that target; rejecting with nothing (`return Promise.reject()`) refuses without
+a word. An outcome answered by `"request_action"` is said by its control.
 
 **Where the position is kept is the answer's.** Until the release navi carries
-the element with a translate of its own. An element drawn from state
+the element on its `translate` property, added to the translate it already had.
+The element's matrix is `translate`, then `rotate`, then `scale`, then
+`transform`, so the hand's translate applies outside whatever the element is
+drawn with — a shape turned to a bearing, a marker scaled with the zoom, by
+property or inside `transform` — and the element stays under the hand. What it
+is drawn with is left alone, a `var()` included, and a release kept in place
+writes only `translate` back. An element drawn from state
 (`left`/`top` computed from a position the application holds) is redrawn by the
 `move` handler, and its layout owns the position from then on: navi sees it drawn
 elsewhere and drops its translate, or it would land twice as far as the hand
@@ -407,6 +423,12 @@ up (a counter of what is in the hand) stays set up with nothing to take it down.
 **before** that answer runs, so what the grab put up comes down the moment the
 hand lets go, while still knowing whether something is on its way. Like `grab`,
 it needs a drag to happen in, and a dev warning says so.
+
+`settle` is when the carry is over, after the answer: the copy gone and the
+original shown again (it is hidden, `navi-drag-clone-source`, while the copy
+waits and flies), or the element at rest where it stays. `refused` says the
+answer rejected. A copy taken back in hand on its way home has not settled — that
+carry goes on, and its own end is told.
 
 ### The hand pulls and nothing follows: `refuse`
 

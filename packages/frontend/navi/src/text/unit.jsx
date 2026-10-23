@@ -1,3 +1,5 @@
+import { pluralCategory } from "@jsenv/humanize";
+
 import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
@@ -5,6 +7,7 @@ import { Text } from "./text.jsx";
 /**
  * @type {import("preact").FunctionComponent<{
  *   unit: string,
+ *   count?: number,
  *   plural?: boolean,
  *   format?: "long" | "short" | "narrow",
  *   lang?: string,
@@ -18,10 +21,15 @@ import { Text } from "./text.jsx";
  *   "hour"), written in the reader's language; any other string is shown as
  *   given, so a unit word of the app's own comes already translated
  *   (docs/i18n.md).
+ * @param {number} [count] The number the unit counts: its form is the one
+ *   that number takes in the reader's language ("0 heure", "0 hours") — a
+ *   unit registered with plural forms picks among them. Without it, `plural`
+ *   says which of the two forms is written.
  */
 export const Unit = ({
   unit,
-  plural,
+  count,
+  plural: pluralProp,
   format = "long",
   lang = languagesSignal.value,
   label,
@@ -37,26 +45,35 @@ export const Unit = ({
     const ratio = sizeRatio !== undefined ? sizeRatio : 0.8;
     resolvedStyle = { fontSize: `calc(${ratio} * 1em)`, ...style };
   }
+  const plural =
+    typeof count === "number"
+      ? pluralCategory(count, { lang }) !== "one"
+      : pluralProp;
   let unitText = unit;
   if (label) {
     unitText = label;
   } else if (naviI18n.has(unit, { lang })) {
-    const singularText = naviI18n(unit, undefined, { lang });
+    // A unit registered with plural forms picks among them by `count`.
+    const registeredText = naviI18n(
+      unit,
+      { count: typeof count === "number" ? count : plural ? 2 : 1 },
+      { lang },
+    );
     if (format === "short" || format === "narrow") {
       const shortKey = `${unit}__short`;
       const shortText = naviI18n(shortKey, undefined, { lang });
-      unitText = shortText === shortKey ? singularText : shortText;
+      unitText = shortText === shortKey ? registeredText : shortText;
     } else if (plural) {
       const pluralKey = `${unit}__plural`;
       const pluralText = naviI18n(pluralKey, undefined, { lang });
-      // fallback to singular if no plural key registered
-      unitText = pluralText !== pluralKey ? pluralText : singularText;
+      // the registered word when no plural key is registered
+      unitText = pluralText !== pluralKey ? pluralText : registeredText;
     } else {
-      unitText = singularText;
+      unitText = registeredText;
     }
   } else {
     // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-    const intlText = formatIntlUnit(unit, { plural, lang, format });
+    const intlText = formatIntlUnit(unit, { count, plural, lang, format });
     if (intlText === null) {
       unitText = unit;
     } else {
@@ -76,14 +93,15 @@ export const Unit = ({
   );
 };
 
-const formatIntlUnit = (unit, { lang, plural, format }) => {
+const formatIntlUnit = (unit, { lang, count, plural, format }) => {
   try {
-    const count = plural ? 2 : 1;
+    // Intl takes the number itself, and writes the form it takes.
+    const countWritten = typeof count === "number" ? count : plural ? 2 : 1;
     const parts = new Intl.NumberFormat(lang, {
       style: "unit",
       unit,
       unitDisplay: format,
-    }).formatToParts(count);
+    }).formatToParts(countWritten);
     const unitPart = parts.find((p) => p.type === "unit");
     return unitPart ? unitPart.value : null;
   } catch {

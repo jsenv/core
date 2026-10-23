@@ -38,6 +38,7 @@ Actions are read in components through the action system (`useAsyncData`,
 - [`GET_RANGE`: feeding a list that loads as it scrolls](#get_range-feeding-a-list-that-loads-as-it-scrolls)
 - [Searching the same collection](#searching-the-same-collection)
 - [Relations: pick one of the four methods](#relations-pick-one-of-the-four-methods)
+  - [Several writes on one item: `writes`](#several-writes-on-one-item-writes)
 - [Callback return contracts](#callback-return-contracts)
 - [When the backend answers a sub-route with the whole parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)
 - [Relations and autorerun](#relations-and-autorerun)
@@ -80,7 +81,8 @@ that keeps the copy, a `stateSignal` that persists:
 
 ```js
 const mePersistedSignal = stateSignal(undefined, {
-  id: `me@${APP_VERSION}`,
+  id: "me",
+  version: APP_VERSION,
   persists: true,
   type: "object",
 });
@@ -106,8 +108,10 @@ test wants.
 What stays the app's, because only the app knows:
 
 - **the key.** A deploy that changes the shape of the answer must not draw the
-  old one: put in the signal's `id` whatever makes a copy unusable — the
-  deployed version — and a new id starts clean.
+  old one: the signal's `version` says what makes a copy unusable — the
+  deployed version. It is stored under `me@<version>`, and creating the signal
+  removes the copies every other version left (and one stored under the bare
+  id), so a device does not keep one per deploy it ever opened.
 - **`when`: is the copy about this session?** A tab viewing as someone else, an
   account being switched — the row is somebody's, and must not be kept for the
   next person. `when` is read whenever the copy is about to be read or written:
@@ -149,7 +153,8 @@ slot, replaced when the user moves:
 
 ```js
 const pageKeptSignal = stateSignal(undefined, {
-  id: `page@${APP_VERSION}`,
+  id: "page",
+  version: APP_VERSION,
   persists: true,
   type: "object",
 });
@@ -429,6 +434,7 @@ people — is two relations spelled as one, and the one the gesture is about
 | The relation itself carries fields (`candidate_since`, `seen_at`, `slot`)                                     | `.scopedMany()` — those fields belong to the pair; putting them in a shared child store corrupts that entity for every other reader |
 | The backend answers every sub-route with the whole refreshed parent                                           | still model the relation; absorb the response with a plural callback (see below)                                                    |
 | A genuine partial update of the parent itself (cancel a game)                                                 | plain `PATCH` on the parent                                                                                                         |
+| Several writes on the item itself, none of them a sub-object (cancel, archive, mark as seen)                  | one named in [`writes`](#several-writes-on-one-item-writes) each                                                                    |
 
 Singular vs plural is about the relation, not the verb: `.one`/`.scopedOne` for a
 single sub-object, `.many`/`.scopedMany` for a collection.
@@ -441,6 +447,39 @@ the row confidently claims the write never happened. The fix is on the shape —
 give that relation its own relationship method and a callback returning what was
 written, even when the backend must grow a field for it — never a flag next to
 the button.
+
+### Several writes on one item: `writes`
+
+An item takes writes that are no sub-object of it: cancel, archive, mark as
+seen, star. The first can be its `PATCH`; the others are named, each one a
+write of its own:
+
+```js
+const ORDER = resource("order", {
+  GET,
+  PATCH,
+  writes: {
+    cancel: {
+      verb: "PATCH",
+      callback: ({ id }) => post(`/orders/${id}/cancel`),
+    },
+    archive: {
+      verb: "PATCH",
+      callback: archiveOrder,
+      rerunOn: { GET_RANGE: true },
+    },
+  },
+});
+<Button action={ORDER.cancel.bindParams({ id })}>Cancel</Button>;
+```
+
+`ORDER.cancel` is an action beside the verbs: its own loading and error on the
+button that runs it, held by the network policy as its `verb`, and answered as
+that verb is (a `PATCH` returns the item, which is upserted). Its `rerunOn` says
+which reads of this resource it reruns; a read it leaves out follows `rerunOn`
+for its verb. A dependent names it like a callback —
+`{ resource: ORDER, on: ["cancel"] }` reruns after a cancel, not after an
+archive — and a resource listed bare counts it with every other write.
 
 ## Callback return contracts
 
@@ -629,7 +668,8 @@ const SUMMARY = resource("summary", {
 ```
 
 `on` names callbacks, not verbs: `PATCH` does not cover `PATCH_MANY` the way it
-does in `rerunOn`, so each write keeps its own answer. A name that is not a
+does in `rerunOn`, nor a write [named in `writes`](#several-writes-on-one-item-writes)
+whose verb is `PATCH`, so each write keeps its own answer. A name that is not a
 write, or that the resource does not define, throws at declaration — a
 dependency that never fires leaves a count on its old value with nothing to say
 so.

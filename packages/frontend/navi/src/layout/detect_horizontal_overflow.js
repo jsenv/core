@@ -37,18 +37,25 @@ const css = /* css */ `
 
 /**
  * @param {object} [options]
- * @param {Element} [options.root=document.body] The box the content must fit
- *   in — the wrapper carrying `overflow-x: clip`, when there is one.
+ * @param {Element} [options.root] The box the content must fit in. Left out,
+ *   the wrapper an app puts around everything it draws (`overflow-x: clip`,
+ *   docs/safe_area.md) when there is one, found down the boxes that are the
+ *   only thing their parent draws — `<body>`, the mount point, the shell —
+ *   and `<body>` otherwise. Measured from `<body>`, that wrapper would hold
+ *   its own overflow and hide everything inside it.
  * @param {boolean} [options.highlight=true] Outline the culprits on screen.
  * @param {(overflows: Array<{element: Element, overflow: number, side: "left"|"right"}>) => void} [options.onDetect]
  *   Replaces the default console warning.
  * @returns {() => void} Stops watching.
  */
 export const detectHorizontalOverflow = ({
-  root = document.body,
+  root,
   highlight = true,
   onDetect = warnOverflows,
 } = {}) => {
+  // Looked for at each detection rather than once: the wrapper is drawn by the
+  // app, often after this is called at load.
+  const resolveRoot = () => root || findPageWrapper() || document.body;
   let styleEl = null;
   if (highlight) {
     styleEl = document.createElement("style");
@@ -58,7 +65,7 @@ export const detectHorizontalOverflow = ({
 
   let highlightedSet = new Set();
   const detect = () => {
-    const overflows = findOverflows(root);
+    const overflows = findOverflows(resolveRoot());
     if (highlight) {
       const nextHighlightedSet = new Set();
       for (const { element } of overflows) {
@@ -93,10 +100,11 @@ export const detectHorizontalOverflow = ({
   // Resize catches the window narrowing and the content growing (the root gets
   // taller); mutations catch a wide element arriving without changing the
   // root's size.
+  const observedRoot = root || document.body;
   const resizeObserver = new ResizeObserver(requestDetect);
-  resizeObserver.observe(root);
+  resizeObserver.observe(observedRoot);
   const mutationObserver = new MutationObserver(requestDetect);
-  mutationObserver.observe(root, { subtree: true, childList: true });
+  mutationObserver.observe(observedRoot, { subtree: true, childList: true });
   requestDetect();
 
   return () => {
@@ -139,14 +147,7 @@ const findOverflows = (root) => {
   const collect = (parentEl) => {
     for (const el of parentEl.children) {
       const style = getComputedStyle(el);
-      if (style.display === "none" || style.position === "fixed") {
-        continue;
-      }
-      if (
-        el.hasAttribute("popover") ||
-        // An idle PopupGroup is a box of the page (see popup_group.jsx).
-        (el.tagName === "DIALOG" && !el.hasAttribute("navi-popup-group"))
-      ) {
+      if (!isInDocumentFlow(el, style)) {
         continue;
       }
       const rect = el.getBoundingClientRect();
@@ -173,4 +174,48 @@ const findOverflows = (root) => {
   };
   collect(root);
   return overflows;
+};
+
+// Whether the box can make the document overflow at all: nothing hidden,
+// nothing laid out against the viewport (position: fixed, the top layer).
+const isInDocumentFlow = (el, style) => {
+  if (style.display === "none" || style.position === "fixed") {
+    return false;
+  }
+  if (
+    el.hasAttribute("popover") ||
+    // An idle PopupGroup is a box of the page (see popup_group.jsx).
+    (el.tagName === "DIALOG" && !el.hasAttribute("navi-popup-group"))
+  ) {
+    return false;
+  }
+  return true;
+};
+
+// The box wrapping all the app draws: down from <body>, through boxes that are
+// the only thing their parent draws, the first one holding its own horizontal
+// overflow. Only that chain: a box clipping beside others (a slider, a
+// carousel) clips its own part of the page on purpose, and is no wrapper.
+const findPageWrapper = () => {
+  let parentEl = document.body;
+  while (parentEl) {
+    let onlyChild = null;
+    for (const el of parentEl.children) {
+      if (!isInDocumentFlow(el, getComputedStyle(el))) {
+        continue;
+      }
+      if (onlyChild) {
+        return null;
+      }
+      onlyChild = el;
+    }
+    if (!onlyChild) {
+      return null;
+    }
+    if (getComputedStyle(onlyChild).overflowX !== "visible") {
+      return onlyChild;
+    }
+    parentEl = onlyChild;
+  }
+  return null;
 };

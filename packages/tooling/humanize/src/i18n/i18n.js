@@ -1,4 +1,5 @@
 import { interpolateText } from "./interpolate_text.js";
+import { isPluralForms, selectPluralForm } from "./plural.js";
 import { getRuntimeLang } from "./runtime_lang.js";
 
 /**
@@ -97,6 +98,38 @@ import { getRuntimeLang } from "./runtime_lang.js";
  * one of the languages above, i.e. how to tell "no translation" apart from
  * "translation equal to the key".
  *
+ * ---
+ *
+ * ## A sentence that depends on a number
+ *
+ * A translation may be a set of plural forms rather than one string: the
+ * form is chosen by `values.count`, an exact number written as a key first
+ * (`0: "Full"`), then the category `Intl.PluralRules` gives that number in
+ * the language the forms are written in (`one`, `other`, and `zero`, `two`,
+ * `few`, `many` where the language has them), then `other`. The rule is the
+ * language's, never `> 1`: "0 place libre" in French, "0 free seats" in
+ * English.
+ *
+ * With `keyLang`, the forms are written at the call site, and their `other`
+ * string is the key other languages register their own forms under:
+ * ```js
+ * const i18n = createI18n({ keyLang: "en" });
+ * i18n.add("[count] free seats", {
+ *   fr: { 0: "Complet", one: "[count] place libre", other: "[count] places libres" },
+ * });
+ * const seats = { 0: "Full", one: "[count] free seat", other: "[count] free seats" };
+ * i18n(seats, { count: 1 }, { lang: "en" }); // "1 free seat"
+ * i18n(seats, { count: 0 }, { lang: "fr" }); // "Complet"
+ * ```
+ * With opaque keys, each language registers its forms under the key:
+ * ```js
+ * i18n.add("seats.free", {
+ *   en: { one: "[count] free seat", other: "[count] free seats" },
+ *   fr: { one: "[count] place libre", other: "[count] places libres" },
+ * });
+ * i18n("seats.free", { count: 3 }); // "3 free seats"
+ * ```
+ *
  * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
  */
 export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
@@ -182,23 +215,37 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
     }
   };
 
-  const getTemplate = (key, lang) => {
+  // [template, the language it is written in]: the language decides which of
+  // a set of plural forms a count reads.
+  const getTemplate = (keyOrForms, lang) => {
+    const callSiteForms = isPluralForms(keyOrForms) ? keyOrForms : null;
+    const key = callSiteForms ? callSiteForms.other : keyOrForms;
     for (const resolvedLang of resolveLangChain(lang)) {
+      if (callSiteForms && resolvedLang === keyLang) {
+        // The forms written at the call site are keyLang's own: the registry
+        // only holds the key itself for it.
+        return [callSiteForms, keyLang];
+      }
       const translated = languageMap.get(resolvedLang)[key];
       if (translated !== undefined) {
-        return translated;
+        return [translated, resolvedLang];
       }
     }
-    // No translation found — return key as-is (opaque fallback)
-    return key;
+    // No translation found — the key as-is (opaque fallback), or the forms
+    // written at the call site.
+    return [callSiteForms || key, keyLang || toLangList(lang)[0]];
   };
 
   const format = (key, values, { lang = getDefaultLang() } = {}) => {
-    const template = getTemplate(key, lang);
-    return interpolateText(template, values);
+    const [template, templateLang] = getTemplate(key, lang);
+    const text = isPluralForms(template)
+      ? selectPluralForm(template, values?.count, templateLang)
+      : template;
+    return interpolateText(text, values);
   };
 
-  const has = (key, { lang = getDefaultLang() } = {}) => {
+  const has = (keyOrForms, { lang = getDefaultLang() } = {}) => {
+    const key = isPluralForms(keyOrForms) ? keyOrForms.other : keyOrForms;
     for (const resolvedLang of resolveLangChain(lang)) {
       if (key in languageMap.get(resolvedLang)) {
         return true;

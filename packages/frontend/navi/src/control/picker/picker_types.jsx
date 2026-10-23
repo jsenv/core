@@ -10,8 +10,10 @@ import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Icon, Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
+import { dispatchRequestAction } from "../rules/control_action.js";
 import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { asPickerOwnUI, usePickerContext } from "./picker_context.jsx";
+import { getPickerInput } from "./picker_custom.jsx";
 import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
 import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
 import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
@@ -394,27 +396,97 @@ export const PickerDatetimeUI = /*#__PURE__*/ asPickerOwnUI((props) => {
   return <Time type="datetime">{value}</Time>;
 });
 
+// What a file picker holds is the File — the Files, with `multiple` — kept as
+// a JS value (navi_js), the way a picker with a popup keeps what its popup
+// holds: a file input's own value can only ever be written empty, so it
+// could not take a File back on a rollback, nor hold one handed down. The
+// browser's chooser is an input of its own, which chooses and holds nothing.
 const PickerFile = (props) => {
   const Next = useNextResolver();
+  if (props.children !== undefined) {
+    // A popup of the caller's holds the file (a file picker in it): this one
+    // draws what it holds.
+    return (
+      <Next
+        ui={<PickerFileUI />}
+        rightSlotIcon={<FileSvg />}
+        {...props}
+        type="navi_js"
+      />
+    );
+  }
+  const { accept, multiple, capture, ...rest } = props;
 
   return (
     <Next
       ui={<PickerFileUI />}
       rightSlotIcon={<FileSvg />}
+      {...rest}
+      type="navi_js"
+      // eslint-disable-next-line react/no-children-prop
+      children={
+        <PickerFileChooser
+          accept={accept}
+          multiple={multiple}
+          capture={capture}
+        />
+      }
+    />
+  );
+};
+// Opened by the picker's press (see findNativePicker in picker_custom.jsx).
+// A chooser dismissed without a choice fires `cancel`, never `change`: nothing
+// is held, nothing is sent.
+const PickerFileChooser = ({ accept, multiple, capture }) => {
+  return (
+    <input
       type="file"
-      {...props}
+      className="navi_picker_file_chooser"
+      accept={accept}
+      multiple={multiple}
+      capture={capture}
+      hidden
+      tabIndex={-1}
+      aria-hidden="true"
+      // The click() a browser without showPicker() is opened by must not
+      // reach the picker's own press, which would open it again.
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+      onChange={(e) => {
+        const chooser = e.currentTarget;
+        const files = Array.from(chooser.files);
+        // Emptied right away: the same file chosen again is a choice too.
+        chooser.value = "";
+        if (files.length === 0) {
+          return;
+        }
+        const pickerInput = getPickerInput(chooser.closest(".navi_picker"));
+        // The choice IS the answer, as a native picker's change is: held,
+        // then sent — the trigger busy while it runs, put back if it fails.
+        dispatchRequestAction(pickerInput, {
+          event: e,
+          name: "file chosen",
+          allowed: () => {
+            pickerInput.__uiStateController__.setUIState(
+              multiple ? files : files[0],
+              e,
+            );
+          },
+        });
+      }}
     />
   );
 };
 export const PickerFileUI = /*#__PURE__*/ asPickerOwnUI(() => {
   const { value, placeholder } = usePickerContext();
 
-  if (!value) {
+  if (uiStateHoldsNothing(value)) {
     if (!placeholder) {
       return null;
     }
     return renderSafe(placeholder);
   }
-  // value is a FileList-like string from the input; display file names
-  return String(value);
+  const files = Array.isArray(value) ? value : [value];
+  return files.map((file) => file.name).join(", ");
 });

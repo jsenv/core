@@ -104,6 +104,7 @@ import { whenTransitionSettles } from "../../layout/popup_shared.js";
 import { flushSyncRendering } from "../../utils/flush_sync_rendering.js";
 import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { onNaviCommand } from "../commands.js";
+import { isPressOnControl } from "../control_dom.js";
 import { SummaryMarker } from "../details/summary_marker.jsx";
 
 const css = /* css */ `
@@ -484,7 +485,7 @@ export const Expandable = (props) => {
     if (
       pointerdownEvent.button === 0 &&
       !openController.opened &&
-      !isAimedAtControlInsideUI(pointerdownEvent.target)
+      !isPressOnControl(pointerdownEvent, uiRef.current)
     ) {
       dispatchCustomEvent(rootRef.current, "navi_open_press", {
         event: pointerdownEvent,
@@ -852,21 +853,10 @@ export const Expandable = (props) => {
     if (clickEvent.defaultPrevented) {
       return;
     }
-    if (isAimedAtControlInsideUI(clickEvent.target)) {
+    if (isPressOnControl(clickEvent, uiRef.current)) {
       return;
     }
     toggle(clickEvent);
-  };
-  const isAimedAtControlInsideUI = (target) => {
-    if (target.nodeType !== 1) {
-      return false;
-    }
-    const interactiveElement = target.closest(UI_INTERACTIVE_SELECTOR);
-    return (
-      Boolean(interactiveElement) &&
-      interactiveElement !== uiRef.current &&
-      uiRef.current.contains(interactiveElement)
-    );
   };
 
   // Space/Enter on the UI part itself (role button) — a key pressed on a
@@ -1100,23 +1090,6 @@ const ExpandableContent = ({ children, ...rest }) => {
 
 Expandable.UI = ExpandableUI;
 Expandable.Content = ExpandableContent;
-
-// What a click inside the UI part must not toggle: it was aimed at the
-// control, not at the row. The UI part itself matches [role='button'] and is
-// the one exception, excluded at the call site.
-const UI_INTERACTIVE_SELECTOR = [
-  "a[href]",
-  "button",
-  "input",
-  "select",
-  "textarea",
-  "label",
-  "[role='button']",
-  "[contenteditable='']",
-  "[contenteditable='true']",
-  "audio[controls]",
-  "video[controls]",
-].join(", ");
 
 // Where the nearest scroller that can scroll would have to be for the whole
 // expandable — UI part and revealed content — to be in view. Measured on the

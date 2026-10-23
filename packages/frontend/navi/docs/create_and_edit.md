@@ -417,7 +417,14 @@ only its mechanisms change.
 | the draft lives in the `searchParams`                 | it lives in the dialog, and dies with it                                                                           |
 | cancelling = leaving the screen, which is thrown away | `mount="while-opened"` (+ a `key` on the form), same effect                                                        |
 | `RouteTravel` between the two screens                 | nothing: a dialog has no neighbour                                                                                 |
-| `onLoad` + `pristineKey`: the resource arrives after  | it is already in hand — the dialog is opened FROM the list                                                         |
+| `onLoad` + `pristineKey`: the resource arrives after  | it is in hand — the dialog is opened FROM the list, or re-reads it as it opens (below)                             |
+
+A list's copy of a record can be minutes old, so a sheet that saves the whole
+record reads it again as it opens, and that answer lands after the popup has
+taken what it holds at open. A `Picker` given the record as its `value` (or its
+signal) counts what the outside writes before the person changes anything as
+what was there at open: a look and a close send nothing, and a cancel goes back
+to the record as it arrived, not to the list's copy.
 
 What does not change:
 

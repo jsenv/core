@@ -122,6 +122,14 @@ export const setActionDispatcher = (value) => {
 
 export const getActionDispatcher = () => dispatchActions;
 
+// Where createAction's `dependencies` go: the resources know what a write is
+// and when one lands (see item_lifecycle_manager.js), so they install this when
+// they load — a dependency names a resource, which has always loaded first.
+let registerActionDependencies = null;
+export const setActionDependenciesRegistrar = (registrar) => {
+  registerActionDependencies = registrar;
+};
+
 export const rerunActions = async (actionSet, options) => {
   return dispatchActions({
     rerunSet: actionSet,
@@ -766,10 +774,11 @@ const mergeActionParams = (currentParams, newParams) => {
   return mergeTwoJsValues(currentParams, newParams);
 };
 
-// What createActionCore reads off the options (see warnUnknownOptions):
-// `{ dependencies: [X] }` would otherwise be accepted and never rerun anything.
+// What createAction reads off the options (see warnUnknownOptions): a key it
+// does not read would be accepted and do nothing.
 const OPTIONS_CREATE_ACTION_READS = new Set([
   "keep",
+  "dependencies",
   "name",
   "params",
   "isPrerun",
@@ -790,8 +799,7 @@ const OPTIONS_CREATE_ACTION_READS = new Set([
   "completeSideEffect",
 ]);
 const OPTIONS_CREATE_ACTION_HINTS = {
-  dependencies: `A read that follows writes is a resource (docs/actions.md, "Reruns").`,
-  rerunOn: `A read that follows writes is a resource (docs/actions.md, "Reruns").`,
+  rerunOn: `An action follows the writes it lists in "dependencies" (docs/actions.md, "Reruns").`,
 };
 const actionWeakMap = new WeakMap();
 /**
@@ -827,6 +835,13 @@ const actionWeakMap = new WeakMap();
  *   long is this still true?" belongs to the question: a court list is good for
  *   the session, a count of people watching grows on its own and is worth a few
  *   minutes, a payment status is worth nothing at all.
+ * @param {Array<Object | { resource: Object, on: string[] }>} [rootOptions.dependencies] -
+ *   the resources whose writes make the answer out of date — a count, a
+ *   summary, anything read that is no row of a resource. After a listed write
+ *   the instances that answered, or are still asking, ask again. Read as a
+ *   resource's `dependencies` are: a resource listed bare counts every write,
+ *   `{ resource, on: ["POST", "DELETE"] }` only the callbacks it names (a
+ *   write named in that resource's `writes` included).
  * @param {{ verb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }} [rootOptions.meta] -
  *   `verb` puts the action under the network policy (docs/network_policy.md).
  */
@@ -1613,6 +1628,15 @@ export const createAction = (callback, rootOptions = {}) => {
 
   rootAction = createActionCore(rootOptions);
   actionWeakMap.set(callback, rootAction);
+  const { dependencies } = rootOptions;
+  if (dependencies) {
+    if (!registerActionDependencies) {
+      throw new Error(
+        `createAction(${rootAction.name}): "dependencies" lists resources, and no resource was declared`,
+      );
+    }
+    registerActionDependencies(rootAction, dependencies);
+  }
   return rootAction;
 };
 

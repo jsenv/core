@@ -111,8 +111,11 @@ all, so it is left alone, and so is a function handed to a control's `action`:
 it is wrapped into an action with no verb, even when it calls one, so the
 control is not held and the write fails after the press with a
 `NetworkPolicyError` ([resource.md](./resource.md#a-function-calling-the-verb-or-the-instance)).
-`createAction(callback, { meta: { verb } })` opts an action into what the action
-layer holds — a control bound to a write verb is read-only, a completed `"GET"`
+Such a control says what its function does to the server with `actionVerb` —
+`<Input type="checkbox" boolean action={(on) => saveSetting("weather", on)}
+actionVerb="PATCH" />` — and is then held up front, with the policy's message.
+`createAction(callback, { meta: { verb } })` says the same of an action declared
+once, and opts it into what the action layer holds — a control bound to a write verb is read-only, a completed `"GET"`
 is not rerun — but its callback is still called when it runs: answering from
 the store and settling with a `NetworkPolicyError` are done by the callbacks a
 `resource()` wraps.

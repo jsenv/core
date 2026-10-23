@@ -20,10 +20,7 @@
  *    given back is the largest of them and never their sum — which is what the
  *    two bars of a page transition need, and what makes a deliberately stacked
  *    second bar unexpressible. A second strip under the first belongs to the
- *    flow: `position: sticky` at `top: var(--navi-fixed-bar-space-top)`, which
- *    puts it under whatever the bar of the moment is worth, and
- *    `useTransitionCover` (nav/transition_cover.js) so the pictures of a route
- *    movement are cut at it.
+ *    flow — see `area` in the JSDoc below.
  * 3. **It reaches under the notch.** `env(safe-area-inset-*)` is padding, so
  *    the content is pushed in while the background keeps running to the edge of
  *    the screen. Across the bar that inset is added to `width`/`height` too, so
@@ -176,8 +173,12 @@ const FixedBarStyleCSSVars = {
  * }>}
  * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
  *   the window it is pinned to. One bar per edge: a second one does not stack
- *   under the first, it sits on it (see this file's top comment for the strip
- *   that does stack).
+ *   under the first, it sits on it. A strip that stays under the bar (a status
+ *   banner) belongs to the flow instead: `position: sticky` at
+ *   `top: var(--navi-safe-area-inset-top)` — the bar of the moment, the notch
+ *   and the app's own bands added up — and `useTransitionCover` on it, so the
+ *   pictures of a route movement are cut at it (docs/safe_area.md, "A strip
+ *   under a bar").
  * @param {string|number} [props.height] - For a bar on the top or bottom
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
  *   inset is NOT part of it: it is added on top, so the content keeps the size

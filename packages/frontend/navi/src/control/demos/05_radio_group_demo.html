@@ -178,7 +178,6 @@
 
       const ImageButtonDemo = () => {
         const [entries, push, clear] = useCallLog();
-        const mapStyle = mapStyleSignal.value;
         return (
           <div class="demo-section" id="image-buttons">
             <h2>Horizontal, image buttons</h2>
@@ -194,10 +193,9 @@
               name="map_style"
               flex
               spacing="s"
-              value={mapStyle}
+              signal={mapStyleSignal}
               uiAction={(value) => {
                 push("uiAction", value);
-                mapStyleSignal.value = value;
               }}
               action={(value) => {
                 push("action", value);

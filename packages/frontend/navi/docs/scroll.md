@@ -135,6 +135,28 @@ opens on an item places the document itself: the offset the page kept for its ur
 is not put back over it — the items held off screen are fillers of an estimated
 height, and the same pixels now fall on other items.
 
+### Moving the list on a press
+
+A table of contents beside a long list, a "back to today" button: the press
+sends the list to a place with `--navi-scroll`, and the list goes there the way
+`scrolled` takes it — asked for by name when it is not fetched yet, measured,
+and held until the user reaches for the list:
+
+```jsx
+<Button command="--navi-scroll:smooth" commandFor="feed" value={{ id: dayId }}>
+  Today
+</Button>
+<List id="feed">…</List>
+```
+
+The value is anything `scrolled` takes (`"start"`, `"end"`, an index,
+`{ id, offset, align }`) or an item's id, and the same place can be asked for
+again once the list was moved away from it — no `scrolled` released and set
+again a frame later. `:smooth` glides, and is instant under
+`prefers-reduced-motion`. Without it a placement follows the scroller's own
+`scroll-behavior`: a `scroll-behavior: smooth` on the box glides every
+placement of the list, the one it opens on included.
+
 ### A list that comes back: one `id`, one list
 
 The position a list comes back to is kept under its `id` and the page's url, so

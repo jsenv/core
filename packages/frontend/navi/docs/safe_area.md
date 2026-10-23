@@ -121,6 +121,51 @@ end (see below).
 Beware of making that container a scroller by accident — see
 [A document wider than the screen](#a-document-wider-than-the-screen).
 
+### A page that fits the free band
+
+An app whose document scrolls still has screens that must fit the screen: a
+head that stays put over a part that scrolls, a wizard whose step fills what is
+left. The height of the free band is the visual viewport less both insets:
+
+```css
+.wizard {
+  height: calc(
+    var(--navi-vvh) - var(--navi-safe-area-inset-top) -
+      var(--navi-safe-area-inset-bottom)
+  );
+}
+```
+
+`--navi-vvh` and not `100dvh`: it follows the visual viewport, so the page
+shrinks with a keyboard that shrinks it, and the insets add the bars, the notch,
+the app's own bands and an overlaying keyboard (see
+[the trap](#the-trap-which-viewport)). Never `--navi-fixed-bar-space-*`: that
+slot is how a `FixedBar` writes what it takes, and reading it for layout misses
+the notch on an edge with no bar, the band of a capped app, and the keyboard.
+
+### A strip under a bar
+
+A strip that stays under the top bar — a status banner, an "offline" line — is
+not a second `FixedBar` (one bar per edge: a second one sits on the first). It
+belongs to the flow, sticking where the band starts:
+
+```jsx
+const bannerRef = useRef();
+useTransitionCover(bannerRef);
+
+<Box
+  ref={bannerRef}
+  style={{ position: "sticky", top: "var(--navi-safe-area-inset-top)" }}
+>
+  Hors ligne
+</Box>;
+```
+
+`useTransitionCover` publishes the strip's height, so the pictures of a route
+movement are cut under it rather than sliding over it. An anchor's
+`scroll-margin` adds only what `:root`'s `scroll-padding` does not hold already
+— the strip's own height, a few pixels of air — never the bar or the band.
+
 ### Reading it yourself
 
 `var(--navi-safe-area-inset-bottom)` in any rule. It is always declared, whether
@@ -241,9 +286,15 @@ data — is still a layout bug. In dev, ask who overflows:
 import { detectHorizontalOverflow } from "@jsenv/navi";
 
 if (import.meta.dev) {
-  detectHorizontalOverflow({ root: document.querySelector("#main") });
+  detectHorizontalOverflow();
 }
 ```
+
+Measured from `<body>`, the wrapper would hold its own overflow and hide every
+culprit inside it, so the wrapper is what the content is measured against: found
+down the boxes that are the only thing their parent draws (`<body>`, the mount
+point, the shell). A wrapper beside other boxes is not found; pass it as
+`root`.
 
 It outlines the culprits in red and names them in the console, at load and
 whenever the layout changes. It reports the **outermost** box that sticks out

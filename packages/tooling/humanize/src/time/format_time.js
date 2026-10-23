@@ -26,7 +26,6 @@ import { humanizeI18n } from "../i18n/humanize_i18n.js";
 import { getRuntimeLang } from "../i18n/runtime_lang.js";
 import { memoIntl } from "../utils/memo_intl.js";
 
-
 // Our own compact/custom duration notation interpolates raw numbers
 // directly (unlike Intl.DurationFormat, which groups thousands on its own,
 // e.g. "5 400 secondes") — this keeps that consistent without reimplementing
@@ -91,7 +90,7 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  * @param {boolean|"auto"} [options.year]
  *   Whether the year is written. `"auto"` writes it only when the date is not
  *   in the current year (`now`'s year), the way a calendar does: "lundi 11
- *   mai", but "samedi 1 janvier 2050". `false` drops it ("30/07", the
+ *   mai", but "samedi 1er janvier 2050". `false` drops it ("30/07", the
  *   day/month order still following the locale). Defaults to `"auto"` for the
  *   spelled formats and to `true` for `"numeric"`. The year qualifies a month,
  *   so a spelling without one (`{ month: false }`) never writes it.
@@ -108,7 +107,7 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
  * formatDay(new Date(), { lang: "fr", format: "numeric", year: false }) // "11/05"
- * formatDay(new Date(2050, 0, 1), { lang: "fr" })          // "samedi 1 janvier 2050"
+ * formatDay(new Date(2050, 0, 1), { lang: "fr" })          // "samedi 1er janvier 2050"
  * formatDay(new Date(), { lang: "fr", year: true })       // "lundi 11 mai 2026"
  * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  * formatDay(new Date(), { lang: "fr", format: { day: false, month: false } }) // "mercredi"
@@ -157,13 +156,34 @@ export const formatDay = (
     month !== false &&
     isYearWritten(year === undefined ? "auto" : year, { date, now, timeZone });
   // a `false` part is omitted, not passed: Intl rejects false as a value
-  return memoIntl("DateTimeFormat", lang, {
+  const formatter = memoIntl("DateTimeFormat", lang, {
     ...(weekday === false ? {} : { weekday }),
     ...(day === false ? {} : { day: "numeric" }),
     ...(month === false ? {} : { month }),
     ...(yearWritten ? { year: "numeric" } : {}),
     timeZone,
-  }).format(date);
+  });
+  if (day === false || month === false || month === "numeric") {
+    return formatter.format(date);
+  }
+  return formatWithSpelledMonth(formatter, date, { lang, timeZone });
+};
+
+// The first of a month spelled out is an ordinal in some languages
+// ("samedi 1er janvier"), which Intl does not write. Read off the parts only
+// when the day can be the first: every other day keeps format().
+const formatWithSpelledMonth = (formatter, date, { lang, timeZone }) => {
+  if (timeZone === undefined && new Date(date).getDate() !== 1) {
+    return formatter.format(date);
+  }
+  return formatter
+    .formatToParts(date)
+    .map((part) =>
+      part.type === "day" && Number(part.value) === 1
+        ? humanizeI18n("time.first_day_of_month", undefined, { lang })
+        : part.value,
+    )
+    .join("");
 };
 
 /**
@@ -372,14 +392,15 @@ export const formatDatetime = (
     as: { compact: "narrow" },
   });
   if (format === "long") {
-    return memoIntl("DateTimeFormat", lang, {
+    const formatter = memoIntl("DateTimeFormat", lang, {
       weekday: "short",
       day: "numeric",
       month: "long",
       hour: "2-digit",
       minute: "2-digit",
       timeZone,
-    }).format(date);
+    });
+    return formatWithSpelledMonth(formatter, date, { lang, timeZone });
   }
   if (format === "narrow") {
     return memoIntl("DateTimeFormat", lang, {
@@ -391,13 +412,14 @@ export const formatDatetime = (
     }).format(date);
   }
   // "short": no weekday
-  return memoIntl("DateTimeFormat", lang, {
+  const formatter = memoIntl("DateTimeFormat", lang, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
     timeZone,
-  }).format(date);
+  });
+  return formatWithSpelledMonth(formatter, date, { lang, timeZone });
 };
 
 /**

@@ -145,6 +145,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useSignal } from "@preact/signals";
       import { useState, useRef } from "preact/hooks";
       import {
         Input,
@@ -1929,24 +1930,38 @@
       };
 
       const ButtonAppearanceDemo = () => {
-        const [eyeChecked, setEyeChecked] = useState(false);
+        // Both buttons below are bound to it: pressing one moves the other.
+        const visibleSignal = useSignal(false);
+        const editingSignal = useSignal(false);
 
         return (
           <fieldset>
             <legend>Button Appearance</legend>
             <p>
-              Checkboxes with icons can also take the appearance of a button:
+              A button that stays pressed — a mode, show/hide, a setting — is a
+              checkbox drawn as a button. With words, they are its label and its
+              name, and it is filled while pressed:
             </p>
+            <Box flex spacing="s" alignY="center" marginBottom="m">
+              <Input
+                type="checkbox"
+                variant="button"
+                boolean
+                signal={editingSignal}
+              >
+                {editingSignal.value ? "Done" : "Edit"}
+              </Input>
+              <Caption>editing: {String(editingSignal.value)}</Caption>
+            </Box>
+            <p>With icons instead of words, it stays square:</p>
 
             <Box flex="y" alignX="start" spacing="s">
               <Field as="label" flex spacing="s" alignY="center">
                 <Input
                   type="checkbox"
                   variant="button"
-                  checked={eyeChecked}
-                  action={(checked) => {
-                    setEyeChecked(checked);
-                  }}
+                  boolean
+                  signal={visibleSignal}
                   icon={[
                     <Icon>
                       <EyeClosedSvg />
@@ -1966,10 +1981,8 @@
                   flex
                   align="center"
                   circle
-                  checked={eyeChecked}
-                  action={(checked) => {
-                    setEyeChecked(checked);
-                  }}
+                  boolean
+                  signal={visibleSignal}
                   icon={[
                     <Icon>
                       <EyeClosedSvg />
@@ -2085,9 +2098,12 @@
       };
 
       const InteractiveDemo = () => {
-        const [loading, setLoading] = useState(false);
-        const [disabled, setDisabled] = useState(false);
-        const [checked, setChecked] = useState(false);
+        const loadingSignal = useSignal(false);
+        const disabledSignal = useSignal(false);
+        const checkedSignal = useSignal(false);
+        const loading = loadingSignal.value;
+        const disabled = disabledSignal.value;
+        const checked = checkedSignal.value;
 
         return (
           <div className="demo-section" id="interactive-controls">
@@ -2096,45 +2112,30 @@
             <fieldset>
               <legend>Toggle States</legend>
               <Box flex="y" spacing="s" alignX="start" wrap>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    background: loading ? "#007bff" : "#f8f9fa",
-                    color: loading ? "white" : "#333",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setLoading(!loading)}
+                <Input
+                  type="checkbox"
+                  variant="button"
+                  boolean
+                  signal={loadingSignal}
                 >
-                  Loading: {loading ? "ON" : "OFF"}
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    background: disabled ? "#007bff" : "#f8f9fa",
-                    color: disabled ? "white" : "#333",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setDisabled(!disabled)}
+                  Loading
+                </Input>
+                <Input
+                  type="checkbox"
+                  variant="button"
+                  boolean
+                  signal={disabledSignal}
                 >
-                  Disabled: {disabled ? "ON" : "OFF"}
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    background: checked ? "#007bff" : "#f8f9fa",
-                    color: checked ? "white" : "#333",
-                    border: "1px solid #ddd",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => setChecked(!checked)}
+                  Disabled
+                </Input>
+                <Input
+                  type="checkbox"
+                  variant="button"
+                  boolean
+                  signal={checkedSignal}
                 >
-                  Checked: {checked ? "ON" : "OFF"}
-                </button>
+                  Checked
+                </Input>
               </Box>
             </fieldset>
 
@@ -2146,8 +2147,8 @@
                     type="checkbox"
                     loading={loading}
                     disabled={disabled}
-                    checked={checked}
-                    uiAction={setChecked}
+                    boolean
+                    signal={checkedSignal}
                   />
                   Interactive Checkbox
                 </Field>

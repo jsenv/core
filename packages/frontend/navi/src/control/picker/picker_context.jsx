@@ -92,10 +92,11 @@ export const getPickerHostLabelId = (id, props) => {
 /**
  * What the picker holds, read from inside its `ui` — for a drawing given as
  * an element (`ui={<MyCard game={game} />}`), which the picker cannot hand
- * props to. `value` is the state the picker holds right now: the answer the
- * popup just closed on, before the server has said anything, and put back if
- * the action fails. `loading` is the run in flight; `interactive` is false
- * while the picker is disabled, read-only or busy.
+ * props to — or from inside its popup. `value` is the state the picker holds
+ * right now: in the popup, what is being picked, before anything is sent; on
+ * the façade, the answer the popup just closed on, before the server has said
+ * anything, and put back if the action fails. `loading` is the run in flight;
+ * `interactive` is false while the picker is disabled, read-only or busy.
  *
  * @returns {{ value: any, loading: boolean, interactive: boolean } | null}
  *   null outside a picker.

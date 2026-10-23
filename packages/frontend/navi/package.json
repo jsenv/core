@@ -34,8 +34,8 @@
     "preact": "^11.0.0-rc.2"
   },
   "dependencies": {
-    "@jsenv/dom": "0.17.95",
-    "@jsenv/humanize": "1.8.9",
+    "@jsenv/dom": "0.17.96",
+    "@jsenv/humanize": "1.8.10",
     "@jsenv/validity": "0.4.7"
   },
   "devDependencies": {

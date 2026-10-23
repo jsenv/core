@@ -207,32 +207,11 @@ export const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
 
-    if (valueLength === 1) {
-      const singularKey = (() => {
-        if (type === "email") {
-          return `constraint.min_length.singular.email`;
-        }
-        if (type === "password") {
-          return `constraint.min_length.singular.password`;
-        }
-        return `constraint.min_length.singular.default`;
-      })();
-      return constraintI18n(singularKey, {
-        min: String(minLength),
-      });
-    }
-    const pluralKey = (() => {
-      if (type === "email") {
-        return `constraint.min_length.plural.email`;
-      }
-      if (type === "password") {
-        return `constraint.min_length.plural.password`;
-      }
-      return `constraint.min_length.plural.default`;
-    })();
-    return constraintI18n(pluralKey, {
+    const context =
+      type === "email" ? "email" : type === "password" ? "password" : "default";
+    return constraintI18n(`constraint.min_length.${context}`, {
       min: String(minLength),
-      count: String(valueLength),
+      count: valueLength,
     });
   },
 };

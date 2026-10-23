@@ -73,7 +73,7 @@ const readOnlyMessage = (field) => {
     const { max } = field.parallelGuard;
     return constraintI18n("constraint.readonly.parallel_guard", {
       max,
-      s: max > 1 ? "s" : "",
+      count: max,
     });
   }
   // A send button held back by the form above it, which holds nothing new (see

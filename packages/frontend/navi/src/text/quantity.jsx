@@ -1,4 +1,4 @@
-import { formatNumber } from "@jsenv/humanize";
+import { formatNumber, pluralCategory } from "@jsenv/humanize";
 
 import { LoadingDotsSvg } from "../graphic/loading/loading_dots_svg.jsx";
 import { Icon, Text } from "./text.jsx";
@@ -82,7 +82,8 @@ const css = /* css */ `
  * @param {string|[string, string]} [unit] A unit navi or `Intl` knows by name
  *   ("kilometer", "hour"), written in the reader's language and made plural
  *   with the value; any other string is shown as given, so a unit word of the
- *   app's own comes translated, as a pair whose second word is used above 1:
+ *   app's own comes translated, as a pair whose second word is used where the
+ *   language writes a plural (`pluralCategory`):
  *   `unit={[i18n("ticket"), i18n("tickets")]}` (docs/i18n.md).
  * @param {string} [unitColor] The unit's `color`, keywords included
  *   (`"secondary"`, `"hint"`…).
@@ -120,7 +121,12 @@ export const Quantity = ({
       ? formatNumber(valueRounded, { lang })
       : valueRounded;
   const unitBottom = unitPosition === "bottom";
-  const isPlural = typeof value === "number" ? value > 1 : false;
+  // The language's rule, never `> 1`: "0 billet" in French, "0 tickets" in
+  // English.
+  const isPlural =
+    typeof value === "number"
+      ? pluralCategory(value, { lang }) !== "one"
+      : false;
   const unitResolved = Array.isArray(unit)
     ? isPlural
       ? (unit[1] ?? unit[0])
@@ -160,7 +166,7 @@ export const Quantity = ({
         {unit && (
           <Unit
             unit={unitResolved}
-            plural={isPlural}
+            count={typeof value === "number" ? value : undefined}
             lang={lang}
             size={unitSize}
             sizeRatio={unitSizeRatio}

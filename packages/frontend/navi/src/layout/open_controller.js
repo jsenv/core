@@ -925,6 +925,9 @@ const readClosedValue = (openSignalValue) => {
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
  * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
  * @param {string} [name] What the dev warnings call the thing being opened.
+ * @returns {boolean|undefined} Where whoever holds the open state says the
+ *   popup is — what a trigger shows as its `aria-expanded` (a picker drives
+ *   its controller through this hook without being a popup itself).
  */
 export const useOpenPropsEffectOnOpenController = (
   openController,
@@ -1165,6 +1168,7 @@ export const useOpenPropsEffectOnOpenController = (
       }
     };
   });
+  return open;
 };
 
 export const useOpenControllerByProps = (props, name) => {

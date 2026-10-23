@@ -1120,7 +1120,9 @@ const executeNaviDefine = (source, event, target) => {
   });
 };
 
-const scrollCommand = (source, event) => {
+// The place a list is sent to, said the way its `scrolled` says it — the list
+// reads it (see List). "--navi-scroll:smooth" asks for the glide.
+const scrollCommand = (source, event, { argument, value }) => {
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -1131,7 +1133,8 @@ const scrollCommand = (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_scroll", {
         event,
-        id: resolveCommandValue(source, event),
+        to: value === undefined ? resolveCommandValue(source, event) : value,
+        smooth: argument === "smooth",
       });
     },
   };

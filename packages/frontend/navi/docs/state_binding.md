@@ -51,6 +51,15 @@ was missed.
 />
 // ✓
 <Dialog signal={openSignal} />
+
+// ✗ a button told it was pressed, and the app writes the state back down
+<Button aria-pressed={editing} uiAction={() => (editingSignal.value = !editing)}>
+  Edit
+</Button>
+// ✓ a button that stays pressed is a checkbox
+<Input type="checkbox" variant="button" boolean signal={editingSignal}>
+  Edit
+</Input>
 ```
 
 In each pair the second line is not a tidier spelling of the first: it is the

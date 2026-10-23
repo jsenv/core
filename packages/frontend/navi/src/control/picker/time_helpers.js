@@ -1,3 +1,5 @@
+import { todaySignal, toLocalDay } from "../../utils/clock.js";
+
 /**
  * Parses a time string into seconds.
  * Accepts:
@@ -18,26 +20,28 @@ export const timeStringToSeconds = (timeString) => {
   return (hours * 60 + minutes) * 60;
 };
 
+/**
+ * Whether `value` falls on the local day it is — a "YYYY-MM-DD", a datetime
+ * (string, timestamp or Date). Read from `todaySignal`, so a render asking it
+ * follows the day past midnight.
+ */
 export const isToday = (value) => {
   if (!value) {
     return false;
   }
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  if (typeof value === "string") {
-    return value === todayStr;
+  const today = todaySignal.value;
+  // A bare day is a local day already; parsed by Date it would be read as UTC
+  // midnight, the day before west of Greenwich.
+  if (typeof value === "string" && DAY_STRING_REGEX.test(value)) {
+    return value === today;
   }
-  if (typeof value === "number") {
-    const d = new Date(value);
-    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return false;
   }
-  if (value instanceof Date) {
-    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  return false;
+  return toLocalDay(date) === today;
 };
+const DAY_STRING_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Returns the current time as "HH:MM", with an optional minute offset.

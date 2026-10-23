@@ -55,8 +55,6 @@ const getCharBeingInserted = (e) => {
   return key;
 };
 
-const s = (n) => (n > 1 ? "s" : "");
-
 // Keydown: block a character that doesn't match the class.
 const getInvalidCharMessage = (char, { charClass, messageKey }) => {
   if (compileCharClass(charClass).test(char)) return null;
@@ -72,7 +70,7 @@ const getMaxLengthInsertionMessage = (el, { maxLength }) => {
   if (newLen <= maxLength) return null;
   return constraintI18n("constraint.guard.max_length.typing", {
     max: maxLength,
-    s: s(maxLength),
+    count: maxLength,
   });
 };
 
@@ -115,7 +113,7 @@ const getLengthOverflowResult = (uiState, { maxLength, uiStateNow }) => {
     fixedValue: str.slice(0, maxLength),
     message: constraintI18n("constraint.guard.max_length.value", {
       max: maxLength,
-      s: s(maxLength),
+      count: maxLength,
     }),
   };
 };

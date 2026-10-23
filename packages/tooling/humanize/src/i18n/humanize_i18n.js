@@ -80,6 +80,12 @@ humanizeI18n.addAll({
   // of its own, and how the swap keeps the rest of the sentence in this
   // language's grammar. A language with no entry here keeps its literal
   // "0 heure(s)" wording rather than this key.
+  // The first of a month when the month is spelled out (formatDay): an
+  // ordinal where the language writes one. English writes "January 1".
+  "time.first_day_of_month": {
+    en: "1",
+    fr: "1er",
+  },
   "time.midnight": {
     en: "midnight",
     fr: "minuit",

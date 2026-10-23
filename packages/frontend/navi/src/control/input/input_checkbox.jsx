@@ -1,4 +1,4 @@
-import { useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
@@ -121,6 +121,13 @@ const css = /* css */ `
       --background-color-disabled: var(--button-background-color-disabled);
       --border-color-checked: var(--button-border-color);
       --background-color-checked: var(--button-background-color);
+    }
+    /* With words on it, the button says it is pressed by its fill, the way a
+       checkbox says it is checked: the accent. Without words the checkmark
+       says it, and the button keeps its own surface. */
+    .navi_checkbox[data-variant="button"][data-label] {
+      --border-color-checked: var(--accent-color);
+      --background-color-checked: var(--accent-color);
     }
   }
 
@@ -332,6 +339,17 @@ const css = /* css */ `
       );
       align-items: center;
       justify-content: center;
+
+      /* The words are written over the fill, in the ink the checkmark
+         would have been drawn in. */
+      &[data-label] {
+        &[data-checked] .navi_checkbox_label {
+          color: var(--x-checkmark-color);
+        }
+        &[data-accent-needs-dark-fg] {
+          --x-checkmark-color: rgb(55, 55, 55);
+        }
+      }
     }
   }
 `;
@@ -391,8 +409,17 @@ const InputCheckboxFieldInterface = (props) => {
     variant = icon ? "icon" : switchProp ? "switch" : "checkbox", // "checkbox", "switch", "icon", "button"
     accentColor,
   } = props;
-  const { basePseudoState, checked } = checkboxHostProps;
+  const { basePseudoState, checked, children } = checkboxHostProps;
   const loading = basePseudoState[":-navi-loading"];
+  // A checkbox drawn as a button can carry words — "Edit" / "Done", a
+  // setting's name — which are its label and its accessible name: a mode one
+  // toggles is a checkbox, not a button writing a signal on each press.
+  const hasLabel =
+    variant === "button" &&
+    children !== undefined &&
+    children !== null &&
+    children !== false;
+  const labelId = useId();
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",
@@ -406,6 +433,8 @@ const InputCheckboxFieldInterface = (props) => {
     );
   } else if (variant === "switch") {
     visualVnode = <SwitchUI />;
+  } else if (hasLabel) {
+    visualVnode = null;
   } else {
     visualVnode = (
       <Box
@@ -422,15 +451,17 @@ const InputCheckboxFieldInterface = (props) => {
   return (
     <Box
       as="span"
-      // Checkbox displayed as button are usually squarish
-      // (passsing any custom width/height would auto disable aspectRatio forced by the square prop)
-      square={variant === "button" ? true : undefined}
+      // A checkbox drawn as a button is square around its checkmark or its
+      // icon, and as wide as its words when it has some (passing any custom
+      // width/height disables the aspect ratio the square prop forces).
+      square={variant === "button" && !hasLabel ? true : undefined}
       {...checkboxRootProps}
       ref={boxRef}
       variant={undefined}
       switch={undefined}
       icon={undefined}
       data-variant={variant}
+      data-label={hasLabel ? "" : undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_control_input"
       styleCSSVars={
@@ -451,9 +482,23 @@ const InputCheckboxFieldInterface = (props) => {
         color="var(--loader-color)"
       />
       {visualVnode}
+      {hasLabel ? (
+        <span className="navi_checkbox_label" id={labelId}>
+          {children}
+        </span>
+      ) : null}
       <RealInputCheckbox
         {...checkboxHostProps}
         switch={switchProp ? "" : undefined}
+        // eslint-disable-next-line react/no-children-prop
+        children={hasLabel ? undefined : children}
+        aria-labelledby={
+          hasLabel &&
+          checkboxHostProps["aria-label"] === undefined &&
+          checkboxHostProps["aria-labelledby"] === undefined
+            ? labelId
+            : checkboxHostProps["aria-labelledby"]
+        }
       />
     </Box>
   );

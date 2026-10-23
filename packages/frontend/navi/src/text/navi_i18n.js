@@ -309,8 +309,14 @@ const CONSTRAINT_MESSAGES = {
   },
   // parallelGuard: the surface already has as many runs in flight as it allows
   "constraint.readonly.parallel_guard": {
-    fr: "[max] action[s] déjà en cours, attendez qu'une se termine.",
-    en: "[max] action[s] already in progress, wait for one to finish.",
+    fr: {
+      one: "[max] action déjà en cours, attendez qu'elle se termine.",
+      other: "[max] actions déjà en cours, attendez qu'une se termine.",
+    },
+    en: {
+      one: "[max] action already in progress, wait for it to finish.",
+      other: "[max] actions already in progress, wait for one to finish.",
+    },
   },
   // The network policy holds every write; WHY it does is the reason, which is
   // the app's — hence no "offline" here, the app's `readOnlyMessage` names it.
@@ -447,29 +453,42 @@ const CONSTRAINT_MESSAGES = {
     fr: "Veuillez saisir une adresse e-mail valide.",
     en: "Please enter a valid email address.",
   },
-  "constraint.min_length.singular.password": {
-    fr: "Ce mot de passe doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "This password must contain at least [min] character (it currently contains only one character).",
+  // Forms on [count], the length typed: "un seul caractère" for exactly one.
+  "constraint.min_length.password": {
+    fr: {
+      1: "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement un seul caractère).",
+      other:
+        "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    },
+    en: {
+      1: "This password must contain at least [min] characters (it currently contains only one character).",
+      other:
+        "This password must contain at least [min] characters (it currently contains [count] characters).",
+    },
   },
-  "constraint.min_length.singular.email": {
-    fr: "Cette adresse e-mail doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "This email address must contain at least [min] character (it currently contains only one character).",
+  "constraint.min_length.email": {
+    fr: {
+      1: "Cette adresse e-mail doit contenir au moins [min] caractères (elle contient actuellement un seul caractère).",
+      other:
+        "Cette adresse e-mail doit contenir au moins [min] caractères (elle contient actuellement [count] caractères).",
+    },
+    en: {
+      1: "This email address must contain at least [min] characters (it currently contains only one character).",
+      other:
+        "This email address must contain at least [min] characters (it currently contains [count] characters).",
+    },
   },
-  "constraint.min_length.singular.default": {
-    fr: "Ce champ doit contenir au moins [min] caractère (il contient actuellement un seul caractère).",
-    en: "This field must contain at least [min] character (it currently contains only one character).",
-  },
-  "constraint.min_length.plural.password": {
-    fr: "Ce mot de passe doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "This password must contain at least [min] characters (it currently contains [count] characters).",
-  },
-  "constraint.min_length.plural.email": {
-    fr: "Cette adresse e-mail doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "This email address must contain at least [min] characters (it currently contains [count] characters).",
-  },
-  "constraint.min_length.plural.default": {
-    fr: "Ce champ doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
-    en: "This field must contain at least [min] characters (it currently contains [count] characters).",
+  "constraint.min_length.default": {
+    fr: {
+      1: "Ce champ doit contenir au moins [min] caractères (il contient actuellement un seul caractère).",
+      other:
+        "Ce champ doit contenir au moins [min] caractères (il contient actuellement [count] caractères).",
+    },
+    en: {
+      1: "This field must contain at least [min] characters (it currently contains only one character).",
+      other:
+        "This field must contain at least [min] characters (it currently contains [count] characters).",
+    },
   },
   "constraint.max_length.password": {
     fr: "Ce mot de passe doit contenir au maximum [max] caractères (il contient actuellement [count] caractères).",
@@ -658,72 +677,98 @@ const CONSTRAINT_MESSAGES = {
     en: "This field must not contain emoji.",
   },
   "constraint.max_line_breaks.default": {
-    fr: "Ce champ ne doit pas contenir plus de [max] retour[s] à la ligne.",
-    en: "This field must not contain more than [max] line break[s].",
+    fr: {
+      one: "Ce champ ne doit pas contenir plus de [max] retour à la ligne.",
+      other: "Ce champ ne doit pas contenir plus de [max] retours à la ligne.",
+    },
+    en: {
+      one: "This field must not contain more than [max] line break.",
+      other: "This field must not contain more than [max] line breaks.",
+    },
   },
-  "constraint.min_lower_letter.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins une lettre minuscule.",
-    en: "This password must contain at least one lowercase letter.",
+  "constraint.min_lower_letter.password": {
+    fr: {
+      1: "Ce mot de passe doit contenir au moins une lettre minuscule.",
+      other: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
+    },
+    en: {
+      1: "This password must contain at least one lowercase letter.",
+      other: "This password must contain at least [min] lowercase letters.",
+    },
   },
-  "constraint.min_lower_letter.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] lettres minuscules.",
-    en: "This password must contain at least [min] lowercase letters.",
+  "constraint.min_lower_letter.default": {
+    fr: {
+      1: "Ce champ doit contenir au moins une lettre minuscule.",
+      other: "Ce champ doit contenir au moins [min] lettres minuscules.",
+    },
+    en: {
+      1: "This field must contain at least one lowercase letter.",
+      other: "This field must contain at least [min] lowercase letters.",
+    },
   },
-  "constraint.min_lower_letter.default.singular": {
-    fr: "Ce champ doit contenir au moins une lettre minuscule.",
-    en: "This field must contain at least one lowercase letter.",
+  "constraint.min_upper_letter.password": {
+    fr: {
+      1: "Ce mot de passe doit contenir au moins une lettre majuscule.",
+      other: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
+    },
+    en: {
+      1: "This password must contain at least one uppercase letter.",
+      other: "This password must contain at least [min] uppercase letters.",
+    },
   },
-  "constraint.min_lower_letter.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] lettres minuscules.",
-    en: "This field must contain at least [min] lowercase letters.",
+  "constraint.min_upper_letter.default": {
+    fr: {
+      1: "Ce champ doit contenir au moins une lettre majuscule.",
+      other: "Ce champ doit contenir au moins [min] lettres majuscules.",
+    },
+    en: {
+      1: "This field must contain at least one uppercase letter.",
+      other: "This field must contain at least [min] uppercase letters.",
+    },
   },
-  "constraint.min_upper_letter.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins une lettre majuscule.",
-    en: "This password must contain at least one uppercase letter.",
+  "constraint.min_digit.password": {
+    fr: {
+      1: "Ce mot de passe doit contenir au moins un chiffre.",
+      other: "Ce mot de passe doit contenir au moins [min] chiffres.",
+    },
+    en: {
+      1: "This password must contain at least one digit.",
+      other: "This password must contain at least [min] digits.",
+    },
   },
-  "constraint.min_upper_letter.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] lettres majuscules.",
-    en: "This password must contain at least [min] uppercase letters.",
+  "constraint.min_digit.default": {
+    fr: {
+      1: "Ce champ doit contenir au moins un chiffre.",
+      other: "Ce champ doit contenir au moins [min] chiffres.",
+    },
+    en: {
+      1: "This field must contain at least one digit.",
+      other: "This field must contain at least [min] digits.",
+    },
   },
-  "constraint.min_upper_letter.default.singular": {
-    fr: "Ce champ doit contenir au moins une lettre majuscule.",
-    en: "This field must contain at least one uppercase letter.",
+  "constraint.min_special_char.password": {
+    fr: {
+      1: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
+      other:
+        "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
+    },
+    en: {
+      1: "This password must contain at least one special character. ([charset])",
+      other:
+        "This password must contain at least [min] special characters. ([charset])",
+    },
   },
-  "constraint.min_upper_letter.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] lettres majuscules.",
-    en: "This field must contain at least [min] uppercase letters.",
-  },
-  "constraint.min_digit.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins un chiffre.",
-    en: "This password must contain at least one digit.",
-  },
-  "constraint.min_digit.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] chiffres.",
-    en: "This password must contain at least [min] digits.",
-  },
-  "constraint.min_digit.default.singular": {
-    fr: "Ce champ doit contenir au moins un chiffre.",
-    en: "This field must contain at least one digit.",
-  },
-  "constraint.min_digit.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] chiffres.",
-    en: "This field must contain at least [min] digits.",
-  },
-  "constraint.min_special_char.password.singular": {
-    fr: "Ce mot de passe doit contenir au moins un caractère spécial. ([charset])",
-    en: "This password must contain at least one special character. ([charset])",
-  },
-  "constraint.min_special_char.password.plural": {
-    fr: "Ce mot de passe doit contenir au moins [min] caractères spéciaux. ([charset])",
-    en: "This password must contain at least [min] special characters. ([charset])",
-  },
-  "constraint.min_special_char.default.singular": {
-    fr: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
-    en: "This field must contain at least one special character. ([charset])",
-  },
-  "constraint.min_special_char.default.plural": {
-    fr: "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
-    en: "This field must contain at least [min] special characters. ([charset])",
+  "constraint.min_special_char.default": {
+    fr: {
+      1: "Ce champ doit contenir au moins un caractère spécial. ([charset])",
+      other:
+        "Ce champ doit contenir au moins [min] caractères spéciaux. ([charset])",
+    },
+    en: {
+      1: "This field must contain at least one special character. ([charset])",
+      other:
+        "This field must contain at least [min] special characters. ([charset])",
+    },
   },
 };
 
@@ -768,13 +813,27 @@ const CHAR_CLASS_MESSAGES = {
   },
   // maxLength: keydown blocked (one character would exceed the limit)
   "constraint.guard.max_length.typing": {
-    fr: "Longueur maximale de [max] caractère[s] atteinte.",
-    en: "Maximum length of [max] character[s] reached.",
+    fr: {
+      one: "Longueur maximale de [max] caractère atteinte.",
+      other: "Longueur maximale de [max] caractères atteinte.",
+    },
+    en: {
+      one: "Maximum length of [max] character reached.",
+      other: "Maximum length of [max] characters reached.",
+    },
   },
   // maxLength: paste/set truncated to maxLength (autofix always applied)
   "constraint.guard.max_length.value": {
-    fr: "Ce champ ne peut pas contenir plus de [max] caractère[s], une partie a été tronquée.",
-    en: "This field cannot contain more than [max] character[s]; the value was truncated.",
+    fr: {
+      one: "Ce champ ne peut pas contenir plus de [max] caractère, une partie a été tronquée.",
+      other:
+        "Ce champ ne peut pas contenir plus de [max] caractères, une partie a été tronquée.",
+    },
+    en: {
+      one: "This field cannot contain more than [max] character; the value was truncated.",
+      other:
+        "This field cannot contain more than [max] characters; the value was truncated.",
+    },
   },
   // maxLengthGuard on a multiple selection: one more item would exceed the limit
   "constraint.guard.max_length.selection": {

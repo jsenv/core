@@ -14,6 +14,8 @@ export { humanizeFileSize, humanizeMemory } from "./byte/byte.js";
 // see @jsenv/navi)
 export { createI18n } from "./i18n/i18n.js";
 export { humanizeI18n } from "./i18n/humanize_i18n.js";
+export { pluralCategory } from "./i18n/plural.js";
+export { formatList } from "./list/format_list.js";
 export {
   installInterpolateJsx,
   interpolateText,

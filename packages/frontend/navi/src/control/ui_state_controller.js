@@ -2916,8 +2916,17 @@ export const uiStateHoldsNothing = (uiState) => {
   if (Array.isArray(uiState)) {
     return uiState.every(uiStateHoldsNothing);
   }
-  if (uiState !== null && typeof uiState === "object") {
+  // A plain object is a group's answer, empty when every key is; any other
+  // object is a value of its own — a File has no keys and holds a whole file.
+  if (isPlainObject(uiState)) {
     return Object.values(uiState).every(uiStateHoldsNothing);
   }
   return false;
+};
+const isPlainObject = (value) => {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 };

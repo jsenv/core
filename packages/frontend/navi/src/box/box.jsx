@@ -1046,6 +1046,10 @@ const computeBox = (props, parentBoxFlow) => {
         return;
       }
       // not a style prop what do we do with it?
+      // An undefined one is a prop blanked on purpose (zoom={undefined}).
+      if (import.meta.dev && !isPseudoStyle && value !== undefined) {
+        warnOnCSSPropertyNotMapped(name, TagName);
+      }
       // When pseudoStateSelector is set, the child element is the semantic/interactive one
       // When both selectors are set the child IS the component (e.g. Button with scale
       // transform) — forward everything so it behaves like a normal element.
@@ -1344,4 +1348,94 @@ const withCurrentHandlers = (computed, props) => {
     return computed;
   }
   return { ...computed, selfForwardedProps, childForwardedProps };
+};
+
+// A prop named like a CSS property Box does not map lands on the element as
+// an attribute, where it does nothing — `<Box gap="s">` draws no gap, and the
+// screen still looks plausible. Said once per name, with navi's own prop when
+// there is one. An attribute the element really has (`content` on a meta,
+// `translate` on anything) is left alone.
+const NAVI_PROP_FOR_CSS_PROPERTY = {
+  gap: "spacing",
+  rowGap: "spacing",
+  columnGap: "spacing",
+  fontStyle: "italic",
+  textDecoration: "underline",
+  textDecorationStyle: "underlineStyle",
+  textDecorationColor: "underlineColor",
+  whiteSpace: "noWrap, pre, preWrap or preLine",
+  textTransform: "capitalize, uppercase or lowercase",
+  textOverflow: "overflowEllipsis",
+  alignItems: "alignX / alignY",
+  justifyContent: "alignX / alignY",
+  flexDirection: 'flex="x" or flex="y"',
+  flexGrow: "expand",
+  flexShrink: "shrink",
+  scrollMarginTop: "scrollMarginBlock",
+  scrollMarginBottom: "scrollMarginBlock",
+  scrollMarginLeft: "scrollMarginInline",
+  scrollMarginRight: "scrollMarginInline",
+};
+const SVG_TAG_NAME_SET = new Set([
+  "svg",
+  "g",
+  "path",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "rect",
+  "text",
+  "tspan",
+  "use",
+  "mask",
+  "pattern",
+  "clipPath",
+  "defs",
+  "symbol",
+  "marker",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "filter",
+  "image",
+  "foreignObject",
+]);
+const cssPropertyNotMappedWarnedSet = new Set();
+const elementByTagName = new Map();
+const warnOnCSSPropertyNotMapped = (name, tagName) => {
+  if (cssPropertyNotMappedWarnedSet.has(name)) {
+    return;
+  }
+  if (
+    name.startsWith("data-") ||
+    name.startsWith("aria-") ||
+    /^on[A-Z]/.test(name) ||
+    !(name in document.documentElement.style)
+  ) {
+    return;
+  }
+  if (typeof tagName === "string") {
+    if (SVG_TAG_NAME_SET.has(tagName)) {
+      // Its presentation attributes (fill, stroke…) share their name with a
+      // CSS property and are read as attributes.
+      return;
+    }
+    let element = elementByTagName.get(tagName);
+    if (!element) {
+      element = document.createElement(tagName);
+      elementByTagName.set(tagName, element);
+    }
+    if (name in element) {
+      return;
+    }
+  }
+  cssPropertyNotMappedWarnedSet.add(name);
+  const naviProp = NAVI_PROP_FOR_CSS_PROPERTY[name];
+  console.warn(
+    naviProp
+      ? `Box: "${name}" is not a prop a box reads, it does nothing. Say it with ${naviProp}.`
+      : `Box: "${name}" is not a prop a box reads, it does nothing. Say it in style={{ ${name}: … }}.`,
+  );
 };

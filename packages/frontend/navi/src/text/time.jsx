@@ -25,6 +25,11 @@ import {
   parseDuration,
 } from "@jsenv/validity";
 
+import {
+  hourTickSignal,
+  minuteTickSignal,
+  todaySignal,
+} from "../utils/clock.js";
 import { languagesSignal } from "./lang_signal.js";
 import { timeI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
@@ -44,7 +49,7 @@ import { Text } from "./text.jsx";
  *
  * @param {"date"|"month"|"week"|"datetime"|"time"|"hour"|"minute"|"second"|"duration"|"relative"} [type="relative"]
  *   Controls the display format:
- *   - `"date"`     → "lundi 11 mai" (long by default), "samedi 1 janvier 2050" outside the current year (see `year`);
+ *   - `"date"`     → "lundi 11 mai" (long by default), "samedi 1er janvier 2050" outside the current year (see `year`);
  *                    `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026";
  *                    `format={{ weekday: "long", month: "short" }}` spells the two apart → "mercredi 2 sept.";
  *                    a part set to `false` is dropped — `format={{ day: false, month: false }}` → "mercredi"
@@ -133,13 +138,20 @@ import { Text } from "./text.jsx";
  * @param {boolean|"auto"} [year]
  *   `type="date"` only — whether the year is written. `"auto"` writes it only
  *   when the date is not in the current year, the way a calendar does
- *   ("lundi 11 mai", but "samedi 1 janvier 2050"); `false` drops it ("30/07",
+ *   ("lundi 11 mai", but "samedi 1er janvier 2050"); `false` drops it ("30/07",
  *   the day/month order still following the locale). Defaults to `"auto"`
  *   for the spelled formats and to `true` for `format="numeric"`. A format
  *   without the month (`{ month: false }`) never writes it.
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
+ * @param {Date|number} [now]
+ *   `type="date"` and `type="relative"` — the instant the text is written
+ *   from. Left out, it is the clock's, and the text follows it: a date's
+ *   label and year move at midnight, a relative time is written again as it
+ *   ages (each minute within a day, each hour within a week, each day
+ *   beyond), with one timer shared by every `<Time>` on the page. Give it to
+ *   write from a fixed instant (a screenshot, a test).
  * @param {string} [lang]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
  *   Defaults to `languagesSignal.value`: the browser's languages, as
@@ -210,10 +222,11 @@ const TimeDate = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const base = formatDay(date, { lang, format, year, now });
+  const nowResolved = now ?? nowFollowingTheDay();
+  const base = formatDay(date, { lang, format, year, now: nowResolved });
   let text;
   if (dayLabel) {
-    const offset = getRelativeDay(date, { now });
+    const offset = getRelativeDay(date, { now: nowResolved });
     if (offset >= -1 && offset <= 1) {
       text = `${base} (${formatDayRelative(offset, { lang })})`;
     } else {
@@ -528,6 +541,7 @@ const TimeRelative = ({
   format = "long",
   eventDuration = 0,
   bare,
+  now,
   ...props
 }) => {
   if (children === undefined || children === null) {
@@ -550,6 +564,7 @@ const TimeRelative = ({
     lang,
     bare,
     format,
+    now: now ?? nowAgingWith(date, eventDurationMs),
   });
   const dateTime = date.toISOString();
   return (
@@ -558,6 +573,37 @@ const TimeRelative = ({
     </TimeText>
   );
 };
+
+// What "now" is for a date written relative to today — its "(demain)", its
+// year: read from todaySignal, so the text follows the day past midnight.
+const nowFollowingTheDay = () => {
+  // eslint-disable-next-line no-unused-expressions
+  todaySignal.value;
+  return new Date();
+};
+// What "now" is for a time written relative to it, read on the tick of the
+// finest unit it can write at that distance: minutes within a day ("dans 3 h"
+// becomes "dans 2 h 59 min"… then "dans 59 minutes"), hours within a week,
+// the day beyond. One shared timer per tick, whatever the number of texts.
+const nowAgingWith = (date, durationMs) => {
+  const nowMs = Date.now();
+  const startMs = date.getTime();
+  const endMs = startMs + durationMs;
+  const distance =
+    nowMs < startMs ? startMs - nowMs : nowMs > endMs ? nowMs - endMs : 0;
+  if (distance < DAY_MS) {
+    // eslint-disable-next-line no-unused-expressions
+    minuteTickSignal.value;
+  } else if (distance < 7 * DAY_MS) {
+    // eslint-disable-next-line no-unused-expressions
+    hourTickSignal.value;
+  } else {
+    // eslint-disable-next-line no-unused-expressions
+    todaySignal.value;
+  }
+  return new Date(nowMs);
+};
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TimeText = (props) => {
   // A date stays on one line, unless the caller grants it several.

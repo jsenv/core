@@ -58,6 +58,7 @@
 import { chainEvent } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
+import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
 import { findNearestControlHost } from "../control_dom.js";
 import {
   dispatchRequestAction,
@@ -106,6 +107,10 @@ const detectors = [];
  *   effect worked, rejected when it did not. Those two answers are different and a
  *   detector usually treats them differently — a row pulled out comes back either
  *   way, something thrown off the screen only comes back if the throw failed.
+ *   What a caller's callback rejects with is an error nothing has displayed: it is
+ *   reported (see action_error_report.js) unless the detector claims it — see
+ *   `claimsRefusals` — and rejecting with nothing at all is a refusal that says
+ *   nothing on purpose, never reported.
  *
  *   The third argument carries `{ types, readConfig, isRefused, isDeclared }`: the
  *   claimed names actually declared, a number read off the element or any ancestor
@@ -117,6 +122,10 @@ const detectors = [];
  *   they matter and never at setup: what an interaction does is the caller's
  *   latest render, and something is locked and unlocked while its listeners stay
  *   where they are.
+ * @param {(type: string) => boolean} [definition.claimsRefusals] Whether this
+ *   detector says, itself, what that interaction's callback rejected with — a
+ *   drag outcome refused, said on the element once it is back (see
+ *   interaction_drag.js). Those rejections are then not reported.
  * @param {(type: string) => boolean} [definition.refusable] Whether that
  *   interaction can be declared "refuse" — a detector that answers a refusal has
  *   to say so, or "refuse" reads as an effect nothing runs and the dev warning
@@ -270,7 +279,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
     // Answers one interaction, and reports back what became of it: null when
     // nothing ran at all, else a promise that mirrors the effect (see the
     // trigger contract on defineInteractionDetector).
-    const perform = (type, interactionEvent) => {
+    const perform = (type, interactionEvent, detector) => {
       const effect = interactionsNow()[type];
       if (!effect) {
         return null;
@@ -318,7 +327,9 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
               if (outcome.error) {
                 reject(outcome.error);
               } else if (outcome.aborted) {
-                reject(new Error(`aborted: ${outcome.reason}`));
+                // It did not happen, and nothing went wrong to say: a refusal
+                // without a word.
+                reject(undefined);
               } else {
                 resolve(outcome.data);
               }
@@ -374,10 +385,14 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
       if (!ran) {
         return null;
       }
-      if (returnValue && typeof returnValue.then === "function") {
-        return settled(returnValue);
+      const pending =
+        returnValue && typeof returnValue.then === "function"
+          ? returnValue
+          : Promise.resolve(returnValue);
+      if (detector.claimsRefusals?.(type)) {
+        return settled(pending);
       }
-      return settled(Promise.resolve(returnValue));
+      return reportUnclaimed(pending);
     };
 
     const cleanups = [];
@@ -401,7 +416,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         if (originalEvent?.type === type) {
           // The interaction IS that event — a native one. Dispatching a second
           // event of the same name would be answering the same thing twice.
-          return perform(type, originalEvent);
+          return perform(type, originalEvent, detector);
         }
         const interactionEvent = new CustomEvent(type, {
           detail: { ...detail, event: originalEvent },
@@ -415,7 +430,7 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         if (!element.dispatchEvent(interactionEvent)) {
           return null;
         }
-        return perform(type, interactionEvent);
+        return perform(type, interactionEvent, detector);
       };
       const cleanup = detector.setup(element, trigger, {
         types,
@@ -438,12 +453,26 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
   }, [names]);
 };
 
-// A rejection nobody is listening for is a console warning about something already
-// reported where it happened (a validation message on the control). The promise
-// handed out keeps rejecting — a detector that has something to undo needs to hear
-// it — but it is no longer "unhandled".
+// A rejection already said where it happened — a validation message on the
+// control, a refusal the detector draws (claimsRefusals) — or a refusal said with
+// nothing. The promise handed out keeps rejecting — a detector that has something
+// to undo needs to hear it — but it is no longer "unhandled".
 const settled = (promise) => {
   promise.catch(() => {});
+  return promise;
+};
+// A caller's callback rejecting is the caller's error, and nothing displays it:
+// swallowed, a TypeError in a swipe's callback would be a row coming back in
+// silence. So it goes where every error nothing displays goes (see
+// action_error_report.js). A detector hearing the rejection still does, through
+// the promise handed out.
+const reportUnclaimed = (promise) => {
+  promise.catch((error) => {
+    if (error === undefined || error === null) {
+      return;
+    }
+    reportErrorIfNobodyDisplaysIt(error);
+  });
   return promise;
 };
 

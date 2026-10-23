@@ -71,7 +71,8 @@
     <span class="outside outside-right">outside</span>
     <div id="root" class="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      import { Button, SidePanel } from "@jsenv/navi";
+      import { useSignal } from "@preact/signals";
+      import { Button, Field, Input, RadioGroup, SidePanel } from "@jsenv/navi";
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { DemoHeader } from "../../internal/demo_header.jsx";
@@ -114,7 +115,8 @@
       };
 
       const App = () => {
-        const [duration, setDuration] = useState(SPEEDS[1]);
+        const durationSignal = useSignal(SPEEDS[1]);
+        const duration = durationSignal.value;
 
         return (
           <>
@@ -127,17 +129,24 @@
             />
 
             <div className="demo-section">
-              <div className="demo-row">
+              <RadioGroup
+                name="duration"
+                signal={durationSignal}
+                className="demo-row"
+              >
                 {SPEEDS.map((speed) => (
-                  <button
+                  <Field
                     key={speed}
-                    aria-pressed={speed === duration}
-                    onClick={() => setDuration(speed)}
+                    as="label"
+                    flex
+                    spacing="xs"
+                    alignY="center"
                   >
+                    <Input type="radio" value={speed} />
                     {speed}
-                  </button>
+                  </Field>
                 ))}
-              </div>
+              </RadioGroup>
             </div>
 
             <div className="demo-section">

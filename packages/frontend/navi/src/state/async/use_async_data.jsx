@@ -24,6 +24,7 @@ import {
   RUNNING,
 } from "../../action/action_run_states.js";
 import { createAction } from "../../action/actions.js";
+import { peekNetworkPolicy } from "../../action/network_policy.js";
 import { prerunUnwatched, runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
@@ -87,7 +88,7 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   the data and `run` implied. Code loaded on demand reads this way
  *   (`() => import("./plan.jsx").then((m) => m.Plan)`, see
  *   docs/dynamic_import.md), as does anything else asked for once per mount.
- * @param {{ loading?: true, error?: true, run?: true, prerun?: true, onLoad?: (data: any, context: {params: any}) => void }} [options]
+ * @param {{ loading?: true, error?: true, run?: true, prerun?: true, onLoad?: (data: any, context: {params: any}) => void, poll?: { every: number, until?: (data: any) => boolean, for?: number } }} [options]
  * @param {true} [options.run] - The fallback for data nothing else can ask for:
  *   this component owns the request and starts it, from the render that reads
  *   it. `loading` and `error` keep their meaning — delegated by default,
@@ -128,6 +129,16 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   Called from a layout effect, so what it writes belongs to the same tick as
  *   the render that got the data — a `<Form pristineKey>` taking its reference
  *   then sees the filled fields rather than the empty ones.
+ * @param {{ every: number, until?: (data: any) => boolean, for?: number }} [options.poll] -
+ *   Asks the question again every `every` milliseconds once it has an answer,
+ *   for a state the server moves on its own (an email that may bounce, an
+ *   account being linked elsewhere, a job's log). Only while this component is
+ *   mounted and the document visible — once at once when it shows again — and
+ *   never while a network policy answers reads from the store. Each tick is a
+ *   revalidation, not a load: the answer held stays drawn and `loading` stays
+ *   false until the new one lands. It stops for good when `until(data)` says
+ *   so, when `for` milliseconds have passed, or on a failure — shown like any
+ *   failed refresh, and asked again by `rerun()`, not by a timer.
  * @returns {[data: unknown, loading: boolean, error: Error | undefined, dismissError: (() => void) | undefined]}
  *
  * @example <caption>Default — delegate both states (least code)</caption>
@@ -158,7 +169,7 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  */
 export const useAsyncData = (
   promiseOrAction,
-  { loading = "delegate", error = "delegate", run, prerun, onLoad } = {},
+  { loading = "delegate", error = "delegate", run, prerun, onLoad, poll } = {},
 ) => {
   // The request this component owns, as a function: one action per instance,
   // made on the first render and kept — the function's identity changes on
@@ -185,6 +196,7 @@ export const useAsyncData = (
       run,
       prerun,
       onLoad,
+      poll,
     });
   }
   return usePromiseAsyncData(promiseOrAction, {
@@ -215,7 +227,7 @@ const dismissedActionPendingPromiseWeakMap = new WeakMap();
 
 const useActionAsyncData = (
   action,
-  { loadingEffect, errorEffect, run, prerun, onLoad },
+  { loadingEffect, errorEffect, run, prerun, onLoad, poll },
 ) => {
   if (prerun) {
     // A head start draws none of what it starts, so it has no wait to
@@ -231,6 +243,7 @@ const useActionAsyncData = (
     );
   }
   useOnLoad(action, onLoad);
+  usePoll(action, poll);
 
   // `run: true` — this component owns the request, so it is what starts it, and
   // it starts it from the render rather than from an effect: a component that
@@ -376,6 +389,14 @@ const useActionAsyncData = (
     return [action.dataSignal.peek(), true, undefined];
   }
 
+  // A poll's own rerun revalidates what is on screen (see usePoll): the
+  // answer held stays drawn, and nothing is loading for whoever reads it.
+  if (runningState === RUNNING && pollRunActionWeakSet.has(action)) {
+    const dataHeld = action.dataSignal.peek();
+    if (dataHeld !== undefined) {
+      return [dataHeld, false, undefined];
+    }
+  }
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
   }
@@ -535,6 +556,124 @@ const useOnLoad = (action, onLoad) => {
     }
     paramsSeededRef.current = params;
     callback(data, { params });
+  });
+};
+
+// Asking again on a timer what the server moves on its own (see `poll` in the
+// JSDoc above). The ticks follow the action's own runs rather than a clock:
+// the next one is set when a run settles, so a slow answer never has a second
+// request stacked behind it, and a run someone else started counts as a tick.
+// Reading the reader's visibility and the network policy at each tick is what
+// keeps a screen nobody looks at, or one that is offline, from talking.
+const usePoll = (action, poll) => {
+  const pollRef = useRef(poll);
+  pollRef.current = poll;
+  const polling = Boolean(poll);
+  useEffect(() => {
+    if (!polling) {
+      return undefined;
+    }
+    const startedAt = Date.now();
+    let timeout = null;
+    let over = false;
+    const stop = () => {
+      over = true;
+      clearTimeout(timeout);
+      timeout = null;
+    };
+    const isDone = () => {
+      const { until, for: duration } = pollRef.current;
+      if (duration !== undefined && Date.now() - startedAt >= duration) {
+        return true;
+      }
+      const data = action.dataSignal.peek();
+      return Boolean(until && data !== undefined && until(data));
+    };
+    const schedule = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(tick, pollRef.current.every);
+    };
+    const settle = () => {
+      if (isDone()) {
+        stop();
+        return;
+      }
+      schedule();
+    };
+    const tick = () => {
+      timeout = null;
+      if (over) {
+        return;
+      }
+      if (document.visibilityState !== "visible") {
+        // Taken back by visibilitychange below.
+        return;
+      }
+      if (action.runningStateSignal.peek() !== COMPLETED) {
+        // A run under way, or none answered yet: its end sets the next tick.
+        return;
+      }
+      if (isDone()) {
+        stop();
+        return;
+      }
+      if (peekNetworkPolicy()?.readsFromStore) {
+        schedule();
+        return;
+      }
+      markPollRun(action);
+      runUnwatched(() => action.rerun({ reason: "useAsyncData({ poll })" }));
+    };
+    const unsubscribeFromRunningState = subscribeToChanges(
+      action.runningStateSignal,
+      (state) => {
+        if (over) {
+          return;
+        }
+        if (state === COMPLETED) {
+          settle();
+          return;
+        }
+        if (state === FAILED) {
+          // A failure is shown, not asked again on a timer: a poll retrying it
+          // would retry it while the network is down — that is rerun()'s job.
+          stop();
+        }
+      },
+    );
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        tick();
+        return;
+      }
+      clearTimeout(timeout);
+      timeout = null;
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    if (action.runningStateSignal.peek() === COMPLETED) {
+      settle();
+    }
+    return () => {
+      stop();
+      unsubscribeFromRunningState();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+    // Another action is another question, polled on its own `for`.
+  }, [action, polling]);
+};
+// The runs a poll started, for every reader of the action (see the RUNNING
+// branch of useActionAsyncData). The mark ends with the run, whatever ends it,
+// and not with the component: a reader unmounting mid-run leaves the others
+// reading a run that is still a revalidation.
+const pollRunActionWeakSet = new WeakSet();
+const markPollRun = (action) => {
+  pollRunActionWeakSet.add(action);
+  const unsubscribe = subscribeToChanges(action.runningStateSignal, (state) => {
+    if (state === RUNNING) {
+      return;
+    }
+    pollRunActionWeakSet.delete(action);
+    unsubscribe();
   });
 };
 

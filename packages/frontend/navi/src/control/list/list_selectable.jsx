@@ -512,7 +512,7 @@ const ListSelectable = (props) => {
             return;
           }
           setCurrentId(targetEl.id, e);
-          dispatchCustomEvent(ref.current, "navi_request_scroll", {
+          dispatchCustomEvent(ref.current, "navi_request_reveal", {
             event: e,
             id: targetEl.id,
           });
@@ -558,6 +558,28 @@ const ListSelectable = (props) => {
 };
 
 const SelectableRealInputContext = createContext(null);
+
+/**
+ * What the selectable `List.Item` around it holds, read by what that row
+ * draws: the "Choose"/"Cancel" of a row, a mark on the chosen one. The row's
+ * own state, read where it is, rather than a value re-derived beside the list
+ * — that one goes stale as soon as the list moves on its own (a press inside
+ * a popup, a reset, a cancel).
+ *
+ * @returns {{ selected: boolean, readOnly: boolean, value: any } | null}
+ *   `null` outside a row of a selectable list.
+ */
+export const useListItemState = () => {
+  const realInput = useContext(SelectableRealInputContext);
+  if (!realInput) {
+    return null;
+  }
+  return {
+    selected: Boolean(realInput.checked),
+    readOnly: Boolean(realInput.readOnly),
+    value: realInput.value,
+  };
+};
 
 export const ListItemSelectableResolver = (props) => {
   const Next = useNextResolver();

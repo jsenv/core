@@ -386,7 +386,8 @@ const DRAG_IGNORED_SELECTOR =
  * Creates a gesture controller that moves elements via drag.
  *
  * Wraps `createDragGestureController` and adds:
- * - Element translation via CSS transform (translate only; other existing transforms are preserved)
+ * - Element translation, on the `translate` property (or inside `transform`,
+ *   see `positionProperty`), added to the translate the element already had
  * - Auto-scroll while dragging near scroll-container edges
  * - Constraints (area boundaries, obstacle elements)
  *
@@ -399,10 +400,11 @@ const DRAG_IGNORED_SELECTOR =
  *   If omitted, `element` is translated. The translate is read from `dragStyleController`
  *   at grab time so any pre-existing translate is accumulated rather than reset.
  *
- * A `transform` already on the moved element (rotate, scale…) is preserved and does
- * not disturb the movement. `rotate` and `scale` set as individual CSS properties do:
- * they apply outside `transform`, where nothing the gesture writes can reach them —
- * put those on a child element instead (a warning says so in dev).
+ * Carried on `translate`, the element keeps everything else it is drawn with:
+ * the element's matrix is translate, then rotate, then scale, then `transform`,
+ * so the hand's translate applies outside a rotation or a scale of its own,
+ * whether written as properties or inside `transform`, and lands exactly where
+ * the hand is.
  *
  * @param {object} [options]
  * @param {boolean} [options.stickyFrontiers=true]
@@ -425,9 +427,15 @@ const DRAG_IGNORED_SELECTOR =
  *   Renders a visual line when the pointer deviates from the element due to constraints.
  * @param {boolean} [options.showDebugMarkers=false]
  *   Renders debug markers for constraint regions.
+ * @param {"translate"|"transform"} [options.positionProperty="translate"]
+ *   Where the hand's translate is written. `"transform"` puts it first in the
+ *   element's transform list, for a box whose `translate` property is already
+ *   spoken for — the copy `startDragTo` carries, which travels on it to the
+ *   hand and home. Inside `transform` it lands within a `rotate` or a `scale`
+ *   property and comes out rotated and scaled (a warning says so in dev).
  * @param {"translate"|"manual"} [options.dragPositionEffect="translate"]
  *   Who puts the element where the hand is, while the hand is moving.
- *   - `"translate"`: this controller does, with a transform (default).
+ *   - `"translate"`: this controller does (default), on `positionProperty`.
  *   - `"manual"`: nobody — the element stays where it was drawn, and whoever is
  *     told the gesture draws it. For a thing whose position is state.
  * @param {"commit"|"cancel"|"cancel-animated"|"manual"} [options.releasePositionEffect="commit"]
@@ -457,6 +465,7 @@ export const createDragToMoveGestureController = ({
   obstacleAttributeName = "data-drag-obstacle",
   showConstraintFeedbackLine = false,
   showDebugMarkers = false,
+  positionProperty = "translate",
   dragPositionEffect = "translate",
   releasePositionEffect = "commit",
   cancelAnimationDuration = 200,
@@ -478,16 +487,27 @@ export const createDragToMoveGestureController = ({
     // rather than resetting it to zero on the first drag event.
     // Nothing is written on the element on "manual" (the caller draws it where
     // it goes), so there is nothing to accumulate on and nothing to read.
+    const writesPosition = dragPositionEffect !== "manual";
+    const carriesOnTranslate = positionProperty === "translate";
+    const translateAtGrab =
+      writesPosition && carriesOnTranslate
+        ? readTranslateParts(
+            dragStyleController.getUnderlyingValue(
+              elementImpacted,
+              "translate",
+            ),
+          )
+        : null;
     const transformAtGrabOrNull =
-      dragPositionEffect === "manual"
-        ? null
-        : dragStyleController.getUnderlyingValue(elementImpacted, "transform");
+      writesPosition && !carriesOnTranslate
+        ? dragStyleController.getUnderlyingValue(elementImpacted, "transform")
+        : null;
     // A transform that cannot be read as named parts (a complex 3D matrix)
     // comes back undefined: the drag then starts from a zero baseline.
     const transformAtGrab = transformAtGrabOrNull || {};
     const translateXAtGrab = transformAtGrab.translateX;
     const translateYAtGrab = transformAtGrab.translateY;
-    if (import.meta.dev && dragPositionEffect !== "manual") {
+    if (import.meta.dev && writesPosition && !carriesOnTranslate) {
       warnAboutTransformsOutsideTransform(elementImpacted);
       if (!transformAtGrabOrNull) {
         console.warn(
@@ -500,24 +520,28 @@ export const createDragToMoveGestureController = ({
     const cancelPosition = () => {
       dragStyleController.clear(elementImpacted);
     };
-    // Reading the transform on either side of the clear is what lets this work
+    // Reading the property on either side of the clear is what lets this work
     // without knowing anything about the element: how it looked while held and
-    // how it looks once let go are both just computed transforms, and the
+    // how it looks once let go are both just computed values, and the
     // animation has only to bridge the two.
     const cancelPositionAnimated = ({
       duration = cancelAnimationDuration,
       easing = cancelAnimationEasing,
     } = {}) => {
-      const transformWhileHeld = getComputedStyle(elementImpacted).transform;
+      const valueWhileHeld =
+        getComputedStyle(elementImpacted)[positionProperty];
       cancelPosition();
-      const transformAtRest = getComputedStyle(elementImpacted).transform;
-      if (transformWhileHeld === transformAtRest) {
+      const valueAtRest = getComputedStyle(elementImpacted)[positionProperty];
+      if (valueWhileHeld === valueAtRest) {
         return null;
       }
-      // No fill: the element already sits at its resting transform, the
+      // No fill: the element already sits at its resting position, the
       // animation only replays the way back to it.
       return elementImpacted.animate(
-        [{ transform: transformWhileHeld }, { transform: transformAtRest }],
+        [
+          { [positionProperty]: valueWhileHeld },
+          { [positionProperty]: valueAtRest },
+        ],
         { duration, easing },
       );
     };
@@ -727,6 +751,19 @@ export const createDragToMoveGestureController = ({
           scrollableLeft,
           scrollableTop,
         );
+        if (carriesOnTranslate) {
+          const { x, y, z } = translateAtGrab;
+          const xMoved = direction.x
+            ? addPixels(x, positionedLeft - dragGesture.gestureInfo.leftAtGrab)
+            : x;
+          const yMoved = direction.y
+            ? addPixels(y, positionedTop - dragGesture.gestureInfo.topAtGrab)
+            : y;
+          dragStyleController.set(elementImpacted, {
+            translate: z ? `${xMoved} ${yMoved} ${z}` : `${xMoved} ${yMoved}`,
+          });
+          break move;
+        }
         // Build the transform to apply, preserving any transforms that were
         // already on the element before the grab (e.g. rotate from another
         // controller), and accumulating from the pre-grab translate baseline.
@@ -809,12 +846,53 @@ export const createDragToMoveGestureController = ({
   return dragGestureController;
 };
 
+// The computed `translate` an element has of its own ("none", "10px",
+// "10px 20px", "50% 0px 4px"), as the three parts the hand's movement is added
+// to.
+const readTranslateParts = (translate) => {
+  if (!translate || translate === "none") {
+    return { x: "0px", y: "0px", z: "" };
+  }
+  // Split on the spaces between the parts, not on those inside a calc().
+  const parts = [];
+  let part = "";
+  let depth = 0;
+  for (const char of translate) {
+    if (char === " " && depth === 0) {
+      if (part) {
+        parts.push(part);
+      }
+      part = "";
+      continue;
+    }
+    if (char === "(") {
+      depth++;
+    } else if (char === ")") {
+      depth--;
+    }
+    part += char;
+  }
+  if (part) {
+    parts.push(part);
+  }
+  const [x = "0px", y = "0px", z = ""] = parts;
+  return { x, y, z };
+};
+// A movement in pixels added to a length: a sum when it is in pixels too, a
+// calc() otherwise — a percentage is only resolved by the browser.
+const addPixels = (length, pixels) => {
+  if (/^-?[\d.]+(?:e-?\d+)?px$/.test(length)) {
+    return `${parseFloat(length) + pixels}px`;
+  }
+  return `calc(${length} + ${pixels}px)`;
+};
+
 /*
  * `rotate` and `scale` set as individual properties are not part of `transform`:
  * the element's matrix is translate, then rotate, then scale, then `transform`.
- * The drag translate lives in `transform`, so it lands INSIDE them and comes out
- * rotated and scaled — the element drifts away from the pointer, a bit more at
- * every pixel travelled.
+ * A drag translate written in `transform` (positionProperty: "transform") lands
+ * INSIDE them and comes out rotated and scaled — the element drifts away from
+ * the pointer, a bit more at every pixel travelled.
  * Nothing written inside `transform` can compensate, and `getComputedStyle().transform`
  * does not show these properties, so the gesture cannot even see what is happening
  * to it: hence a warning, and the way out is to carry the decoration on a child
@@ -878,6 +956,13 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   reject. Beside a copy, the copy fades where it was let go of and comes back
  *   if the promise rejects. Picked up and put straight back down is a cancel:
  *   it has to have gone somewhere to be away from anything.
+ * @param {(detail: {outcome: "move"|"reorder"|"land"|"toss"|"leave"|null, refused: boolean, error?: any}) => void} [options.onCarryEnd]
+ *   Whatever was carried is at rest: the copy gone and the original shown again,
+ *   or the element settled where it stays — after the answer and the journey
+ *   home a refusal takes. `refused` says the answer rejected, and `error` is what
+ *   it rejected with, so it can be said on the element now that it stands where
+ *   it was. Not told for a copy taken back in hand on its way home: that carry
+ *   goes on, and its own end is told. Told, not asked.
  * @param {(detail: {gestureInfo: object, x: number, y: number, outcome: "move"|"reorder"|"land"|"toss"|"leave"|null}) => void} [options.onRelease]
  *   The hand let go — the mirror of `onDragStart`, and the one thing that is told
  *   whatever the release meant, a cancelled gesture included. `outcome` is what
@@ -1147,6 +1232,7 @@ const startDragToMoveElement = (
     onMove,
     onLeave,
     onRelease,
+    onCarryEnd,
     outsideOf,
     // A thing that can be let go of outside has to be able to get there. Same
     // reason and same shape as the default of the copy path below.
@@ -1207,7 +1293,8 @@ const startDragToMoveElement = (
         if (dropMeans === "cancel") {
           // Nothing answers it: whatever the gesture translated goes home — and
           // there is nothing to take back when `onMoving` had the caller draw.
-          gestureInfo.cancelPositionAnimated();
+          await whenAnimationDone(gestureInfo.cancelPositionAnimated());
+          onCarryEnd?.({ outcome: null, refused: false });
           return;
         }
         if (dropMeans === "leave") {
@@ -1218,10 +1305,13 @@ const startDragToMoveElement = (
           // it where it goes back to; travelled home on a reject.
           try {
             await onLeave?.({ gestureInfo, x: xDelta, y: yDelta });
-            gestureInfo.cancelPosition();
-          } catch {
-            gestureInfo.cancelPositionAnimated();
+          } catch (error) {
+            await whenAnimationDone(gestureInfo.cancelPositionAnimated());
+            onCarryEnd?.({ outcome: dropMeans, refused: true, error });
+            return;
           }
+          gestureInfo.cancelPosition();
+          onCarryEnd?.({ outcome: dropMeans, refused: false });
           return;
         }
         // Kept where the hand let go of it while the answer is asked — a thing
@@ -1230,17 +1320,18 @@ const startDragToMoveElement = (
         const layoutBeforeAnswer = readOwnLayout(draggedElement);
         try {
           await onMove?.({ gestureInfo, x: xDelta, y: yDelta });
-        } catch {
-          gestureInfo.cancelPositionAnimated();
+        } catch (error) {
+          await whenAnimationDone(gestureInfo.cancelPositionAnimated());
+          onCarryEnd?.({ outcome: dropMeans, refused: true, error });
           return;
         }
-        if (onMoving) {
-          // Nothing was translated, so there is nothing to keep or to take back:
-          // who owns the position was settled when the gesture was declared,
-          // rather than read off the element afterwards.
-          return;
+        // Nothing was translated under `onMoving`, so there is nothing to keep
+        // or to take back: who owns the position was settled when the gesture
+        // was declared, rather than read off the element afterwards.
+        if (!onMoving) {
+          settleMovedElement(draggedElement, gestureInfo, layoutBeforeAnswer);
         }
-        settleMovedElement(draggedElement, gestureInfo, layoutBeforeAnswer);
+        onCarryEnd?.({ outcome: dropMeans, refused: false });
       });
       return dragGesture;
     },
@@ -1406,6 +1497,7 @@ const startDragToCarryCopy = (
     onToss,
     onLeave,
     onRelease,
+    onCarryEnd,
     outsideOf,
     tossDistance,
     tossSpeed,
@@ -1484,6 +1576,10 @@ const startDragToCarryCopy = (
 
         const gestureController = createDragToMoveGestureController({
           direction,
+          // The wrapper's own `translate` carries its flights — to the hand
+          // that pressed elsewhere, away when thrown, home when refused — and
+          // nothing rotates or scales it: the hand goes in its transform.
+          positionProperty: "transform",
           releasePositionEffect: "manual",
           areaConstraint,
           ...options,
@@ -1754,6 +1850,9 @@ const startDragToCarryCopy = (
               }),
           );
 
+          // What the answer said no with, once the copy is home: told with the
+          // end of the carry, where the original stands again.
+          let refusal = null;
           // The copy stops where the hand left it, and the answer is given a way to
           // take it the rest of the way — synchronously, inside a view transition, so
           // it is captured where it lands rather than where it was let go of.
@@ -1778,11 +1877,12 @@ const startDragToCarryCopy = (
             };
             try {
               await answer(syncCloneWithDropTarget);
-            } catch {
+            } catch (error) {
               // Coming down on a place can be a QUESTION, and the answer may be
               // no. Refused, the thing is still where it was and the screen has
               // to say so: the copy takes the same journey home a refused throw
               // takes — from wherever it got to, which is where it visibly is.
+              refusal = { error };
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           };
@@ -1792,18 +1892,24 @@ const startDragToCarryCopy = (
             // there rather than from where the clone was declared.
             setCloneViewportRect(cloneWrapper, cloneWrapper);
             gestureInfo.cancelPosition();
-            const gone = await tossCloneAway(cloneWrapper, gestureInfo, onToss);
-            if (!gone) {
+            const tossed = await tossCloneAway(
+              cloneWrapper,
+              gestureInfo,
+              onToss,
+            );
+            if (!tossed.gone) {
               // It still exists, so the screen has to say so: the copy comes back
               // over the original, and taking it away then reveals the row in
               // place.
+              refusal = { error: tossed.error };
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           } else if (dropMeans === "leave") {
             setCloneViewportRect(cloneWrapper, cloneWrapper);
             gestureInfo.cancelPosition();
-            const gone = await letCloneGo(cloneWrapper, gestureInfo, onLeave);
-            if (!gone) {
+            const left = await letCloneGo(cloneWrapper, gestureInfo, onLeave);
+            if (!left.gone) {
+              refusal = { error: left.error };
               await settleCloneBack(cloneWrapper, draggedElement);
             }
           } else if (dropMeans === "land") {
@@ -1835,6 +1941,11 @@ const startDragToCarryCopy = (
           }
           draggedElement.removeAttribute("navi-drag-clone-source");
           cloneWrapper.remove();
+          onCarryEnd?.({
+            outcome: dropMeans === "cancel" ? null : dropMeans,
+            refused: Boolean(refusal),
+            error: refusal?.error,
+          });
         });
 
         return dragGesture;
@@ -2110,7 +2221,8 @@ const findPlaceOnNearestLine = (dragElementRect, items, flow) => {
 
 /**
  * The copy leaves the screen the way it was thrown, and the caller says what that
- * meant. Resolves true when it is really gone.
+ * meant. Resolves `{ gone: true }` when it is really gone, and with what the
+ * answer refused with otherwise.
  *
  * The answer is asked for WHILE it flies rather than after: the thing is already
  * far away by the time the request lands, which is the whole point of a gesture
@@ -2125,15 +2237,15 @@ const tossCloneAway = async (cloneWrapper, gestureInfo, onToss) => {
   }px`;
   try {
     await onToss?.({ gestureInfo });
-    return true;
-  } catch {
-    return false;
+    return { gone: true };
+  } catch (error) {
+    return { gone: false, error };
   }
 };
 
 /**
  * The copy fades where the hand let go of it, and the caller says what being let
- * go of there meant. Resolves true when it is really gone.
+ * go of there meant. Resolves like tossCloneAway.
  *
  * No flight, unlike a throw: nothing was thrown. The thing was put down over
  * nothing, and it goes from there — the same attribute as a throw, so that a
@@ -2144,9 +2256,9 @@ const letCloneGo = async (cloneWrapper, gestureInfo, onLeave) => {
   try {
     const { xDelta, yDelta } = gestureInfo.layout;
     await onLeave?.({ gestureInfo, x: xDelta, y: yDelta });
-    return true;
-  } catch {
-    return false;
+    return { gone: true };
+  } catch (error) {
+    return { gone: false, error };
   }
 };
 
@@ -2202,6 +2314,18 @@ const settleCloneBack = (cloneWrapper, sourceElement) => {
   return new Promise((resolve) => {
     setTimeout(resolve, TOSS_DURATION_MS);
   });
+};
+
+// The way home an element travels on its own (cancelPositionAnimated), waited
+// out: what is said about it after is said where it stands again.
+const whenAnimationDone = (animation) => {
+  if (!animation) {
+    return Promise.resolve();
+  }
+  return animation.finished.then(
+    () => {},
+    () => {},
+  );
 };
 
 /**

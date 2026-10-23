@@ -1,3 +1,5 @@
+import { createIterableWeakSet } from "@jsenv/dom";
+
 import { RUNNING } from "../../action/action_run_states.js";
 import { getActionDispatcher } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -83,6 +85,7 @@ const assertRerunOnCanFire = (rerunOn) => {
 // What a `dependencies` entry names are callbacks, not verbs (`rerunOn` names
 // verbs, where `PATCH` covers `PATCH_MANY`): one callback of a resource can be
 // the write that creates (a move into a new item) while its sibling only edits.
+// A write named in `writes` is a callback of its own, under its name.
 const WRITE_CALLBACK_NAMES = [
   "POST",
   "POST_MANY",
@@ -93,6 +96,8 @@ const WRITE_CALLBACK_NAMES = [
   "DELETE",
   "DELETE_MANY",
 ];
+// What a resource listed bare counts: every write, named ones included.
+const EVERY_WRITE = Symbol("every_write");
 
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 export const createResourceLifecycleManager = () => {
@@ -119,7 +124,7 @@ export const createResourceLifecycleManager = () => {
     for (const dependency of dependencies) {
       const [dependencyScope, writeNames] = resolveDependency(
         dependency,
-        resourceScope,
+        `resource(${resourceScope.name})`,
       );
       let dependentMap = resourceDependencies.get(dependencyScope);
       if (!dependentMap) {
@@ -145,8 +150,45 @@ export const createResourceLifecycleManager = () => {
     if (!writeNameSet) {
       return false;
     }
-    const { verb, isMany } = triggeringAction.meta;
-    return writeNameSet.has(isMany ? `${verb}_MANY` : verb);
+    return isWriteHeardIn(writeNameSet, triggeringAction);
+  };
+  // createAction's `dependencies`: an action holds no rows and has no rerunOn,
+  // only instances to ask again after a write it listed. Held weakly, like
+  // everything the action system keeps (see actions.js): an action nobody
+  // references any more has nobody left to answer.
+  const dependentActionSetByScope = new Map(); // Map<dependencyScope, IterableWeakSet<action>>
+  const writeNameSetByScopeWeakMap = new WeakMap(); // WeakMap<action, Map<dependencyScope, Set<writeName>>>
+  const registerActionDependencies = (action, dependencies) => {
+    let writeNameSetByScope = writeNameSetByScopeWeakMap.get(action);
+    if (!writeNameSetByScope) {
+      writeNameSetByScope = new Map();
+      writeNameSetByScopeWeakMap.set(action, writeNameSetByScope);
+    }
+    for (const dependency of dependencies) {
+      const [dependencyScope, writeNames] = resolveDependency(
+        dependency,
+        `createAction(${action.name})`,
+      );
+      if (!registeredResources.has(dependencyScope)) {
+        throw new Error(
+          `createAction(${action.name}): a dependency is a resource or a scope of one, received ${dependencyScope}`,
+        );
+      }
+      let dependentActionSet = dependentActionSetByScope.get(dependencyScope);
+      if (!dependentActionSet) {
+        dependentActionSet = createIterableWeakSet();
+        dependentActionSetByScope.set(dependencyScope, dependentActionSet);
+      }
+      dependentActionSet.add(action);
+      let writeNameSet = writeNameSetByScope.get(dependencyScope);
+      if (!writeNameSet) {
+        writeNameSet = new Set();
+        writeNameSetByScope.set(dependencyScope, writeNameSet);
+      }
+      for (const writeName of writeNames) {
+        writeNameSet.add(writeName);
+      }
+    }
   };
   const isScopedManyOwner = (resourceScope, childScope) => {
     const parentEntries = scopedManyParents.get(childScope);
@@ -186,11 +228,19 @@ export const createResourceLifecycleManager = () => {
     const triggerResourceScope = triggeringActionContext.resourceScope;
 
     for (const [resourceScope, config] of registeredResources) {
-      const shouldRerunGetMany = shouldRerunAfter(
-        config.rerunOn.GET_MANY,
-        triggerVerb,
+      const isTriggerScope = resourceScope === triggerResourceScope;
+      const shouldRerunGetMany = shouldReadRerunAfter(
+        "GET_MANY",
+        config,
+        triggeringAction,
+        isTriggerScope,
       );
-      const shouldRerunGet = shouldRerunAfter(config.rerunOn.GET, triggerVerb);
+      const shouldRerunGet = shouldReadRerunAfter(
+        "GET",
+        config,
+        triggeringAction,
+        isTriggerScope,
+      );
       const paramScope = config.paramScope;
 
       // Skip if no rerun or reset rules apply
@@ -233,14 +283,8 @@ export const createResourceLifecycleManager = () => {
       };
 
       for (const restAction of config.restActionSet) {
-        // A read still out left before this write landed: its answer is as
-        // stale as a completed one, and replaces what the write put in the
-        // store. A rerun aborts it and asks again.
         const actionCandidateArray = restAction.matchAllSelfOrDescendant(
-          (action) =>
-            !action.isPrerun &&
-            (action.completed || action.runningState === RUNNING) &&
-            action !== triggeringAction,
+          (action) => isAnsweredOrAsking(action, triggeringAction),
         );
 
         for (const actionCandidate of actionCandidateArray) {
@@ -402,6 +446,26 @@ export const createResourceLifecycleManager = () => {
       }
     }
 
+    const dependentActionSet =
+      dependentActionSetByScope.get(triggerResourceScope);
+    if (dependentActionSet) {
+      for (const dependentAction of dependentActionSet) {
+        const writeNameSet = writeNameSetByScopeWeakMap
+          .get(dependentAction)
+          .get(triggerResourceScope);
+        if (!isWriteHeardIn(writeNameSet, triggeringAction)) {
+          continue;
+        }
+        const instanceArray = dependentAction.matchAllSelfOrDescendant(
+          (action) => isAnsweredOrAsking(action, triggeringAction),
+        );
+        for (const instance of instanceArray) {
+          actionsToRerun.add(instance);
+          reasonSet.add("action dependency autorerun");
+        }
+      }
+    }
+
     return {
       actionsToRerun,
       actionsToReset,
@@ -416,7 +480,6 @@ export const createResourceLifecycleManager = () => {
     triggeringAction,
     triggeringActionContext,
   ) => {
-    const triggerVerb = triggeringAction.meta.verb;
     const triggerResourceScope = triggeringActionContext.resourceScope;
     for (const [resourceScope, config] of registeredResources) {
       if (config.rangeReaderSet.size === 0) {
@@ -431,7 +494,14 @@ export const createResourceLifecycleManager = () => {
       if (!isSameResource && !isDependent) {
         continue;
       }
-      if (!shouldRerunAfter(config.rerunOn.GET_RANGE, triggerVerb)) {
+      if (
+        !shouldReadRerunAfter(
+          "GET_RANGE",
+          config,
+          triggeringAction,
+          isSameResource,
+        )
+      ) {
         continue;
       }
       for (const rangeReader of config.rangeReaderSet) {
@@ -461,6 +531,7 @@ export const createResourceLifecycleManager = () => {
     registerResource,
     registerAction,
     registerRangeReader,
+    registerActionDependencies,
     onActionComplete,
     // Registers: when `triggerResource` fires, rerun `dependentResource`'s actions.
     // Used by scopedMany to make the parent GET rerun when a child mutation completes.
@@ -475,6 +546,42 @@ export const createResourceLifecycleManager = () => {
   };
 };
 
+// A read to ask again after a write: answered before it landed, or still out —
+// an answer that left before the write is as stale as a completed one, and
+// would replace what the write put in the store (a rerun aborts it and asks
+// again). A head start is its owner's to ask.
+const isAnsweredOrAsking = (action, triggeringAction) =>
+  !action.isPrerun &&
+  (action.completed || action.runningState === RUNNING) &&
+  action !== triggeringAction;
+// A write named in `writes` says for itself which reads of its own resource it
+// reruns (`rerunOn: { GET_RANGE: true }`); a read it leaves out, and every read
+// of another resource, follows the rerunOn of that resource for its verb.
+const shouldReadRerunAfter = (
+  read,
+  config,
+  triggeringAction,
+  isTriggerScope,
+) => {
+  const { verb, writeRerunOn } = triggeringAction.meta;
+  if (isTriggerScope && writeRerunOn && writeRerunOn[read] !== undefined) {
+    return writeRerunOn[read];
+  }
+  return shouldRerunAfter(config.rerunOn[read], verb);
+};
+const isWriteHeardIn = (writeNameSet, triggeringAction) => {
+  const { verb, isMany, writeName } = triggeringAction.meta;
+  if (verb === "GET") {
+    return false;
+  }
+  if (writeNameSet.has(EVERY_WRITE)) {
+    return true;
+  }
+  if (writeName) {
+    return writeNameSet.has(writeName);
+  }
+  return writeNameSet.has(isMany ? `${verb}_MANY` : verb);
+};
 const shouldRerunAfter = (rerunConfig, verb) => {
   if (rerunConfig === false) {
     return false;
@@ -492,33 +599,40 @@ const shouldRerunAfter = (rerunConfig, verb) => {
   return false;
 };
 // A `dependencies` entry: a resource (every write counts), or
-// `{ resource, on }` naming the write callbacks that do. A name that cannot
-// fire throws here: a dependency that never fires leaves a read on its old
-// value with nothing to say so.
-const resolveDependency = (dependency, dependentScope) => {
+// `{ resource, on }` naming the write callbacks that do — a write named in its
+// `writes` included. A name that cannot fire throws here: a dependency that
+// never fires leaves a read on its old value with nothing to say so.
+const resolveDependency = (dependency, dependentLabel) => {
   if (!Object.hasOwn(dependency, "resource")) {
-    return [dependency, WRITE_CALLBACK_NAMES];
+    return [dependency, [EVERY_WRITE]];
   }
   const { resource: dependencyScope, on } = dependency;
-  const where = `resource(${dependentScope.name}) dependency on ${dependencyScope.name}`;
+  const where = `${dependentLabel} dependency on ${dependencyScope.name}`;
   if (!Array.isArray(on) || on.length === 0) {
     throw new Error(
       `${where}: "on" lists the writes that count, e.g. on: ["POST", "DELETE"] — list the resource itself for every write`,
     );
   }
   for (const writeName of on) {
+    if (isNamedWriteOf(dependencyScope, writeName)) {
+      continue;
+    }
     if (!WRITE_CALLBACK_NAMES.includes(writeName)) {
       throw new Error(
-        `${where}: "${writeName}" is not a write, "on" takes ${WRITE_CALLBACK_NAMES.join(", ")}`,
+        `${where}: "${writeName}" is not a write, "on" takes ${WRITE_CALLBACK_NAMES.join(", ")} or a write named in its "writes"`,
       );
     }
     if (!dependencyScope[writeName]) {
       throw new Error(
-        `${where}: ${dependencyScope.name} has no ${writeName}, so it would never rerun ${dependentScope.name}`,
+        `${where}: ${dependencyScope.name} has no ${writeName}, so it would never rerun ${dependentLabel}`,
       );
     }
   }
   return [dependencyScope, on];
+};
+const isNamedWriteOf = (resourceScope, writeName) => {
+  const writeAction = resourceScope[writeName];
+  return Boolean(writeAction && writeAction.meta?.writeName === writeName);
 };
 const isParamSubset = (parentParams, childParams) => {
   if (!parentParams || !childParams) {

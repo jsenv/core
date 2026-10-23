@@ -19,7 +19,7 @@
  * write happens where it is measured, with no frame to wait for.
  */
 
-import { useLayoutEffect } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { installTransitionWindowCss } from "./transition_window.js";
 
@@ -41,9 +41,18 @@ const writtenValueByEdge = new Map();
 export const useTransitionCover = (elementRef, edge = "top") => {
   installTransitionWindowCss();
 
-  const measureCover = (element) => {
-    const { width, height } = element.getBoundingClientRect();
-    return edge === "left" || edge === "right" ? width : height;
+  // The element observed, followed from commit to commit: the ref can point at
+  // another element than the one there at mount (a row swapped for another, one
+  // drawn later), and the one it no longer points at must stop counting.
+  const observedRef = useRef(null);
+  const stopObserving = () => {
+    const observed = observedRef.current;
+    if (!observed) {
+      return;
+    }
+    observedRef.current = null;
+    observed.resizeObserver.disconnect();
+    writeCover(observed.edge, observed.element, null);
   };
 
   // Anything a render can change — the row's content, a size prop, a theme
@@ -51,28 +60,30 @@ export const useTransitionCover = (elementRef, edge = "top") => {
   // render that grew the row is cut at the row as it now is.
   useLayoutEffect(() => {
     const element = elementRef.current;
+    const observed = observedRef.current;
+    if (observed && (observed.element !== element || observed.edge !== edge)) {
+      stopObserving();
+    }
     if (!element) {
       return;
     }
-    writeCover(edge, element, measureCover(element));
-  });
-
-  // What no render caused: a font arriving late, content coming from outside, a
-  // rotation.
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return undefined;
+    if (!observedRef.current) {
+      // What no render caused: a font arriving late, content coming from
+      // outside, a rotation.
+      const resizeObserver = new ResizeObserver(() => {
+        writeCover(edge, element, measureCover(element, edge));
+      });
+      resizeObserver.observe(element);
+      observedRef.current = { element, edge, resizeObserver };
     }
-    const resizeObserver = new ResizeObserver(() => {
-      writeCover(edge, element, measureCover(element));
-    });
-    resizeObserver.observe(element);
-    return () => {
-      resizeObserver.disconnect();
-      writeCover(edge, element, null);
-    };
-  }, [edge]);
+    writeCover(edge, element, measureCover(element, edge));
+  });
+  useLayoutEffect(() => stopObserving, []);
+};
+
+const measureCover = (element, edge) => {
+  const { width, height } = element.getBoundingClientRect();
+  return edge === "left" || edge === "right" ? width : height;
 };
 
 const writeCover = (edge, element, size) => {

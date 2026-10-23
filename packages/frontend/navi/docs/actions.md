@@ -492,6 +492,38 @@ stays on screen while it does, is in [list_refresh.md](./list_refresh.md); a
 scope with reruns of its own, and a rerun after another resource writes, are
 [`withParams()`](./resource.md#withparams-a-scope-with-reruns-of-its-own).
 
+A read that is no row of a resource — a count, a summary — follows writes the
+same way, with `dependencies` on the action:
+
+```js
+const SUMMARY = createAction(fetchSummary, {
+  dependencies: [ORDER, { resource: CART, on: ["POST"] }],
+});
+```
+
+After a listed write, its instances that answered, or are still asking, ask
+again; `on` is read as a resource's is
+([resource.md](./resource.md#dependencies-rerun-after-another-resource-writes)).
+
+What the server moves on its own — an email that may bounce, an account being
+linked in another app — no write announces: its reader asks again on a timer.
+
+```js
+const [delivery] = useAsyncData(DELIVERY.GET.bindParams({ id }), {
+  run: true,
+  poll: {
+    every: 3000,
+    until: (delivery) => delivery.status !== "pending",
+    for: 60_000,
+  },
+});
+```
+
+It ticks only while that reader is mounted and the document visible (once at
+once when it shows again), never while a network policy answers reads from the
+store, and each tick revalidates: the answer stays drawn and `loading` stays
+false. `until`, `for` and a failure end it.
+
 `rerunActions(actionSet)` reruns several at once;
 `updateActions({ prerunSet, runSet, rerunSet, resetSet })` settles the four
 kinds of request in one pass — a route change goes through it.

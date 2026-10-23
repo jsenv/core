@@ -142,6 +142,14 @@
  * a copy — `land` and `reorder` as much as `toss` and `leave` — so a place can be
  * asked about rather than taken: refuse, and the board is as it was.
  *
+ * WHY IT WAS REFUSED is said on the element once it is back where it was, in an
+ * error callout — what the person needs to know about a seat that was taken in
+ * the meantime, and what a control says when its action fails. What the outcome
+ * rejected with is read the way an `errorMapping` answer is: an error, a string
+ * or an element is shown; `{ message, target }` is shown on that target;
+ * rejecting with nothing (`return Promise.reject()`) refuses without a word. An
+ * outcome answered by "request_action" is said by its control, not twice.
+ *
  * Starting a document transition is the application's call and not navi's: a
  * `view-transition-name` must be unique per document, so only the application can
  * name what moves.
@@ -269,6 +277,21 @@
  * vibration for a finger, nothing more for a mouse whose cursor has already said
  * it.
  *
+ * WHEN IT IS ALL OVER: `settle`.
+ *
+ *   interactions={{ land: placeSeat, settle: () => setCarrying(false) }}
+ *
+ * `release` is told the instant the hand lets go, before the answer runs; the
+ * carry goes on after that — the copy waits on the answer, comes down or flies
+ * home, and the original stays hidden (`navi-drag-clone-source`) until it is
+ * over. `settle` is when it is over: the copy gone and the original shown again,
+ * or the element at rest where it stays. Its detail is `{ id, outcome, refused }`
+ * — `outcome` as `release` says it, `refused` when the answer said no.
+ *
+ * Told, not asked, like the other moments, and no more an interaction of its
+ * own. A copy taken back in hand on its way home has not settled: that carry
+ * goes on, and its own end is told.
+ *
  * WHEN THE PRESS WAS MADE ELSEWHERE: `--navi-grab`.
  *
  *   triggerNaviCommand(seatElement, "--navi-grab", openEvent);
@@ -299,7 +322,14 @@ import {
   refuseDragTo,
   startDragTo,
 } from "@jsenv/dom";
+import { isValidElement } from "preact";
 
+import {
+  errorIsDisplayed,
+  markErrorAsDisplayedBy,
+  reportErrorIfNobodyDisplaysIt,
+} from "../../action/action_error_report.js";
+import { openCallout } from "../rules/callout/callout.js";
 import { defineInteractionDetector } from "./interaction_registry.js";
 
 const MOVE = "move";
@@ -320,6 +350,8 @@ const RELEASE = "release";
 // The moment that hold is not acquired, on something that would be carried and
 // says no.
 const REFUSE = "refuse";
+// And the moment the carry is over: whatever was carried is at rest again.
+const SETTLE = "settle";
 
 // What makes an element a place something can land, written by the detector itself.
 const REORDERABLE_ATTRIBUTE = "data-reorderable";
@@ -353,12 +385,21 @@ defineInteractionDetector({
     type === LEAVE ||
     type === GRAB ||
     type === RELEASE ||
-    type === REFUSE,
+    type === REFUSE ||
+    type === SETTLE,
   // The five outcomes can be turned down; the moments cannot — a moment is told,
   // and there is nothing in it to refuse.
   refusable: (type) =>
     type === MOVE ||
     type === MOVING ||
+    type === REORDER ||
+    type === LAND ||
+    type === TOSS ||
+    type === LEAVE,
+  // What an outcome rejects with is said here, on the element once it is home
+  // (see sayRefusal).
+  claimsRefusals: (type) =>
+    type === MOVE ||
     type === REORDER ||
     type === LAND ||
     type === TOSS ||
@@ -390,7 +431,11 @@ defineInteractionDetector({
       // they are registered in (see interactions.js).
       if (import.meta.dev && !isDeclared("pan") && !isDeclared("zoom")) {
         const moments = types.filter(
-          (type) => type === GRAB || type === RELEASE || type === REFUSE,
+          (type) =>
+            type === GRAB ||
+            type === RELEASE ||
+            type === REFUSE ||
+            type === SETTLE,
         );
         const them = moments.length === 1 ? "it" : "them";
         console.warn(
@@ -402,6 +447,7 @@ defineInteractionDetector({
     const tellsWhenGrabbed = types.includes(GRAB);
     const tellsWhenReleased = types.includes(RELEASE);
     const tellsWhenRefused = types.includes(REFUSE);
+    const tellsWhenSettled = types.includes(SETTLE);
     // `startDragTo` arbitrates the same conflicts and says so too, and that voice
     // is not heard from here: @jsenv/dom publishes one build with `import.meta.dev`
     // false, so nothing of its dev code exists for whoever consumes navi. What a
@@ -581,6 +627,16 @@ defineInteractionDetector({
             syncCloneWithDropTarget,
           }),
         onLand: (detail) => trigger(LAND, causeEvent, detail),
+        // Over: what an answer refused with is said now that the thing stands
+        // where it was, and the moment is told.
+        onCarryEnd: ({ outcome, refused, error }) => {
+          if (refused) {
+            sayRefusal(element, error);
+          }
+          if (tellsWhenSettled) {
+            trigger(SETTLE, causeEvent, { id: element.id, outcome, refused });
+          }
+        },
         onToss: ({ gestureInfo }) =>
           trigger(TOSS, causeEvent, {
             id: element.id,
@@ -703,4 +759,35 @@ const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
     `interactions: "${LAND}" has nowhere to land — nothing marked ${DROPPABLE_ATTRIBUTE} is inside ${dropContainer ? `the [${DROP_CONTAINER_ATTRIBUTE}]` : `the element's parent`}, which is where the places are looked for.${consequence} Mark them, and when they are not siblings of this element put ${DROP_CONTAINER_ATTRIBUTE} on an ancestor of both.`,
     container,
   );
+};
+
+// What a refused outcome rejected with, said on the element in an error callout
+// the way a control says its action failed, and read the way an errorMapping
+// answer is (see "WHY IT WAS REFUSED" above). An error something already shows —
+// the control an outcome asked for its action — is not said a second time.
+const sayRefusal = (element, error) => {
+  if (error === undefined || error === null) {
+    return;
+  }
+  if (errorIsDisplayed(error)) {
+    return;
+  }
+  let message = error;
+  let anchorElement = element;
+  if (
+    typeof error === "object" &&
+    !Error.isError(error) &&
+    !isValidElement(error)
+  ) {
+    message = error.message;
+    anchorElement = error.target || element;
+  }
+  if (message === undefined || !anchorElement.isConnected) {
+    // Nothing to show, or nowhere to show it: the error goes where every error
+    // nothing displays goes.
+    reportErrorIfNobodyDisplaysIt(error);
+    return;
+  }
+  openCallout(message, { anchorElement, status: "error" });
+  markErrorAsDisplayedBy(error, "interactions: refused outcome");
 };

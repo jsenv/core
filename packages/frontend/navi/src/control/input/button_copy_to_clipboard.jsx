@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "preact/hooks";
-
 import { Box } from "../../box/box.jsx";
 import { buttonI18n } from "../../text/navi_i18n.js";
 import { Icon } from "../../text/text.jsx";
 import { Button } from "./button.jsx";
+import { useCopyToClipboard } from "./use_copy_to_clipboard.js";
 
 const css = /* css */ `
   @layer navi {
@@ -34,21 +33,24 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * A square icon button copying its `children` (a text), with a bubble saying
+ * it did. Its mechanics are `useCopyToClipboard`, for a copy drawn any other
+ * way.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   children: string,
+ *   "aria-label"?: string,
+ *   [key: string]: any,
+ * }>}
+ */
 export const ButtonCopyToClipboard = ({
   children,
   "aria-label": ariaLabel = buttonI18n("button.copy"),
   ...props
 }) => {
   import.meta.css = css;
-  const [copied, setCopied] = useState(false);
-  const renderedRef = useRef();
-
-  useEffect(() => {
-    renderedRef.current = true;
-    return () => {
-      renderedRef.current = false;
-    };
-  }, []);
+  const [copied, copy] = useCopyToClipboard(children);
 
   return (
     <Box className="navi_clipboard_container" {...props}>
@@ -67,17 +69,7 @@ export const ButtonCopyToClipboard = ({
         square
         expandY
         borderRadius="xs"
-        action={async () => {
-          await addToClipboard(children);
-          setTimeout(() => {
-            if (!renderedRef.current) {
-              // do not call setState on unmounted component
-              return;
-            }
-            setCopied(false);
-          }, 1500);
-          setCopied(true);
-        }}
+        action={copy}
       >
         {copied ? (
           <Icon color="green">
@@ -93,14 +85,6 @@ export const ButtonCopyToClipboard = ({
   );
 };
 
-const addToClipboard = async (text) => {
-  const type = "text/plain";
-  const clipboardItemData = {
-    [type]: text,
-  };
-  const clipboardItem = new ClipboardItem(clipboardItemData);
-  await window.navigator.clipboard.write([clipboardItem]);
-};
 const CopyIcon = () => (
   <svg viewBox="0 0 16 16">
     <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path>

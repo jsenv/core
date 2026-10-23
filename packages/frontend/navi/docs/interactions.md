@@ -210,6 +210,29 @@ reads `event.target` when it has to tell them apart — on a `click`; any other
 interaction's target is the box itself, and what was pressed is in its
 `detail.event` (see [Which interaction asked](#which-interaction-asked)).
 
+A box answering a press on its **blank space** only — a row that folds, a card
+that opens on any press but its buttons', a viewer that closes on its
+background — asks `isPressOnControl(event, box)`: true when the press was aimed
+at a control strictly inside the box (a field, a button, a link, a navi
+control, an element claiming its own interactions). Bounded by the box, so the
+list or the dialog around it is never taken for what was pressed:
+
+```jsx
+<Box
+  interactions={{
+    click: (event) => {
+      if (isPressOnControl(event, event.currentTarget)) {
+        return;
+      }
+      toggleFolded();
+    },
+  }}
+/>
+```
+
+For an interaction navi dispatches, the press is its `detail.event` and the box
+is the event's `target`: `isPressOnControl(event.detail.event, event.target)`.
+
 **The gate takes every declared interaction for a write.** Letting a read through
 a read-only or busy control is navi's to grant inside its own controls, and
 `interactions` cannot ask for it: a callback on a read-only control is refused, a
@@ -459,7 +482,9 @@ The registry holds no detector of its own: navi's swipes, holds and shortcuts go
 through the same door an application uses, `defineInteractionDetector`. Its
 JSDoc is the contract — `setup` once per element and its teardown, what
 `trigger` returns (`null` when nothing ran, else a promise that rejects when
-the effect failed), `implies`, `refusable`, `disputesPress` — and
+the effect failed — what a callback rejects with is reported unless the
+detector says it itself, `claimsRefusals`), `implies`, `refusable`,
+`disputesPress` — and
 `38_interactions_demo.html` registers a `triple_click` from the page. A detector
 claims a **set** of names rather than one, because interactions sharing an input
 have to be arbitrated together: a swipe, a hold and a click dispute the same

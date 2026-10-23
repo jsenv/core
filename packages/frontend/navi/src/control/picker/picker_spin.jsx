@@ -53,6 +53,7 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { Icon } from "@jsenv/navi/src/text/text.jsx";
 import { constraintI18n, spinI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
+import { todaySignal } from "@jsenv/navi/src/utils/clock.js";
 import { triggerNaviCommand } from "../commands.js";
 import { findControlHost } from "../control_dom.js";
 import {
@@ -1651,9 +1652,10 @@ const renderDayDefault = (day, { lang, format, maxLines } = {}) => (
 // The day one starts on when nobody said which: today, unless a min/max puts
 // today out of reach — a control opening on a day it refuses to keep would be
 // invalid before it has been touched. A step counts from `min`, so the day
-// landed on is one the chevrons can actually reach.
+// landed on is one the chevrons can actually reach. Read in DaySpin's render,
+// so the day it falls back on moves at midnight.
 const firstDayAllowed = ({ min, max, step }) => {
-  const today = todayString();
+  const today = todaySignal.value;
   if (min && today < min) {
     return min;
   }
@@ -1683,8 +1685,6 @@ const dayToDate = (day) => new Date(`${day}T00:00:00`);
 
 const dateToDay = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
-const todayString = () => dateToDay(new Date());
 
 const addDays = (day, count) => {
   const date = dayToDate(day);

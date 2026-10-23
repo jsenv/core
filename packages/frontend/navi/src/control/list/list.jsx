@@ -1182,6 +1182,7 @@ const ListUI = (props) => {
     virtualItemSizeSignal,
     renderWindow,
     scrollToItem,
+    holdAt,
     pendingScrollRef,
     captureAnchor,
   } = useListScrollSync({
@@ -1368,19 +1369,24 @@ const ListUI = (props) => {
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
       childPropSet={LIST_TRACK_PROP_SET}
+      // --navi-scroll: a place the list is held at, as `scrolled` says one.
       onnavi_request_scroll={(e) => {
-        if (!Object.hasOwn(e.detail, "id")) {
+        const wanted = resolveScrollRequest(e.detail.to);
+        if (wanted === undefined) {
           console.warn(
-            `navi_request_scroll event is missing the "id" property in its detail.`,
-            e,
+            `--navi-scroll: ${JSON.stringify(e.detail.to)} is not a place in a list. It takes what "scrolled" takes — "start", "end", an index, { id, offset, align } — or an item's id.`,
           );
           return;
         }
-        const { id } = e.detail;
-        const item = getItemById(id);
+        holdAt(wanted, { smooth: e.detail.smooth });
+      }}
+      // The item the keyboard moved to, brought into view by the nearest edge:
+      // nothing is held, the keyboard keeps going.
+      onnavi_request_reveal={(e) => {
+        const item = getItemById(e.detail.id);
         scrollToItem(item, {
           event: e,
-          reason: "navi_request_scroll",
+          reason: "navi_request_reveal",
         });
       }}
     >
@@ -1619,6 +1625,8 @@ const useListScrollSync = ({
       defaultScrolled,
       way: null,
       arrived: false,
+      // Whether the hold's writes glide (--navi-scroll:smooth).
+      smooth: false,
     };
   } else {
     const place = startPlaceRef.current;
@@ -1627,6 +1635,7 @@ const useListScrollSync = ({
       place.defaultScrolled = defaultScrolled;
       place.wanted = scrolled ?? defaultScrolled;
       place.userTookOver = false;
+      place.smooth = false;
     } else if (
       (scrolled === undefined || scrolled === null) &&
       !compareTwoJsValues(place.defaultScrolled, defaultScrolled)
@@ -1638,9 +1647,26 @@ const useListScrollSync = ({
         // says nothing about whose the next scrolls are.
         place.way = null;
         place.arrived = false;
+        place.smooth = false;
       }
     }
   }
+  // A press sending the list somewhere (--navi-scroll) arms the hold a
+  // `scrolled` that changes arms: the place is measured and kept until the user
+  // takes over, on an item not fetched yet too, and the same place can be
+  // asked for again once the list was moved away from it. Rendered for, since
+  // the hold frames its window during the render (holdWindow) and places the
+  // list in a layout effect (placeWhereHeld).
+  const [, setHoldRequestCount] = useState(0);
+  const holdAt = (wanted, { smooth = false } = {}) => {
+    const place = startPlaceRef.current;
+    place.wanted = wanted;
+    place.userTookOver = false;
+    place.way = null;
+    place.arrived = false;
+    place.smooth = smooth;
+    setHoldRequestCount((count) => count + 1);
+  };
   const scrolledWanted = startPlaceRef.current.wanted;
   listItems.scrolled = scrolledWanted;
   // The items drawn, [start, end) among the list's own. A ref as well as a
@@ -2503,6 +2529,18 @@ const useListScrollSync = ({
       place.arrived = true;
       return;
     }
+    // Asked to glide, the list glides whatever scroll-behavior says — and
+    // never for someone who asked for less motion.
+    if (
+      place.smooth &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      scrollerEl.scrollTo({
+        [horizontal ? "left" : "top"]: to,
+        behavior: "smooth",
+      });
+      return;
+    }
     if (horizontal) {
       scrollerEl.scrollLeft = to;
     } else {
@@ -3359,6 +3397,7 @@ const useListScrollSync = ({
     renderWindow: windowDrawn,
     pendingScrollRef,
     scrollToItem,
+    holdAt,
     captureAnchor,
   };
 };
@@ -3939,6 +3978,25 @@ const resolveScrollInset = (value, viewportSize) => {
 // showing the same collection — and a list acting on an item that belongs to
 // another one is a spectacular kind of wrong (it scrolls to hold still
 // something it is not even showing).
+// Where `--navi-scroll` sends a list, read the way `scrolled` reads it, plus a
+// bare string naming an item by its id — what a command's value most often
+// is. "start" is held on the first item: the hold at "start" is the absence of
+// one, and a press asking for the start must go there.
+const resolveScrollRequest = (to) => {
+  if (to === "start") {
+    return 0;
+  }
+  if (to === "end" || typeof to === "number") {
+    return to;
+  }
+  if (typeof to === "string") {
+    return { id: to };
+  }
+  if (to && typeof to === "object" && to.id !== undefined) {
+    return to;
+  }
+  return undefined;
+};
 const findItemElement = (listEl, id) => {
   return listEl.querySelector(`[navi-list-item-real="${CSS.escape(id)}"]`);
 };
@@ -7625,6 +7683,14 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   how many items there are and how tall one is, and lets go the moment the
  *   user reaches for the list, or anything else scrolls it (a script, find in
  *   page, the status bar tap on iOS).
+ *
+ *   A press sends the list to a place the same way, held the same way:
+ *   `<Button command="--navi-scroll" commandFor="feed" value={{ id }}>` (or
+ *   `triggerNaviCommand(el, "--navi-scroll", event, { value })`), the value
+ *   being anything `scrolled` takes, or an item's id. The same place can be
+ *   asked for again after the user moved away from it. `--navi-scroll:smooth`
+ *   glides there — instantly for someone who asked for less motion — and
+ *   every other placement follows the scroller's `scroll-behavior`.
  * @param {(scrolled: {id: string, index: number, offset: number, visibleCount: number}) => void} [props.onScrolledChange]
  *   Where the list is, as the user scrolls: the item at the top of the view and
  *   how far below the place an item lands on its own (see `defaultScrolled`) it

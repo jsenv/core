@@ -175,9 +175,11 @@ const css = /* css */ `
  * `pressOutside`, `escapeEffect`, `closeOnFocusOut`,
  * `scrollCapture`, `focusCapture`, `popupBackgroundColor`,
  * `popupBorderRadius`, `animation`. See picker.jsx for what each one says.
- * An `aria-*` attribute describes the button and reaches the main half —
- * `aria-pressed` for a split button whose main half toggles a mode;
- * `aria-hidden` excepted, which hides the whole control. How the words are
+ * An `aria-*` attribute describes the button and reaches the main half
+ * (`aria-describedby`, `aria-label`), `aria-hidden` excepted, which hides the
+ * whole control. A mode one toggles is a checkbox drawn as a button
+ * (`<Input type="checkbox" variant="button">`), not a main half wearing
+ * `aria-pressed`. How the words are
  * written (`size`, `bold`, `lineHeight`, `noWrap`…) reaches both halves, and so
  * does vertical padding (`paddingY`, `paddingTop`, `paddingBottom`); the rest
  * of the padding is the main half's — the chevron half keeps its own, which

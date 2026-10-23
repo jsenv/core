@@ -280,7 +280,7 @@ const PickerNative = (props) => {
             e.preventDefault();
           },
           allowed: () => {
-            showNativePicker(pickerInput, e);
+            showNativePicker(findNativePicker(pickerEl), e);
           },
         });
       }}
@@ -298,8 +298,31 @@ const PickerNative = (props) => {
                 // nothing to do, color picker whole surface is opening the picker
               } else {
                 // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
-                showNativePicker(pickerInput, e);
+                showNativePicker(findNativePicker(pickerEl), e);
               }
+            },
+          };
+        },
+        // A file picker's input holds the File and opens nothing by itself
+        // (see PickerFile in picker_types.jsx): Space and Enter open the
+        // chooser, as they would open a file input.
+        keyDown: (e) => {
+          if (e.key !== " " && e.key !== "Enter") {
+            return null;
+          }
+          const pickerEl = props.ref.current;
+          const chooser = findFileChooser(pickerEl);
+          if (!chooser) {
+            return null;
+          }
+          return {
+            name: "key to show file chooser",
+            prevented: () => {
+              e.preventDefault();
+            },
+            allowed: () => {
+              e.preventDefault();
+              showNativePicker(chooser, e);
             },
           };
         },
@@ -314,6 +337,10 @@ const PickerCustom = (props) => {
     mode: modeProp,
     open,
     defaultOpen,
+    // Where the app holds the open state, the way a Dialog's `signal`/`value`
+    // do: `signal` and `value` are already the picker's answer. See the JSDoc.
+    openSignal,
+    openValue,
     // What Escape means for this picker. "cancel" (the default) puts back the
     // value the picker had at open and, for a dialog with an explicit id, goes
     // back in history — so everything written to the url while it was open
@@ -383,6 +410,8 @@ const PickerCustom = (props) => {
   // otherwise leak through PickerContentInsidePopup's own ...rest).
   delete pickerProps.open;
   delete pickerProps.defaultOpen;
+  delete pickerProps.openSignal;
+  delete pickerProps.openValue;
   delete pickerProps.escapeEffect;
   delete pickerProps.onConfirm;
   delete pickerProps.canSendWhileUnchanged;
@@ -444,16 +473,21 @@ const PickerCustom = (props) => {
     // the page (or a reload) finds it under a key it does not have.
     const pickerNavType =
       mode === "dialog" && hasExplicitId ? "push" : "replace";
-    const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
-      type: pickerNavType,
-      defaultValue: open || defaultOpen ? "on" : undefined,
-      // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
-      onLeave: () => {
-        requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
-          isCancel: true,
-        });
+    // An `openSignal` holds the open state instead, history included (see
+    // writeOpenedInSignal): the nav state is then asked for nothing.
+    const [expanded, enterExpanded, leaveExpanded] = useNavState(
+      openSignal ? undefined : popupId,
+      {
+        type: pickerNavType,
+        defaultValue: open || defaultOpen ? "on" : undefined,
+        // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
+        onLeave: () => {
+          requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
+            isCancel: true,
+          });
+        },
       },
-    });
+    );
     // openController centralizes open/close decision-making (validation,
     // focus and value bookkeeping) for the picker. The returned
     // { onRequestClose, onClose } pair is the picker's reaction to close
@@ -660,13 +694,21 @@ const PickerCustom = (props) => {
     const requestOpen = openController.open;
     const requestClose = openController.requestClose;
     // Same skip-if-already-matching / open-or-requestClose control flow as
-    // useOpenControllerByProps (see open_controller.js) — the picker's own
-    // "open" comes from history state (expanded) rather than a literal
-    // `open` prop, so it adapts requestOpen/requestClose to the shape that
-    // hook expects instead of driving openController directly.
-    useOpenPropsEffectOnOpenController(openController, {
-      open: Boolean(expanded),
-    });
+    // useOpenControllerByProps (see open_controller.js). The picker's own
+    // "open" comes from history state (expanded), or from the app's
+    // `openSignal`, which the hook then also writes as the popup opens and
+    // closes — exactly what it does for a Dialog's `signal`.
+    const opened = useOpenPropsEffectOnOpenController(
+      openController,
+      openSignal
+        ? {
+            signal: openSignal,
+            value: openValue,
+            ...(Object.hasOwn(props, "open") ? { open } : {}),
+          }
+        : { open: Boolean(expanded) },
+      "Picker",
+    );
 
     const requestInteraction = (options) => {
       dispatchRequestInteraction(ref.current, options);
@@ -682,7 +724,7 @@ const PickerCustom = (props) => {
     Object.assign(pickerProps, {
       "requestValue":
         valueInPopup && props.mount === undefined ? requestValue : undefined,
-      "aria-expanded": Boolean(expanded),
+      "aria-expanded": Boolean(opened),
       "onActionStart": (e) => {
         onActionStart?.(e);
         // requestClose(e);
@@ -1587,6 +1629,14 @@ const PickerCalloutPopup = ({
 // keyboard stays where it was — a spin's middle, the button that sent the
 // command — so one keeps going with the keys once the calendar closes, rather
 // than on an input drawn behind (see the headless variant in picker.jsx).
+// What the browser opens for a picker without a popup of navi's: its input,
+// or — for a file, held as a JS value — the chooser beside it.
+const findNativePicker = (pickerEl) => {
+  return findFileChooser(pickerEl) || getPickerInput(pickerEl);
+};
+const findFileChooser = (pickerEl) => {
+  return pickerEl.querySelector(".navi_picker_file_chooser");
+};
 const showNativePicker = (pickerInput, event) => {
   if (findEvent(event, isTouchDrivenEvent)) {
     moveFocusTo(pickerInput, { focusVisible: false });

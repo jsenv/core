@@ -736,6 +736,21 @@ route's search-param `stateSignal` as the signal, that is how
 [a row of cards](./popup_lift.md#a-row-of-cards-one-popup-that-walks) survives
 leaving the page: the address names the card, and the sheet reopens on it.
 
+A `Picker` says the same with `openSignal` and `openValue`, its own `signal`
+and `value` being its answer:
+
+```jsx
+<Picker openSignal={editedIdSignal} openValue={item.id} action={save}>
+  …
+</Picker>
+```
+
+An item edited in place under `?edit=<id>` then reopens from a reload or a
+pasted link, Back closes it when the signal's history pushes, and the route
+actions reading `editedIdSignal` load the fresh record and what the sheet lists
+while it is open ([below](#a-popup-that-loads-data)). The picker's `onOpen` and
+`onClose` are left to what they are for: nothing in them writes the address.
+
 ### `navState` — the history entry holds it
 
 ```jsx
@@ -748,7 +763,7 @@ opening an entry of its own: the back button closes the popup rather than
 leaving the screen, and a cancel goes back with the entry
 ([above](#escapeeffectclose-and-why-it-is-a-last-resort)). A `Picker` needs none
 of this, only an `id`: its open state is nav state under that id, pushed in
-dialog mode. Without an `id` the key names one mount — the page left with the
+dialog mode (unless an `openSignal` holds it, see above). Without an `id` the key names one mount — the page left with the
 picker open and come back to is a new mount, and the state stays in the entry
 with nothing to read it (navi warns). A picker whose popup leads somewhere, a
 link inside it, has an `id`.

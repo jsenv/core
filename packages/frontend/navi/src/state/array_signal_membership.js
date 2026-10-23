@@ -3,6 +3,24 @@ import { useMemo } from "preact/hooks";
 
 import { addIntoArray, removeFromArray } from "../utils/array_add_remove.js";
 
+/**
+ * Whether `id` is in the array a signal holds, and the two writes that put it
+ * in or take it out: `[isMember, add, remove]`. For a row that adds itself to
+ * a selection held elsewhere (a "favourite" star over a list of ids). The
+ * component re-renders when its own membership changes, not when other ids
+ * come and go.
+ *
+ * Where the membership is a checkbox, a `CheckboxGroup` bound to the array's
+ * signal already adds and removes each checkbox's `value`
+ * (docs/control_value.md).
+ *
+ * @param {import("@preact/signals").Signal<any[]>} arraySignal
+ * @param {any} id
+ * @returns {[boolean, () => any[], () => any[]]}
+ *
+ * @example
+ * const [starred, star, unstar] = useArraySignalMembership(starredIdsSignal, place.id);
+ */
 export const useArraySignalMembership = (...args) => {
   if (args.length < 2) {
     throw new Error(

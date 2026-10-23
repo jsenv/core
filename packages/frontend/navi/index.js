@@ -26,6 +26,9 @@ export { findEvent } from "@jsenv/dom";
 // …and how code registers an interaction navi does not know: the door navi's own
 // swipes, holds and shortcuts come through.
 export { defineInteractionDetector } from "./src/control/interaction/interactions.js";
+// …and whether a press a box answers was aimed at a control inside it: a
+// row folding on its blank, a card opening on any press but its buttons'.
+export { isPressOnControl } from "./src/control/control_dom.js";
 export { useActionStatus } from "./src/action/use_action_status.js";
 // Whether a request may go out at all — one declaration the resource actions
 // and the controls bound to them read (see docs/network_policy.md).
@@ -235,6 +238,7 @@ export {
   getNowHoursRoundedToStep,
   isToday,
 } from "./src/control/picker/time_helpers.js";
+export { todaySignal } from "./src/utils/clock.js";
 // --- List start ---
 export { applySearch } from "./src/control/list/apply_search.js";
 export { createSearch } from "./src/control/list/create_search.js";
@@ -244,7 +248,10 @@ export {
   ListItemGroup,
   ListItems,
 } from "./src/control/list/list.jsx";
-export { SelectableInput } from "./src/control/list/list_selectable.jsx";
+export {
+  SelectableInput,
+  useListItemState,
+} from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
 export { Wheel, WheelGroup, WheelItem } from "./src/control/wheel/wheel.jsx";
@@ -279,6 +286,7 @@ export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcut
 // Text
 export { contrastColor } from "@jsenv/dom";
 export { ButtonCopyToClipboard } from "./src/control/input/button_copy_to_clipboard.jsx";
+export { useCopyToClipboard } from "./src/control/input/use_copy_to_clipboard.js";
 export { Address } from "./src/text/address.jsx";
 export { Badge } from "./src/text/badge.jsx";
 export { BadgeCount } from "./src/text/badge_count.jsx";
@@ -296,6 +304,7 @@ export {
   formatDayRelative,
   formatDuration,
   formatHourDuration,
+  formatList,
   formatMinuteDuration,
   formatMonth,
   formatNumber,
@@ -305,6 +314,7 @@ export {
   formatTimeRange,
   formatTimeRelative,
   interpolateText,
+  pluralCategory,
 } from "@jsenv/humanize";
 export { Icon } from "./src/text/text.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";

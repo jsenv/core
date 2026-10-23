@@ -92,6 +92,25 @@ the page. Being an element, the message:
 Reference: `src/control/demos/form_error_mapping_jsx/demo.html`, a mapping
 answering with a different component per error kind.
 
+### Someone acted, and no control asked — a gesture, an autosave
+
+A card dropped on a place, a row swiped away, a draft saved as it is typed: the
+person did something and the write runs from a callback, with no control's
+action to draw its failure. The rule does not change — the answer belongs where
+they acted — and what holds the callback says it there:
+
+- **a drag outcome** (`land`, `reorder`, `toss`, `leave`, `move`) is said on the
+  element once it is home, in an error callout, and what the callback rejected
+  with is read like an `errorMapping` answer — rejecting with nothing refuses
+  without a word ([drag_interactions.md](./drag_interactions.md#carrying-something-move-reorder-land-toss-leave));
+- **any other interaction's callback** that rejects is reported like every
+  error nothing displays (below): a swipe whose write failed comes back in
+  place, and the error is not lost with it. Reject with nothing for a refusal
+  that has nothing to say;
+- **a write nobody's gesture is waiting on** (an autosave in an effect) has no
+  place to answer at: the screen reads the action that ran it
+  (`useAsyncData(action, { error: true })`) and says it where the draft is.
+
 ### A screen's data failed — a route action
 
 Nobody clicked; the page simply cannot be drawn. It is the page, or a piece of

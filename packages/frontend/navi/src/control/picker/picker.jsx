@@ -1450,7 +1450,12 @@ const PickerButton = (props) => {
               "on its façade" — read by this picker's own press handling and by
               the command resolution in control_dom.js. */}
           <ContentTag className="navi_picker_content" data-picker-content="">
-            {children}
+            {/* What the popup draws reads the value held right now too, the
+                draft included: a row saying it is the one chosen, a preview,
+                a Picker.Clear in the sheet. */}
+            <PickerContext.Provider value={pickerContext}>
+              {children}
+            </PickerContext.Provider>
           </ContentTag>
         </ControlFacadeChildrenWrapper>
       </Box>
@@ -2055,6 +2060,10 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   onConfirm?: (confirmEvent: CustomEvent) => void,
  *   onOpen?: (openEvent: CustomEvent) => void,
  *   onClose?: (closeEvent: CustomEvent) => void,
+ *   openSignal?: import("@preact/signals").Signal<any>,
+ *   openValue?: any,
+ *   accept?: string,
+ *   multiple?: boolean,
  *   maxLines?: number,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
@@ -2401,6 +2410,27 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   value read in here is the one the picker ends up holding, and before the
  *   popup leaves the history entry it pushed, so a route param cleared in here
  *   is part of the url a close that keeps carries back.
+ * @param {import("@preact/signals").Signal<any>} [openSignal] Where the app
+ *   holds whether the popup is open, as a Dialog's `signal` does (a Picker's
+ *   own `signal` is its value): the popup opens while the signal holds
+ *   `openValue` (or anything but `undefined`/`null`/`false` without one) —
+ *   from the address, a reload, Back — and the picker writes it as the popup
+ *   opens and closes, a refused close included. A route's search param bound
+ *   to it reopens an item edited in place (`?edit=<id>`), and route actions
+ *   read it to load what the sheet needs while it is open
+ *   (docs/popup_open.md, "When the app holds the open state").
+ * @param {any} [openValue] What `openSignal` holds while this picker's popup
+ *   is open: several pickers then share one signal saying which of them is
+ *   (`<Picker openSignal={editedIdSignal} openValue={item.id}>` on every row).
+ *   Closing writes `undefined`.
+ * @param {string} [accept] `type="file"`: which files the chooser offers
+ *   (`"image/*"`). A file picker holds the File chosen — an array of Files with
+ *   `multiple` — and its `action` receives it as the choice is made: the
+ *   trigger busy while it runs, the error said on it, the file it held before
+ *   put back if it fails. A chooser closed without a choice sends nothing.
+ *   Inside a picker's popup the File is what that picker holds too, sent as
+ *   its popup closes.
+ * @param {boolean} [multiple] `type="file"`: several files, held as an array.
  * @param {number|string} [rightSlotIconSize="inherit"] How big what sits in the
  *   right slot is drawn — the chevron, a `rightSlotIcon`, or the clear button's
  *   cross. "inherit" takes the picker's own font size.

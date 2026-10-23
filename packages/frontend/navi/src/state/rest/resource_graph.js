@@ -1,6 +1,9 @@
 import { computed, effect, signal, untracked } from "@preact/signals";
 
-import { createAction } from "../../action/actions.js";
+import {
+  createAction,
+  setActionDependenciesRegistrar,
+} from "../../action/actions.js";
 import {
   NetworkPolicyError,
   peekNetworkPolicy,
@@ -31,6 +34,11 @@ import { createResourcePersistence } from "./resource_persist.js";
 import { createRangeReader } from "./resource_range_reader.js";
 
 const resourceLifecycleManager = createResourceLifecycleManager();
+// A plain action following writes (createAction's `dependencies`) is followed
+// by the same manager the resources are.
+setActionDependenciesRegistrar(
+  resourceLifecycleManager.registerActionDependencies,
+);
 
 /*
  * REST resources backed by signal stores: `resource()` creates one, and the
@@ -87,6 +95,7 @@ const RESOURCE_OPTIONS = new Set([
   "rerunOn",
   "dependencies",
   "persist",
+  "writes",
   "GET",
   "GET_MANY",
   "GET_RANGE",
@@ -126,13 +135,24 @@ const RESOURCE_OPTIONS = new Set([
  * verb's callback.
  *
  * @param {string} name - resource name, used in action names and error messages
- * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
  * @param {Array<Object | { resource: Object, on: string[] }>} [restCallbacks.dependencies] -
  *   resources whose writes rerun this one's reads: one listed bare counts every
  *   write, `{ resource, on: ["PATCH_MANY", "DELETE"] }` only the callbacks it
- *   names (`PATCH` is not `PATCH_MANY`)
+ *   names (`PATCH` is not `PATCH_MANY`), a write named in its `writes`
+ *   included
+ * @param {Record<string, { verb: "POST" | "PUT" | "PATCH" | "DELETE", callback: Function, rerunOn?: { GET?: boolean, GET_MANY?: boolean, GET_RANGE?: boolean } }>} [restCallbacks.writes] -
+ *   the writes on an item that are not its sub-objects — cancel, archive, mark
+ *   as seen — one action each, exposed under its name (`ORDER.cancel`) beside
+ *   the verbs. Each answers as its `verb` does (a `PATCH` returns the item and
+ *   it is upserted, a `DELETE` its id and it is dropped), is held by the network
+ *   policy as that verb, and is a write of its own for a dependent:
+ *   `{ resource: ORDER, on: ["cancel"] }`. Its `rerunOn` says which reads of
+ *   this resource it reruns (`{ GET_RANGE: true }`); a read it leaves out
+ *   follows `rerunOn` for its verb. A name a verb takes, or one the resource
+ *   already exposes (`withParams`, `store`…), throws.
  * @param {{ signal: import("@preact/signals").Signal, when?: () => boolean }} [restCallbacks.persist] -
  *   mirrors the rows `GET` lands with into `signal` — a `stateSignal` with
  *   `persists: true` and `type: "object"` keeps them across a reload, whose
@@ -156,6 +176,16 @@ const RESOURCE_OPTIONS = new Set([
  *   POST: (user) => fetchJson(`/users`, { method: "POST", body: user }),
  *   DELETE: ({ id }) => fetchJson(`/users/${id}`, { method: "DELETE" }),
  * });
+ *
+ * @example
+ * const ORDER = resource("order", {
+ *   GET,
+ *   writes: {
+ *     cancel: { verb: "PATCH", callback: ({ id }) => post(`/orders/${id}/cancel`) },
+ *     archive: { verb: "PATCH", callback: archiveOrder, rerunOn: { GET_RANGE: true } },
+ *   },
+ * });
+ * <Button action={ORDER.cancel.bindParams({ id })}>Cancel</Button>
  */
 export const resource = (name, restCallbacks = {}) => {
   const {
@@ -165,6 +195,7 @@ export const resource = (name, restCallbacks = {}) => {
     rerunOn,
     dependencies,
     persist,
+    writes,
 
     GET,
     GET_MANY,
@@ -329,6 +360,7 @@ export const resource = (name, restCallbacks = {}) => {
     paramScope: getParamScope(undefined),
     rerunOn: resolveRerunOn(rerunOn),
     dependencies,
+    writes,
   });
 };
 
@@ -345,6 +377,9 @@ const createResource = (
     paramScope,
     rerunOn,
     dependencies,
+    // The writes named in resource()'s `writes`: a root resource and its
+    // withParams() scopes have them, a relation does not.
+    writes,
     // Set on a scoped child: the resource owning each of its items, which
     // live in one store per owner (`store` is the owner's).
     ownerName,
@@ -484,6 +519,7 @@ const createResource = (
       paramScope: resolvedParamScope,
       rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
+      writes,
       ownerName,
       getChildStore,
       ownerDependency,
@@ -1440,6 +1476,30 @@ const createResource = (
     resourceLifecycleManager.registerAction(stateFacade, restAction);
   }
 
+  // expose one action per write named in `writes`
+  if (writes) {
+    for (const [writeName, write] of Object.entries(writes)) {
+      assertWriteCanBeNamed(name, writeName, write, stateFacade);
+      const { verb, callback, rerunOn: writeRerunOn } = write;
+      let writeAction = createRestAction(
+        verb,
+        applyNetworkPolicy(callback, { verb, isMany: false }),
+        {
+          isMany: false,
+          onActionComplete,
+          paramScope,
+          writeName,
+          writeRerunOn,
+        },
+      );
+      if (params) {
+        writeAction = writeAction.bindParams(params);
+      }
+      stateFacade[writeName] = writeAction;
+      resourceLifecycleManager.registerAction(stateFacade, writeAction);
+    }
+  }
+
   return stateFacade;
 };
 
@@ -1456,12 +1516,14 @@ const createRestActionFactoryForRoot = (
   const createActionForRoot = (
     verb,
     restCallback,
-    { isMany, onActionComplete, paramScope },
+    { isMany, onActionComplete, paramScope, writeName, writeRerunOn },
   ) => {
     if (!isMany) {
       return createActionAffectingOneItem(verb, restCallback, {
         onActionComplete,
         paramScope,
+        writeName,
+        writeRerunOn,
       });
     }
     return createActionAffectingManyItems(verb, restCallback, {
@@ -1472,8 +1534,10 @@ const createRestActionFactoryForRoot = (
   const createActionAffectingOneItem = (
     verb,
     callback,
-    { onActionComplete, paramScope },
+    { onActionComplete, paramScope, writeName, writeRerunOn },
   ) => {
+    // A write named in `writes` answers as its verb does, under its own name.
+    const actionName = writeName ? `${name}.${writeName}` : `${name}.${verb}`;
     const applyResultToValue =
       verb === "DELETE"
         ? (itemIdOrItemProps) => store.drop(itemIdOrItemProps)
@@ -1486,12 +1550,14 @@ const createRestActionFactoryForRoot = (
             return item[idKey];
           };
     const throwInvalidResult = createInvalidResultThrower(
-      `${name}.${verb}`,
+      actionName,
       declarationSite,
     );
     const action = createAction(callback, {
-      name: `${name}.${verb}`,
-      meta: { verb, isMany: false, paramScope },
+      name: actionName,
+      meta: writeName
+        ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
+        : { verb, isMany: false, paramScope },
       resultToValue: (result, action) => {
         if (verb === "DELETE") {
           if (!isProps(result) && !primitiveCanBeId(result)) {
@@ -1656,6 +1722,66 @@ const applyNetworkPolicy = (
     }
     throw new NetworkPolicyError(policy.reason);
   };
+};
+
+// A write named in `writes` sits on the facade beside the verbs: a name a verb
+// takes, or one the facade already holds, would hide what is there. What it
+// declares is checked here too, since nothing would ever say a write that
+// cannot run or a rerun that cannot fire is wrong.
+const NAMED_WRITE_VERBS = ["POST", "PUT", "PATCH", "DELETE"];
+const VERB_KEYS = [
+  "GET",
+  "GET_MANY",
+  "GET_RANGE",
+  "POST",
+  "POST_MANY",
+  "PUT",
+  "PUT_MANY",
+  "PATCH",
+  "PATCH_MANY",
+  "DELETE",
+  "DELETE_MANY",
+];
+const WRITE_RERUN_READS = ["GET", "GET_MANY", "GET_RANGE"];
+const assertWriteCanBeNamed = (name, writeName, write, stateFacade) => {
+  const where = `resource(${name}) writes.${writeName}`;
+  if (VERB_KEYS.includes(writeName.toUpperCase())) {
+    throw new Error(
+      `${where}: "${writeName}" is a verb's name — a write named in "writes" takes a name of its own (cancel, archive…)`,
+    );
+  }
+  if (Object.hasOwn(stateFacade, writeName)) {
+    throw new Error(
+      `${where}: the resource already exposes "${writeName}" — pick another name`,
+    );
+  }
+  if (!write || typeof write !== "object") {
+    throw new Error(`${where}: expects { verb, callback }, received ${write}`);
+  }
+  const { verb, callback, rerunOn } = write;
+  if (!NAMED_WRITE_VERBS.includes(verb)) {
+    throw new Error(
+      `${where}: "verb" says how its answer is applied, one of ${NAMED_WRITE_VERBS.join(", ")} — received ${verb}`,
+    );
+  }
+  if (typeof callback !== "function") {
+    throw new Error(`${where}: "callback" must be a function`);
+  }
+  if (rerunOn === undefined) {
+    return;
+  }
+  for (const read of Object.keys(rerunOn)) {
+    if (!WRITE_RERUN_READS.includes(read)) {
+      throw new Error(
+        `${where}: rerunOn.${read} — a write reruns GET, GET_MANY or GET_RANGE`,
+      );
+    }
+    if (typeof rerunOn[read] !== "boolean") {
+      throw new Error(
+        `${where}: rerunOn.${read} is true or false — the write says whether it reruns that read`,
+      );
+    }
+  }
 };
 
 // WeakMap<action, itemId> — the row each GET action last completed with. A

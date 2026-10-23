@@ -352,6 +352,24 @@ Choose by what the box asks:
   value) takes its own `value`, or none for `"on"`. Unchecked carries nothing,
   so the group gathers only the checked ones into an array.
 
+A button that stays pressed — a mode ("Edit" / "Done"), show/hide, a setting —
+is a checkbox too, drawn as a button: `<Input type="checkbox" variant="button"
+boolean signal={editingSignal}>`, its children its words and its name. A
+`<Button aria-pressed>` whose press writes the signal back is the binding done
+by hand: the state it shows is the app's to keep in step, where the checkbox
+announces it as checked and follows the signal whoever writes it.
+
+```jsx
+// ✗ a button wired to remember a state
+<Button aria-pressed={editing} uiAction={() => (editingSignal.value = !editing)}>
+  {editing ? "Done" : "Edit"}
+</Button>
+// ✓
+<Input type="checkbox" variant="button" boolean signal={editingSignal}>
+  {editingSignal.value ? "Done" : "Edit"}
+</Input>
+```
+
 ## Which controls take a `signal`
 
 All of them: `Input` (every type), `Picker`, `Select`, `Wheel`, `Spin`,

@@ -18,6 +18,8 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   value?: any,
  *   boolean?: boolean,
  *   selectOnPress?: boolean,
+ *   variant?: "checkbox" | "switch" | "icon" | "button",
+ *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
  *   [key: string]: any,
  * }>}
  * @param {any} [value] On a checkbox, what it is worth checked (`"on"` when
@@ -25,6 +27,18 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   checkbox is worth".
  * @param {boolean} [boolean] Makes a checkbox a yes/no: `true` checked, `false`
  *   unchecked, everywhere it hands its value. Takes no `value`.
+ * @param {"checkbox"|"switch"|"icon"|"button"} [variant] How a checkbox is
+ *   drawn. `"button"` is a button that stays pressed — a mode ("Edit" /
+ *   "Done"), show/hide, a setting: its children are its words and its
+ *   accessible name, filled with the accent while checked; without children it
+ *   is a square around its checkmark (or its `icon`, which takes an
+ *   `[off, on]` pair). Bound with `signal`, it follows whatever else writes
+ *   that signal.
+ * @param {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} [actionVerb] What a plain
+ *   function `action` does to the server. A write verb puts the field under
+ *   the network policy: held read-only up front, with the policy's message,
+ *   instead of failing after the change (docs/network_policy.md). An action
+ *   bound to a resource verb says it already.
  * @param {import("preact").ComponentChildren|null} [icon] What the textual
  *   types that draw an icon (`search`, `email`, `tel`) put in their slot: left
  *   out, the type's own glyph; `null`, nothing — for a field an application

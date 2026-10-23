@@ -23,6 +23,8 @@
  * See control_proxy.js for the `navi-control-proxy-for` pattern.
  */
 
+import { SELF_INTERACTIONS_ATTRIBUTE } from "./self_interactions.js";
+
 /**
  * Returns the host element inside `el` — the element that holds the control's
  * value, UI state, and constraints (i.e. the element onto which
@@ -166,4 +168,52 @@ export const findControlRoot = (el) => {
     return el.closest("[navi-control]");
   }
   return null;
+};
+
+// What a press can be aimed at inside something else: a native control, a
+// link, a label, an editable region, a media player's controls, a navi
+// control (a wheel is a <div>), and an element claiming its own interactions
+// (see self_interactions.js).
+const PRESS_TARGET_SELECTOR = [
+  "a[href]",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "label",
+  "[role='button']",
+  "[contenteditable='']",
+  "[contenteditable='true']",
+  "audio[controls]",
+  "video[controls]",
+  "[navi-control]",
+  "[navi-control-host]",
+  `[${SELF_INTERACTIONS_ATTRIBUTE}]`,
+].join(", ");
+
+/**
+ * Whether `event` was aimed at a control strictly inside `box` — a field, a
+ * button, a link, a navi control, an element claiming its own interactions —
+ * rather than at the box itself.
+ *
+ * The question every box that answers a press on its blank space has to ask: a
+ * row that folds, a card that opens, a viewer that closes on its background.
+ * Bounded by the box, so a list or a dialog around it is never mistaken for
+ * what was pressed, and the box being a button itself is not a control inside
+ * it.
+ *
+ * @param {Event} event The press — a click, a pointerdown, an interaction's
+ *   `detail.event`.
+ * @param {Element} box The element answering it.
+ * @returns {boolean}
+ */
+export const isPressOnControl = (event, box) => {
+  const target = event?.target;
+  if (!target || target.nodeType !== 1) {
+    return false;
+  }
+  const pressTarget = target.closest(PRESS_TARGET_SELECTOR);
+  return (
+    Boolean(pressTarget) && pressTarget !== box && box.contains(pressTarget)
+  );
 };
