@@ -155,6 +155,10 @@ const ROUTE_ACTION_BINDING_OPTIONS = new Set([
  * @param {boolean} [options.prefetch=true] - `false` keeps the action from
  *   being prerun ahead of what asks for it, when the read is not worth a
  *   hover or a press that may not end in an opening.
+ * @param {number} [options.debounce] - milliseconds the params must hold
+ *   still before the action runs on them: a search param a field writes as
+ *   the person types asks once typing stops (see `bindParams` in
+ *   docs/actions.md).
  */
 export const routeAction = (
   routeOrRoutes,

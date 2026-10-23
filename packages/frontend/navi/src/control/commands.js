@@ -28,20 +28,24 @@ import {
 } from "./ui_state_dom.js";
 
 /**
- * Runs a navi command from JS. It is the LAST RESORT: the attributes say the
- * same thing declaratively and go through this very function, so a press that
- * opens, closes, sends, updates or travels needs none of this.
+ * Runs a navi command from JS. It is the LAST RESORT for a navi control: its
+ * props say the same thing declaratively, read on the press, and go through
+ * this very function, so a press that opens, closes, sends, updates or travels
+ * needs none of this.
  *
- * ```html
- * <button command="--navi-open" commandfor="note-dialog" value="42">
+ * ```jsx
+ * <Button command="--navi-open" commandFor="note-dialog" value={42}>
  * ```
  *
  * `command` names it (`--navi-x:argument` when it needs an argument),
- * `commandfor` / `navi-command-target` says to whom, the source's own `value`
+ * `commandFor` / `navi-command-target` says to whom, the source's own `value`
  * says what it is about (`command-value` when the source has a value meaning
- * something else). Reach for `triggerNaviCommand` only when what decides is not
- * a press on the element carrying those attributes: a long press, the end of a
- * drag, a double-click, a keyboard shortcut, a server answer, an observer.
+ * something else). Reach for `triggerNaviCommand` when what decides is not a
+ * press on a control carrying those props: a long press, the end of a drag, a
+ * double-click, a keyboard shortcut, a server answer, an observer — or a press
+ * on a plain element. There, `command`/`commandfor` are HTML's own invoker
+ * commands, whose `command` event no navi popup listens to (see
+ * docs/popup_open.md).
  *
  * @param {Element} element The element asking — the command's source, and the
  *   anchor a popup opens on unless `anchor` says otherwise.

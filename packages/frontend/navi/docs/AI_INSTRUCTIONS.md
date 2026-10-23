@@ -208,8 +208,9 @@ start when unsure which export solves a problem.
   line height for everything; `BadgeList`. Before an overflowing label, and
   before touching a `line-height`.
 - `i18n.md` — `interpolateText`/`<Interpolate>` for one sentence, `createI18n`
-  for the app's texts, `naviI18n` for navi's own. Before writing a user-visible
-  sentence.
+  for the app's texts, `naviI18n` for navi's own, and which helper writes a
+  number, a day or a time. Before writing a user-visible sentence, a number, a
+  date or a time.
 - `testid.md` — role and accessible name first; where `data-testid` lands; what
   not to target. Before a selector in a test.
 

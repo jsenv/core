@@ -44,9 +44,22 @@ that contract is absent or not usable:
 
 - there is no accessible name, or it is an icon, or it is dynamic;
 - the app is translated, and the test must pass in every language;
+- the name is copy still being reworded;
 - several elements legitimately share role and name (rows of a list, cells of a
   table) and only their position tells them apart — a per-item
   `data-testid={`row-${id}`}` names them by identity instead of by index.
+
+A name is stable when it is not copy: an icon's `aria-label`, a landmark, the
+names navi gives its own parts. When the testid is what addresses the element,
+the contract stays checked as an assertion of its own — a rewording then breaks
+nothing, and a missing name still fails:
+
+```js
+const save = page.getByTestId("save-game");
+await expect(save).toHaveRole("button");
+await expect(save).toHaveAccessibleName(/\S/);
+await save.click();
+```
 
 ## Where it lands in navi
 
@@ -199,7 +212,12 @@ Navi's own attributes are implementation, not a contract: `data-header`,
 `navi-control*`, `.navi_*` class names, the ids navi generates when none is
 given (`useId`), and the ids it derives from yours (a picker's popup id is built
 from the picker's, so the suffix is navi's even when the base is not). They
-change without notice and without a migration note.
+change without notice and without a migration note. The exception is the state
+a guideline doc tells an app to read — `navi-refreshing`
+([list_refresh.md](./list_refresh.md)), `navi-stuck`
+([z_index.md](./z_index.md)), `data-navi-route-transition*`
+([route_transitions.md](./route_transitions.md)): a test may assert it like any
+other contract.
 Likewise a `view-transition-name` or a CSS variable: those exist to draw, not
 to be found.
 

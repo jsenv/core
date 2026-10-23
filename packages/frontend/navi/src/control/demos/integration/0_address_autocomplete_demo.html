@@ -48,16 +48,17 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
-      import { useRef, useState } from "preact/hooks";
+      import { useComputed, useSignal } from "@preact/signals";
       import {
         Box,
         Button,
+        createAction,
         Field,
         Form,
         Input,
         Label,
         Text,
+        useAsyncData,
       } from "@jsenv/navi";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
@@ -84,11 +85,28 @@
         };
       };
 
+      // Les suggestions suivent la frappe: une lecture liée à ce qui est
+      // tapé, attendue dans la liaison (debounce), et non l'action du champ —
+      // un champ dont l'action tourne est occupé, donc en lecture seule, et
+      // on ne pourrait plus taper pendant la recherche.
+      const ADDRESS_SUGGESTIONS = createAction(async ({ q }, { signal }) => {
+        const url = `${GEO_API_URL}?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`;
+        const response = await fetch(url, { signal });
+        const geoJson = await response.json();
+        return geoJson.features || [];
+      });
+
       const AddressFields = ({ id }) => {
         const searchSignal = useSignal("");
-        const [suggestions, setSuggestions] = useState([]);
-        // la requête en vol, annulée dès qu'une frappe la rend obsolète
-        const abortRef = useRef(null);
+        // undefined tant que la saisie est trop courte: rien à demander
+        const questionSignal = useComputed(() => {
+          const typed = (searchSignal.value || "").trim();
+          return typed.length < SUGGESTION_MIN_CHARS ? undefined : { q: typed };
+        });
+        const [suggestions = [], , suggestionsError] = useAsyncData(
+          ADDRESS_SUGGESTIONS.bindParams(questionSignal, { debounce: 300 }),
+          { run: true, loading: true, error: true },
+        );
         // Un signal par champ structuré: chacun est un champ nommé du
         // formulaire, c'est le formulaire qui les envoie
         const componentSignals = {
@@ -97,56 +115,20 @@
           city: useSignal(""),
           country: useSignal(""),
         };
-        const fillFromFeature = (feature) => {
-          const components = componentsFromGeoFeature(feature);
-          for (const key of Object.keys(componentSignals)) {
-            componentSignals[key].value = components[key];
-          }
-        };
-
-        // Sync exprès: une action async passerait l'input en loading — donc
-        // read-only — pendant la recherche, alors qu'on veut continuer à
-        // taper. L'abort de la requête en vol est donc géré ici (le signal
-        // d'abort d'une action ne couvre que la durée de son run, fini
-        // immédiatement en sync). actionDebounce fait toujours le debounce.
-        const searchAddress = (value) => {
+        // Choisir une option du datalist écrit son label complet dans le
+        // champ: c'est le moment de remplir les champs structurés
+        const fillIfSuggestionPicked = (value) => {
           const typed = (value || "").trim();
-          // Choisir une option du datalist repasse par ici, avec le label
-          // complet d'une suggestion comme valeur: c'est le moment de
-          // remplir les champs
           const picked = suggestions.find(
             (candidate) => candidate.properties.label === typed,
           );
-          if (picked) {
-            fillFromFeature(picked);
+          if (!picked) {
             return;
           }
-          abortRef.current?.abort();
-          if (typed.length < SUGGESTION_MIN_CHARS) {
-            setSuggestions([]);
-            return;
+          const components = componentsFromGeoFeature(picked);
+          for (const key of Object.keys(componentSignals)) {
+            componentSignals[key].value = components[key];
           }
-          const abortController = new AbortController();
-          abortRef.current = abortController;
-          const search = async () => {
-            try {
-              const url = `${GEO_API_URL}?q=${encodeURIComponent(typed)}&limit=5&autocomplete=1`;
-              const response = await fetch(url, {
-                signal: abortController.signal,
-              });
-              const geoJson = await response.json();
-              setSuggestions(geoJson.features || []);
-            } catch {
-              if (abortController.signal.aborted) {
-                // une frappe plus récente a repris la main
-                return;
-              }
-              // autocomplete en panne = pas de suggestions, le champ reste
-              // un champ texte qui marche
-              setSuggestions([]);
-            }
-          };
-          search();
         };
 
         return (
@@ -161,8 +143,7 @@
                 list={`${id}_options`}
                 placeholder="12 rue de la Paix Paris"
                 signal={searchSignal}
-                action={searchAddress}
-                actionDebounce={300}
+                uiAction={fillIfSuggestionPicked}
                 autoComplete="off"
                 borderRadius="s"
                 paddingX="s"
@@ -183,6 +164,14 @@
                   </option>
                 ))}
               </datalist>
+              {/* Autocomplete en panne: pas de suggestions, et le champ reste
+                  un champ texte qui marche */}
+              {suggestionsError ? (
+                <Text size="xs" color="secondary">
+                  Suggestions indisponibles — les champs se remplissent à la
+                  main.
+                </Text>
+              ) : null}
             </Field>
 
             <Box flex="x" spacing="s" flexWrap>

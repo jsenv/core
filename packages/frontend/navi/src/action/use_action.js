@@ -39,12 +39,14 @@ export const useActionBoundToOneArrayParam = (action, paramsSignal) => {
   return result;
 };
 // The action bound to the signal, without reading it: the caller is not
-// re-rendered by the params (a control, a <details>).
-export const useAction = (action, paramsSignal) => {
-  return useBoundAction(action, paramsSignal);
+// re-rendered by the params (a control, a <details>). `verb` is what a plain
+// function's action says it does to the server, which puts it under the network
+// policy (docs/network_policy.md); an action object says it itself (meta.verb).
+export const useAction = (action, paramsSignal, { verb } = {}) => {
+  return useBoundAction(action, paramsSignal, verb);
 };
 
-const useBoundAction = (action, actionParamsSignal) => {
+const useBoundAction = (action, actionParamsSignal, verb) => {
   // The cache gives an inline function a stable action identity across renders.
   // That identity is only wanted while `action` stays the same kind
   // (function to function); when the kind changes — none ↔ function ↔ action
@@ -90,6 +92,7 @@ const useBoundAction = (action, actionParamsSignal) => {
         // We don't want to give empty params by default
         // we want to give undefined for regular functions
         params: undefined,
+        meta: verb === undefined ? undefined : { verb },
       },
     );
     if (!actionParamsSignal) {

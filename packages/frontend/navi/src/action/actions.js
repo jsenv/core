@@ -3,6 +3,7 @@ import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
 
 import { getDebouncedSignal } from "../state/debounce_signal.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { isSignal } from "../utils/is_signal.js";
 import { createJsValueWeakMap } from "../utils/js_value_weak_map.js";
 import { mergeTwoJsValues } from "../utils/merge_two_js_values.js";
@@ -83,6 +84,8 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 // Params waiting to settle exist only under a debounced binding; every other
 // action answers "no" so nobody has to check whether it can be asked.
 const NOT_SETTLING_SIGNAL = signal(false);
+// What a signal binding's params computed holds before its first evaluation.
+const NO_COMBINED_PARAMS_YET = {};
 
 let DEBUG = false;
 export const enableDebugActions = () => {
@@ -950,9 +953,22 @@ export const createAction = (callback, rootOptions = {}) => {
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // Case 1: a signal → proxy that retargets as the signal changes
       if (isSignal(newParamsOrSignal)) {
+        // A getter builds a fresh object each time a signal it reads moves,
+        // equal or not. Equal params are the same question: the previous
+        // object is kept, so the binding's paramsSignal does not move and its
+        // readers (useAsyncData) do not render again — the rule the debounced
+        // binding follows too (debounce_signal.js).
+        let combinedParamsPrevious = NO_COMBINED_PARAMS_YET;
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
           const result = mergeActionParams(params, newParams);
+          if (
+            combinedParamsPrevious !== NO_COMBINED_PARAMS_YET &&
+            compareTwoJsValues(result, combinedParamsPrevious)
+          ) {
+            return combinedParamsPrevious;
+          }
+          combinedParamsPrevious = result;
           return result;
         });
         return createActionProxyFromSignal(

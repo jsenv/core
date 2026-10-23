@@ -51,7 +51,9 @@ Before fighting them:
 
 - the body is `flex: 0 1 auto` — **it shrinks, it never grows**. A short body
   leaves the footer right under it rather than pushed to the bottom of a box it
-  does not fill. Adding `expandY` to "fix" that is undoing a deliberate default.
+  does not fill. Adding `expandY` to "fix" that is undoing a deliberate default
+  — the one body that grows holds a list scrolling in its own frame (see
+  [A field above the list](#a-field-above-the-list)).
 - the separating line is a `border-bottom` on the header (`border-top` on the
   footer), not a `box-shadow`: a shadow is drawn outside the box and lost to
   whatever is painted after it, so the body would cover the very line meant to
@@ -216,7 +218,10 @@ So the parts are direct children of the `Dialog`:
 
 ```jsx
 <Dialog id="…" dockedOnSmallTouchScreen>
-  <Box header>title + close</Box>
+  <Box header flex="x" alignY="center">
+    <Dialog.Title expandX>…</Dialog.Title>
+    <Dialog.Close />
+  </Box>
   <Box body>
     <List scroller="parent" /> {/* NOT "self" */}
   </Box>
@@ -224,9 +229,35 @@ So the parts are direct children of the `Dialog`:
 </Dialog>
 ```
 
+The title is the popup's name ([popup_open.md](./popup_open.md#its-name)),
+drawn as the row's text.
+
 A dialog is already bounded by the room its container leaves it, so a
 `maxHeight` is only for making it smaller than that (see
 [dialog_shape.md](./dialog_shape.md#the-ceiling-nobody-sets)).
+
+### A field above the list
+
+A sheet of fixed height that keeps a field in view above a list scrolling in
+its own frame — a search box over the entries to pick from — gives the body
+the height and the list the scrolling:
+
+```jsx
+<Dialog id="…" expandY>
+  <Box header>…</Box>
+  <Box body flex="y" expandY>
+    <Input type="search" />
+    <List expandY />
+  </Box>
+</Dialog>
+```
+
+The body grows here, which it never does on its own: not to push a footer
+down, but to bound a list that is itself the scrolling area. It still scrolls
+when what stays put outgrows it (the keyboard up). `scroller="parent"` is the
+shape when there is no frame to keep and the field may scroll away with the
+rows. The field goes in the body, never in the header of a docked sheet: that
+header is its swipe grip.
 
 ### `scrollCapture`
 
@@ -458,9 +489,10 @@ paint on. `initial: "100%"` is the screen and nothing more, whatever the items
 weigh: a few are drawn to be measured, and the window is sized on them before
 the browser paints — a count (`initial: 6`) is a guess that holds for one kind
 of item only. A position handed back with its `visibleCount` sizes that first
-window itself, whatever `initial` says. The runs ask their source for a page of
-items (`<List.Items pageSize>`, 100 by default) whatever either says, so the
-smaller first window costs no second request.
+window itself, whatever `initial` says. A first window smaller than a page
+still asks the source for a whole page (`<List.Items pageSize>`, 100 by
+default), so the smaller window costs no second request; a window wider than a
+page — a count budget without `initial` — is asked for whole.
 
 The switch waits for the paint itself. Do not rebuild it with a `useEffect`
 that widens a slice: preact runs a component's pending effects early when that

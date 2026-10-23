@@ -135,6 +135,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   current?: boolean,
  *   currentExcept?: object | object[],
  *   currentAlso?: object | object[],
+ *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
  *   [key: string]: any,
  * }>}
  * @param {object} [route] Where the press leads, as a `<Link route>` says it:
@@ -179,10 +180,17 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   press and draws the error on itself. On a button with an `href` or a
  *   `route`, the same order as a Link's: it runs on the press, before the
  *   navigation, and the navigation does not wait for it (see Link's `action`).
+ * @param {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} [actionVerb] What a plain
+ *   function `action` does to the server. A write verb puts the button under
+ *   the network policy: held read-only up front, with the policy's message,
+ *   instead of failing after the press (docs/network_policy.md). An action
+ *   bound to a resource verb says it already.
  * @param {Function} [uiAction] The same press, for what cannot fail and takes
- *   no time — moving something else on screen, writing a local signal: a plain
- *   callback, no busy state, nothing drawn if it throws (see
- *   docs/actions.md#action-or-uiaction).
+ *   no time — moving something else on screen: a plain callback, no busy
+ *   state, nothing drawn if it throws (see docs/actions.md#action-or-uiaction).
+ *   A button that stays pressed (a mode, show/hide, a setting) is a checkbox
+ *   drawn as a button (`<Input type="checkbox" variant="button" signal>`), not
+ *   a button writing a signal on each press.
  * @param {string} [selfInteractions] The interactions this button takes for
  *   itself inside a zone that belongs to another control — a chip's cross on a
  *   picker's façade, an eye on a pressable row, a badge against the edge of a

@@ -980,8 +980,10 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *   `{ route, params }` when the page is a param of a route rather than a route
  *   of its own. `null` says the page is
  *   reached FROM ANYWHERE: its door is in the furniture (a gear in the top
- *   bar, a "+" in the tab bar) rather than on a screen, so there is no pair to
- *   write it on. Arriving at `to` from any page then plays forward and leaving
+ *   bar, a "+" in the tab bar) rather than on a screen, or it has no door at
+ *   all — reached by its address from whatever screen one was on, as the
+ *   `routeFallback()` page is — so there is no pair to write it on. Arriving
+ *   at `to` from any page then plays forward and leaving
  *   it for any page plays back, which is what makes the back button close it
  *   the way it opened. Tried last, after every written pair: a pair naming the
  *   same destination still owns its crossing.

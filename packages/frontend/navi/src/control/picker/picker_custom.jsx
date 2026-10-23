@@ -461,19 +461,39 @@ const PickerCustom = (props) => {
     const openController = useOpenController((openEvent) => {
       enterExpanded();
 
-      const valueAtOpen = getPickerInputUIState(ref.current);
+      let valueAtOpen = getPickerInputUIState(ref.current);
       // Whether that value is an ANSWER or only a suggestion. A picker showing
       // a defaultValue holds nothing, so closing on it untouched IS the answer
       // ("yes, 2h15") — the same rule Form applies to an untouched field (see
       // isUIStateHeld). Read at open, before anything inside can change it.
-      const pickerController = getPickerInput(
-        ref.current,
-      )?.__uiStateController__;
-      const heldAtOpen = isUIStateHeld(pickerController);
+      const pickerInput = getPickerInput(ref.current);
+      const pickerController = pickerInput?.__uiStateController__;
+      let heldAtOpen = isUIStateHeld(pickerController);
       // What a cancel must not take back: see followOutsideSinceOpen.
       const statesAtOpen = pickerController
         ? readStatesAtOpen(pickerController)
         : null;
+      // What the outside writes while the popup is open — the record re-read
+      // as the sheet opens, landing after the read above — is not the
+      // person's edit. Until they change something, what was there at open
+      // follows it: a look and a close then send nothing, and a cancel goes
+      // back to the record as it arrived.
+      let editedSinceOpen = false;
+      const followOutsideUntilEdited = (e) => {
+        if (editedSinceOpen) {
+          return;
+        }
+        if (!isWrittenByTheOutside(e.detail.event)) {
+          editedSinceOpen = true;
+          return;
+        }
+        valueAtOpen = e.detail.value;
+        heldAtOpen = isUIStateHeld(pickerController);
+      };
+      pickerInput?.addEventListener(
+        "navi_ui_state_change",
+        followOutsideUntilEdited,
+      );
       debugPopup(
         openEvent,
         `picker opened, store value at open`,
@@ -537,6 +557,10 @@ const PickerCustom = (props) => {
           }
         },
         onClose: (closeEvent) => {
+          pickerInput?.removeEventListener(
+            "navi_ui_state_change",
+            followOutsideUntilEdited,
+          );
           if (closeEvent.detail.isCancel) {
             const pickerEl = ref.current;
             const inputEl = getPickerInput(pickerEl);
@@ -1082,6 +1106,23 @@ const getTriggerLabelIds = (pickerEl) => {
     }
   }
   return ids.length === 0 ? undefined : ids.join(" ");
+};
+// What the picker holds without the person having changed it: its `value` (or
+// signal) moving, a default moving under it — also when carried up from a
+// control in its popup — and what its popup's controls are placed on as they
+// mount.
+const isWrittenByTheOutside = (e) => {
+  if (!e) {
+    return false;
+  }
+  if (
+    e.type === "state_prop_change" ||
+    e.type === "initial_state_push" ||
+    e.type === "facade_child_mount_sync"
+  ) {
+    return true;
+  }
+  return Boolean(findEvent(e, "outside_value_follow"));
 };
 const getPickerInputUIState = (pickerEl) => {
   const pickerInput = getPickerInput(pickerEl);

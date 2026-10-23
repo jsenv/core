@@ -24,29 +24,8 @@ import { parseDuration } from "@jsenv/validity";
 
 import { humanizeI18n } from "../i18n/humanize_i18n.js";
 import { getRuntimeLang } from "../i18n/runtime_lang.js";
+import { memoIntl } from "../utils/memo_intl.js";
 
-// Constructing an Intl formatter dominates the cost of a call (~19µs vs
-// ~0.4µs to format with a kept instance, node 26 on an M-series Mac) and
-// these formatters run in render loops — a card easily writes half a dozen
-// per render — so every instance is memoized by (constructor, lang,
-// options). lang and each option value come from small closed sets, so the
-// cache stays bounded.
-const intlCache = new Map();
-const memoIntl = (constructorName, lang, options) => {
-  let key = `${constructorName}|${Array.isArray(lang) ? lang.join() : lang}`;
-  if (options) {
-    for (const optionName of Object.keys(options)) {
-      key += `|${optionName}:${options[optionName]}`;
-    }
-  }
-  const cached = intlCache.get(key);
-  if (cached) {
-    return cached;
-  }
-  const formatter = new Intl[constructorName](lang, options);
-  intlCache.set(key, formatter);
-  return formatter;
-};
 
 // Our own compact/custom duration notation interpolates raw numbers
 // directly (unlike Intl.DurationFormat, which groups thousands on its own,
@@ -348,6 +327,20 @@ export const formatDayRelative = (offset, { lang = getRuntimeLang() } = {}) => {
   }).format(offset, "day");
 };
 
+/**
+ * Writes a month and its year.
+ *
+ * @param {Date} date
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|"compact", timeZone?: string }} [options]
+ *   `"short"`/`"narrow"` abbreviate the month, `"numeric"` (which `"compact"`
+ *   is a name for) writes it in digits. `timeZone` words the instant in that
+ *   IANA zone instead of the runtime's own.
+ *
+ * @example
+ * formatMonth(date, { lang: "fr" })                     // "septembre 2026" (long, default)
+ * formatMonth(date, { lang: "fr", format: "short" })   // "sept. 2026"
+ * formatMonth(date, { lang: "fr", format: "numeric" }) // "09/2026"
+ */
 export const formatMonth = (
   date,
   { lang = getRuntimeLang(), format = "long", timeZone } = {},

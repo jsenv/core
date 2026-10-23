@@ -306,7 +306,7 @@ const css = /* css */ `
        the items either: one with a background in a corner covers the inside of
        the curve, and past a radius of ~3.4 times the border width its square
        corner shows outside it. */
-    &:not([data-borderless], [data-overflow-visible], [data-scroller]) {
+    &:not([data-overflow-visible], [data-scroller]) {
       /* A flex or grid item that does not clip takes its content's height as
          its minimum: a frame given a height (expandY) would grow to all its
          items, and the page would scroll instead of the list. */
@@ -5748,7 +5748,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   which is its rank in the collection plus whatever items are declared before
  *   the run. `state.refreshing` says the items drawn are the ones from before
  *   while the run reads the collection again — the list carries
- *   `navi-refreshing` for the same reason.
+ *   `navi-refreshing` for the same reason. What it returns is kept per item
+ *   and handed back as long as the function, the item, its index and
+ *   `refreshing` are the same: an inline `renderItem` in a component that
+ *   re-renders redraws every row. What changes inside a row is read in the
+ *   row's own component, or listed in `useCallback`'s deps.
  * @param {(item: any, index: number) => string} [props.findText]
  *   The text of an item as the browser's find in page (Cmd/Ctrl + F) sees it
  *   while the item is not drawn — without it, find reaches only the items in the
@@ -5806,8 +5810,10 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   scrolls. It paints nothing of its own then: its display and background
  *   are defaults a `groupLabelProps` class takes back.
  * @param {number} [props.pageSize=100]
- *   How many items to ask for at a time. A turn of the wheel opens a hole three
- *   items wide; asking for exactly that would ask again at the next turn.
+ *   The least an ask covers. A turn of the wheel opens a hole three items wide;
+ *   asking for exactly that would ask again at the next turn, so a hole
+ *   narrower than a page grows to one, away from the items already held. A
+ *   hole wider than a page is asked for whole.
  * @param {number} [props.memoryBudget=1000]
  *   How many items the run keeps in memory. Past that, the ones far from what is
  *   on screen are dropped (and asked for again if the user goes back) — the
@@ -5834,7 +5840,9 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   `renderSkeleton` is given — the two draw on the same knowledge. A room
  *   measured on an item drawn wins over it, and in development one that
  *   differs from it is reported. Items side by side in a grid (`columns`)
- *   share a line, which keeps `virtualItemSize`.
+ *   share a line, which keeps `virtualItemSize`. A lookup: it is called while
+ *   the run renders, for every item outside the window the list has not
+ *   measured, each time the window moves — never a layout or style read.
  * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where items were asked for and never came: given the `error`,
  *   a `retry` to call, and the `start`/`end` of the range that failed — the
@@ -7490,7 +7498,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   loadingSkeletonCount?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   error?: boolean | import("preact").ComponentChildren,
- *   separator?: boolean | import("preact").ComponentChildren,
+ *   separator?: boolean | import("preact").ComponentChildren | ((gapIndex: number) => import("preact").ComponentChildren),
  *   itemTransition?: boolean,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
@@ -7543,9 +7551,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   corner, a badge crossing the edge. A list clips by default, which is what
  *   its rounded corners and its scroll box need, and the two cannot both be
  *   true: asking for visible gives up the clipping, corners included.
+ * @param {boolean|import("preact").ComponentChildren|((gapIndex: number) => any)} [props.separator]
+ *   What is drawn between two items: `true` for the default line, a node, or a
+ *   function given the gap's index (0 for the first one).
  * @param {boolean} [props.itemTransition]
- *   Names each item, so a change the application wraps in
- *   `document.startViewTransition` is seen item by item — items moving to their new
+ *   Names each item, so a change the application wraps in a view transition
+ *   (started with `ensureDocumentStartViewTransition()`, which also swallows the
+ *   rejection of a skipped one) is seen item by item — items moving to their new
  *   place, an arriving item appearing where it lands — instead of the list
  *   cross-fading as a block. The items are drawn inside the list's own picture,
  *   so one coming from outside the visible part of the list is cut at the list's

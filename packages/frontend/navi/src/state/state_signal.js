@@ -4,6 +4,7 @@ import { computed, effect, signal, untracked } from "@preact/signals";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
 import {
+  listLocalStorageKeys,
   readLocalStorage,
   writeLocalStorage,
 } from "./guarded_local_storage.js";
@@ -83,6 +84,7 @@ const STATE_SIGNAL_OPTIONS = new Set([
   "weak",
   "history",
   "debounceUrl",
+  "version",
 ]);
 /**
  * Creates an advanced signal with dynamic default value, local storage persistence, and validation.
@@ -109,6 +111,10 @@ const STATE_SIGNAL_OPTIONS = new Set([
  * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
  * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
+ * @param {string} [options.version] - What makes a stored copy unusable — the deployed version, a schema
+ *   number. The value is persisted under `${id}@${version}`, and at creation the copies of every other
+ *   version of this id (and the one stored under the bare id) are removed: a device that opened ten
+ *   deploys holds one copy, not ten. Only the storage key changes, the id the url reads stays `id`.
  * @param {string} [options.type] - Type the value is coerced to, and read back as from localStorage and the url:
  *   any @jsenv/validity type (`"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"integer"`, `"date"`,
  *   `"time"`…). Without it the value is not coerced.
@@ -225,6 +231,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     weak = false,
     history = "replace",
     debounceUrl = 0,
+    version,
   } = options;
   if (import.meta.dev) {
     warnUnknownOptions(`stateSignal "${id}"`, options, STATE_SIGNAL_OPTIONS);
@@ -275,8 +282,15 @@ export const stateSignal = (defaultValue, options = {}) => {
     globalSignalRegistry.delete(signalIdString);
   }
 
-  // Determine localStorage key: use id if persists=true, or legacy localStorage option
-  const localStorageKey = signalIdString;
+  const localStorageKey =
+    version === undefined ? signalIdString : `${signalIdString}@${version}`;
+  if (persists && version !== undefined) {
+    removeOtherVersions(signalIdString, localStorageKey);
+  } else if (import.meta.dev && version !== undefined) {
+    console.warn(
+      `stateSignal "${signalIdString}": version names the copy kept in localStorage, and without persists nothing is kept.`,
+    );
+  }
   const [validity, updateValidity, clearValidity] = createValidity({
     type,
     min,
@@ -646,4 +660,19 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
+};
+
+// The copies an older deploy left: under `${id}@<another version>`, or under the
+// bare id from before the signal declared a version. Read once, at creation:
+// they are what a previous document wrote, nothing of this one writes there.
+const removeOtherVersions = (id, keyKept) => {
+  const versionPrefix = `${id}@`;
+  for (const key of listLocalStorageKeys()) {
+    if (key === keyKept) {
+      continue;
+    }
+    if (key === id || key.startsWith(versionPrefix)) {
+      writeLocalStorage(key, undefined);
+    }
+  }
 };

@@ -665,6 +665,18 @@ const WheelGroupContext = createContext(null);
  * value, the value lives in one hidden input for the form. The visible rows are
  * presentational.
  *
+ * A drag, a fling or the mouse wheel reports every row it crosses: a bound
+ * `signal`, the value a `WheelGroup` or a form puts together, and `uiAction`
+ * follow each one, and whatever reads them re-renders at that rate. `action`
+ * runs once, on the row the wheel settles on.
+ *
+ * Its colours are tokens read from any ancestor: `--wheel-color` (the value's
+ * ink), `--wheel-neighbor-color` (the rows around it — the ink at 45% by
+ * default), `--wheel-frame-color`, and `--wheel-glass-tint`, `-blur`,
+ * `-saturate` for the glass. The wheel paints no background. On a dark panel
+ * inside a light page, `color-scheme: dark` on the panel turns its inks, its
+ * glass and its frame, with the rest of the panel.
+ *
  * @type {import("preact").FunctionComponent<{
  *   value?: any,
  *   defaultValue?: any,
@@ -686,6 +698,8 @@ const WheelGroupContext = createContext(null);
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {(value: any) => void} [props.action] - Runs once, on the row the wheel settles on.
+ * @param {(value: any) => void} [props.uiAction] - Called at every row a drag, a fling or the mouse wheel crosses.
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
  * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (1.8em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).

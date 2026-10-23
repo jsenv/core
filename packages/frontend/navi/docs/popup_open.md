@@ -93,6 +93,14 @@ one press:
 </Link>
 ```
 
+`command` and `commandFor` are props of navi's controls (`Button`, `Link`…),
+read when the control is pressed. Written on a plain element they are HTML's own
+invoker commands, and no navi popup listens to the `command` event the browser
+fires for them. `popovertarget`, `showPopover()` and `showModal()` do not go
+through the popup's open state either: they toggle the element behind it (a
+top-layer `Popover` is `popover="manual"` from its first render). From anything
+that is not a navi control, the way in is `triggerNaviCommand`.
+
 ## Something else opens it: `triggerNaviCommand`
 
 The attributes cover more than "this button opens that dialog": `commandFor`
@@ -595,12 +603,15 @@ a thumb can hit:
 ```jsx
 <Dialog id="duration">
   <Box header flex="x" alignY="center" padding="s">
-    <Box expandX>Durée de la partie</Box>
+    <Dialog.Title expandX>Durée de la partie</Dialog.Title>
     <Dialog.Close />
   </Box>
   …
 </Dialog>
 ```
+
+The text of the row is the popup's title, and so its name (see
+[below](#its-name)).
 
 ### It is the way out, so the state around it does not reach it
 
@@ -660,6 +671,12 @@ nothing else. The first of these names it:
   <ReportForm />
 </Picker>
 ```
+
+In a header row, beside the cross, the title is both the row's text and the
+popup's name — written as plain text there instead, it names nothing. It is a
+heading drawn as that text: bold, at the size of the row, with no heading
+margins, unless `size` or `margin` say otherwise (see
+[the close cross](#the-close-cross)).
 
 A `Popover` has no role of its own, and a name on an element without one is
 read by nobody: a named popover is a `dialog`, unless given another `role`. A

@@ -716,6 +716,7 @@
         Button,
         CloseSvg,
         defineInteractionDetector,
+        ensureDocumentStartViewTransition,
         ExclamationSvg,
         EyeClosedSvg,
         EyeSvg,
@@ -732,6 +733,10 @@
       import { FakeBackend } from "../../internal/fake_backend.jsx";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      // What the demo's own transitions start with: a skipped one (two drops
+      // close together) leaves no rejection behind.
+      const startViewTransition = ensureDocumentStartViewTransition();
 
       const Heading = ({ level = 2, id, children, ...rest }) => {
         const Tag = `h${level}`;
@@ -1392,7 +1397,7 @@
           const { fromId, toId, syncCloneWithDropTarget } = event.detail;
           // A transition name is unique per document, so it is the app that writes
           // it and the app that starts the transition.
-          const transition = document.startViewTransition(() => {
+          const transition = startViewTransition(() => {
             syncCloneWithDropTarget();
             setOrder((previous) => moveBefore(previous, fromId, toId));
           });
@@ -2429,14 +2434,15 @@
             (displacedId && document.getElementById(displacedId)) ||
             document.getElementById(`${toPlaceId}__free`) ||
             toElement;
-          const transition = document.startViewTransition(() => {
+          const transition = startViewTransition(() => {
             syncCloneWithDropTarget?.(landingElement);
             setSwapRoles(roles);
             setLineup((previous) => padelSwap(previous, fromId, toId));
           });
-          transition.finished.then(() => {
+          const clearSwapRoles = () => {
             setSwapRoles(null);
-          });
+          };
+          transition.finished.then(clearSwapRoles, clearSwapRoles);
           return transition.finished;
         };
 

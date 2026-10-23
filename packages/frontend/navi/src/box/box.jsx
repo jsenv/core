@@ -415,6 +415,9 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
  * @param {boolean} [inline] The inline form of the box's display
  *   (`inline-flex`, `inline-grid`…). An inline box given a `width`/`height`
  *   becomes an inline flex row, since an inline box ignores both.
+ * @param {import("preact").ComponentChildren|((index: number) => import("preact").ComponentChildren)} [separator]
+ *   What is drawn between two children — a `<Separator />`, or a function given
+ *   the gap's index (0 for the first one). None next to a `hidden` child.
  * @param {string} [alignX] Horizontal alignment of the content whatever the
  *   flex direction: `justify-content` or `align-items` is picked from it
  *   (`text-align` outside flex and grid).

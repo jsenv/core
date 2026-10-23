@@ -10,7 +10,7 @@ Routing is signal-based, which means URL state — including search params — c
 
 Routes are flexible: you can create route groups to share logic, state, or UI across multiple routes. Nested routing is supported, and the structure naturally maps to how your application is organized. `routeFallback()` names the not-found page.
 
-`Link` knows whether it points where the user is, and `Nav` turns links into a tab row whose indicator travels from tab to tab. `Binder` draws tabs and the page they open as one shape. `RouteTravel` lets a thumb drag from one URL to the next without ever mounting a route that does not match. See [docs/navigation.md](./docs/navigation.md).
+`Link` knows whether it points where the user is, and `Nav` turns links into a tab row whose indicator travels from tab to tab. A link lands on an element by its fragment (`#id`): navi waits for the element to render, scrolls to it and marks it (`:target`, `data-url-target`). `Binder` draws tabs and the page they open as one shape. `RouteTravel` lets a thumb drag from one URL to the next without ever mounting a route that does not match. See [docs/navigation.md](./docs/navigation.md).
 
 ## Transitions
 
@@ -69,7 +69,7 @@ A `Table` for spreadsheet-like screens: columns reordered by drag, columns and r
 
 ## Popups
 
-`Dialog`, `Popover` and `SidePanel` own whether they are open; what varies is the trigger — a button (`command` + `commandFor`), a gesture, a piece of application state. A popup can lift the card that was pressed to the front (`animation="lifting"`), dock to an edge on a small touch screen, and choose how far the page behind it withdraws. Popups that hand over to each other — score cells, a menu bar — stand in a `PopupGroup`: the wall goes around that box of the page, and a press on another one's trigger closes the open popup and opens that one in the same press. `Expandable` opens in place, pushing the content below. `createSlot` renders content declared in one place at another: one `SidePanel` for a whole board, bound to the state that names what it shows. See [docs/popup_open.md](./docs/popup_open.md), [docs/popup_backdrop.md](./docs/popup_backdrop.md), [docs/popup_lift.md](./docs/popup_lift.md) and [docs/dialog_shape.md](./docs/dialog_shape.md).
+`Dialog`, `Popover` and `SidePanel` own whether they are open; what varies is the trigger — a button (`command` + `commandFor`), a gesture, a piece of application state. A popup can lift the card that was pressed to the front (`animation="lifting"`), dock to an edge on a small touch screen, and choose how far the page behind it withdraws. Popups that hand over to each other — score cells, a menu bar — stand in a `PopupGroup`: the wall goes around that box of the page, and a press on another one's trigger closes the open popup and opens that one in the same press. `Expandable` opens in place, pushing the content below; several sharing one `signal`, each with its own `value`, are an accordion. `createSlot` renders content declared in one place at another: one `SidePanel` for a whole board, bound to the state that names what it shows. See [docs/popup_open.md](./docs/popup_open.md), [docs/popup_backdrop.md](./docs/popup_backdrop.md), [docs/popup_lift.md](./docs/popup_lift.md) and [docs/dialog_shape.md](./docs/dialog_shape.md).
 
 A callout (`openCallout`) points at an element to say something about it — a validation message, a refused press.
 
@@ -83,13 +83,13 @@ Who holds the keyboard, and whether a focus ring shows, is decided in one place 
 
 **`Box`** is the main layout primitive. It wraps CSS Flexbox with a friendlier API: `flex` for horizontal layout, `flex="y"` for vertical (the axis things line up on, rather than guessing what `flex-direction: column` does visually). Supports `grid`, `inline`, alignment via `alignX`/`alignY`, and spacing props.
 
-`FixedBar` pins a strip to an edge of the window and gives the space back to the content, clearing the notch and the virtual keyboard (see [docs/safe_area.md](./docs/safe_area.md)). `SlideContainer` holds slides that replace one another in one box, dragged or bound to the URL. `CardLayout`, `StepList` and `Separator` cover the rest of a screen's usual shapes.
+`FixedBar` pins a strip to an edge of the window and gives the space back to the content, clearing the notch and the virtual keyboard (see [docs/safe_area.md](./docs/safe_area.md)). `SlideContainer` holds slides that replace one another in one box, dragged or bound to the URL. `CardLayout`, `StepList` and `Separator` cover the rest of a screen's usual shapes; a rule between children is `separator` on a `Box` (a node, or a function of the gap's index) or a `List` (`true` for the default line, too).
 
 Components are styled from `@layer navi` and `--navi-*` tokens, so an app theme and a plain CSS rule win without a fight. See [docs/css_architecture.md](./docs/css_architecture.md).
 
 ## Text & i18n
 
-**`Text`** and related components (`Title`, `Paragraph`, `Code`, `Caption`) handle typography consistently across the app — including the parts of a line that are not text: icons, counts, truncation (`maxLines`), skeletons, and where a line may break. Values have components of their own: `Time`, `TimeRange`, `Quantity`, `Unit`, `Meter`, `Badge`, `BadgeList`. See [docs/typography.md](./docs/typography.md).
+**`Text`** and related components (`Title`, `Paragraph`, `Code`, `Caption`) handle typography consistently across the app — including the parts of a line that are not text: icons, counts, truncation (`maxLines`), skeletons, and where a line may break. Values have components of their own: `Time`, `TimeRange`, `Quantity`, `Unit`, `Meter`, `Badge`, `BadgeList`, and `BadgeCount` for a count beside a word. See [docs/typography.md](./docs/typography.md).
 
 Icons are a piece that is often missing or painful in web projects. The `Icon` component makes icons behave like text — they scale with font size, inherit color, and align naturally in any layout. No sizing hacks, no SVG wrangling.
 

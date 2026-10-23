@@ -93,7 +93,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { signal } from "@preact/signals";
-      import { useState, useRef } from "preact/hooks";
+      import { useCallback, useState, useRef } from "preact/hooks";
       import {
         List,
         ListItem,
@@ -201,6 +201,28 @@
         const [maxHeightEnabled, setMaxHeightEnabled] = useState(true);
         const [itemHeight, setItemHeight] = useState(null);
         const [scrollToIndex, setScrollToIndex] = useState(54);
+        // Stable while neither the search nor the height moves: the run then
+        // keeps the rows it drew instead of drawing every one of them again.
+        const renderItem = useCallback(
+          (item, index) => (
+            <ListItem
+              value={item}
+              matchInfo={getItemMatchInfo(item)}
+              style={{
+                backgroundColor: SUGGESTION_BG,
+                ...(itemHeight
+                  ? {
+                      minHeight: `${itemHeight}px`,
+                      alignItems: "center",
+                    }
+                  : {}),
+              }}
+            >
+              {item} #{index}
+            </ListItem>
+          ),
+          [getItemMatchInfo, itemHeight],
+        );
         const listRef = useRef(null);
 
         const scrollTo = (position) => {
@@ -364,27 +386,7 @@
                 searchText={searchText}
                 separator
               >
-                <List.Items
-                  key={searchText}
-                  itemsAction={() => orderedItems}
-                  renderItem={(item, index) => (
-                    <ListItem
-                      value={item}
-                      matchInfo={getItemMatchInfo(item)}
-                      style={{
-                        backgroundColor: SUGGESTION_BG,
-                        ...(itemHeight
-                          ? {
-                              minHeight: `${itemHeight}px`,
-                              alignItems: "center",
-                            }
-                          : {}),
-                      }}
-                    >
-                      {item} #{index}
-                    </ListItem>
-                  )}
-                />
+                <List.Items items={orderedItems} renderItem={renderItem} />
               </List>
             </NaviDebug>
 

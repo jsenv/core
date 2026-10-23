@@ -158,6 +158,23 @@ where a separator would leave a stray gap next to something invisible; and
 `preventSpaceUnderlines`, which `Link` sets, so an underline stops at the text
 instead of running under the spaces.
 
+## Faces
+
+The document writes in the browser's control face: navi sets it as
+`font-family` on `:root`, in its layer, so a page that says nothing gets its
+text and its buttons in one face, and the app's own `font-family` there wins.
+
+Controls carry no face of their own: they write in `inherit`, so what a
+container says reaches the button, the field and the picker inside it. To give
+them one, set `--navi-control-font-family` — on `:root` for the whole app, or
+on a subtree. A `Button` reads `--button-font-family`, which defaults to that
+token; a bare or text `Picker` writes in its container's face whatever the
+token says, its drawing being the caller's.
+
+A popup keeps the face of what opened it — a picker's popup, the picker's — so
+a menu needs no font of its own (see
+[what reaches a popup from its opener](./css_architecture.md#a-surface-is-a-new-paper-what-reaches-a-popup-from-its-opener)).
+
 ## Emoji
 
 **An emoji is not a character the layout can absorb.** The system emoji fonts

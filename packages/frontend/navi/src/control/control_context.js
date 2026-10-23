@@ -66,6 +66,9 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
 // (the constraint message props are too, see isControlProp)
 export const CONTROL_PROP_SET = new Set([
   "action",
+  // What a plain function `action` does to the server ("PATCH"…): the network
+  // policy holds the control on it, as it does one bound to a resource verb.
+  "actionVerb",
   "actionEvent",
   "actionAfterChange",
   "actionOnMouseDown",

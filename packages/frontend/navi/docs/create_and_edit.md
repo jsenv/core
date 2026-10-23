@@ -232,6 +232,24 @@ for a screen that can be blanked without the person losing their place.
 Either way, cancelling is a link away: the screen is thrown away with what was
 typed in it, and coming back re-reads the resource. There is nothing to restore.
 
+### A screen that stays open after Save
+
+Everything above assumes the screen is left on saving. One edited in place —
+a settings panel, saved, then edited again — has no shape that answers all of
+it yet, and each of the three leaves one thing out:
+
+- `defaultValue={record.x}` follows the record and never undoes an edit, but is
+  not held: an untouched Save sends the record back.
+- `onLoad` + `pristineKey` is held, and stops following: a record moved while
+  the screen is open stays as `onLoad` found it.
+- `useSignalSync(record.x)` ([state_binding.md](./state_binding.md)) is held
+  and follows, but the record moving overwrites what is being typed — and it
+  compares by reference, so a record read again as a new array or object
+  counts as a move even when nothing in it changed.
+
+What not to write: `useSignal(record.x)` with `key={record.updated_at}` on the
+block. The key throws away what is being typed each time the record moves.
+
 ## A field that picks from a list too big to load
 
 A place, a player, a category: the field is a picker whose popup holds **one

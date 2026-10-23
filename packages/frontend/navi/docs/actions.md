@@ -84,6 +84,10 @@ const userAction = getUser.bindParams({ id: userIdSignal });
 // and starts it, with useAsyncData(userAction, { run: true })
 ```
 
+The params a signal or a getter hands over may be a fresh object each time:
+params equal to the ones held are the same question, so the binding keeps the
+object it has — nothing is asked again, and its readers do not render again.
+
 `{ debounce }` puts a delay between the signal and the instance, for params that
 move faster than a request should — a search box, a wheel, a slider:
 
@@ -103,6 +107,15 @@ the previous answer, and `loading` says a newer one is coming: don't compare
 params by hand. It follows where the signal **settles** (`A → B → A` sends
 nothing for `B`). `actionRunEffect`, which takes the action itself and a params
 getter, is for a request that must go out whether or not something draws it.
+
+A request that follows typing — the suggestions under an address field — is
+this binding, never the field's `action`: a field whose action runs is busy,
+and a busy field is read-only, so the person could not go on typing.
+`actionDebounce` delays an action that saves what was typed. Such a request,
+written with a plain `createAction`, has no verb for the network policy to see
+([network_policy.md](./network_policy.md)): offline, its params say there is
+nothing to ask (`undefined`, [below](#nothing-to-ask-and-coming-back)).
+`src/control/demos/integration/0_address_autocomplete_demo.html` is this shape.
 
 ### The answer is kept on the instance that ran
 

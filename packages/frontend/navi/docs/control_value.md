@@ -18,6 +18,7 @@ somewhere else in the app.
 - [Which controls take a `signal`](#which-controls-take-a-signal)
 - [The PROP is what controls, not its value](#the-prop-is-what-controls-not-its-value)
 - [A yes/no shown as two rows](#a-yesno-shown-as-two-rows)
+- [A choice that can be given back](#a-choice-that-can-be-given-back)
 - [Clearing, resetting, and what is shown meanwhile](#clearing-resetting-and-what-is-shown-meanwhile)
 - [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
 - [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
@@ -25,12 +26,12 @@ somewhere else in the app.
 
 ## The three answers
 
-| what you pass          | who holds the value | when the user acts                                                                    |
-| ---------------------- | ------------------- | ------------------------------------------------------------------------------------- |
-| nothing                | the control         | it keeps it; `uiAction` tells you                                                     |
-| `defaultValue`         | the control         | same — the default is where it starts, and a new one is taken while nothing is edited |
-| `signal`               | the signal          | the control writes it back, both ways                                                 |
-| `value` (or `checked`) | you                 | nothing moves until you hand a new one down                                           |
+| what you pass          | who holds the value | when the user acts                                                                         |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------------ |
+| nothing                | the control         | it keeps it; `uiAction` tells you                                                          |
+| `defaultValue`         | the control         | same — the default is where it starts, and a new one is taken while nothing is edited      |
+| `signal`               | the signal          | the control writes it back, both ways                                                      |
+| `value` (or `checked`) | you                 | it holds what you hand down: the press shows its change, a failed `action` puts yours back |
 
 A control given `value` and nothing to listen to it (`uiAction`, `action`, a
 `signal`, a `command`, a form or group collecting it) is read-only, and says so
@@ -56,6 +57,12 @@ const minutesSignal = useSignal(0);
 // elsewhere — the wheel rolls to 30, no re-render of your own needed
 minutesSignal.value = 30;
 ```
+
+A control moved by a gesture writes each value the gesture passes through: a
+wheel dragged, flung or turned by the mouse wheel writes every row it crosses,
+and its `action` runs once, on the row it settles on. Whatever reads the signal
+re-renders at that rate, so read it in the smallest component that shows it, or
+through a `computed` of what it needs.
 
 "Every change" includes the ones the control did not decide: a group placing
 its children, a picker filling its popup at open, and the same picker putting
@@ -242,10 +249,22 @@ or taken back (the action failed, the popup was cancelled).
 
 This holds for a control, for a group given a `defaultValue` (a selectable list,
 a `ControlGroup`), and for everything inside a picker's popup, which stays
-mounted while closed. So the record goes in as `defaultValue` and nothing else —
-no `key` to remount the popup when it changes: a key also destroys whatever is
-being typed when the answer to ANOTHER field arrives. A picker's cancel follows
-the same line: it undoes the person's edits
+mounted while closed.
+
+Where the record goes depends on who sends it. A control that saves itself —
+its own `action`, nothing around it to press — takes it as `defaultValue`
+(`defaultChecked`). A picker whose `action` sends what its popup holds takes it
+as its own `value`, the controls in the popup carrying only their `name`: a
+default is a suggestion the picker does not hold, and closing on one untouched
+confirms it ([form_changed.md](./form_changed.md#what-counts-as-already-held)),
+so a popup opened and closed with defaults in it sends the record back. A group
+holding nothing of its own counts as holding an answer as soon as one of its
+controls does. A form editing a record has the same trap, and its own way out
+([create_and_edit.md](./create_and_edit.md#the-edit-screen-opens-before-its-values)).
+
+Either way, no `key` to remount the popup when the record changes: a key also
+destroys whatever is being typed when the answer to ANOTHER field arrives. A
+picker's cancel follows the same line: it undoes the person's edits
 ([popup_open.md](./popup_open.md#what-cancel-actually-undoes)), and what the
 outside moved during the opening stays moved.
 
@@ -296,13 +315,13 @@ no field needs a url of its own — the fields then take nothing but their `name
 What a control is worth when it holds nothing has the type of what it holds when
 it holds something. A list of days nobody picked is `[]`, not `""`:
 
-| control                                           | empty is |
-| ------------------------------------------------- | -------- |
-| `Picker type="array"`, `List selectable multiple` | `[]`     |
-| `Picker type="object"`                            | `{}`     |
-| text/number/date `Input`, `Select`                | `""`     |
-| `Input type="checkbox" boolean`                   | `false`  |
-| radio, any other checkbox                         | absent   |
+| control                                                            | empty is |
+| ------------------------------------------------------------------ | -------- |
+| `Picker type="array"`, `List selectable multiple`, `CheckboxGroup` | `[]`     |
+| `Picker type="object"`                                             | `{}`     |
+| text/number/date `Input`, `Select`                                 | `""`     |
+| `Input type="checkbox" boolean`                                    | `false`  |
+| radio, `List selectable`, any other checkbox                       | absent   |
 
 This is what a clear (`--navi-clear`, a row's cross) leaves behind and what the
 object around it carries, so `value.days || []` is not needed.
@@ -388,6 +407,25 @@ Nothing translates: the row holds the boolean, the form carries the boolean.
 What cannot be done is give a row `undefined` to mean "no value" — `undefined`
 is what UNCHECKED means, here as in HTML, so such a row can never be ticked.
 "Nothing chosen" is the absence of a row, not a row.
+
+## A choice that can be given back
+
+A single choice that may also be no choice at all — left, right, or neither — is
+`<List selectable deselectable>`: the selected row, pressed again, lets go, and
+the list holds nothing (absent). Without `deselectable` it is a radio group: a
+choice moves to another row but never goes away.
+
+```jsx
+<List selectable deselectable name="side" defaultValue={me.side}>
+  <List.Item value="left">Gauche</List.Item>
+  <List.Item value="right">Droite</List.Item>
+  <List.Item value="both">Les deux</List.Item>
+</List>
+```
+
+An answer that is the others together ("both") is a row of its own, not two
+rows held at once; what it lights in the others hangs off `aria-selected` in
+CSS.
 
 ## Clearing, resetting, and what is shown meanwhile
 

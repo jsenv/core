@@ -50,6 +50,19 @@ along with the code; at module scope, it lands on every page importing the
 module, and nothing can shake it out. Assign at module scope only for a module
 that is a side effect by design — an app's tokens, say.
 
+The same holds for an app's components, and the choice moves the cascade:
+between unlayered sheets the last one adopted wins a tie. Assigned at module
+scope in a module the entry imports, an app's sheet is adopted before any navi
+component renders, and loses every tie with navi's rules, the same way every
+session. Assigned in render, it lands after the navi sheets already adopted and
+before the ones still to come, so a tie goes to whichever came last — which
+depends on what the user opened first. Before moving a sheet from one to the
+other, find its ties (a `.navi_*` class as a rule's subject, an app class on a
+navi component setting what navi's one-class rule sets) and settle each by
+weight, a prop or a variable rather than by order; what other modules use from
+the sheet (a class they wear) goes in a shared sheet, installed by each of them
+as below.
+
 The setter is keyed by module: **two assignments in one module do not add up**,
 the second replaces the first. A stylesheet shared between components is
 therefore a module of its own, exposing an install function its callers run
@@ -258,6 +271,21 @@ A variant (`icon`, `discrete`, `bare`, `border`, `headless`…) describes what
 the caller did not say: it only moves defaults, so a prop given next to it
 always wins.
 
+#### Where a prop lands
+
+A `Button`, a range input and a `CardLayout` paint a frame inside themselves.
+Their visual props — `background*`, `border*`, `borderRadius`, `boxShadow`,
+`outline*`, `opacity`, `filter`, `cursor`, `overflow` — and their padding go to
+that frame; size, position and margins stay on the control. A `style={{…}}` is
+not sorted: all its keys paint the outer element, so a background or a shadow
+written there lands around the frame rather than on it. Write them as props.
+
+What navi's unlayered structure sets — a control's `position: relative` —
+changes with the prop (`<Button absolute inset>`), or with the variable that
+feeds it where there is one (`--nav-width`), never with a class: one class only
+ties with navi's rule, and sheet order decides the tie (see
+[Where CSS lives](#where-css-lives-importmetacss)).
+
 ### 2. CSS variables (for global or theme-level changes)
 
 When the same change applies to many components (e.g. a design token update),
@@ -278,6 +306,32 @@ How wide popups may ever get is the app's own screen, stated once on `:root`
 with `--navi-app-max-width` — never `--dialog-max-width`, a `--component-*`
 token every dialog resets on itself: see
 [safe_area.md](./safe_area.md#an-app-that-is-narrower-than-the-window).
+
+#### The tokens a rule may read
+
+What `:root` declares, and so what an app's own css may read with `var()`:
+
+- spacing: `--navi-xxs` … `--navi-xxl` (`xxs`, `xs`, `s`, `m`, `l`, `xl`,
+  `xxl`), in `em` — the scale the spacing props take, and `borderRadius` too
+  (`borderRadius="s"` is `var(--navi-s)`): there is no radius scale of its own;
+- type: `--navi-typo-xxs` … `--navi-typo-xxl`, the scale `size` takes, and
+  `--navi-line-height` ([typography.md](./typography.md#emoji));
+- the paper: `--navi-surface-color`, `--navi-surface-text-color`,
+  `--navi-chrome-color` (see [below](#two-planes-the-paper-and-the-frame));
+- `--navi-accent-color`; `--navi-error-color`, `--navi-info-color`,
+  `--navi-success-color` and `--navi-warning-color`, each with a `-light` twin;
+- the stacking bands `--navi-z-index-*` ([z_index.md](./z_index.md)) and the
+  screen's `--navi-safe-area-inset-*` ([safe_area.md](./safe_area.md));
+- the themable defaults of controls and surfaces: `--navi-control-*`,
+  `--navi-button-*` (the button grey is `--navi-button-background-color`),
+  `--navi-picker-*`, `--navi-link-*`, `--navi-popup-*`, `--navi-callout-*`,
+  `--navi-focus-outline-*`, `--navi-placeholder-*`.
+
+The color keywords are not read this way: they go through the `color` prop
+([typography.md](./typography.md)). A name found neither here nor in the doc of
+what it belongs to is most likely declared nowhere, and `var()` on it draws its
+fallback without a word — `--navi-radius-s`, `--navi-space-m`, `--navi-font-mono`
+look plausible and are not tokens.
 
 #### `--navi-*` vs `--component-*`: where the override has to go
 
@@ -327,9 +381,16 @@ Scoping to an ancestor is not enough: `.my-sidebar { --link-color-pressed: blue 
 fails for the same reason `:root` does. The selector has to reach the link
 element itself.
 
+The rule is about declarations, not about the family. A `--component-*` navi
+only reads with a fallback and declares nowhere — `--button-background`,
+`--button-border`, `--button-padding*` — has nothing on the element to beat, so
+an ancestor's value reaches it like any inherited custom property; one navi
+declares — `--button-color`, `--nav-current-indicator-color` — stops at the
+element.
+
 When a component default deserves to be themed globally, promote it: declare a
-`--navi-<component>-<thing>` in [navi_css_vars.js](../src/navi_css_vars.js) and
-make the component default read `var(--navi-…)`.
+`--navi-<component>-<thing>` in `src/navi_css_vars.js` (in navi's repository)
+and make the component default read `var(--navi-…)`.
 
 #### Two planes: the paper and the frame
 
@@ -414,6 +475,24 @@ and it stops at the surface. Declaring the formulas on `*` to make container
 ratios work is the thing not to do: it would overwrite the pinned keyword on
 each of the card's children, and a paper could no longer say anything.
 
+##### A dark surface inside a light page
+
+`color` on a surface turns what is written against `currentColor` — the four
+keyword formulas, and whatever an app writes the same way. It does not turn the
+colors navi writes as `light-dark()` or as a system color: the paper
+(`--navi-surface-color`) and its ink (`CanvasText`), the control border, the
+button grey, the focus ring, a `Wheel`'s ink, glass and frame. A card saying
+`color: white` and nothing else still holds a near-black wheel.
+
+`color-scheme: dark` on the surface turns those: a `light-dark()` is resolved
+where it is used, so every one below the surface takes its dark side — except a
+token the app pinned to an absolute on `:root`. A dark card says both. A
+component's own color token (`--wheel-color`) still tints it, set on the card
+or any ancestor. `color-scheme` is inherited and no surface takes it back: a
+popup opened from the card is drawn dark too. (A lowered `light-dark()` follows
+`prefers-color-scheme` only: see
+[Browser support](#browser-support-navis-css-and-your-target).)
+
 ### 3. Direct rule override (avoid unless necessary)
 
 Overriding the actual CSS rules (not the variables) is intentionally hard. If
@@ -496,6 +575,7 @@ elements and the boxes before and after.
 | A global design token                                         | `--navi-*` on `:root`                                                                              |
 | The share of ink in `secondary`/`emphasis`/`discrete`/`hint`  | `--navi-color-*-mix` on `:root` — never on a container                                             |
 | A container's own paper (a dark card)                         | `color` on it, plus a keyword pinned if its formula reads wrong; both stop at the next popup       |
+| A dark surface inside a light page                            | `color-scheme: dark` on it, beside its `color` — it turns every `light-dark()` below               |
 | How wide popups may ever get                                  | `--navi-app-max-width` on `:root`                                                                  |
 | A structural layout rule                                      | Expose a new CSS variable (contribute)                                                             |
 | A rule counting children of a container holding navi controls | `:nth-child(… of S)`, `:not([navi-out-of-flow])`, or a class — a popup or a callout is a child too |

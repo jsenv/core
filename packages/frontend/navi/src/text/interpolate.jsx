@@ -83,7 +83,9 @@ installInterpolateJsx({
  *   fr: "Données limitées à [radiusKm] autour de [zoneName].",
  * });
  *
- * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName="your area">
+ * // A value that is wording is looked up too: left raw, "your area" would
+ * // stay English inside the French sentence.
+ * <Interpolate radiusKm={<Text bold>50 km</Text>} zoneName={i18n("your area")}>
  *   {i18n("Data limited to [radiusKm] around [zoneName].")}
  * </Interpolate>
  */

@@ -35,6 +35,9 @@ the fingers, or under the wheel. Two fingers are one gesture, the point between
 them panning and the distance between them zooming, and a finger lifting
 re-anchors on what is left. What a pixel of pan means in your coordinates, and
 whether the zoom is continuous or stepped, is yours: the numbers are the numbers.
+Where the hand is, rather than how far it moved, is on the event the report was
+read from, `detail.event`: the `pointermove` (its `clientX`/`clientY`), or the
+`wheel` for a zoom.
 
 Everything else is settled before the press, and there is nothing to wire: the
 pan steps back for what is carried across the surface (a `move`, a handle, a

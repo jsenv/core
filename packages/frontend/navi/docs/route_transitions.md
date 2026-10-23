@@ -65,6 +65,19 @@ is not `defineRouteDefaultTransition`, which is about every navigation nothing
 was said about. Write it only for a door that really is furniture: a page reached from a
 screen has that screen to be paired with, and the pair says more.
 
+A page with no door at all is from anywhere too: reached by its address from
+whatever screen one was on, as the not-found page is.
+
+```js
+const NOT_FOUND_PAGE = routeFallback();
+// <Route fallback={NOT_FOUND_PAGE} element={NotFoundPage} />
+defineRouteTransition(null, NOT_FOUND_PAGE, "slide-x");
+```
+
+So is an item's own page reached from every card it appears on: pair it only
+where one screen means something different, and let the traversal retrace the way
+back (see [below](#a-traversal-retraces-its-crossing)).
+
 **Such a page is still a PAGE**: it takes the screen's place, and the reader comes
 back to whatever the router puts there. A destination that must be drawn OVER the
 screen and give it back exactly on closing is a layer, not a page — its address
@@ -359,6 +372,13 @@ a custom movement's pictures read goes on `::view-transition`, never on the root
   }
 }
 ```
+
+The values navi hands a movement's pictures live there too, which is the only
+place they can be read from: `--navi-transition-window-width` and `-height`, the
+window the pages move in, and `--navi-route-transition-travel-x` and `-y`, the
+distance a page travels — the window less what the bars cut off it. A depth or a
+distance a movement derives from them is derived on `::view-transition`, as above;
+written on `:root`, the `var()` finds nothing and takes its fallback.
 
 ## Two routes matching one url
 

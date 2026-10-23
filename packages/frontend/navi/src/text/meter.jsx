@@ -138,6 +138,51 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * A level inside a range — a quota, a battery, how full a game is — drawn as a
+ * track and its fill, announced as a `meter`.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   value?: number,
+ *   min?: number,
+ *   max?: number,
+ *   low?: number,
+ *   high?: number,
+ *   optimum?: number,
+ *   caption?: import("preact").ComponentChildren,
+ *   percentage?: boolean,
+ *   fillOnly?: boolean,
+ *   fillRound?: boolean,
+ *   borderless?: boolean,
+ *   transition?: boolean,
+ *   loading?: boolean,
+ *   readOnly?: boolean,
+ *   disabled?: boolean,
+ *   trackColor?: string,
+ *   borderColor?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {number} [value=0] Where the level stands, kept inside `min`/`max`.
+ * @param {number} [min=0] The start of the range; `max` (1 by default) its end.
+ * @param {number} [low] With `high` and `optimum`, which part of the range is
+ *   good — the native `<meter>`'s rule: the fill is `--fill-color-optimum` in
+ *   the region `optimum` is in, `--fill-color-suboptimum` one region away and
+ *   `--fill-color-even-less-good` two away. Without `low` and `high` the whole
+ *   range is optimum.
+ * @param {import("preact").ComponentChildren} [caption] Written over the track,
+ *   which then takes the meter's whole height; without one the track is half
+ *   of it. A string caption is also the meter's accessible name.
+ * @param {boolean} [percentage] The caption is the fill as a percentage, when
+ *   no `caption` is given.
+ * @param {boolean} [fillOnly] Only the fill is drawn, not the empty track
+ *   behind it. Rounds the fill's end too (`fillRound`).
+ * @param {boolean} [fillRound] The fill's end follows the track's radius
+ *   rather than being cut straight.
+ * @param {boolean} [borderless] The track's border is transparent; its width
+ *   stays, so the fill keeps its inset.
+ * @param {boolean} [transition] The fill moves to a new value instead of
+ *   jumping there.
+ */
 export const Meter = ({
   value = 0,
   min = 0,

@@ -277,9 +277,10 @@ const css = /* css */ `
  *   press on the wall does, not whether there is one (see `dialog.jsx`'s own
  *   doc).
  * @param {import("preact").ComponentChildren} props.children - No built-in
- *   close button — add one wherever it makes sense for the layout (e.g. a
- *   plain `<Button command="--navi-close">` in `SidePanel.Head`), or rely on
- *   `closeByPressOutside`/Escape instead.
+ *   title or close button — place them where the layout wants them, usually
+ *   together in `SidePanel.Head`: `<Popup.Title>`, which names the panel, and
+ *   `<Popup.Close />` (see `SidePanel.Head`) — or no cross, leaving Escape
+ *   and `closeByPressOutside`.
  *   A form sent inside the panel closes it, as in any popup: a panel one
  *   keeps editing in says `command="--navi-void"` on that form (see
  *   docs/form_changed.md).
@@ -371,8 +372,14 @@ const toCssLength = (value, propertyName) =>
 /**
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
  * regardless of `side` — only the panel's content in between scrolls. No
- * built-in padding or close button — add a `<Button command="--navi-close">`
- * wherever it makes sense for the layout.
+ * built-in padding, title or close button. The usual row is the title, which
+ * names the panel, and the cross (docs/popup_open.md, "Its name"):
+ *
+ * @example
+ * <SidePanel.Head flex="x" alignY="center" padding="s">
+ *   <Popup.Title expandX>Filters</Popup.Title>
+ *   <Popup.Close />
+ * </SidePanel.Head>
  *
  * @param {object} props
  * @param {string} [props.className] - Merged with the shared

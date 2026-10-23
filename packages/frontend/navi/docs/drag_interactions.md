@@ -90,20 +90,22 @@ whatever it is declared on, and a `data-drop-container` (a place outside is only
 reached from outside).
 
 ```jsx
+const startViewTransition = ensureDocumentStartViewTransition();
+
 <List.Item
   id={task.id}
   data-view-transition-name={`task_${task.id}`}
   interactions={{
     reorder: (event) => {
       const { fromId, toId, syncCloneWithDropTarget } = event.detail;
-      return document.startViewTransition(() => {
+      return startViewTransition(() => {
         syncCloneWithDropTarget();
         setOrder(moveBefore(order, fromId, toId));
       }).finished;
     },
     toss: (event) => remove(event.detail.id),
   }}
-/>
+/>;
 ```
 
 Every element declaring `reorder` marks itself, so the set of items IS the set of

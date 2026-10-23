@@ -541,8 +541,33 @@ const useOnLoad = (action, onLoad) => {
 // ─── Loading ──────────────────────────────────────────────────────────────────
 // Wraps Suspense. Provides LoadingContext so useAction can write the suspension
 // reason. LoadingFallback reads that reason and subscribes to the action so it
-// only shows the spinner when actually loading (not in the initial idle state).
+// draws the fallback only while that action runs (not in the initial idle state).
+let loadingWithoutChildrenWarned = false;
+/**
+ * A boundary, not an indicator: it catches the wait a `useAsyncData` below it
+ * delegates, and draws `fallback` in place of its children while the action
+ * that wait is for runs. Nothing for an idle action, nothing without
+ * `fallback`, nothing at all without children — put it where the fallback
+ * should land. A spinner beside a value is `<LoadingIndicator>`; a first load
+ * is a skeleton (`<Text skeleton loading>`, see docs/data_states.md).
+ *
+ * @param {object} props
+ * @param {import("preact").ComponentChildren} props.children - What may wait.
+ * @param {import("preact").ComponentChildren | import("preact").ComponentType} [props.fallback] -
+ *   What stands in for the children while the action runs: an element, or a
+ *   component.
+ */
 export const Loading = ({ children, fallback }) => {
+  if (
+    import.meta.dev &&
+    (children === undefined || children === null) &&
+    !loadingWithoutChildrenWarned
+  ) {
+    loadingWithoutChildrenWarned = true;
+    console.warn(
+      `<Loading> without children draws nothing: it is the boundary a useAsyncData below it suspends into, not a spinner. A spinner is <LoadingIndicator>, a first load a skeleton (docs/data_states.md).`,
+    );
+  }
   const loadingRef = useRef({ reason: "idle", action: null });
   return (
     <LoadingContext.Provider value={loadingRef}>

@@ -119,7 +119,9 @@ told it shimmers until something runs that action.
 
 navi's own placeholders take that flag rather than inventing it: `<Text loading>`
 shimmers, `<Text skeleton>` is the same bar held still, and
-`<Text skeleton loading={loading}>` is one that tells the truth either way.
+`<Text skeleton loading={loading}>` is one that tells the truth either way. A
+spinner beside a value is `<LoadingIndicator>` — never `<Loading>`, which is the
+boundary a delegated wait suspends into and draws nothing of its own.
 
 **Knowing the count beforehand beats guessing it.** A screen that already knows
 how many rows are coming — a count carried by the parent resource, a total

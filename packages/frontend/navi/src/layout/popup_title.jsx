@@ -21,6 +21,20 @@ import {
 } from "preact/hooks";
 
 import { Title } from "../text/title.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
+
+const css = /* css */ `
+  @layer navi {
+    /* Offered back: a popup's title is most often the text of its header row,
+       beside the close cross, where a heading's own margins and size would
+       make the row taller and its text bigger. The margin and size props, or
+       a rule of the app's, take them back. */
+    .navi_popup_title {
+      margin-block: 0;
+      font-size: inherit;
+    }
+  }
+`;
 
 // The popup a title names: the nearest one around it. A surface that is no
 // popup of this kind but holds content of its own (a picker's callout) sets it
@@ -33,6 +47,8 @@ export const PopupTitleContext = createContext(null);
  * otherwise) that is also the popup's accessible name: a screen reader
  * announces the popup by it, and `getByRole("dialog", { name })` finds it.
  * An `aria-label`/`aria-labelledby` written on the popup itself wins over it.
+ * It is written at the size of what holds it, bold, with no heading margins —
+ * the text of a header row — unless `size` or `margin` say otherwise.
  *
  * @type {import("preact").FunctionComponent<{
  *   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6",
@@ -41,6 +57,7 @@ export const PopupTitleContext = createContext(null);
  * } & Record<string, any>>}
  */
 export const PopupTitle = (props) => {
+  import.meta.css = css;
   const registerTitle = useContext(PopupTitleContext);
   const idDefault = useId();
   const id = props.id || `popup_title_${idDefault}`;
@@ -51,7 +68,17 @@ export const PopupTitle = (props) => {
     return registerTitle(id);
   }, [registerTitle, id]);
 
-  return <Title as="h2" {...props} id={id} />;
+  return (
+    <Title
+      as="h2"
+      {...props}
+      baseClassName={withPropsClassName(
+        "navi_popup_title",
+        props.baseClassName,
+      )}
+      id={id}
+    />
+  );
 };
 
 /**

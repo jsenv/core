@@ -14,6 +14,10 @@ import { Text } from "./text.jsx";
  *   style?: import("preact").JSX.CSSProperties,
  *   [key: string]: any,
  * }>}
+ * @param {string} unit A unit `naviI18n` or `Intl` knows by name ("kilometer",
+ *   "hour"), written in the reader's language; any other string is shown as
+ *   given, so a unit word of the app's own comes already translated
+ *   (docs/i18n.md).
  */
 export const Unit = ({
   unit,

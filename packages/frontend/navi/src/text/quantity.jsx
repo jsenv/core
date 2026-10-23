@@ -79,6 +79,13 @@ const css = /* css */ `
  *   [key: string]: any,
  * }>}
  *
+ * @param {string|[string, string]} [unit] A unit navi or `Intl` knows by name
+ *   ("kilometer", "hour"), written in the reader's language and made plural
+ *   with the value; any other string is shown as given, so a unit word of the
+ *   app's own comes translated, as a pair whose second word is used above 1:
+ *   `unit={[i18n("ticket"), i18n("tickets")]}` (docs/i18n.md).
+ * @param {string} [unitColor] The unit's `color`, keywords included
+ *   (`"secondary"`, `"hint"`…).
  * @param {string|number} [unitSpacing]
  *   Gap between the value and the unit when `unitPosition="right"`. Accepts a
  *   size token (`"s"`, `"m"`, …), a CSS length string, a number (px) or

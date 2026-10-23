@@ -181,6 +181,9 @@ const MAX_CHAR_AS_CIRCLE = 3;
 const MAX_FOR_CIRCLE = 99;
 
 /**
+ * A count beside a word — unread messages, requests waiting: a pill holding
+ * the number, written for the reader's language and capped by `max`.
+ *
  * @param {boolean} [circle] Drawn round rather than as a pill. A circle holds
  *   three characters at most, so `max` defaults to 99 with it ("99+"); a `max`
  *   above 99, or `"none"`, lets a bigger count turn the circle into a pill as

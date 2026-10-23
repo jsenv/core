@@ -172,11 +172,27 @@ receives.
 ancestor can also listen for one, and `preventDefault()` on it means "not this
 time".
 
-The lower-level event is reachable too: `interactionEvent.detail.event` is the
-`pointerdown` a hold was made of, and the `pointerup` that ended a swipe or a
-tap — which is how a menu is opened at the point the press happened. A drag's
-is its `pointerdown`, release included, with one exception (see
-[drag_interactions.md](./drag_interactions.md)).
+What the callback receives depends on who made the interaction.
+`click`, `mousedown`, `mouseup` and `contextmenu` **are** the browser's event:
+its `target` is what was pressed, its `detail` the click count, and there is no
+`detail.event`. Every other interaction is an event navi dispatches **on the
+element that declares it** — its `target` is that element, whatever was pressed
+inside — and the event it was read from is `detail.event`:
+
+| Interaction                                | `detail.event`                                                                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `longpress`                                | the `pointerdown` held                                                                                                    |
+| a swipe                                    | the release that ended it                                                                                                 |
+| `double_click`, `single_click`             | the `pointerup` of the tap that settled it; a `single_click` no press made (the keyboard, `element.click()`): the `click` |
+| the carrying family (`move`, `reorder`, …) | the `pointerdown`, release included, with one exception (see [drag_interactions.md](./drag_interactions.md))              |
+| `"keyboard:<shortcut>"`                    | the `keydown`                                                                                                             |
+| `pan`                                      | the `pointermove`                                                                                                         |
+| `zoom`                                     | the `pointermove` of a pinch, or the `wheel`                                                                              |
+
+So `event.target` tells inner controls apart for the four native ones only.
+Whatever the interaction, the press itself — where a menu opens at the point the
+finger was — is `findEvent(event, ["pointerdown", "pointerup", "click",
+"contextmenu"]) || event`.
 
 ## Reaching the control
 
@@ -190,7 +206,9 @@ still answers a callback; only the two requests (`"request_action"`,
 A `Box` that lays out **several** controls — a row of badges, a toolbar — belongs
 to none of them: its interactions are its own, answered with no gate. A click on
 one of the controls reaches the box too, the way any click bubbles; the callback
-reads `event.target` when it has to tell them apart.
+reads `event.target` when it has to tell them apart — on a `click`; any other
+interaction's target is the box itself, and what was pressed is in its
+`detail.event` (see [Which interaction asked](#which-interaction-asked)).
 
 **The gate takes every declared interaction for a write.** Letting a read through
 a read-only or busy control is navi's to grant inside its own controls, and

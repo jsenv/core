@@ -6,6 +6,19 @@ document. An app that starts a transition of its own runs into a handful of
 browser facts no component can absorb for it; they are collected here so that
 they are met once.
 
+Two of them are absorbed by the function navi starts its own with, and an app
+starts its own with it too. `ensureDocumentStartViewTransition()` installs
+`document.startViewTransition` where the browser has none and returns the
+function to call: it runs the update whatever happens, and swallows the
+rejection a skipped transition leaves behind (see
+[below](#ready-rejects-when-the-transition-is-skipped-finished-when-the-update-fails)).
+Ending it still takes both ways of `finished`:
+
+```js
+const startViewTransition = ensureDocumentStartViewTransition();
+startViewTransition(() => setItems(next)).finished.then(done, done);
+```
+
 - [A name is unique per document](#a-name-is-unique-per-document)
 - [Nested groups, and the fallback fade](#nested-groups-and-the-fallback-fade)
 - [Rendering is suspended for the whole callback](#rendering-is-suspended-for-the-whole-callback)

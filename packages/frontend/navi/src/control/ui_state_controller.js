@@ -1173,7 +1173,7 @@ const readNamedChildUIStates = (children, { warnNameless }) => {
       }
       if (warnNameless) {
         console.warn(
-          "A group child is missing a name property, its state won't be included in the group state",
+          "A group child is missing a name property, its state won't be included in the group state: give it a `name` if it is part of this answer, or `standalone` if it answers for itself (docs/form_changed.md).",
           child,
         );
       }

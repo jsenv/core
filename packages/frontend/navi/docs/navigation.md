@@ -345,6 +345,10 @@ The routes, the document url and the renders still follow every write; only
 `window.location` waits for the state to stay still that long, and a back pressed
 before the write keeps the last address written. A push is never debounced.
 
+A `stateSignal` bound to a `Wheel` is such a value: the wheel writes every row a
+drag, a fling or a mouse wheel passes through, not only the one it settles on, so
+the state declares `debounceUrl`.
+
 ## Rendering routes
 
 `<Route>` is the only primitive. With `children` it is a container that renders
@@ -369,6 +373,12 @@ the pages of a `RouteTravel` row alike:
   <Route fallback element={NotFoundPage} />
 </Route>
 ```
+
+`fallback` also takes a `routeFallback()`, which names the page it shows
+(`<Route fallback={NOT_FOUND_PAGE} element={NotFoundPage} />`): a movement can then
+be written about it (see
+[route_transitions.md](./route_transitions.md#a-page-opened-from-anywhere)), and
+its `matchingSignal` read outside the tree.
 
 A section with a shared prefix owns its own sub-router: one leaf on
 `/dashboard/` whose element renders its own `<Route>` tree and chrome, handing its
@@ -685,6 +695,14 @@ panel — it is a [search param](#search-params); when only the reader's eyes
 should go somewhere, a fragment, down to a single row (`#tournament_42`) — never
 a search param plus a `scrollIntoView` in an effect, which fires before what sits
 above the element has laid out, with nothing to tell it how long to wait.
+
+A mark that only designates — the row a notification points at, outlined until
+the reader moves on — is `:target` too, even though it restyles the element: it
+lasts until the page next writes its URL, which is the length of "this one". A
+search param would outlive it, as state the page does not act on. The alignment
+`setUrlTargetOptions({ block })` sets holds for the whole app; a target that wants
+to land with more room before it says so on itself, with a scroll-margin
+(`scrollMarginBlock` on a `Box`), which the landing honours.
 
 ### A row of tabs, where a replace IS an arrival
 

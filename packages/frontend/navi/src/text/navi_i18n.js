@@ -40,7 +40,10 @@ import { humanizeI18n } from "@jsenv/humanize";
  * Unit names get two derived keys, both optional: `<unit>__plural` and
  * `<unit>__short`. `<Unit>`/`<Quantity>` fall back to the singular when the
  * derived key is missing, and to `Intl.NumberFormat` when the unit itself is
- * not registered at all — so only units Intl gets wrong need registering.
+ * not registered at all — so only units Intl gets wrong need registering. A
+ * unit word of the app's own (a ticket, a seat) is an app text: it comes from
+ * the app's registry, translated (`<Quantity unit={[i18n("ticket"),
+ * i18n("tickets")]}>`), see docs/i18n.md.
  *
  * @example
  * import { naviI18n } from "@jsenv/navi";
@@ -51,10 +54,12 @@ import { humanizeI18n } from "@jsenv/humanize";
  * // Teach navi a language it does not ship:
  * naviI18n.addLangKeys("ja", { "list.empty": "項目がありません。" });
  *
- * // Register unit translations used by <Quantity>/<Unit>:
+ * // Reword a unit <Quantity>/<Unit> would take from Intl (the unit itself
+ * // first: its derived keys are read only once it is registered):
  * naviI18n.addAll({
- *   ticket:         { en: "ticket",  fr: "billet"  },
- *   ticket__plural: { en: "tickets", fr: "billets" },
+ *   hour:         { en: "hour",  fr: "heure"  },
+ *   hour__plural: { en: "hours", fr: "heures" },
+ *   hour__short:  { en: "h",     fr: "h"      },
  * });
  */
 export const naviI18n = humanizeI18n;

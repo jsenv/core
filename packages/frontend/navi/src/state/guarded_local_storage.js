@@ -23,3 +23,15 @@ export const writeLocalStorage = (key, value) => {
     // Full, or refused: the value lives for the session only.
   }
 };
+
+export const listLocalStorageKeys = () => {
+  try {
+    const keys = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      keys.push(window.localStorage.key(i));
+    }
+    return keys;
+  } catch {
+    return [];
+  }
+};
