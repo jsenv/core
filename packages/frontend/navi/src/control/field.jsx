@@ -7,8 +7,13 @@ import {
 } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { moveFocusTo } from "../utils/focus/focus_transfer.js";
 import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
-import { subscribeToControlState } from "./control_label_state.js";
+import { findControlRoot } from "./control_dom.js";
+import {
+  publishLabelToControl,
+  subscribeToControlState,
+} from "./control_label_state.js";
 import { extractMessageAndRemainingProps } from "./rules/constraint_message.js";
 
 const css = /* css */ `
@@ -192,6 +197,7 @@ export const Label = (props) => {
   const [readOnly, setReadOnly] = useState(false);
   const [required, setRequired] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [namesControlRoot, setNamesControlRoot] = useState(false);
   // Set htmlFor only when we know the correct target id:
   //   - caller explicitly provided one (even undefined to opt out)
   //   - a parent Field provided one via ControlIdContext
@@ -216,8 +222,39 @@ export const Label = (props) => {
       setDisabled(Boolean(controlState?.disabled));
       setReadOnly(Boolean(controlState?.readOnly));
       setRequired(Boolean(controlState?.required));
+      setNamesControlRoot(controlState?.nameOn === "root");
     });
   }, [htmlFor]);
+  // A control whose role is on its root (a wheel) is named by this label's id
+  // rather than by `for`, which can only point at its aria-hidden host (see
+  // control_label_state.js).
+  const labelId = props.id;
+  useLayoutEffect(() => {
+    if (!htmlFor || !namesControlRoot) {
+      return undefined;
+    }
+    return publishLabelToControl(htmlFor, labelId);
+  }, [htmlFor, namesControlRoot, labelId]);
+  // …and without `for`, the press that focuses the control is this label's
+  // to answer. A press on something interactive inside the label stays that
+  // thing's, as the browser does for a label[for].
+  const onClickFocusingControlRoot = (e) => {
+    props.onClick?.(e);
+    if (e.defaultPrevented) {
+      return;
+    }
+    const interactive = e.target.closest(
+      "a[href], button, input, select, textarea, [tabindex]",
+    );
+    if (interactive && e.currentTarget.contains(interactive)) {
+      return;
+    }
+    const host = document.getElementById(htmlFor);
+    const controlRoot = host && findControlRoot(host);
+    if (controlRoot) {
+      moveFocusTo(controlRoot);
+    }
+  };
   const [messageProps, remainingProps] = extractMessageAndRemainingProps({
     ...props,
     requiredIndicator: undefined,
@@ -236,6 +273,8 @@ export const Label = (props) => {
         ":read-only": readOnly,
       }}
       {...remainingProps}
+      htmlFor={namesControlRoot ? undefined : htmlFor}
+      onClick={namesControlRoot ? onClickFocusingControlRoot : props.onClick}
       onnavi_control_state={(e) => {
         setConnected(true);
         setDisabled(e.detail.disabled);

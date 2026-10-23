@@ -83,7 +83,9 @@ announced by nothing and found by nothing, while the host is what the user
 focuses and what `getByRole(role, { name })` and `getByLabel()` read. A `Wheel`
 is the other way round: its root is the `spinbutton` the user focuses, and its
 host is an `aria-hidden` input carrying the value, so the name lands on the
-root.
+root. A `<Label>` in its `<Field>` names it the same way: by id, through
+`aria-labelledby` on the root, with no `for` (which could only point at the
+hidden input).
 
 ```jsx
 <Picker variant="icon" aria-label="Aide" ui={<Icon>…</Icon>}>

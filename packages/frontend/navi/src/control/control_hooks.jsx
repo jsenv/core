@@ -85,6 +85,7 @@ import { findControlHost, findControlRoot } from "./control_dom.js";
 import { interactionsDisputeThePress } from "./interaction/interactions.js";
 import {
   publishControlStateToLabels,
+  subscribeToControlLabels,
   unpublishControlStateToLabels,
 } from "./control_label_state.js";
 import { findControlProxyTarget } from "./control_proxy.js";
@@ -405,17 +406,11 @@ export const useControlProps = (
           };
         }
         if (defaultAction === "activate") {
-          // activating the control (e.g. space on a button/range)
           return {
             name: `keydown to activate`,
             prevented: () => e.preventDefault(),
             allowed: () => {
               triggerUIAction(e);
-              if (controlType === "button" && e.key === " ") {
-                // prevent browser dispatching click
-                // it could lead to duplicates as we explicitely handled the space to click here
-                e.preventDefault();
-              }
             },
           };
         }
@@ -557,7 +552,15 @@ export const useControlProps = (
         };
 
         return {
-          keyDown: keyDownDefault,
+          keyDown: (e) => {
+            if (getKeyboardEventDefaultAction(e) === "activate") {
+              // The browser presses the button itself — Enter clicks on
+              // keydown, Space on keyup — and the click reaction below answers
+              // that press, once: ui action, action and command together.
+              return null;
+            }
+            return keyDownDefault(e);
+          },
           mouseDown: (e) => {
             if (actsOnMouseDown) {
               return {
@@ -576,7 +579,9 @@ export const useControlProps = (
             return null;
           },
           click: (e) => {
-            if (actsOnMouseDown) {
+            // A click no mousedown came before (the keyboard, a label) is a
+            // press the mousedown reaction never saw.
+            if (actsOnMouseDown && e.detail !== 0) {
               return null;
             }
             return {
@@ -1967,6 +1972,7 @@ const useInteractiveProps = (
         disabled: disabledResolved,
         readOnly,
         required: requiredResolved,
+        nameOn,
       };
       for (const label of getAssociatedLabels(element)) {
         label.dispatchEvent(
@@ -1987,6 +1993,24 @@ const useInteractiveProps = (
         unpublishControlStateToLabels(publishedIdRef.current);
       };
     }, []);
+    // Named on its root, the control is named by its labels' ids: they drop
+    // their `for` for it (see control_label_state.js). A name the caller gives
+    // wins.
+    const [labelledBy, setLabelledBy] = useState();
+    const { id } = props;
+    useLayoutEffect(() => {
+      if (nameOn !== "root" || !id) {
+        return undefined;
+      }
+      return subscribeToControlLabels(id, setLabelledBy);
+    }, [id]);
+    if (
+      labelledBy &&
+      controlRootProps["aria-label"] === undefined &&
+      controlRootProps["aria-labelledby"] === undefined
+    ) {
+      controlRootProps["aria-labelledby"] = labelledBy;
+    }
   }
   ui_state_and_value: {
     const isCheckable = isCheckableInput(

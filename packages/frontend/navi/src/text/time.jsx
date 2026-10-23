@@ -429,6 +429,7 @@ const TimeHour = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
+  const dateTime = formatClock(hours * 3600);
   if (format === "timestring") {
     const totalMinutes = Math.round(hours * 60);
     const date = new Date(
@@ -439,10 +440,18 @@ const TimeHour = ({
       totalMinutes % 60,
       0,
     );
-    return <TimeText {...props}>{formatTime(date, { lang })}</TimeText>;
+    return (
+      <TimeText dateTime={dateTime} {...props}>
+        {formatTime(date, { lang })}
+      </TimeText>
+    );
   }
   const text = formatHourDuration(hours, { lang, format, forceUnit });
-  return <TimeText {...props}>{text}</TimeText>;
+  return (
+    <TimeText dateTime={dateTime} {...props}>
+      {text}
+    </TimeText>
+  );
 };
 
 const TimeDuration = ({

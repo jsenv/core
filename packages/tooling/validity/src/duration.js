@@ -393,7 +393,9 @@ export const durationToString = (duration) => {
  *
  * For fully-numeric durations this produces a valid ISO 8601 string, folding
  * milliseconds into the seconds component as a decimal fraction (e.g. 500ms
- * → 0.5S) and omitting zero-value fields.
+ * → 0.5S). A fraction of a day, an hour or a minute is carried down to the
+ * next unit, so that only the seconds have one, as HTML's `datetime` requires
+ * (1.5 hours → PT1H30M).
  *
  * Non-numeric (mid-edit) unit values are embedded as-is between their ISO
  * markers so that the result can always be round-tripped back through
@@ -410,7 +412,8 @@ export const durationToString = (duration) => {
  * durationToISOString("2hour15minute")                    // "PT2H15M"
  * durationToISOString({ years: 1, months: 2 })            // "P1Y2M"
  * durationToISOString({ seconds: 1, milliseconds: 500 })  // "PT1.5S"
- * durationToISOString({ hours: "ab", minutes: 30 })       // "PTabH30M"
+ * durationToISOString({ hours: 1.5 })                     // "PT1H30M"
+ * durationToISOString({ hours: "ab", minutes: 30 })     // "PTabH30M"
  * durationToISOString({ hours: "aH", minutes: 30 })       // "PTaHH30M"  (parser: last H wins)
  * durationToISOString("30")                               // null — no unit
  * durationToISOString(null)                               // null
@@ -447,28 +450,50 @@ export const durationToISOString = (value) => {
   if (weeks !== null) {
     date += `${encodeISOValue(weeks)}W`;
   }
-  if (days !== null) {
-    date += `${encodeISOValue(days)}D`;
-  }
+  // HTML's duration grammar takes a fraction on the seconds only, up to 3
+  // decimals: a fraction of a day, an hour or a minute goes down to the next
+  // unit (1.5 hours is "PT1H30M"), counted in whole milliseconds. Only down:
+  // a unit the duration does not overflow into stays absent, so 90 minutes
+  // stays "PT90M".
+  let carriedMs = 0;
+  const writeCarried = (value, unitMs, marker) => {
+    if (typeof value === "string") {
+      return `${encodeISOValue(value)}${marker}`;
+    }
+    if (value === null && carriedMs === 0) {
+      return "";
+    }
+    const totalMs = Math.round((value ?? 0) * unitMs) + carriedMs;
+    const whole = Math.trunc(totalMs / unitMs);
+    carriedMs = totalMs - whole * unitMs;
+    return `${whole}${marker}`;
+  };
+  date += writeCarried(days, 86_400_000, "D");
   let time = "";
-  if (hours !== null) {
-    time += `${encodeISOValue(hours)}H`;
-  }
-  if (minutes !== null) {
-    time += `${encodeISOValue(minutes)}M`;
-  }
+  time += writeCarried(hours, 3_600_000, "H");
+  time += writeCarried(minutes, 60_000, "M");
   if (typeof secs === "string") {
     // Non-numeric seconds — embed with bracket escaping if needed
     time += `${encodeISOValue(secs)}S`;
-  } else {
-    // Numeric path — fold ms into seconds; include even if total is 0 so that
-    // an explicitly-set field (user typed "0") is preserved in the output
-    const numSecs = secs ?? 0;
-    const numMs = typeof ms === "number" ? ms : 0;
-    const totalSeconds = numSecs + numMs / 1000;
-    if (secs !== null || (ms !== null && typeof ms === "number")) {
-      time += `${totalSeconds}S`;
-    }
+  } else if (
+    // included even when it totals 0, so that an explicitly-set field (user
+    // typed "0") is preserved in the output
+    secs !== null ||
+    typeof ms === "number" ||
+    carriedMs !== 0
+  ) {
+    const totalMs =
+      Math.round((secs ?? 0) * 1000) +
+      (typeof ms === "number" ? Math.round(ms) : 0) +
+      carriedMs;
+    const wholeSeconds = Math.trunc(totalMs / 1000);
+    const fractionMs = Math.abs(totalMs - wholeSeconds * 1000);
+    const fraction =
+      fractionMs === 0
+        ? ""
+        : `.${String(fractionMs).padStart(3, "0").replace(/0+$/, "")}`;
+    const sign = totalMs < 0 && wholeSeconds === 0 ? "-" : "";
+    time += `${sign}${wholeSeconds}${fraction}S`;
   }
   const result = `P${date}${time ? `T${time}` : ""}`;
   return result === "P" ? null : result;

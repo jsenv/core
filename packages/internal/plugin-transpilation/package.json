@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-transpilation",
-  "version": "1.7.16",
+  "version": "1.7.17",
   "type": "module",
   "description": "TODO",
   "repository": {
@@ -45,10 +45,10 @@
     "@babel/plugin-transform-typeof-symbol": "8.0.1",
     "@babel/plugin-transform-unicode-property-regex": "8.0.1",
     "@babel/plugin-transform-unicode-regex": "8.0.1",
-    "@jsenv/ast": "6.10.12",
-    "@jsenv/js-module-fallback": "1.6.16",
-    "@jsenv/sourcemap": "1.4.15",
-    "@jsenv/urls": "2.9.19",
+    "@jsenv/ast": "6.10.13",
+    "@jsenv/js-module-fallback": "1.6.17",
+    "@jsenv/sourcemap": "1.4.16",
+    "@jsenv/urls": "2.9.20",
     "@jsenv/utils": "2.3.1",
     "construct-style-sheets-polyfill": "3.1.0",
     "lightningcss": "1.33.0"

@@ -858,12 +858,19 @@ export const formatSecondDuration = (
     reads: ["long", "short", "narrow", "compact"],
   });
   seconds = roundSeconds(seconds, decimals);
-  if (seconds < 0) {
+  // The millisecond is the finest unit written (see carryFraction): the zero
+  // and the sign are read at that precision, so 0.0004 is the "0 seconde" it
+  // rounds to, not a duration with nothing in it, and -0.0004 has no sign.
+  const milliseconds = Math.round(seconds * 1000);
+  if (milliseconds === 0) {
+    return formatSingleUnit(0, "second", { lang, format });
+  }
+  if (milliseconds < 0) {
     // the d/h/m/s split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
     return `-${formatSecondDuration(-seconds, { lang, format, forceUnit, decimals })}`;
   }
-  if (forceUnit || seconds === 0) {
+  if (forceUnit) {
     return formatSingleUnit(seconds, "second", { lang, format });
   }
   const [totalSeconds, ms] = carryFraction(seconds, 1000);
