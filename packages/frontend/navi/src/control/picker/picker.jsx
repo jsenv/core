@@ -70,7 +70,21 @@ import { FileSvg } from "../../graphic/icons/file_svg.jsx";
 import { PencilSvg } from "../../graphic/icons/pencil_svg.jsx";
 
 const css = /* css */ `
+  /* The font size of what holds a picker, as a length: registered, the 1em
+     below computes to the pixels of the element it is declared on — the
+     picker's container — and reaches the popup as that, past the size the
+     picker sets for its own trigger (see .navi_picker_content). */
+  @property --navi-picker-container-font-size {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 16px;
+  }
+
   @layer navi {
+    :where(:has(> .navi_picker)) {
+      --navi-picker-container-font-size: 1em;
+    }
+
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
       --picker-border-width: var(--navi-control-border-width);
@@ -84,6 +98,11 @@ const css = /* css */ `
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
       --picker-padding-y-default: var(--navi-picker-padding-y-default);
       --picker-font-size: var(--navi-control-font-size);
+      /* The trigger's weight, when it is given one: written on its frame
+         rather than on this root, which also holds the popup (see
+         .navi_picker_box). Declared on every root so a picker in a popup does
+         not inherit the weight of the one that opened it. */
+      --picker-font-weight: initial;
       --picker-font-family: var(--navi-control-font-family, inherit);
       --picker-loader-color: var(--navi-loader-color);
       --picker-cta-background-color: var(--navi-accent-color);
@@ -521,6 +540,7 @@ const css = /* css */ `
       flex-direction: row;
       align-items: var(--x-picker-align-y);
       justify-content: var(--x-picker-align-x);
+      font-weight: var(--picker-font-weight, inherit);
       background-color: var(--x-picker-background-color);
       border-width: var(--picker-border-width);
       border-style: solid;
@@ -818,12 +838,12 @@ const css = /* css */ `
          and the chevron the picker draws in em land on the text the caller
          actually wrote) would otherwise take the popup with it: its title, and
          everything in it that does not state a size of its own. The controls
-         in there state the control size themselves. Read off the container as
-         the popup opens (writeContainerFont in picker_custom.jsx); these hold
-         until then. Same reason the popup is written on the page's line rather
-         than the control's — see .navi_popup in popup.jsx. */
-      font-weight: initial;
-      font-size: 1rem;
+         in there state the control size themselves. The weight needs nothing
+         here, the trigger's being written on its frame; the size stays on the
+         picker's root, where the trigger's em need it, so the container's is
+         read past it. Same reason the popup is written on the page's line
+         rather than the control's — see .navi_popup in popup.jsx. */
+      font-size: var(--navi-picker-container-font-size);
       text-align: initial; /* Don't inherit picker text align */
     }
 
@@ -1768,6 +1788,9 @@ const PickerInputPseudoClasses = [
 // picker_custom.jsx: a variable on the root inherits into everything the popup
 // holds, and the pickers in there would read it as their own.
 const PickerStyleCSSVars = {
+  // Onto the trigger's frame rather than the root, which holds the popup too
+  // (see --picker-font-weight).
+  "fontWeight": "--picker-font-weight",
   "outlineWidth": "--picker-outline-width",
   "borderWidth": "--picker-border-width",
   "borderRadius": "--picker-border-radius",
