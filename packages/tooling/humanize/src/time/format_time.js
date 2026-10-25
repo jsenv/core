@@ -380,10 +380,17 @@ export const formatMonth = (
  * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short),
  * "11/05, 14:30" (narrow, which `"compact"` is a name for).
  * `timeZone` words the instant in that IANA zone instead of the runtime's own.
+ * `precision: "second"` writes the seconds after the minutes ("11/05,
+ * 14:30:07"): a log line, two events within one minute.
  */
 export const formatDatetime = (
   date,
-  { lang = getRuntimeLang(), format = "long", timeZone } = {},
+  {
+    lang = getRuntimeLang(),
+    format = "long",
+    precision = "minute",
+    timeZone,
+  } = {},
 ) => {
   format = resolveFormat(format, {
     fnName: "formatDatetime",
@@ -391,13 +398,13 @@ export const formatDatetime = (
     // The narrow datetime is already all digits ("17/09 14:30").
     as: { compact: "narrow" },
   });
+  const clockOptions = resolveClockOptions(precision);
   if (format === "long") {
     const formatter = memoIntl("DateTimeFormat", lang, {
       weekday: "short",
       day: "numeric",
       month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
+      ...clockOptions,
       timeZone,
     });
     return formatWithSpelledMonth(formatter, date, { lang, timeZone });
@@ -406,8 +413,7 @@ export const formatDatetime = (
     return memoIntl("DateTimeFormat", lang, {
       day: "2-digit",
       month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      ...clockOptions,
       timeZone,
     }).format(date);
   }
@@ -415,26 +421,31 @@ export const formatDatetime = (
   const formatter = memoIntl("DateTimeFormat", lang, {
     day: "numeric",
     month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
+    ...clockOptions,
     timeZone,
   });
   return formatWithSpelledMonth(formatter, date, { lang, timeZone });
 };
 
 /**
- * Formats a date as "14:30".
+ * Formats a date as "14:30", or "14:30:07" with `precision: "second"`.
  * `timeZone` words the instant in that IANA zone instead of the runtime's own.
  */
 export const formatTime = (
   date,
-  { lang = getRuntimeLang(), timeZone } = {},
+  { lang = getRuntimeLang(), precision = "minute", timeZone } = {},
 ) => {
   return memoIntl("DateTimeFormat", lang, {
-    hour: "2-digit",
-    minute: "2-digit",
+    ...resolveClockOptions(precision),
     timeZone,
   }).format(date);
+};
+
+const resolveClockOptions = (precision) => {
+  if (precision === "second") {
+    return { hour: "2-digit", minute: "2-digit", second: "2-digit" };
+  }
+  return { hour: "2-digit", minute: "2-digit" };
 };
 
 /**
@@ -446,11 +457,15 @@ export const formatTime = (
  *   A Date, a ms timestamp, or an "HH:MM"/"HH:MM:SS" string. Only the clock
  *   time is read. A nullish value renders the "--:--" placeholder; an
  *   unparseable one is returned as-is, stringified.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", timeZone?: string }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute"|"second", timeZone?: string }} [options]
  *   The options `<Time type="time">` takes: `"timestring"` is the clock
  *   "14:30"; the other formats write the time as a duration-shaped phrase —
  *   see {@link formatMinuteDuration}'s `clockStyle` for what `pad` and
  *   `precision` shape in `format="compact"`.
+ * @param {"hour"|"minute"|"second"} [options.precision]
+ *   `"second"` writes the seconds in every format: "14:30:07", "14h30min07s",
+ *   "14 heures, 30 minutes et 7 secondes". `"hour"` and `"minute"` only
+ *   shape `format="compact"`.
  * @param {string} [options.timeZone]
  *   IANA zone the instant's clock is read in ("Europe/Paris"); defaults to
  *   the runtime's own zone. Only applies to a Date/timestamp — an
@@ -489,7 +504,10 @@ export const formatTimeOfDay = (
     reads: ["long", "short", "narrow", "compact", "timestring"],
   });
   if (format === "timestring") {
-    return formatTime(date, { lang, timeZone: zone });
+    return formatTime(date, { lang, precision, timeZone: zone });
+  }
+  if (precision === "second") {
+    return formatTimeOfDayToTheSecond(date, { lang, format, pad, zone });
   }
   const { hours, minutes } = readClock(date, zone);
   const totalMinutes = hours * 60 + minutes;
@@ -537,13 +555,18 @@ export const formatTimeOfDay = (
   // (the conjunction, the minutes part) exactly as Intl would produce
   // for this locale — formatToParts tags each token with the unit it
   // belongs to, so the swap doesn't need to know the locale's own
-  // grammar/word order. Only ever one hour-tagged group per call
-  // (hours is always 0 or absent here), but guarded anyway in case a
-  // future Intl implementation ever splits it into more parts.
+  // grammar/word order.
   const parts = memoIntl("DurationFormat", lang, {
     style: "long",
     hoursDisplay: "always",
   }).formatToParts({ hours: 0, minutes });
+  return replaceHourGroup(parts, midnightWord);
+};
+
+// Only ever one hour-tagged group per call (hours is always 0 where this is
+// called), but guarded anyway in case a future Intl implementation ever
+// splits it into more parts.
+const replaceHourGroup = (parts, word) => {
   let hourGroupReplaced = false;
   return parts
     .map((part) => {
@@ -554,9 +577,38 @@ export const formatTimeOfDay = (
         return "";
       }
       hourGroupReplaced = true;
-      return midnightWord;
+      return word;
     })
     .join("");
+};
+
+// A clock read to the second, in the same shapes as at the minute: Intl's
+// duration words with the hour kept at zero (midnight said in "long"), or
+// formatSecondDuration's compact symbols padded like a clock ("14h30min07s").
+const formatTimeOfDayToTheSecond = (date, { lang, format, pad, zone }) => {
+  const { hours, minutes, seconds } = readClock(date, zone);
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    const formatter = memoIntl("DurationFormat", lang, {
+      style: format,
+      hoursDisplay: "always",
+    });
+    const duration = { hours, minutes, seconds };
+    if (hours !== 0 || format !== "long") {
+      return formatter.format(duration);
+    }
+    const midnightWord = humanizeI18n("time.midnight", undefined, { lang });
+    if (midnightWord === "time.midnight") {
+      return formatter.format(duration);
+    }
+    return replaceHourGroup(formatter.formatToParts(duration), midnightWord);
+  }
+  const hSym = humanizeI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = humanizeI18n("time.duration.minute_symbol", undefined, { lang });
+  const sSym = humanizeI18n("time.duration.second_symbol", undefined, { lang });
+  const hStr = pad ? String(hours).padStart(2, "0") : String(hours);
+  const mStr = String(minutes).padStart(2, "0");
+  const sStr = String(seconds).padStart(2, "0");
+  return `${hStr}${hSym}${mStr}${mSym}${sStr}${sSym}`;
 };
 
 /**
@@ -571,7 +623,7 @@ export const formatTimeOfDay = (
  * @param {Date|number|string} to
  *   Each bound accepts what {@link formatTimeOfDay} accepts; a nullish bound
  *   renders its "--:--" placeholder.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string, timeZone?: string }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute"|"second", separator?: string, timeZone?: string }} [options]
  *   `precision` writes both bounds at this precision instead of the one the
  *   pair calls for. `separator` defaults to the `"time.range_separator"`
  *   registered text (an en dash), tightened against both bounds in
@@ -1405,30 +1457,38 @@ export const toTimeOfDay = (value) => {
   });
 };
 
-// Reads the wall-clock hour/minute of an instant — in the runtime's own zone
-// by default, in `timeZone` when given. A Date only carries local getters, so
-// another zone's clock has to come out of Intl parts (hourCycle h23 so
-// midnight reads hour 0, never 24).
+// Reads the wall-clock hour/minute/second of an instant — in the runtime's own
+// zone by default, in `timeZone` when given. A Date only carries local
+// getters, so another zone's clock has to come out of Intl parts (hourCycle
+// h23 so midnight reads hour 0, never 24).
 const readClock = (date, timeZone) => {
   if (!timeZone) {
-    return { hours: date.getHours(), minutes: date.getMinutes() };
+    return {
+      hours: date.getHours(),
+      minutes: date.getMinutes(),
+      seconds: date.getSeconds(),
+    };
   }
   const parts = memoIntl("DateTimeFormat", "en", {
     timeZone,
     hour: "numeric",
     minute: "numeric",
+    second: "numeric",
     hourCycle: "h23",
   }).formatToParts(date);
   let hours = 0;
   let minutes = 0;
+  let seconds = 0;
   for (const part of parts) {
     if (part.type === "hour") {
       hours = Number(part.value);
     } else if (part.type === "minute") {
       minutes = Number(part.value);
+    } else if (part.type === "second") {
+      seconds = Number(part.value);
     }
   }
-  return { hours, minutes };
+  return { hours, minutes, seconds };
 };
 
 const isYearWritten = (year, { date, now, timeZone }) => {

@@ -111,6 +111,7 @@ const css = /* css */ `
       --picker-color: currentColor;
       --picker-placeholder-color: var(--navi-placeholder-color);
       --picker-placeholder-font-style: var(--navi-placeholder-font-style);
+      --picker-placeholder-font-size: var(--navi-placeholder-font-size);
       --picker-color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       /* Hover */
       --picker-border-color-hover: color-mix(
@@ -598,6 +599,7 @@ const css = /* css */ `
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
         font-style: var(--picker-placeholder-font-style);
+        font-size: var(--picker-placeholder-font-size);
       }
 
       /* A <BadgeList> caps its own rows: it renders the badges that fit and a
@@ -656,7 +658,9 @@ const css = /* css */ `
       );
       flex-shrink: 0;
       align-items: center;
-      align-self: flex-start;
+      /* On the value's first line, unless alignY says where: the slot is one
+         line tall, and a value of several lines leaves it a place to choose. */
+      align-self: var(--picker-align-y, flex-start);
       justify-content: center;
       color: var(--x-picker-icon-color);
       /* Transparent to the pointer: the chevron is decoration, and a click on
@@ -964,24 +968,33 @@ const css = /* css */ `
         margin-left: 0;
         order: -1;
       }
-      /* Out of the flow, in the margin beside the box: the box stays the
-         drawing's, and what the drawing measures is what it measures when
-         nothing opens. left: 100% rather than right: 0, so the chevron follows
-         the box's edge outward and never covers what the drawing wrote there.
-         The press reaches it through --x-picker-chevron-reach (see the root),
-         the chevron's own size plus its gap — the size is written on the box
-         by the picker, from rightSlotIconSize. */
+      /* In the margin beside the box: the box stays the drawing's, and what
+         the drawing measures is what it measures when nothing opens. The slot
+         stays in the flow after the drawing and a negative margin as wide as
+         the chevron and its gap takes it back out of the box's size, so it
+         follows the box's edge outward and never covers what the drawing wrote
+         there. The press reaches it through --x-picker-chevron-reach (see the
+         root) — the size is written on the box by the picker, from
+         rightSlotIconSize. Both are multiplied by --picker-chevron-hang (1,
+         unset), which an app sets to 0 — on the picker or around it, from a
+         container query — to bring the chevron back into the line when the
+         margin it hangs in is gone: one number, so no style query is needed
+         to undo the two together. */
       &[data-chevron="hang-end"] > .navi_picker_box {
         --x-picker-chevron-reach: calc(
-          var(--x-picker-chevron-size) +
-            var(--picker-slot-spacing, var(--navi-xxs))
+          (
+              var(--x-picker-chevron-size) +
+                var(--picker-slot-spacing, var(--navi-xxs))
+            ) *
+            var(--picker-chevron-hang, 1)
         );
 
         > .navi_picker_right_slot {
-          position: absolute;
-          top: 50%;
-          left: 100%;
-          transform: translateY(-50%);
+          /* Taken out of the box's height the same way: centered on the
+             drawing, it adds no line to a drawing shorter than one. */
+          margin-top: calc(-0.5lh * var(--picker-chevron-hang, 1));
+          margin-right: calc(-1 * var(--x-picker-chevron-reach));
+          margin-bottom: calc(-0.5lh * var(--picker-chevron-hang, 1));
         }
       }
     }
@@ -1088,7 +1101,9 @@ const PickerButton = (props) => {
   // caller's own, and clamping it would be the picker deciding the shape of
   // something it does not draw.
   const maxLines =
-    variant === "text" || variant === "bare" ? undefined : maxLinesProp;
+    variant === "text" || variant === "bare" || maxLinesProp === false
+      ? undefined
+      : maxLinesProp;
   const isSingleLine = maxLines === 1;
   // Same rule as the root: phrasing content inside a sentence.
   const ContentTag = variant === "text" ? "span" : "div";
@@ -1989,7 +2004,11 @@ const warnOnMaxLinesNotClamped = (props) => {
     return;
   }
   const { maxLines, variant } = props;
-  if (maxLines === undefined || (variant !== "text" && variant !== "bare")) {
+  if (
+    maxLines === undefined ||
+    maxLines === false ||
+    (variant !== "text" && variant !== "bare")
+  ) {
     return;
   }
   if (maxLinesNotClampedWarnedSet.has(variant)) {
@@ -2142,7 +2161,7 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   openValue?: any,
  *   accept?: string,
  *   multiple?: boolean,
- *   maxLines?: number,
+ *   maxLines?: number | false,
  *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
  *   dialogMinWidth?: number | string,
@@ -2212,12 +2231,16 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   press, the way a click is the innermost target's. Being a gesture, the open goes through
  *   the interaction gate as one: a `readOnly` picker refuses it and says so
  *   where the finger is, whatever `openWhileReadOnly` says.
- * @param {number} [maxLines=1] How many lines the value may take before it is
- *   cut with an ellipsis — `Text`'s `maxLines`, put on the value box, and
+ * @param {number|false} [maxLines=1] How many lines the value may take before
+ *   it is cut with an ellipsis — `Text`'s `maxLines`, put on the value box, and
  *   granted to a `BadgeList` in the `ui`, which caps its rows to it (see
  *   max_lines_context.js). `variant="text"` and `variant="bare"` are not
  *   clamped: their drawing is the caller's own, a `Text` in the `ui` cuts
- *   itself with its own `maxLines`. See docs/typography.md.
+ *   itself with its own `maxLines`. `false` clamps nothing and keeps the
+ *   page's wrapping, for a `ui` that lays itself out (two storeys, a label and
+ *   its value). The chevron sits on the value's first line once it may take
+ *   several; `alignY` places it (`alignY="center"`: on the middle of the
+ *   value, however many lines it takes). See docs/typography.md.
  * @param {import("preact").ComponentChildren | "default" | import("preact").ComponentType} [ui] What the
  *   trigger draws in place of the value's default rendering (a date, a list
  *   joined by commas…) — and then all it draws: `placeholder` is not shown
@@ -2364,7 +2387,10 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   would otherwise push left by its width. `"hang-end"`: after it and OUT of
  *   the flow, in the margin beside the box — a drawing filling its whole
  *   line; the press follows it out there by its size plus its gap, on top of
- *   any `pressPaddingRight`. The chevron is drawn in `--picker-icon-color`
+ *   any `pressPaddingRight`. Where that margin is gone under a width only the
+ *   app knows, `--picker-chevron-hang: 0` (on the picker or any element around
+ *   it, from a container query) brings the chevron back into the line, press
+ *   area included, as `"end"` draws it. The chevron is drawn in `--picker-icon-color`
  *   (`currentColor` here) and `--picker-icon-color-hover`; a dimmed one is
  *   `--picker-icon-color: color-mix(in srgb, currentColor 55%, transparent)`.
  * @param {import("preact").ComponentChildren} [rightSlot] Same place, rendered
@@ -2559,12 +2585,13 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   that opens precisely to get bigger. It brings an opaque, blurred backdrop
  *   with it (`--navi-backdrop-lift-*`); `backdropVariant="discrete"` asks for
  *   the light wash back.
- * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [liftAnchor] Dialog mode,
- *   Dialog's own: where a lifting close lands when that is not the trigger
- *   (`animation="lifting"`, or `animation={{ open, close: "lifting" }}` for a
- *   popup that opens the plain way and only lands on close),
- *   read once the close is made (after `onClose`). A function is called with
- *   what the popup was open on (see `usePopupValue`).
+ * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [liftAnchor] Where a
+ *   lifting close lands when that is not the trigger (`animation="lifting"`
+ *   in dialog mode, or `animation={{ open, close: "lifting" }}` in either
+ *   mode, for a popup that opens the plain way and only lands on close: a
+ *   popover's own exit is then the page's fade), read once the close is made
+ *   (after `onClose`). A function is called with what the popup was open on
+ *   (see `usePopupValue`).
  * @param {"box"|"scene"} [lift="box"] Dialog's own, under `animation="lifting"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
  *   `"scene"` for a thumbnail that is a band cut from the middle of the bigger

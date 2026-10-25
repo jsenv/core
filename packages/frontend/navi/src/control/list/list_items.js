@@ -159,7 +159,7 @@ export const createListItems = () => {
     }
     runItemRemovedWarned = true;
     console.warn(
-      `List: an item drawn by <List.Items> matches nothing and searchNoMatchMode is "remove", but a run's items cannot be removed: the run keeps the room of every item it was given, so the item leaves a blank. Give <List.Items> the matching items only (useSearchText orders them first; keep the ones whose getItemMatchInfo(item).match is not false), or use searchNoMatchMode="muted" / "invisible_and_inert", which keep the item.`,
+      `List: an item drawn by <List.Items> matches nothing and searchNoMatchMode is "remove", but a run's items cannot be removed: the run keeps the room of every item it was given, so the item leaves a blank. Give <List.Items> the matching items only — useSearchText(searchText, items, matchFn, { noMatch: "remove" }) returns them — or use searchNoMatchMode="muted" / "invisible_and_inert", which keep the item.`,
     );
   };
   const removeFromSlot = (slotId, ownerId) => {

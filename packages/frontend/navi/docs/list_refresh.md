@@ -125,7 +125,10 @@ same (next section).
 A composition is about the **values** its params hold, not the reader instance:
 `GET_RANGE.bindParams({ scope: "thread" })` called from two places reads and
 writes the same one. A verb in `rerunOn.GET_RANGE`, or `reader.invalidate()`,
-drops the compositions — they stand for an order that is gone — and
+drops the compositions — they stand for an order that is gone;
+`reader.revalidate()` keeps them and has the lists on screen ask again for
+their window, for a collection that may have moved (the app back from the
+background) — and
 `memoryBudget` (1000 ranks by default) trims the ranks far from any window,
 which are asked for again if the user goes back to them.
 

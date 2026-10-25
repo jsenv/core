@@ -93,6 +93,27 @@ turned down where it is read (see
 [`refuse`](./drag_interactions.md#the-hand-pulls-and-nothing-follows-refuse),
 which the carrying interactions answer with).
 
+A value can also say what it is besides what it does, as
+`{ answer, verb, optimistic }`, `answer` being one of the four:
+
+```jsx
+<List.Item
+  interactions={{
+    reorder: { answer: saveOrder, verb: "PUT" },
+    toss: { answer: remove, verb: "DELETE" },
+    swipe_left: { answer: archive, verb: "PATCH" },
+  }}
+/>
+```
+
+`verb` says the answer writes, which a function cannot say about itself. Under a
+[network policy](./network_policy.md) holding writes the interaction does not
+happen, and the policy's words are said where the hand made it — before anything
+moves, for a gesture: a carried thing is not picked up, a swiped row resists like
+a wall. `optimistic` is for a `reorder` or a `land` drawn at once and written
+after ([drag_interactions.md](./drag_interactions.md#answered-at-once-optimistic)).
+A falsy `answer` is "not this one" too.
+
 ### The interactions navi detects
 
 | Key                                                | Read from                                                   |
@@ -199,9 +220,15 @@ finger was — is `findEvent(event, ["pointerdown", "pointerup", "click",
 Everything goes through the interaction gate of the **nearest control** — itself,
 an ancestor, or the one control it wraps, in that order. So a disabled, read-only
 or busy control answers a swipe the way it answers a click: it says why, where the
-interaction happened, and nothing runs. A `Box` with no control anywhere near it
-still answers a callback; only the two requests (`"request_action"`,
-`"request_ui_action"`) have nothing to ask, and say so in dev.
+interaction happened, and nothing runs. A gesture asks the gate where the hand
+meets it, not once it has played: a carried thing is not picked up — the gate
+speaks at the instant the grab would have been felt — and a swiped row resists
+the way a side nothing is declared for does, the gate speaking the first time the
+hand pulls that way. A row that goes all the way out before being told it was
+never free to go is a press that looks accepted and fails after. A `Box` with no
+control anywhere near it still answers a callback; only the two requests
+(`"request_action"`, `"request_ui_action"`) have nothing to ask, and say so in
+dev.
 
 A `Box` that lays out **several** controls — a row of badges, a toolbar — belongs
 to none of them: its interactions are its own, answered with no gate. A click on
@@ -276,8 +303,11 @@ element that declares the gesture.
 
 While the answer takes time, the element **stays where the gesture left it**, and
 comes back once it settles — a failure leaves the row in place to be tried
-again. What a success does to it is yours (a list that redemands its rows, a row
-that leaves): navi does not make it disappear.
+again, and says why on it once it is back, read the way a refused drag's answer
+is ([drag_interactions.md](./drag_interactions.md#carrying-something-move-reorder-land-toss-leave)):
+rejecting with nothing comes back without a word. What a success does to it is
+yours (a list that redemands its rows, a row that leaves): navi does not make it
+disappear.
 
 ## Twice, whichever hand it is
 
@@ -540,7 +570,9 @@ teardown, so a travelling container above it does not take the gesture (see
 ## Reference
 
 - `src/control/interaction/interaction_registry.js` — the prop, the four values,
-  the registry.
+  `{ answer, verb, optimistic }`, the registry.
+- `src/control/interaction/interaction_refusal.js` — how a refusal is said,
+  before and after.
 - `src/control/interaction/interaction_press.js` — swipes, holds and the two
   taps, and what a swipe writes on the element.
 - `src/control/interaction/interaction_keyboard.js`,

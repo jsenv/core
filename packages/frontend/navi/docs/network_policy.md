@@ -111,14 +111,25 @@ all, so it is left alone, and so is a function handed to a control's `action`:
 it is wrapped into an action with no verb, even when it calls one, so the
 control is not held and the write fails after the press with a
 `NetworkPolicyError` ([resource.md](./resource.md#a-function-calling-the-verb-or-the-instance)).
-Such a control says what its function does to the server with `actionVerb` —
-`<Input type="checkbox" boolean action={(on) => saveSetting("weather", on)}
-actionVerb="PATCH" />` — and is then held up front, with the policy's message.
+Such a control, or a `<Form>`, says what its function does to the server with
+`actionVerb` — `<Input type="checkbox" boolean action={(on) => saveSetting("weather", on)}
+actionVerb="PATCH" />`, `<Form action={sendDraft} actionVerb="POST">` — and is
+then held up front, with the policy's message: a form's fields and its submit
+alike.
 `createAction(callback, { meta: { verb } })` says the same of an action declared
 once, and opts it into what the action layer holds — a control bound to a write verb is read-only, a completed `"GET"`
 is not rerun — but its callback is still called when it runs: answering from
 the store and settling with a `NetworkPolicyError` are done by the callbacks a
 `resource()` wraps.
+
+A gesture's answer is a function navi cannot see into either, and says what it
+writes in its declaration —
+`interactions={{ reorder: { answer: saveOrder, verb: "PUT" }, toss: { answer: remove, verb: "DELETE" } }}`
+([interactions.md](./interactions.md#the-four-values)). Under the policy it does
+not happen, and the policy's message is said where the hand made it, before
+anything moves: a carried thing is not picked up, a swiped row resists as a wall
+does. Undeclared, the gesture plays to the end and the write it calls fails
+after — said on the element, the way any refused answer is.
 
 ## Holding writes while reads go out
 

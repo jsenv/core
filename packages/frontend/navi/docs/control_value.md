@@ -8,6 +8,8 @@ somewhere else in the app.
 - [A bound signal works in both directions](#a-bound-signal-works-in-both-directions)
 - [A picker fills its popup: the control inside already knows](#a-picker-fills-its-popup-the-control-inside-already-knows)
 - [A button that proposes a value is `--navi-update`](#a-button-that-proposes-a-value-is---navi-update)
+  - [The shortcut matching what the control holds is drawn applied](#the-shortcut-matching-what-the-control-holds-is-drawn-applied)
+  - [`--navi-update:toggle`: a preset over a multiple list](#--navi-updatetoggle-a-preset-over-a-multiple-list)
   - [`--navi-update:smooth`: the control is seen answering](#--navi-updatesmooth-the-control-is-seen-answering)
 - [`signal` + `defaultValue`: the answer and where it starts](#signal--defaultvalue-the-answer-and-where-it-starts)
 - [A `defaultValue` follows what it was read from](#a-defaultvalue-follows-what-it-was-read-from)
@@ -185,6 +187,46 @@ command finds an element that holds no value, and navi says so in dev rather
 than letting the press do nothing; an id that matches nothing is a dev warning
 too, naming the id it looked for.
 
+### The shortcut matching what the control holds is drawn applied
+
+A shortcut whose value is the one its control holds — its suggestion included —
+would change nothing if pressed, and says so: the button wears
+`aria-pressed="true"` and `[data-applied]` (`:-navi-applied` in `style`, the
+`--button-*-applied` variables), followed live from the control. Nothing is
+painted by default; the app says how its shortcuts show it:
+
+```jsx
+<Button
+  command="--navi-update"
+  commandFor="date"
+  value={today}
+  style={{
+    ":-navi-applied": {
+      backgroundColor:
+        "color-mix(in srgb, var(--navi-accent-color) 12%, transparent)",
+    },
+  }}
+>
+  aujourd'hui
+</Button>
+```
+
+### `--navi-update:toggle`: a preset over a multiple list
+
+`:toggle` takes the value back out when it is already there. Over a multiple
+list, the button's items join it when they are not all held, and all leave it
+when they are; the button is applied when all are held:
+
+```jsx
+<Button command="--navi-update:toggle" commandFor="days" value={WEEK_DAYS}>
+  En semaine
+</Button>
+```
+
+On a single control, it writes the value, or empties the control when the value
+is already the one held. It combines with `:smooth`
+(`--navi-update:toggle:smooth`).
+
 ### `--navi-update:smooth`: the control is seen answering
 
 On a phone the thumb covers the shortcut while the eye is on the control, and a
@@ -257,9 +299,14 @@ its own `action`, nothing around it to press — takes it as `defaultValue`
 as its own `value`, the controls in the popup carrying only their `name`: a
 default is a suggestion the picker does not hold, and closing on one untouched
 confirms it ([form_changed.md](./form_changed.md#what-counts-as-already-held)),
-so a popup opened and closed with defaults in it sends the record back. A group
-holding nothing of its own counts as holding an answer as soon as one of its
-controls does. A form editing a record has the same trap, and its own way out
+so a popup opened and closed with defaults in it sends the record back. The
+picker asks its popup part by part, as a form asks its fields: one named part
+still on its suggestion — a day shown because nobody chose one, beside an hour
+that is chosen — leaves the answer open, and a keeping close confirms that part
+with the rest; a part showing nothing has nothing to confirm. A picker given a
+`value` holds all of it, holes included. Inside, a group holding nothing of its
+own is one part, holding an answer as soon as one of its controls does. A form
+editing a record has the same trap, and its own way out
 ([create_and_edit.md](./create_and_edit.md#the-edit-screen-opens-before-its-values)).
 
 Either way, no `key` to remount the popup when the record changes: a key also

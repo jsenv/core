@@ -21,6 +21,7 @@ export {
   interpolateText,
 } from "./i18n/interpolate_text.js";
 export { getRuntimeLang, setRuntimeLangSource } from "./i18n/runtime_lang.js";
+export { formatByteSize } from "./byte/format_byte_size.js";
 export { formatNumber } from "./number/format_number.js";
 export {
   formatDatePlaceholder,

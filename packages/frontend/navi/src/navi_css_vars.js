@@ -323,10 +323,13 @@ const css = /* css */ `
            :root {
              --navi-placeholder-color: #8a94a6;
              --navi-placeholder-font-style: italic;
+             --navi-placeholder-font-size: 0.9em;
            }
-      */
+
+         The size is in em of the control's own text. */
       --navi-placeholder-color: var(--navi-color-discrete);
       --navi-placeholder-font-style: normal;
+      --navi-placeholder-font-size: 1em;
     }
 
     /* A surface is a new paper: it writes in an ink of its own, and the

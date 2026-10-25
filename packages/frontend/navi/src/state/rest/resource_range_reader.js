@@ -31,9 +31,11 @@
  * whatever `rerunOn.GET_RANGE` says) bumps `invalidationSignal` and drops the
  * compositions: they stand for an order that is gone. Whoever reads slices
  * through the reader then goes and asks again — the counterpart, for a reader,
- * of what a rerun is for an action. Every reader made by `bindParams` shares
- * the signal and the compositions of the one it comes from: the params say
- * which slices are read, not which collection.
+ * of what a rerun is for an action. `revalidate()` bumps the signal and keeps
+ * the compositions: nothing says the order is gone, only that it may have
+ * moved. Every reader made by `bindParams` shares the signal and the
+ * compositions of the one it comes from: the params say which slices are
+ * read, not which collection.
  *
  * A composition also outlives the document when a list on the page on screen
  * reads it (see keepPageOnScreen): the ranks around the window it draws are
@@ -156,6 +158,13 @@ export const createRangeReader = (
     compositionSet.clear();
     invalidationSignal.value = invalidationSignal.peek() + 1;
     bumpKeptVersion();
+  };
+  // The collection may have moved and nobody knows how — the app back from
+  // the background: the lists on screen ask again for the window they draw,
+  // their rows kept until the answer lands. The compositions stay, so a list
+  // off screen comes back drawn, and asks for its window then.
+  readRange.revalidate = () => {
+    invalidationSignal.value = invalidationSignal.peek() + 1;
   };
   // The rows of a composition, drawn from the store: a rank whose row is gone
   // from the store resolves to nothing and is asked for again.

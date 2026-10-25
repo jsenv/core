@@ -161,23 +161,25 @@ exists to prevent, and it does not look like one: bind both screens to the same
 `nameSignal`, edit a game, then press "create" — the game you just edited is
 sitting in the create form, and in the url.
 
-The draft's other half is the end of its life:
+The draft's other half is the end of its life, and `weak` is it:
 
-```jsx
-action={async (values) => {
-  const game = await GAME.POST.bindParams(values).rerun();
-  GAME_ROUTE.navTo({ gameId: game.id });
-  draftNameSignal.value = undefined; // it has served
-  draftLevelSignal.value = undefined;
-}}
+```js
+const draftNameSignal = stateSignal(undefined, { id: "name", weak: true });
 ```
 
-`undefined`, not `""`: a state signal put back to undefined returns to its
-default and leaves the url (see
+A weak param goes back to its default when its route stops matching — after
+the navigation the send makes, never while the screen being left still reads
+it (its list of places is asked for with the place the draft holds) — and a
+link to the create screen opens it blank, since a url built for a link never
+inherits a weak param from its signal. Every way out of the screen ends the
+draft that way, a tab or a link as much as the send, so the action clears
+nothing.
+
+Clear by hand only a draft that must outlive its screen — kept while the person
+looks at something else — and then after the navigation, not before, for the
+reason above. `undefined`, not `""`: a state signal put back to undefined
+returns to its default and leaves the url (see
 [control_value.md](./control_value.md#signal--defaultvalue-the-answer-and-where-it-starts)).
-**Clear after navigating, not before**: those signals are read by the screen
-being left — its list of places is asked for with the place the draft holds —
-and emptying them while it is still up asks for that list again, for nobody.
 
 One signal for the whole form works too, when the values arrive as one object
 (see [control_value.md](./control_value.md#what-a-signal-holds-control-by-control)).
@@ -243,9 +245,14 @@ it yet, and each of the three leaves one thing out:
 - `onLoad` + `pristineKey` is held, and stops following: a record moved while
   the screen is open stays as `onLoad` found it.
 - `useSignalSync(record.x)` ([state_binding.md](./state_binding.md)) is held
-  and follows, but the record moving overwrites what is being typed — and it
-  compares by reference, so a record read again as a new array or object
-  counts as a move even when nothing in it changed.
+  and follows, but the record moving overwrites what is being typed. It
+  compares by content: a record read again as a new but equal array or object
+  is not a move.
+
+Until one shape answers all three, a block that stays on screen takes
+`useSignalSync`, one per field: what it gives up — a move landing over a field
+being typed — needs someone else saving the same record at that moment, the
+rarest of the three on a settings block.
 
 What not to write: `useSignal(record.x)` with `key={record.updated_at}` on the
 block. The key throws away what is being typed each time the record moves.
@@ -317,12 +324,18 @@ places ([form_changed.md](./form_changed.md#what-follows-a-send)):
 
   ```jsx
   <Form
+    canSendWhileUnchanged
     action={async (values) => {
       const game = await GAME.POST.bindParams(values).rerun();
       GAME_ROUTE.navTo({ gameId: game.id });
     }}
   >
   ```
+
+  `canSendWhileUnchanged`, because the draft lives in the url: a reload opens
+  the screen already held, and an untouched press would send nothing — and
+  never reach the navigation that lives in the action
+  ([form_changed.md](./form_changed.md#sending-nothing-is-the-default)).
 
 - **Edit**: the destination is known before the send — and has to be, because a
   press with **nothing to send** must leave too. That is `command`:

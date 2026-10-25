@@ -8,6 +8,7 @@ import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
 import {
   forgetScrollersOnArrival,
+  hasScrollPositionToReturnTo,
   installScrollRestoration,
   isArrival,
   restoreScrollPositionOnReturn,
@@ -37,7 +38,14 @@ import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
 import { linkOpensElsewhere } from "./link_elsewhere.js";
+import {
+  linkAsksToOpen,
+  NAV_STATE_ENTERED_VALUE,
+  readPageStateUnderPopup,
+  resolveOpenOnArrival,
+} from "./link_open.js";
 import { linkAsksForReplace } from "./link_replace.js";
+import { linkAsksForReturn } from "./link_return.js";
 
 export const setupBrowserIntegrationViaHistory = ({
   applyActions,
@@ -224,6 +232,7 @@ export const setupBrowserIntegrationViaHistory = ({
       landOn,
       debounce,
       pressWrites,
+      asReturn,
     } = options;
     let { state } = options;
 
@@ -297,8 +306,9 @@ export const setupBrowserIntegrationViaHistory = ({
     // The page's own scrollers are told of an arrival before the routing
     // renders anything: a list arriving decides where it opens in its first
     // render (see scroll_restoration.js). The document itself is moved once
-    // the page is there, below.
-    if (navigationType === "push") {
+    // the page is there, below. A push that says it is a return keeps them
+    // (see link_return.js).
+    if (navigationType === "push" && !asReturn) {
       forgetScrollersOnArrival(url, { from: urlLeft });
     }
     if (abortController) {
@@ -329,7 +339,13 @@ export const setupBrowserIntegrationViaHistory = ({
     // that IS an arrival is a row of tabs travelling, and the row says so for
     // itself (see route_travel.jsx) — from inside the routing above, which is
     // why the replace is written down after it.
-    if (navigationType === "push") {
+    if (
+      navigationType === "push" &&
+      asReturn &&
+      hasScrollPositionToReturnTo(url, { from: urlLeft })
+    ) {
+      restoreScrollPositionOnReturn(url);
+    } else if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "replace") {
       stayInPlace(url);
@@ -446,11 +462,12 @@ export const setupBrowserIntegrationViaHistory = ({
       return false;
     }
     e.preventDefault();
-    handleRoutingTask(href, {
+    const linkRoutingOptions = {
       reason: `"click" on a[href="${href}"]`,
       // A link that takes the place of the current entry instead of stacking
       // on it says so on itself (see link_replace.js).
       navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
+      asReturn: linkAsksForReturn(linkElement),
       // Who started it. Announced with the navigation because a press
       // carries things the url does not: what a link asks of a route
       // transition is the first of them (see route_transition.jsx). Read by
@@ -458,8 +475,47 @@ export const setupBrowserIntegrationViaHistory = ({
       // resolved here, where it already is.
       element: linkElement,
       pressWrites,
-    });
+    };
+    // A link to a page with one of its popups open (see link_open.js).
+    const open = linkAsksToOpen(linkElement);
+    if (open) {
+      routeWithPopupOpen(href, linkRoutingOptions, open);
+      return true;
+    }
+    handleRoutingTask(href, linkRoutingOptions);
     return true;
+  };
+  // The page's entry, then the one the popup's opening writes over it (see
+  // link_open.js), both before anything renders: the popup reads its key
+  // when the page mounts it.
+  const routeWithPopupOpen = (url, options, open) => {
+    const { id, type } = resolveOpenOnArrival(open);
+    const urlLeft = readAddress();
+    // Already on the page: only the popup's opening is left to write.
+    const onThePage = url === urlLeft;
+    const pageState = readPageStateUnderPopup(url, {
+      state: options.state,
+      urlLeft,
+      stateLeft: getDocumentState(),
+    });
+    if (type !== "push") {
+      handleRoutingTask(url, {
+        ...options,
+        navigationType: onThePage ? "replace" : options.navigationType,
+        state: { ...pageState, [id]: NAV_STATE_ENTERED_VALUE },
+      });
+      return;
+    }
+    if (!onThePage) {
+      handleRoutingTask(url, { ...options, state: pageState });
+    }
+    // Where the page landed: a redirection may have taken it elsewhere.
+    handleRoutingTask(readAddress(), {
+      ...(onThePage ? options : null),
+      reason: `${options.reason}, with "${id}" open`,
+      navigationType: "push",
+      state: { ...getDocumentState(), [id]: NAV_STATE_ENTERED_VALUE },
+    });
   };
   // Wired from the capture phase on window, the first place a click is seen,
   // so that a link is answered whatever handler stops the click on its way up
@@ -543,12 +599,15 @@ export const setupBrowserIntegrationViaHistory = ({
 
   const navTo = async (
     url,
-    { replace, state, routeTransition, debounce } = {},
+    { replace, state, routeTransition, debounce, asReturn, open } = {},
   ) => {
-    handleRoutingTask(url, {
+    const routingOptions = {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
+      // A push that lands where its address was last left (see
+      // link_return.js).
+      asReturn,
       // Milliseconds the browser's address waits for this replace to settle
       // (see replaceAddressWhenSettled); said by the state being written
       // (stateSignal's `debounceUrl`), never assumed.
@@ -557,7 +616,12 @@ export const setupBrowserIntegrationViaHistory = ({
       // that starts it rather than by an element — the programmatic half of
       // what a <Link routeTransition> says (see route_transition.jsx).
       routeTransition,
-    });
+    };
+    if (open) {
+      routeWithPopupOpen(url, routingOptions, open);
+      return;
+    }
+    handleRoutingTask(url, routingOptions);
   };
 
   const stop = (reason = "stop called") => {

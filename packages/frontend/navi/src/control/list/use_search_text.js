@@ -3,27 +3,40 @@ import { applySearch } from "./apply_search.js";
 
 /**
  * useSearchText — reorders items so matched ones come first (sorted by score
- * desc), followed by non-matched items in their natural order. No item is
- * dropped: what a non-matching row becomes is the list's `searchNoMatchMode`.
+ * desc), followed by non-matched items in their natural order. What a
+ * non-matching item becomes is the list's `searchNoMatchMode`.
  * Returns [orderedItems, getItemMatchInfo].
- *   - orderedItems: all items, reordered
+ *   - orderedItems: all items, reordered — or only the matching ones with
+ *     `{ noMatch: "remove" }`
  *   - getItemMatchInfo(item): { match, matchScore, matchRanges } — pass the
  *     whole thing straight to <List.Item matchInfo={getItemMatchInfo(item)} />,
- *     there is no need to destructure the three fields by hand. The row derives
- *     filtered / hidden / muted from it, and the list counts the rows matching
+ *     there is no need to destructure the three fields by hand. The item derives
+ *     filtered / hidden / muted from it, and the list counts the items matching
  *     nothing (its searchFallback shows when none matches).
  *
  * When searchText is empty, natural order is preserved and all items match with
  * score 0.
  *
- * Rows declared one by one (<List.Item> children) give their place back when
+ * Items declared one by one (<List.Item> children) give their place back when
  * removed. A run (<List.Items items={...}>) does not: it keeps the room of
  * every item it was given, drawn or held in a filler. In "remove" mode, hand
- * the run the matching items only — the ones whose getItemMatchInfo(item).match
- * is not false; a typed search that leaves the list without a row still shows
- * its searchFallback.
+ * the run what `{ noMatch: "remove" }` returns: the matching items only. A
+ * typed search that leaves the list without an item still shows its
+ * searchFallback.
+ *
+ * @param {string|undefined} searchText
+ * @param {any[]} items
+ * @param {(searchText: string, item: any) => { match: boolean, matchScore: number, matchRanges: Array<[number, number]> }} [matchFn]
+ * @param {{ noMatch?: "keep" | "remove" }} [options]
+ *   `"remove"`: the items matching nothing are left out of the array returned
+ *   (getItemMatchInfo still answers for them). Default `"keep"`.
  */
-export const useSearchText = (searchText, items, matchFn = applySearch) => {
+export const useSearchText = (
+  searchText,
+  items,
+  matchFn = applySearch,
+  { noMatch = "keep" } = {},
+) => {
   if (typeof searchText !== "string" && searchText !== undefined) {
     throw new TypeError(
       "useSearchText: searchText must be a string or undefined",
@@ -31,6 +44,11 @@ export const useSearchText = (searchText, items, matchFn = applySearch) => {
   }
   if (items === undefined) {
     throw new TypeError("useSearchText: items is undefined");
+  }
+  if (noMatch !== "keep" && noMatch !== "remove") {
+    throw new TypeError(
+      `useSearchText: noMatch must be "keep" or "remove", got ${noMatch}`,
+    );
   }
   const { orderedItems, matchInfoMap } = useMemo(() => {
     const { scoreEntries, nonMatched, matchInfoMap } = buildMatchInfo(
@@ -44,11 +62,13 @@ export const useSearchText = (searchText, items, matchFn = applySearch) => {
         orderedItems.push(item);
       }
     }
-    for (const { item } of nonMatched) {
-      orderedItems.push(item);
+    if (noMatch === "keep") {
+      for (const { item } of nonMatched) {
+        orderedItems.push(item);
+      }
     }
     return { orderedItems, matchInfoMap };
-  }, [items, searchText, matchFn]);
+  }, [items, searchText, matchFn, noMatch]);
 
   // The same function for as long as the map is the same: a `renderItem`
   // reading it is stable only if this is, and a run keeps the rows it drew

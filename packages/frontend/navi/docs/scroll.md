@@ -128,7 +128,11 @@ followed — a place read from an answer that refreshes (yesterday's "today", th
 today's) — and it is compared by value, so it can be computed at every render. A list with an `id` also **comes back where it was** when its screen is
 left and come back to, or the page reloaded, the way the page does (its `id`
 must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-list));
-**`scrollResetOnNavigation`** opts out. What it draws there before its source
+**`scrollResetOnNavigation`** opts out. A push to its screen is an arrival and
+forgets it, even when the address names the item one was reading: a link that is
+a return by meaning says `asReturn`, and the list comes back where that address
+was left (see
+[navigation.md](./navigation.md#where-a-navigation-lands-the-scroll)). What it draws there before its source
 answers is another matter
 ([What a run knows when it opens](#what-a-run-knows-when-it-opens)). A list scrolling the document that
 opens on an item places the document itself: the offset the page kept for its url

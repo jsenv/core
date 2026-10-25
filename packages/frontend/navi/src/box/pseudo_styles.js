@@ -87,6 +87,11 @@ export const PSEUDO_CLASSES = {
   ":-navi-href-current": {
     attribute: "data-href-current",
   },
+  // Written by a `--navi-update` source while its target holds its value
+  // (see button_update_applied.jsx).
+  ":-navi-applied": {
+    attribute: "data-applied",
+  },
   // Written by a Link from its href.
   ":-navi-href-internal": {
     attribute: "data-href-internal",
@@ -121,6 +126,11 @@ export const PSEUDO_CLASSES = {
   },
   ":-navi-selected": {
     attribute: "data-selected",
+  },
+  // Written by an item of a selectable List that holds nothing, when the item
+  // is what that emptiness means (see List's `placeholder`).
+  ":-navi-placeholder": {
+    attribute: "data-placeholder",
   },
   ":-navi-loading": {
     attribute: "data-loading",

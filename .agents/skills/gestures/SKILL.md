@@ -57,7 +57,9 @@ hands the press to an axis nobody meant, and a press given up is given up WHOLE:
 the hand's remaining hundred pixels are read by no one. So on a box that travels
 one axis, the cross axis takes the press only when it dominates the first report
 twice over (`AXIS_CROSS_DOMINANCE`); a scroll, near-pure from its first pixel
-(4-6×), still leaves whole, at once. A box travelling both axes reads even.
+(4-6×), still leaves whole, at once. A box travelling both axes reads even. A
+drag source taken on contact along one axis reads its press the same way, with
+the same number (`dragAfterDistance`): the same two hands.
 
 **Deferring the decision is not available** — physics, not caution. Past the
 browser's 8px a frame spent gathering evidence is a lost gesture: waiting for
@@ -480,7 +482,8 @@ questions.
   constant with its rationale; `src/interaction/scroll/wheel_gesture.js` (the
   claim); `src/interaction/drag/drag_gesture.js` (the loop,
   `captureHolderByPointerId`, `preventTouchScroll`, the velocity window);
-  `src/interaction/drag/drag_after_intent.js` (`keepTouchRefusable`).
+  `src/interaction/drag/drag_after_intent.js` (`keepTouchRefusable`,
+  `AXIS_CROSS_DOMINANCE`).
 - navi: `src/layout/slide_container.jsx`, `src/nav/route_travel.jsx`,
   `src/layout/swipe_to_close.js` (`DOCKED_SWIPE_GRIP` in `dialog.jsx`,
   `closeByDrag` in `side_panel.jsx`), `startSwipe` in

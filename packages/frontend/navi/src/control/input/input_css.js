@@ -19,6 +19,7 @@ const inputCss = /* css */ `
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       --placeholder-color: var(--navi-placeholder-color);
       --placeholder-font-style: var(--navi-placeholder-font-style);
+      --placeholder-font-size: var(--navi-placeholder-font-size);
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
@@ -116,6 +117,7 @@ const inputCss = /* css */ `
     --x-color: var(--color);
     --x-placeholder-color: var(--placeholder-color);
     --x-placeholder-font-style: var(--placeholder-font-style);
+    --x-placeholder-font-size: var(--placeholder-font-size);
     --x-padding-top: var(
       --padding-top,
       var(--padding-y, var(--padding, var(--navi-control-padding-y-default)))
@@ -216,6 +218,7 @@ const inputCss = /* css */ `
       &::placeholder {
         color: var(--x-placeholder-color);
         font-style: var(--x-placeholder-font-style);
+        font-size: var(--x-placeholder-font-size);
       }
       /* Webkit is putting a slight blue bckground on autofilled input */
       /* For now we override with out custom background color */

@@ -87,8 +87,14 @@ export const todaySignal = /*#__PURE__*/ createClockSignal(
   },
 );
 
-// A tick on each minute and on each hour of the wall clock: what a time
-// relative to now reads to age on (see `<Time type="relative">`).
+// A tick on each second, on each minute and on each hour of the wall clock:
+// what a duration running since an instant reads to count on (see `<Time
+// type="duration" since>`), and a time relative to now to age on (see `<Time
+// type="relative">`).
+export const secondTickSignal = /*#__PURE__*/ createClockSignal(
+  () => Math.floor(Date.now() / 1000),
+  (now) => 1000 - (now.getTime() % 1000),
+);
 export const minuteTickSignal = /*#__PURE__*/ createClockSignal(
   () => Math.floor(Date.now() / MINUTE),
   (now) => MINUTE - (now.getTime() % MINUTE),

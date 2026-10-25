@@ -66,6 +66,7 @@ export {
   syncResourceToSignals,
 } from "./src/state/rest/resource_graph.js";
 export { stateSignal } from "./src/state/state_signal.js";
+export { stateSignalGroup } from "./src/state/state_signal_group.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";
 export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
@@ -126,6 +127,7 @@ export {
   useRouteStatus,
 } from "./src/nav/route.js";
 export { Route } from "./src/nav/route.jsx";
+export { renderedPageSignal } from "./src/nav/rendered_page.js";
 export { routeFallback } from "./src/nav/route_fallback.js";
 export {
   RouteTransitionArea,
@@ -167,6 +169,8 @@ export { detectHorizontalOverflow } from "./src/layout/detect_horizontal_overflo
 // target and dispatches exactly like the attribute path, so a popup driven this
 // way stays uncontrolled and keeps its own say over closing.
 export { triggerNaviCommand } from "./src/control/commands.js";
+// `--navi-open` a gesture can await: settles with the popup's yes or no.
+export { askPopup } from "./src/layout/popup_ask.js";
 // The JS counterpart of `--navi-update`: propose a value to a control from
 // somewhere that is not a button (`{ behavior: "smooth" }` for the control to
 // be seen moving to it). Goes through the same gate a command does.
@@ -231,6 +235,7 @@ export { useInputGroup } from "./src/control/input/use_input_group.js";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Select } from "./src/control/input/select.jsx";
 export { SplitButton } from "./src/control/input/split_button.jsx";
+export { SortHeader } from "./src/control/sort_header.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
 export { usePickerState } from "./src/control/picker/picker_context.jsx";
 export {
@@ -299,6 +304,7 @@ export { Color } from "./src/text/color.jsx";
 // a server sharing that wording imports it from @jsenv/humanize directly.
 export {
   createI18n,
+  formatByteSize,
   formatDatetime,
   formatDay,
   formatDayRelative,

@@ -25,6 +25,7 @@ import {
   markErrorAsDisplayedBy,
   markErrorAsPrerunFailure,
 } from "./action_error_report.js";
+import { pollAction } from "./action_poll.js";
 import { takeKeptValue } from "./kept_values.js";
 import { isRerunHeldByNetworkPolicy } from "./network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
@@ -131,8 +132,18 @@ export const setActionDependenciesRegistrar = (registrar) => {
 };
 
 export const rerunActions = async (actionSet, options) => {
+  const rerunSet = new Set();
+  for (const actionOrReader of actionSet) {
+    // A range reader keeps no answer to run again: the lists reading it ask
+    // again for the window they draw (see resource_range_reader.js).
+    if (actionOrReader.isRangeReader) {
+      actionOrReader.revalidate();
+      continue;
+    }
+    rerunSet.add(actionOrReader);
+  }
   return dispatchActions({
-    rerunSet: actionSet,
+    rerunSet,
     reason: "rerunActions was called",
     ...options,
   });
@@ -835,13 +846,15 @@ const actionWeakMap = new WeakMap();
  *   long is this still true?" belongs to the question: a court list is good for
  *   the session, a count of people watching grows on its own and is worth a few
  *   minutes, a payment status is worth nothing at all.
- * @param {Array<Object | { resource: Object, on: string[] }>} [rootOptions.dependencies] -
+ * @param {Array<Object | { resource: Object, on: string[] }> | (() => Array<Object | { resource: Object, on: string[] }>)} [rootOptions.dependencies] -
  *   the resources whose writes make the answer out of date — a count, a
  *   summary, anything read that is no row of a resource. After a listed write
  *   the instances that answered, or are still asking, ask again. Read as a
  *   resource's `dependencies` are: a resource listed bare counts every write,
  *   `{ resource, on: ["POST", "DELETE"] }` only the callbacks it names (a
- *   write named in that resource's `writes` included).
+ *   write named in that resource's `writes` included), and a function
+ *   returning that list is called once, before the first request of any
+ *   resource leaves.
  * @param {{ verb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }} [rootOptions.meta] -
  *   `verb` puts the action under the network policy (docs/network_policy.md).
  */
@@ -928,6 +941,32 @@ export const createAction = (callback, rootOptions = {}) => {
     const rerun = (options) => {
       action.debug(`${action}.rerun(${stringifyForDisplay(options)})`);
       return dispatchSingleAction(action, "rerun", options);
+    };
+    /**
+     * Asks again every `every` ms until the answer is the one awaited, and
+     * resolves with it: what code awaits when the server moves on its own — a
+     * link made in another app, after the sheet that started it closed. The
+     * rules are `useAsyncData`'s `poll`: no tick while the document is hidden
+     * (one at once when it shows again), paused while a network policy answers
+     * reads from the store, and each tick is a revalidation for the readers.
+     * An action nobody ran is asked at once.
+     *
+     * Resolves with the data `until` accepted, or the data held when `for` ran
+     * out; rejects with the error of a run that fails, and with the abort
+     * reason when `signal` aborts or a newer `poll()` of this instance replaces
+     * this one.
+     *
+     * @param {object} options
+     * @param {number} options.every - milliseconds between the end of a run
+     *   and the next ask.
+     * @param {(data: any) => boolean} [options.until] - the answer awaited.
+     * @param {number} [options.for] - milliseconds after which the poll gives
+     *   up, resolving with what it holds.
+     * @param {AbortSignal} [options.signal]
+     * @returns {Promise<any>}
+     */
+    const poll = (options) => {
+      return pollAction(action, options);
     };
     /**
      * Stop the action completely - this will:
@@ -1233,6 +1272,7 @@ export const createAction = (callback, rootOptions = {}) => {
       prerun,
       run,
       rerun,
+      poll,
       reset,
       abort,
       bindParams,
@@ -1877,6 +1917,7 @@ const createActionProxyFromSignal = (
     prerun: proxyMethod("prerun", { explicitRunIntent: true }),
     run: proxyMethod("run", { explicitRunIntent: true }),
     rerun: proxyMethod("rerun", { explicitRunIntent: true }),
+    poll: proxyMethod("poll", { explicitRunIntent: true }),
     reset: proxyMethod("reset", { explicitRunIntent: true }),
     abort: proxyMethod("abort", { explicitRunIntent: true }),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),

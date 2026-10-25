@@ -42,6 +42,7 @@ import {
   createDragGestureController,
 } from "./drag_gesture.js";
 import {
+  AXIS_CROSS_DOMINANCE,
   dragAfterIntent,
   dragSourceThatStoodDown,
 } from "./drag_after_intent.js";
@@ -188,12 +189,6 @@ const DRAG_START_THRESHOLD = 10;
 // went nowhere, and its click is lost (Chrome would click it up to 8px, Safari
 // never once a touchmove is refused).
 const DRAG_START_THRESHOLD_TOUCH = 6;
-// How much the cross axis must dominate the travel axis, over the first
-// reported pixels, to take the press away from the box (see the axis decision
-// in onDrag). Sized against the two hands it separates: a thumb's arc leans up
-// to about twice as far off-axis as along it at the start of a sideways swipe,
-// while a scroll is four or five times purer than that on its own axis.
-const AXIS_CROSS_DOMINANCE = 2;
 // How much of a box has to be pulled for letting go to carry on rather than put
 // things back, when the caller does not say. Under half, because a gesture that
 // has clearly begun is an intention: asking for the box to be dragged all the

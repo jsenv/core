@@ -7,6 +7,27 @@
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 
 const css = /* css */ `
+  /* The seam of members that draw no border (--group-seam-width and
+     --group-seam-color, read where they are set: on the group or around it).
+     The member after a seam stands that far off, and its own shadow, shifted
+     back by as much, fills the gap: a member's square corner on the seam side
+     keeps the line straight, and the group's outer radii are the members' own.
+     A rule offered back: a member painting a shadow of its own wins over it. */
+  @layer navi {
+    .navi_group:not([data-vertical])
+      > *:not([navi-out-of-flow])
+      ~ *:not([navi-out-of-flow]) {
+      box-shadow: calc(var(--group-seam-width, 0px) * -1) 0 0 0
+        var(--group-seam-color, transparent);
+    }
+    .navi_group[data-vertical]
+      > *:not([navi-out-of-flow])
+      ~ *:not([navi-out-of-flow]) {
+      box-shadow: 0 calc(var(--group-seam-width, 0px) * -1) 0 0
+        var(--group-seam-color, transparent);
+    }
+  }
+
   .navi_group {
     --group-border-width: var(--navi-control-border-width);
     /* A seam reads the member's own --border-width, which a control declares
@@ -115,7 +136,12 @@ const css = /* css */ `
          and it is the one pulled back so the two borders there become one
          line — same relationship, so the same rule. */
       > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
-        margin-left: calc(var(--border-width, var(--group-border-width)) * -1);
+        margin-left: calc(
+          var(--group-seam-width, 0px) - var(
+              --border-width,
+              var(--group-border-width)
+            )
+        );
 
         --x-corner-top-left-radius: 0;
         --x-corner-bottom-left-radius: 0;
@@ -139,7 +165,12 @@ const css = /* css */ `
       /* A member with a member above it — see the horizontal block's own
          comments, this is the same thing turned a quarter. */
       > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
-        margin-top: calc(var(--border-width, var(--group-border-width)) * -1);
+        margin-top: calc(
+          var(--group-seam-width, 0px) - var(
+              --border-width,
+              var(--group-border-width)
+            )
+        );
 
         --x-corner-top-left-radius: 0;
         --x-corner-top-right-radius: 0;
@@ -160,12 +191,42 @@ const css = /* css */ `
   }
 `;
 
-export const Group = ({ children, row, vertical = row, ...props }) => {
+const GROUP_STYLE_CSS_VARS = {
+  seamColor: ["--group-seam-color", "color"],
+  seamWidth: ["--group-seam-width", "borderWidth"],
+};
+
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   row?: boolean,
+ *   vertical?: boolean,
+ *   seamColor?: string,
+ *   seamWidth?: number | string,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [seamColor] The line between two members that draw no border
+ *   (a borderless SplitButton, two bare halves): the members stand
+ *   `seamWidth` apart and the gap is painted this colour. Members with a border
+ *   need none, their shared border is the seam. CSS: `--group-seam-color`.
+ * @param {number|string} [seamWidth=1] How thick that line is, once
+ *   `seamColor` is given. CSS: `--group-seam-width`.
+ */
+export const Group = ({
+  children,
+  row,
+  vertical = row,
+  seamColor,
+  seamWidth = seamColor === undefined ? undefined : 1,
+  ...props
+}) => {
   import.meta.css = css;
 
   return (
     <Box
       baseClassName="navi_group"
+      styleCSSVars={GROUP_STYLE_CSS_VARS}
+      seamColor={seamColor}
+      seamWidth={seamWidth}
       data-vertical={vertical ? "" : undefined}
       /* A group draws one frame around its members, so they must share their
          top and bottom edges. A block box lays them out inline, where they

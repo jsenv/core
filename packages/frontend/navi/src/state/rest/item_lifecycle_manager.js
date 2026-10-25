@@ -105,6 +105,35 @@ export const createResourceLifecycleManager = () => {
   const resourceDependencies = new Map(); // Map<resourceInstance, Map<dependentResource, Set<writeCallbackName>>> — user-configured
   const scopedManyParents = new Map(); // Map<childResource, Set<{resource, propertyName}>> — auto from scopedMany
 
+  // `dependencies` given as a function name resources declared after the one
+  // listing them (two resources depending on each other, a file's order). It
+  // is read once, before the first request leaves or the first action
+  // completes, whichever comes first: every module has been evaluated by then,
+  // and nothing reads a dependency earlier. A function throwing, or naming
+  // what cannot fire, throws into that run.
+  const pendingDependencyResolutionArray = [];
+  const resolvePendingDependencies = () => {
+    while (pendingDependencyResolutionArray.length > 0) {
+      const resolve = pendingDependencyResolutionArray.shift();
+      resolve();
+    }
+  };
+  const readDependencies = (dependencies, dependentLabel, register) => {
+    if (typeof dependencies !== "function") {
+      register(dependencies, { lazy: false });
+      return;
+    }
+    pendingDependencyResolutionArray.push(() => {
+      const dependencyArray = dependencies();
+      if (!Array.isArray(dependencyArray)) {
+        throw new Error(
+          `${dependentLabel}: "dependencies" returned ${dependencyArray}, an array of resources was expected`,
+        );
+      }
+      register(dependencyArray, { lazy: true });
+    });
+  };
+
   const registerResource = (resourceScope, config) => {
     const {
       rerunOn,
@@ -121,11 +150,30 @@ export const createResourceLifecycleManager = () => {
       rangeReaderSet: new Set(),
     });
 
-    for (const dependency of dependencies) {
-      const [dependencyScope, writeNames] = resolveDependency(
-        dependency,
-        `resource(${resourceScope.name})`,
-      );
+    const dependentLabel = `resource(${resourceScope.name})`;
+    readDependencies(
+      dependencies,
+      dependentLabel,
+      (dependencyArray, { lazy }) =>
+        addResourceDependencies(resourceScope, dependencyArray, {
+          dependentLabel,
+          lazy,
+        }),
+    );
+  };
+  const addResourceDependencies = (
+    resourceScope,
+    dependencyArray,
+    { dependentLabel, lazy },
+  ) => {
+    let index = 0;
+    for (const dependency of dependencyArray) {
+      const [dependencyScope, writeNames] = resolveDependency(dependency, {
+        dependentLabel,
+        index,
+        lazy,
+      });
+      index++;
       let dependentMap = resourceDependencies.get(dependencyScope);
       if (!dependentMap) {
         dependentMap = new Map();
@@ -159,16 +207,35 @@ export const createResourceLifecycleManager = () => {
   const dependentActionSetByScope = new Map(); // Map<dependencyScope, IterableWeakSet<action>>
   const writeNameSetByScopeWeakMap = new WeakMap(); // WeakMap<action, Map<dependencyScope, Set<writeName>>>
   const registerActionDependencies = (action, dependencies) => {
+    const dependentLabel = `createAction(${action.name})`;
+    readDependencies(
+      dependencies,
+      dependentLabel,
+      (dependencyArray, { lazy }) =>
+        addActionDependencies(action, dependencyArray, {
+          dependentLabel,
+          lazy,
+        }),
+    );
+  };
+  const addActionDependencies = (
+    action,
+    dependencyArray,
+    { dependentLabel, lazy },
+  ) => {
     let writeNameSetByScope = writeNameSetByScopeWeakMap.get(action);
     if (!writeNameSetByScope) {
       writeNameSetByScope = new Map();
       writeNameSetByScopeWeakMap.set(action, writeNameSetByScope);
     }
-    for (const dependency of dependencies) {
-      const [dependencyScope, writeNames] = resolveDependency(
-        dependency,
-        `createAction(${action.name})`,
-      );
+    let index = 0;
+    for (const dependency of dependencyArray) {
+      const [dependencyScope, writeNames] = resolveDependency(dependency, {
+        dependentLabel,
+        index,
+        lazy,
+      });
+      index++;
       if (!registeredResources.has(dependencyScope)) {
         throw new Error(
           `createAction(${action.name}): a dependency is a resource or a scope of one, received ${dependencyScope}`,
@@ -259,6 +326,7 @@ export const createResourceLifecycleManager = () => {
       // nothing about the child collection its GET embeds.
       const ownsPostedScopedMany =
         triggerVerb === "POST" &&
+        !triggerIsMany &&
         isScopedManyOwner(resourceScope, triggerResourceScope);
 
       if (
@@ -402,11 +470,14 @@ export const createResourceLifecycleManager = () => {
           // (recordGetResultProperties) — a GET still on its first load is taken
           // at what scopedMany declares, an owner embedding its children.
           // GET_MANY is excluded — a list of parents is not stale just because one
-          // child item was added to one of them.
+          // child item was added to one of them. A POST_MANY is excluded too: its
+          // answer `[ownerId, items]` replaced the collection, there is nothing
+          // left for the owner's GET to bring.
           scoped_many_effect: {
             if (
               triggerResourceScope &&
               triggerVerb === "POST" &&
+              !triggerIsMany &&
               candidateVerb === "GET" &&
               !candidateIsPlural
             ) {
@@ -510,6 +581,7 @@ export const createResourceLifecycleManager = () => {
   };
 
   const onActionComplete = (restActionWhoJustCompleted, restActionContext) => {
+    resolvePendingDependencies();
     invalidateRangeReaders(restActionWhoJustCompleted, restActionContext);
     const { actionsToRerun, actionsToReset, reasons } = findEffectOnActions(
       restActionWhoJustCompleted,
@@ -531,6 +603,7 @@ export const createResourceLifecycleManager = () => {
     registerAction,
     registerRangeReader,
     registerActionDependencies,
+    resolvePendingDependencies,
     onActionComplete,
     // Registers: when `triggerResource` fires, rerun `dependentResource`'s actions.
     // Used by scopedMany to make the parent GET rerun when a child mutation completes.
@@ -601,11 +674,27 @@ const shouldRerunAfter = (rerunConfig, verb) => {
 // `{ resource, on }` naming the write callbacks that do — a write named in its
 // `writes` included. A name that cannot fire throws here: a dependency that
 // never fires leaves a read on its old value with nothing to say so.
-const resolveDependency = (dependency, dependentLabel) => {
+// An entry still `undefined` is a resource read before its declaration ran: a
+// `const` declared further down the file throws on its own, a registry filled
+// later does not.
+const resolveDependency = (dependency, { dependentLabel, index, lazy }) => {
+  const nameMissing = (value) => {
+    let message = `${dependentLabel}: dependency #${index + 1} is ${value}`;
+    if (!lazy) {
+      message += ` — declared after it? Pass a function, read before the first request leaves: dependencies: () => […]`;
+    }
+    return new Error(message);
+  };
+  if (dependency === undefined || dependency === null) {
+    throw nameMissing(dependency);
+  }
   if (!Object.hasOwn(dependency, "resource")) {
     return [dependency, [EVERY_WRITE]];
   }
   const { resource: dependencyScope, on } = dependency;
+  if (dependencyScope === undefined || dependencyScope === null) {
+    throw nameMissing(`{ resource: ${dependencyScope} }`);
+  }
   const where = `${dependentLabel} dependency on ${dependencyScope.name}`;
   if (!Array.isArray(on) || on.length === 0) {
     throw new Error(

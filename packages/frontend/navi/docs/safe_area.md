@@ -125,13 +125,16 @@ Beware of making that container a scroller by accident — see
 
 An app whose document scrolls still has screens that must fit the screen: a
 head that stays put over a part that scrolls, a wizard whose step fills what is
-left. The height of the free band is the visual viewport less both insets:
+left. The height of the free band is the visual viewport less both insets, less
+the strips that stick under a bar in the flow:
 
 ```css
 .wizard {
   height: calc(
     var(--navi-vvh) - var(--navi-safe-area-inset-top) -
-      var(--navi-safe-area-inset-bottom)
+      var(--navi-safe-area-inset-bottom) -
+      var(--navi-transition-cover-top, 0px) -
+      var(--navi-transition-cover-bottom, 0px)
   );
 }
 ```
@@ -142,6 +145,13 @@ the app's own bands and an overlaying keyboard (see
 [the trap](#the-trap-which-viewport)). Never `--navi-fixed-bar-space-*`: that
 slot is how a `FixedBar` writes what it takes, and reading it for layout misses
 the notch on an edge with no bar, the band of a capped app, and the keyboard.
+
+The covers are the strips of [the next section](#a-strip-under-a-bar): an
+offline line above the page pushes it down by its height, and a page as tall as
+the band would end that much under the bottom bar. `useTransitionCover`
+publishes the tallest strip on each edge, in the frame the strip changes, and
+removes it when the strip goes; the `0px` is for an app that has none, where the
+variable does not exist.
 
 ### A strip under a bar
 
@@ -162,7 +172,8 @@ useTransitionCover(bannerRef);
 ```
 
 `useTransitionCover` publishes the strip's height, so the pictures of a route
-movement are cut under it rather than sliding over it. An anchor's
+movement are cut under it rather than sliding over it, and a page fitting the
+free band leaves room for it ([above](#a-page-that-fits-the-free-band)). An anchor's
 `scroll-margin` adds only what `:root`'s `scroll-padding` does not hold already
 — the strip's own height, a few pixels of air — never the bar or the band.
 

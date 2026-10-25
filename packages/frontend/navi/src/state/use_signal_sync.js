@@ -1,9 +1,13 @@
 import { useSignal } from "@preact/signals";
 import { useRef } from "preact/hooks";
 
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+
 /**
  * Creates a signal that stays synchronized with an external value,
- * only updating the signal when the value actually changes.
+ * only updating the signal when the value actually changes — compared by
+ * content, so a record read again as a new but equal object or array is not a
+ * change and leaves what is being typed alone.
  *
  * This hook solves a common reactive UI pattern where:
  * 1. A signal controls a UI element (like an input field)
@@ -47,8 +51,9 @@ export const useSignalSync = (value, initialValue = value) => {
 
   // Only update signal when external value actually changes
   // This preserves user input between external changes
-  if (previousValueRef.current !== value) {
-    previousValueRef.current = value;
+  const previousValue = previousValueRef.current;
+  previousValueRef.current = value;
+  if (!compareTwoJsValues(previousValue, value)) {
     signal.value = value; // Model takes precedence
   }
 

@@ -432,6 +432,20 @@ order:
    (`.navi_dialog { --app-thing: … }`, unlayered), or writes it against the ink
    (`currentColor`) so it follows whatever ink the surface writes in.
 
+The same holds for a selector. `.card .navi_badge` matches a badge in a popup
+the card opens, since the popup is a descendant of the card. Keep a container's
+rule to the container by naming the popup's marker between the container and
+the element:
+
+```css
+.card .navi_badge:not(.card [navi-out-of-flow] *) {
+  outline: 1px solid;
+}
+```
+
+`:not([navi-out-of-flow] *)` alone is too coarse: it also drops a card that
+itself sits in a popup.
+
 ##### Ink, ratio, paper: the color keywords
 
 `primary` is an absolute (the surface's ink, `--navi-surface-text-color`). The
@@ -441,6 +455,15 @@ whatever writes them: a dark card sets `color: white` and nothing else, and its
 secondary is white at 80%. Which is also what lets a surface re-declare the
 same formulas and have them come out right: on a popup writing in black, they
 mix black.
+
+Three of them — `secondary`, `discrete`, `hint` — mix with `transparent`: they
+are translucent inks, not greys (`emphasis` mixes with black, and is opaque).
+Text never shows it, but a drawing whose shapes overlap — a slash across a bell,
+two crossing strokes — paints each overlap twice, and the overlap comes out
+darker: `discrete` on a navy ink paints (109,116,128) where one shape lies and
+(51,60,78) where two meet. Give such a drawing its share as one opacity instead
+— `<Icon style={{ opacity: 0.6 }}>` in `primary` composites once — or an opaque
+color.
 
 The share of ink in each is a token: `--navi-color-secondary-mix` (80%),
 `--navi-color-emphasis-mix` (50%), `--navi-color-discrete-mix` (60%),
@@ -550,10 +573,15 @@ own — either by what they are, or by what navi's out-of-flow elements all carr
 combinator is the other shape, and there the marker goes between the compounds:
 
 ```css
-.stack > *:not([navi-out-of-flow]) + *:not([navi-out-of-flow]) {
+.stack > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]) {
   margin-block-start: 8px;
 }
 ```
+
+`~`, not `+`: `+` looks at the element right before, and a popup written
+between two rows — a `Dialog` next to the button that opens it — is that
+element, closed or open, so the row after it loses the rule. `~` asks for any
+earlier sibling that is not out of flow, which is what navi's own `Group` writes.
 
 The third way is to stop asking a structural question at all: put a class on the
 cell you mean and style that. It is the most robust of the three — it survives

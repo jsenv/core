@@ -113,6 +113,12 @@ import {
 } from "@jsenv/dom";
 
 import { defineInteractionDetector } from "./interaction_registry.js";
+import {
+  findControlRefusingWrites,
+  sayControlRefusal,
+  sayHeldByNetworkPolicy,
+  sayRefusal,
+} from "./interaction_refusal.js";
 import { isPressOnLayerOver } from "./press_target.js";
 
 // The axis each swipe names, which is the whole reason they are named rather than
@@ -286,10 +292,13 @@ defineInteractionDetector({
     type === LONGPRESS ||
     type === DOUBLE_CLICK ||
     type === SINGLE_CLICK,
+  // What a swipe's answer rejects with is said here, on the row once it is back
+  // (see startSwipe).
+  claimsRefusals: (type) => type in AXIS_BY_SWIPE_TYPE,
   // Every one of them is "what this press turns out to be": until it turns out,
   // the press is theirs.
   disputesPress: true,
-  setup: (element, trigger, { types, readConfig }) => {
+  setup: (element, trigger, { types, readConfig, isHeldByNetworkPolicy }) => {
     let axes = "";
     for (const type of types) {
       const axis = AXIS_BY_SWIPE_TYPE[type];
@@ -485,6 +494,7 @@ defineInteractionDetector({
           axes,
           types,
           trigger,
+          isHeldByNetworkPolicy,
           threshold: readConfig(
             SWIPE_THRESHOLD_ATTRIBUTE,
             SWIPE_THRESHOLD_DEFAULT,
@@ -596,9 +606,22 @@ const warnOnceAboutHoldTakenByInner = (element, innerElement) => {
 
 const startSwipe = (
   pointerDownEvent,
-  { element, axes, types, trigger, threshold, onSwipeStart },
+  {
+    element,
+    axes,
+    types,
+    trigger,
+    isHeldByNetworkPolicy,
+    threshold,
+    onSwipeStart,
+  },
 ) => {
   let settleTimeout = null;
+  // How each declared side that would be turned down at the release is said,
+  // read where the gesture forms: a side refused is a wall from the first
+  // pixel, never a row that goes out and is told afterwards it could not.
+  const refusalBySide = new Map();
+  let refusalSaid = false;
   const paint = ({ pulled, progress, type }) => {
     element.style.setProperty("--swipe-pulled", `${pulled}px`);
     element.style.setProperty("--swipe-progress", progress);
@@ -648,12 +671,42 @@ const startSwipe = (
       onSwipeStart();
       clearTimeout(settleTimeout);
       element.removeAttribute("data-swipe-settling");
+      // The gate the answer goes through, and the policy over a side that
+      // writes: what they would turn down at the release they turn down now.
+      const controlHost = findControlRefusingWrites(element);
+      for (const type of [positive, negative]) {
+        if (!types.includes(type)) {
+          continue;
+        }
+        if (controlHost) {
+          refusalBySide.set(type, () => {
+            sayControlRefusal(controlHost, pointerDownEvent, type);
+          });
+        } else if (isHeldByNetworkPolicy(type)) {
+          refusalBySide.set(type, () => {
+            sayHeldByNetworkPolicy(element);
+          });
+        }
+      }
       // A side nothing is declared for is not refused, it resists: the gesture is
-      // answered (something moves) while saying there is nothing that way.
-      return { size, travelBack: hasPositive, travelOn: hasNegative };
+      // answered (something moves) while saying there is nothing that way. A
+      // side declared and turned down resists the same way, and says why.
+      return {
+        size,
+        travelBack: hasPositive && !refusalBySide.has(positive),
+        travelOn: hasNegative && !refusalBySide.has(negative),
+      };
     },
     onPull: ({ axis, pulled, progress }) => {
-      paint({ pulled, progress, type: swipeTypeOf(axis, pulled) });
+      const type = swipeTypeOf(axis, pulled);
+      paint({ pulled, progress, type });
+      // Said once, the first time the hand leans on it: a refusal is an
+      // answer to the hand, and the hand asked the moment it pulled that way.
+      const sayRefusedSide = refusalBySide.get(type);
+      if (sayRefusedSide && !refusalSaid) {
+        refusalSaid = true;
+        sayRefusedSide();
+      }
     },
     onEnd: ({ axis, pulled, size, sign, travels, event }) => {
       const type = swipeTypeOf(axis, pulled);
@@ -686,7 +739,14 @@ const startSwipe = (
       const comeBack = () => {
         settleTo(restingPlace);
       };
-      pending.then(comeBack, comeBack);
+      pending.then(comeBack, (error) => {
+        comeBack();
+        // Why, once the row is back where the words point: a row coming back
+        // in silence reads as a gesture not understood, and it is tried again.
+        setTimeout(() => {
+          sayRefusal(element, error);
+        }, SETTLE_DURATION_MS);
+      });
     },
     // Nothing to put back: onGiveUp only ever comes from a press that never became
     // a swipe, so nothing was painted by it.

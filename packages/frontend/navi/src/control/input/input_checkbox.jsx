@@ -108,6 +108,18 @@ const css = /* css */ `
       --background-color-disabled-checked: var(
         --switch-background-color-disabled-checked
       );
+      --border-color: var(--switch-border-color);
+      --border-color-hover: var(--switch-border-color-hover);
+      --border-color-readonly: var(--switch-border-color-readonly);
+      --border-color-disabled: var(--switch-border-color-disabled);
+      --border-color-checked: var(--switch-border-color-checked);
+      --border-color-hover-checked: var(--switch-border-color-hover-checked);
+      --border-color-readonly-checked: var(
+        --switch-border-color-readonly-checked
+      );
+      --border-color-disabled-checked: var(
+        --switch-border-color-disabled-checked
+      );
     }
     .navi_checkbox[data-variant="icon"] {
       --margin: 0;
@@ -337,7 +349,6 @@ const css = /* css */ `
       min-width: var(--switch-outer-width);
       padding: var(--switch-padding);
       background-color: var(--x-background-color);
-      border-color: transparent;
     }
 
     &[data-variant="icon"] {

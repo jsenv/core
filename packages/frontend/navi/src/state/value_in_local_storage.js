@@ -3,6 +3,23 @@ import {
   writeLocalStorage,
 } from "./guarded_local_storage.js";
 
+/**
+ * Reads and writes one value kept under `key` in localStorage, without a
+ * signal: `[get, set, remove]`. `get()` reads storage again at each call, so a
+ * write from another tab counts; a stored value that does not decode as
+ * `type` reads `undefined` (with a console message). `set(undefined)` removes
+ * the key. Every access is guarded — a refused or full storage keeps nothing.
+ *
+ * For state the app reads and binds, prefer
+ * `stateSignal(default, { id, type, persists: true, version })`.
+ *
+ * @param {string} key
+ * @param {object} [options]
+ * @param {"any"|"boolean"|"number"|"array"|"object"} [options.type="any"] How
+ *   the value is written and read back: `"any"`, `"array"` and `"object"` as
+ *   JSON, `"boolean"` as `"true"`/`"false"`, `"number"` as its text.
+ * @returns {[() => any, (value: any) => void, () => void]}
+ */
 export const valueInLocalStorage = (key, { type = "any" } = {}) => {
   const converter = TYPE_CONVERTERS[type];
 
@@ -21,7 +38,8 @@ export const valueInLocalStorage = (key, { type = "any" } = {}) => {
         return undefined;
       }
     }
-    if (type !== "any" && typeof valueToReturn !== type) {
+    // typeof answers "object" for an array: the "array" converter checked it.
+    if (type !== "any" && type !== "array" && typeof valueToReturn !== type) {
       console.warn(
         `localStorage "${key}" value is invalid: should be a "${type}", got ${valueInLocalStorage}`,
       );

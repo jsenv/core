@@ -26,6 +26,7 @@ import { Dialog } from "./dialog.jsx";
 import { Popover } from "./popover.jsx";
 import { PopupModeContext, useResolvedPopupMode } from "./popup_mode.jsx";
 import { PopupClose } from "./popup_close.jsx";
+import { dropPickerPopupProps } from "./popup_shared.js";
 import { PopupTitle } from "./popup_title.jsx";
 
 const css = /* css */ `
@@ -98,9 +99,11 @@ const css = /* css */ `
  *   popup meant to dock on a phone must not declare itself compact — see
  *   `maxWidth` below.
  * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
- * @param {"box"|"scene"} [props.lift] - **Dialog-only**, same guard.
+ * @param {"box"|"scene"} [props.lift] - Forwarded to both: what a lift's two
+ *   boxes are to each other (see `Dialog`'s own). A popover reads it on a
+ *   closing lift only.
  * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [props.liftAnchor] -
- *   **Dialog-only**, same guard.
+ *   Forwarded to both: where a closing lift lands (see `Dialog`'s own).
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
@@ -141,11 +144,12 @@ const css = /* css */ `
  *   `--navi-popup-theme-color` token decides.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`|"lifting"|{open: boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`, close: "lifting"}} [props.animation]
  *   - Forwarded to whichever renders — see either component's own doc.
- *   `"expanding"`/`"expand-*"` are `Popover`'s own; `"lifting"` and
- *   `{ open, close: "lifting" }` are `Dialog`'s. A popover has no lift, so in
- *   popover mode `"lifting"` plays no movement (what a dialog does with no
- *   anchor to lift out of) and the object form opens with its `open`, which
- *   the close plays backwards like every other kind.
+ *   `"expanding"`/`"expand-*"` are `Popover`'s own; `"lifting"` is
+ *   `Dialog`'s. A popover opens placed against its anchor, never out of it,
+ *   so in popover mode `"lifting"` plays no movement (what a dialog does with
+ *   no anchor to lift out of). `{ open, close: "lifting" }` lifts on the close
+ *   in both modes: the popup opens with `open`, and its `data-lift` node
+ *   travels into `liftAnchor` (or the anchor it opened from) as it closes.
  * @param {string} [props.animationDuration] - Forwarded as-is.
  * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
  *   here directly to help decide the automatic `mode` (a fixed length under
@@ -174,6 +178,9 @@ const css = /* css */ `
  * @param {any} [props.value] - Forwarded as-is: what `signal` holds while
  *   THIS popup is open, for several sharing one signal (see
  *   `Dialog`/`Popover`'s own `value`).
+ * @param {import("@preact/signals").Signal<any>[]} [props.ownSignals] -
+ *   Forwarded as-is: state emptied by every close (see `Dialog`'s own
+ *   `ownSignals`).
  * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
  *   mount-only).
  * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
@@ -216,7 +223,6 @@ export const Popup = (props) => {
     // mode the automatic screen-size resolution happens to pick.
     pressOutside = "close",
     backdrop,
-    // A popover is handed only the values it understands (toPopoverAnimation).
     animation,
     // Popover-only (see this component's own doc) — destructured out so
     // they're never part of ...rest, and therefore never forwarded to
@@ -231,10 +237,9 @@ export const Popup = (props) => {
     // in the dialog branch, so they never reach the popover element.
     dockedOnSmallTouchScreen,
     sizeFromAnchor,
-    lift,
-    liftAnchor,
-    ...rest
+    ...restGiven
   } = props;
+  const rest = dropPickerPopupProps(restGiven, "Popup");
 
   const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
     // layer stays in ...rest (forwarded as-is to Dialog/Popover); it is read
@@ -255,8 +260,6 @@ export const Popup = (props) => {
         {...rest}
         dockedOnSmallTouchScreen={dockedOnSmallTouchScreen}
         sizeFromAnchor={sizeFromAnchor}
-        lift={lift}
-        liftAnchor={liftAnchor}
         animation={animation}
         maxWidth={maxWidth}
         pressOutside={pressOutside}
@@ -274,7 +277,7 @@ export const Popup = (props) => {
   return (
     <Popover
       {...rest}
-      animation={toPopoverAnimation(animation)}
+      animation={animation}
       maxWidth={maxWidth}
       pressOutside={pressOutside}
       backdrop={backdrop}
@@ -295,15 +298,3 @@ export const Popup = (props) => {
 
 Popup.Close = PopupClose;
 Popup.Title = PopupTitle;
-
-// What Dialog's own animation values mean to a popover, which has no lift
-// (see the `animation` doc above).
-const toPopoverAnimation = (animation) => {
-  if (animation === "lifting") {
-    return undefined;
-  }
-  if (animation !== null && typeof animation === "object") {
-    return animation.open;
-  }
-  return animation;
-};

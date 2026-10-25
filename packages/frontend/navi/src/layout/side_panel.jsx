@@ -16,6 +16,7 @@ import { keepTouchRefusable, stringifyStyle } from "@jsenv/dom";
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
+import { dropPickerPopupProps } from "./popup_shared.js";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 
 const css = /* css */ `
@@ -194,6 +195,9 @@ const css = /* css */ `
  * @param {any} [props.value] - What `signal` holds while this panel is
  *   open, for several panels sharing one signal that says which is open.
  *   Forwarded as-is to `Popup` (see `Dialog`/`Popover`'s own `value`).
+ * @param {import("@preact/signals").Signal<any>[]} [props.ownSignals] - State
+ *   that belongs to the panel alone, emptied by every close. Forwarded as-is
+ *   to `Popup` (see `Dialog`'s own `ownSignals`).
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
  *   required at all for a purely command-driven panel (an `id` plus a
@@ -303,9 +307,10 @@ export const SidePanel = ({
   mode,
   layer = "top",
   className,
-  ...rest
+  ...restGiven
 }) => {
   import.meta.css = css;
+  const rest = dropPickerPopupProps(restGiven, "SidePanel");
 
   const onSwipePointerDown = closeByDrag ? createSwipeToClose(side) : null;
 

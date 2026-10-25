@@ -72,6 +72,7 @@ import { cloneElement, createRef, h } from "preact";
 import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
+import { forgetContainer, reportContainerShows } from "./rendered_page.js";
 import { unwireRouteFallback, wireRouteFallback } from "./route_fallback.js";
 import { observeRouteRender, publishRouteRender } from "./route_render.js";
 import { RoutePageContext } from "./route_page_context.js";
@@ -258,21 +259,34 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
     };
   }
   const parentPage = useContext(RoutePageContext);
-  const content = useContentKeepingLeavingPages(
+  const { content, page } = useContentKeepingLeavingPages(
     branch,
     readShownBranchRef.current,
     parentPage,
   );
 
-  // The two things this component knows that nobody outside can find out: the
+  // The things this component knows that nobody outside can find out: the
   // pages a named fallback is the absence of — the children it was written
-  // with — and that the branch it chose is in the DOM.
+  // with —, that the branch it chose is in the DOM, and which page that is
+  // (see rendered_page.js).
+  const containerKey = useRef({}).current;
   useLayoutEffect(() => {
     if (fallbackPage) {
       wireRouteFallback(fallbackPage, pages);
     }
     publishRouteRender();
+    reportContainerShows(containerKey, {
+      parentPage,
+      page,
+      branchType: branch ? branch.type : null,
+      routePage: branchRoutePage(branch),
+    });
   });
+  useLayoutEffect(() => {
+    return () => {
+      forgetContainer(containerKey);
+    };
+  }, []);
   // Being wired means the container holding it is on screen: a router taken out
   // of the document leaves no fallback behind still claiming an address.
   useLayoutEffect(() => {
@@ -395,7 +409,7 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
   }, []);
 
   if (leaving.length === 0) {
-    return vnode ? [vnode] : null;
+    return { content: vnode ? [vnode] : null, page };
   }
   import.meta.css = css;
   const children = vnode ? [vnode] : [];
@@ -406,7 +420,7 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
       h("template", { key: `${entry.key}-end`, ref: entry.endRef }),
     );
   }
-  return children;
+  return { content: children, page };
 };
 const countRenders = (count) => count + 1;
 // The page a container renders, as RoutePageContext hands it over (see
@@ -443,14 +457,7 @@ const createRoutePage = (readShownBranch, parentPage) => {
 // renders either way: the element the page is rendered with — a layout, for a
 // container branch.
 const branchElement = (branch) => {
-  if (!branch) {
-    return null;
-  }
-  let node = branch.node;
-  while (node && node.type !== Route) {
-    // A wrapper around the branch (see wrapBranch).
-    node = node.props.children;
-  }
+  const node = branchRouteNode(branch);
   if (!node) {
     return null;
   }
@@ -459,6 +466,29 @@ const branchElement = (branch) => {
     return element;
   }
   return element.type;
+};
+// The page a leaf or a fallback branch is, as rendered_page.js publishes it. A
+// container branch is a page only through the container it renders.
+const branchRoutePage = (branch) => {
+  if (!branch || branch.type === "container") {
+    return null;
+  }
+  if (branch.type === "fallback") {
+    return { route: branch.page, params: undefined };
+  }
+  const { route, routeParams } = branchRouteNode(branch).props;
+  return { route, params: routeParams };
+};
+const branchRouteNode = (branch) => {
+  if (!branch) {
+    return null;
+  }
+  let node = branch.node;
+  while (node && node.type !== Route) {
+    // A wrapper around the branch (see wrapBranch).
+    node = node.props.children;
+  }
+  return node;
 };
 
 // Walk JSX children vnodes (without rendering) to build a branch list and

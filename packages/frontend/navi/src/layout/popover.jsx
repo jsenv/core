@@ -92,6 +92,12 @@ import {
   readPopupThemeColor,
 } from "../nav/theme_color.js";
 import { usePopupContentMount } from "./popup_content_mount.js";
+import {
+  installPopupLiftCss,
+  liftPopupFromAnchor,
+  resolveNamedLiftAnchor,
+} from "./popup_lift.js";
+import { usePopupStandIn } from "./popup_stand_in.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
@@ -99,6 +105,7 @@ import {
   armOutsidePressClose,
   armPointerDownOutsideClose,
   clearTextSelectionInside,
+  dropPickerPopupProps,
   handlePressOnOutsideRegion,
   keepFocusedElementVisible,
   mayHaveHiddenFocus,
@@ -496,6 +503,17 @@ const css = /* css */ `
     }
   }
 
+  /* A closing lift (animation={{ open, close: "lifting" }}, popup_lift.js) is
+     the popover leaving as a picture, faded with the page's: the exit its
+     opening arms would keep it rendered into the picture of the state it
+     closes into. */
+  :root[data-navi-popup-lift="closing"] {
+    .navi_popover,
+    .navi_popover_backdrop {
+      transition: none;
+    }
+  }
+
   ${surfaceTextCss}
   ${popupCss}
 `;
@@ -592,11 +610,25 @@ const css = /* css */ `
  *   popover so the page/container behind it can't scroll while it's open.
  * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
  *   popover (see `focus_trap.js`).
- * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`} [props.animation]
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`|{open: boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`|"expanding"|`expand-${string}`, close: "lifting"}} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a real anchor or a centered
  *   `positionArea`, and to a concrete `"slide-from-*"` direction otherwise.
  *   `"expanding"`/`"expand-*"` grow out of a real anchor (see popup_css.js).
  *   Any other explicit value is used as-is.
+ *   - `{ open, close: "lifting" }`: opens with `open`, and the close lifts —
+ *   the popover's `data-lift` node travels into `liftAnchor` (or back into
+ *   the anchor the popover was placed against) while the popover fades out
+ *   with the page, its own exit off. For a popover whose content is put away
+ *   somewhere: "Later" on an invitation flies its icon into the settings
+ *   wheel it can be found in again. Same movement as `Dialog`'s closing lift,
+ *   see docs/popup_lift.md.
+ * @param {"box"|"scene"} [props.lift="box"] - Under a closing lift, what the
+ *   lifted node and the box it lands in are to each other (see `Dialog`'s own).
+ * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [props.liftAnchor] -
+ *   Under a closing lift, where the lifted node lands: read once the close is
+ *   made — after `onClose` — and waited for a moment when the close itself
+ *   renders it. A function is called with what the popover was open on. Left
+ *   out, the anchor the popover was placed against.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - The element the
@@ -679,6 +711,9 @@ const css = /* css */ `
  *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
  *   value, closed otherwise; opening writes it, closing writes `undefined`
  *   (a state signal's default). Without it the signal holds a boolean.
+ * @param {import("@preact/signals").Signal<any>[]} [props.ownSignals] - State
+ *   that belongs to this popover alone, emptied (written `undefined`) by every
+ *   close, whatever closes it (see `Dialog`'s own `ownSignals`).
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the popover was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -697,7 +732,10 @@ const css = /* css */ `
  *   request. What refuses a close is navi's: a control inside still
  *   running its action (see popup_busy.js for the runs that let it through).
  *   `event.detail.isCancel` says the close meant "revert", and
- *   `event.detail.isConfirm` that a `--navi-confirm` said yes.
+ *   `event.detail.isConfirm` that a `--navi-confirm` said yes, and
+ *   `event.detail.isSend` that a send aimed at the popover itself closed it
+ *   (a row's `--navi-send`). To await that answer from where the opening is
+ *   decided, open it with `askPopup` instead.
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it
@@ -715,7 +753,9 @@ const css = /* css */ `
  * @param {"always"|"idle"|"from-first-open"|"while-opened"} [props.mount] - When
  *   `children` are built and thrown away (see popup_content_mount.js).
  *   `"from-first-open"` (the default) builds them on the first open and keeps
- *   them afterwards. `"always"` builds them right away, for content something
+ *   them afterwards — and the popover itself is built then too: until its first
+ *   request (an open, a press on what opens it, its signal saying open) it is
+ *   a bare `<div>` holding its id (see docs/popup_open.md). `"always"` builds them right away, for content something
  *   depends on while the popup is still closed: a value read off it, fields a
  *   surrounding form collects on submit, a size measured from outside.
  *   `"idle"` builds them in a browser idle moment after load — "always" minus
@@ -743,7 +783,25 @@ export const Popover = (props) => {
   if (props.openController) {
     return <ControlledPopover {...props} />;
   }
-  return <UncontrolledPopover {...props} />;
+  return <PopoverStandIn {...props} />;
+};
+
+// A popover nobody has asked for yet stands in as a bare element (see
+// popup_stand_in.js), hidden by its class's own [navi-hidden] rule.
+const PopoverStandIn = (props) => {
+  const [builtReason, popoverRef, standInProps] = usePopupStandIn(props);
+  if (builtReason !== null) {
+    return (
+      <UncontrolledPopover
+        {...props}
+        ref={popoverRef}
+        defaultOpen={
+          builtReason === "interaction" ? "interaction" : props.defaultOpen
+        }
+      />
+    );
+  }
+  return <div className="navi_popover" {...standInProps} />;
 };
 
 // No openController passed: this Popover is used declaratively (e.g. driven
@@ -803,6 +861,7 @@ const UncontrolledPopover = (props) => {
       value={undefined}
       defaultOpen={undefined}
       navState={undefined}
+      ownSignals={undefined}
       onClose={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
@@ -828,6 +887,8 @@ const UncontrolledPopover = (props) => {
         const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,
           isConfirm: e.detail?.isConfirm,
+          isSend: e.detail?.isSend,
+          requester: e.detail?.source,
         });
         if (!closing) {
           // Said back to whoever asked: --navi-close:all stops climbing here.
@@ -965,7 +1026,10 @@ const usePopoverProps = (props) => {
     expand,
     expandX,
     expandY,
-    animation,
+    animation: animationProp,
+    // Read by the closing lift alone (see transitionChange below).
+    lift = "box",
+    liftAnchor,
     anchor,
     anchorCustomEventDetail = "override",
     marginWithAnchor = 0,
@@ -989,8 +1053,9 @@ const usePopoverProps = (props) => {
     // Read by usePopupName below, never written on the element.
     openerAriaLabel,
     openerAriaLabelledBy,
-    ...rest
+    ...restGiven
   } = props;
+  const rest = dropPickerPopupProps(restGiven, "Popover");
   // Assigned on every render, like openEffect below, so it always closes over
   // the latest prop. Called by openController.open() before the content is
   // built: what this popup opens ON is known before anything reads it.
@@ -1026,6 +1091,27 @@ const usePopoverProps = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
+  // `{ open, close: "lifting" }`: the opening is `open`, the close lifts. A
+  // popover opens placed against its anchor, never out of it, so a plain
+  // "lifting" plays no movement either way.
+  const [animation, liftsOnClose] =
+    animationProp !== null && typeof animationProp === "object"
+      ? [animationProp.open, animationProp.close === "lifting"]
+      : [animationProp === "lifting" ? undefined : animationProp, false];
+  if (
+    import.meta.dev &&
+    animationProp !== null &&
+    typeof animationProp === "object" &&
+    animationProp.close !== undefined &&
+    animationProp.close !== "lifting"
+  ) {
+    console.warn(
+      `[navi] Popover animation={{ close: ${JSON.stringify(animationProp.close)} }}: "lifting" is the only close that differs from the opening; every other kind closes by playing the opening backwards.`,
+    );
+  }
+  if (liftsOnClose) {
+    installPopupLiftCss();
+  }
   // animation={true} or "auto" always resolves to "sliding" or "scaling"
   // (see resolveAutoAnimationKind).
   const isAutoAnimation = animation === true || animation === "auto";
@@ -1102,6 +1188,34 @@ const usePopoverProps = (props) => {
   // and see no aria-expanded at all yet, wrongly falling back to the
   // slower, flash-prone `toggle` event instead of the fast, pre-paint
   // MutationObserver path.
+
+  // The close alone lifts (see popup_lift.js): the lifted node travels into
+  // `liftAnchor`, read once the close is made — `onClose` may be what renders
+  // it — or back into the anchor the popover was placed against.
+  const anchorElementRef = useRef(null);
+  openController.transitionChange = liftsOnClose
+    ? (applyChange, { opened, event }) => {
+        const popoverEl = ref.current;
+        // A change a page change carries moves with that page (see
+        // page_change.js).
+        if (opened || !popoverEl || event.detail.silent) {
+          applyChange();
+          return;
+        }
+        liftPopupFromAnchor(
+          popoverEl,
+          liftAnchor
+            ? () =>
+                resolveNamedLiftAnchor(
+                  liftAnchor,
+                  openController.popupValueSignal.peek(),
+                )
+            : () => anchorElementRef.current,
+          applyChange,
+          { opened, lift, waitForAnchor: Boolean(liftAnchor) },
+        );
+      }
+    : null;
 
   openController.getElement = () => ref.current;
   openController.openEffect = (e) => {
@@ -1181,6 +1295,7 @@ const usePopoverProps = (props) => {
       anchorElement = e.detail.source;
     }
     const hasAnchorElement = Boolean(anchorElement);
+    anchorElementRef.current = anchorElement || null;
     // getPositionedParent already resolves to document.documentElement for
     // the via-attribute renderer on its own (popoverEl's own `popover`
     // attribute, present from render regardless of whether it's actually

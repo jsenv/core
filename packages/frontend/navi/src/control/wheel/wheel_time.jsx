@@ -72,6 +72,8 @@ const END_OF_DAY = END_OF_DAY_HOUR * MINUTES_PER_HOUR;
  *   defaultValue?: string,
  *   signal?: import("@preact/signals").Signal<string>,
  *   minuteStep?: number,
+ *   min?: string,
+ *   max?: string,
  *   loop?: boolean,
  *   separator?: import("preact").ComponentChildren,
  *   hourLabel?: string,
@@ -91,6 +93,11 @@ const END_OF_DAY = END_OF_DAY_HOUR * MINUTES_PER_HOUR;
  *   the list itself. 0 to 23 by default. Rows nobody will ever land on are rows
  *   in the way. 24 is the end of the day ("24:00", midnight at the end of a
  *   span) and has no minutes: turned onto it, the minute wheel goes back to 0.
+ * @param {string} [min] The earliest time one can turn to, as "HH:MM"; `max`
+ *   is the latest ("21:00" at the latest). The hours beyond are not offered,
+ *   and on the hour of a bound the minutes past it are drawn pale: landing on
+ *   one, the minute wheel glides back to the bound. Rounded to `minuteStep`,
+ *   inwards — a bound the wheels cannot show is one they cannot land on.
  * @param {boolean} [loop=true] The wheels go round: 23h then 0h, 59 minutes
  *   then 0. What a clock does. Say `loop={false}` for two ends one cannot turn
  *   past.
@@ -110,6 +117,8 @@ const END_OF_DAY = END_OF_DAY_HOUR * MINUTES_PER_HOUR;
 export const TimeWheel = ({
   minuteStep = 1,
   hours,
+  min,
+  max,
   loop = true,
   placeholder,
   separator,
@@ -137,9 +146,30 @@ export const TimeWheel = ({
     }
     return minuteList;
   }, [minuteStep]);
+  // The bounds as the wheels hold them, { hour, minute }: what WheelGroup
+  // compares its wheels against.
+  const minParts = useMemo(
+    () => boundTimeParts(min, minuteStep, "up"),
+    [min, minuteStep],
+  );
+  const maxParts = useMemo(
+    () => boundTimeParts(max, minuteStep, "down"),
+    [max, minuteStep],
+  );
   const hourList = useMemo(
-    () => resolveHourList(hours),
-    [hours ? hours.min : undefined, hours ? hours.max : undefined, hours],
+    () =>
+      resolveHourList(hours).filter(
+        (hour) =>
+          (!minParts || hour >= minParts.hour) &&
+          (!maxParts || hour <= maxParts.hour),
+      ),
+    [
+      hours ? hours.min : undefined,
+      hours ? hours.max : undefined,
+      hours,
+      minParts,
+      maxParts,
+    ],
   );
   const { aggregateChildStates, distributeChildUIState } = useAnswered(
     placeholder,
@@ -171,6 +201,8 @@ export const TimeWheel = ({
     <WheelGroup
       aggregateChildStates={aggregateChildStates}
       distributeChildUIState={distributeChildUIState}
+      min={minParts}
+      max={maxParts}
       onnavi_wheel_settle={(e) => {
         if (!wholeHours) {
           endOfDayHasNoMinutes(e);
@@ -644,3 +676,28 @@ const distributeTime = (groupState, childUIStateController, minuteStep) => {
 
 const floorToStep = (minutes, step) => Math.floor(minutes / step) * step;
 const ceilToStep = (minutes, step) => Math.ceil(minutes / step) * step;
+
+// A bound "HH:MM" as the wheels hold it, on a minute the minute wheel shows —
+// rounded towards the inside of the bounds ("up" for a min, "down" for a max).
+// A time of whole hours has no minute wheel: only its hour is a bound.
+const boundTimeParts = (time, minuteStep, direction) => {
+  const parts = parseTimeParts(time);
+  if (!parts) {
+    return undefined;
+  }
+  const step = minuteStep >= MINUTES_PER_HOUR ? MINUTES_PER_HOUR : minuteStep;
+  // Within the hour: the minute wheel's rows start again at 0 every hour.
+  const minute =
+    direction === "up"
+      ? ceilToStep(parts.minute, step)
+      : floorToStep(parts.minute, step);
+  if (minute >= MINUTES_PER_HOUR) {
+    return step === MINUTES_PER_HOUR
+      ? { hour: parts.hour + 1 }
+      : { hour: parts.hour + 1, minute: 0 };
+  }
+  if (step === MINUTES_PER_HOUR) {
+    return { hour: parts.hour };
+  }
+  return { hour: parts.hour, minute };
+};

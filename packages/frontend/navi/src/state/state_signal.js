@@ -1,5 +1,5 @@
 import { createValidity } from "@jsenv/validity";
-import { computed, effect, signal, untracked } from "@preact/signals";
+import { batch, computed, effect, signal, untracked } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
@@ -134,7 +134,8 @@ const STATE_SIGNAL_OPTIONS = new Set([
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
  *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
  *   value, and it goes back to the default value when the route stops matching. Use it for params like an
- *   "edit this one" id, where every other link to the screen must lead to the plain screen.
+ *   "edit this one" id, where every other link to the screen must lead to the plain screen — or for a draft:
+ *   the create screen's fields, which die with the screen (docs/create_and_edit.md).
  *   Incompatible with `persists` (throws).
  * @param {"replace"|"push"} [options.history="replace"] - what writing this state
  *   is worth in the browser's history, when it is bound to a url (a route's
@@ -418,8 +419,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   // Whether "" says nothing at all: on a type that is not text, it is what a
   // cleared control writes (an empty field, a picker's cross) — no number, no
   // date — and kept, it would be an invalid value the address carries.
-  const emptyStringIsAbsence =
-    type !== undefined && !TEXT_TYPE_SET.has(type);
+  const emptyStringIsAbsence = type !== undefined && !TEXT_TYPE_SET.has(type);
   const processValue = (value) => {
     if (value === undefined || (value === "" && emptyStringIsAbsence)) {
       // Absence is never validated, and the verdict on the previous value
@@ -646,7 +646,8 @@ export const stateSignal = (defaultValue, options = {}) => {
     debug,
     ...options,
     history,
-    getHistory: () => historyForCurrentWrite || history,
+    getHistory: () =>
+      historyForCurrentWrite || takeHistoryOfWriteAsOne() || history,
     debounceUrl,
   };
   globalSignalRegistry.set(signalIdString, {
@@ -668,6 +669,36 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
 
   return facadeSignal;
+};
+
+// Several states written as one move (see stateSignalGroup): the first url
+// write it causes is worth what the move asks of the history, and the ones
+// after it replace that entry instead of each pushing their own. The url
+// writes run when the batch ends, synchronously, inside this function — a
+// write made inside an outer batch() is out of its reach, as `set` is.
+let writeAsOne = null;
+export const writeStatesAsOne = (writes, { history }) => {
+  const writeAsOnePrevious = writeAsOne;
+  writeAsOne = { history, taken: false };
+  try {
+    batch(() => {
+      for (const [stateSignalToWrite, value] of writes) {
+        stateSignalToWrite.value = value;
+      }
+    });
+  } finally {
+    writeAsOne = writeAsOnePrevious;
+  }
+};
+const takeHistoryOfWriteAsOne = () => {
+  if (!writeAsOne) {
+    return undefined;
+  }
+  if (writeAsOne.taken) {
+    return "replace";
+  }
+  writeAsOne.taken = true;
+  return writeAsOne.history;
 };
 
 // The copies an older deploy left: under `${id}@<another version>`, or under the

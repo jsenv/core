@@ -123,7 +123,11 @@ export const isRerunHeldByNetworkPolicy = (action) => {
 };
 
 export const isWriteAction = (action) => {
-  return WRITE_VERB_SET.has(action.meta.verb);
+  return isWriteVerb(action.meta.verb);
+};
+
+export const isWriteVerb = (verb) => {
+  return WRITE_VERB_SET.has(verb);
 };
 
 export const getNetworkPolicyReadOnlyMessage = () => {

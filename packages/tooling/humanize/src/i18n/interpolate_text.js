@@ -9,6 +9,8 @@ let jsx = null;
 export const installInterpolateJsx = (runtime) => {
   jsx = runtime;
 };
+// formatList joins elements through the same runtime.
+export const getInstalledJsx = () => jsx;
 
 /**
  * Interpolates a template string, replacing `[key]` placeholders with values.

@@ -318,6 +318,12 @@ param that qualifies a screen is not a place, and one entry per write turns a
 single back-press into as many as the user moved. A state whose values ARE places
 says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
 
+One answer may be kept as several params — a level and its reach,
+`?levels=…&level_exact=…` — and drawn by one control whose value is the object.
+`stateSignalGroup({ levels: levelsSignal, level_exact: levelExactSignal })` is
+that object: read from the params, following each of them, and written back
+into them as one move — one history entry.
+
 #### A value written per frame
 
 Every write reaches the address, synchronously, and browsers refuse an address
@@ -379,6 +385,13 @@ the pages of a `RouteTravel` row alike:
 be written about it (see
 [route_transitions.md](./route_transitions.md#a-page-opened-from-anywhere)), and
 its `matchingSignal` read outside the tree.
+
+Which page is on screen is the containers' answer, not the routes': several can
+match one address, and only the order of the branches says which renders.
+`renderedPageSignal` holds it — `{ route, params }` of the deepest page the
+routers render, a section's own sub-router included, the fallback's
+`routeFallback()` when nothing matches. Naming the screen being left, counting
+where people go: read it there rather than walking a copy of the route table.
 
 A section with a shared prefix owns its own sub-router: one leaf on
 `/dashboard/` whose element renders its own `<Route>` tree and chrome, handing its
@@ -577,6 +590,16 @@ traversal**: a "back" link to the page one just came from behaves as a back — 
 A, B, A, B… growth, and the scroll comes back — and one step forward too. Only
 towards entries of this document, and never when the push carries explicit
 state. An arrow that must ALWAYS behave as a back is `navBack()`.
+
+Further back, a push is an arrival even when it means a return: a bar entry
+leading back to a thread whose address names the item one was reading
+(`/games?at=<id>`) is, by its path, a new arrival at the top — the same push from
+a notification would be one. Only the link knows, and it says so:
+`<Link asReturn>`, `navTo(url, { asReturn: true })`. The push still stacks its
+entry, and lands like a back: the document where that address was last left,
+its lists on the positions they kept there
+([scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)). An address never
+left opens at its top as usual.
 
 ### A page that is not whole yet
 

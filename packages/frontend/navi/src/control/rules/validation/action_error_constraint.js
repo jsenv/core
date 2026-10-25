@@ -7,9 +7,9 @@ export const NAVI_ACTION_ERROR_CONSTRAINT = {
     if (!errorInfo) {
       return null;
     }
-    const { target, message } = errorInfo;
+    const { target, message, status } = errorInfo;
     return {
-      status: "error",
+      status,
       target,
       message,
     };
@@ -23,8 +23,15 @@ export const NAVI_ACTION_ERROR_CONSTRAINT = {
   },
 };
 
-export const setActionError = (controller, message, { target } = {}) => {
-  actionErrorWeakMap.set(controller, { message, target });
+// `status` is how the failure is drawn: "error" (red, kept until the next
+// action), or "warning" / "info" for an attempt that did not work while nothing
+// is broken (docs/error_handling.md).
+export const setActionError = (
+  controller,
+  message,
+  { target, status = "error" } = {},
+) => {
+  actionErrorWeakMap.set(controller, { message, target, status });
 };
 
 export const clearActionError = (controller) => {

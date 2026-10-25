@@ -26,6 +26,10 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
+import {
+  readUpdateCommandModifiers,
+  toggledValue,
+} from "./update_command_value.js";
 
 /**
  * Runs a navi command from JS. It is the LAST RESORT for a navi control: its
@@ -219,7 +223,7 @@ const resolveExplicitTarget = (element) => {
 // --navi-update from a picker's popup is that very field: the command then
 // sets the field to what it already holds, which fires the command again,
 // without end. Such a surface is walked past, up to the picker or the form.
-const resolveFirstParentControl = (el) => {
+export const resolveFirstParentControl = (el) => {
   let parentControl = getParentControl(el);
   while (parentControl && !ownsControlHost(parentControl)) {
     parentControl = getParentControl(parentControl);
@@ -428,7 +432,12 @@ const voidCommand = (source) => {
 // its chevron would play — so a shortcut under a control shows which value it
 // changed, and by how much. What that movement is, and whether the value
 // travels with it, belongs to the control: see control_value.md.
+// "--navi-update:toggle" takes the value back out when it is already there:
+// on a multiple target its items join when not all are held and all leave
+// when they are (see update_command_value.js). The two combine
+// ("--navi-update:toggle:smooth").
 const updateCommand = (source, event, { argument }) => {
+  const { toggle, smooth } = readUpdateCommandModifiers(argument);
   const target =
     resolveExplicitTarget(source) || resolveFirstParentControl(source);
   if (!target) {
@@ -447,9 +456,12 @@ const updateCommand = (source, event, { argument }) => {
         prevented: () => event.preventDefault(),
         allowed: () => {
           const commandValue = resolveCommandValue(source, event);
-          dispatchRequestSetUIState(target, commandValue, {
+          const valueToSet = toggle
+            ? toggledValue(getUIStateFromElement(target), commandValue)
+            : commandValue;
+          dispatchRequestSetUIState(target, valueToSet, {
             event,
-            behavior: argument,
+            behavior: smooth ? "smooth" : undefined,
           });
           sendClosedPickerChange(target, {
             event,

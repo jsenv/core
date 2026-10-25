@@ -169,10 +169,14 @@
  * has taken it on every frame, and NOTHING here moves it — no translate, nothing
  * to hand back at the release. The caller draws, from the numbers it is given.
  *
- * Its detail is `{ x, y }`: where it is now, counted from the grab — the very
- * numbers `move` ends with, said all along rather than once. Not steps since the
- * last frame (which is what `pan` gives, having no grab to count from): a caller
- * adding up steps drifts, and has nothing to re-read after a frame it missed.
+ * Its detail is `{ x, y, velocityX, velocityY }`: where it is now, counted from
+ * the grab — the very numbers `move` ends with, said all along rather than once.
+ * Not steps since the last frame (which is what `pan` gives, having no grab to
+ * count from): a caller adding up steps drifts, and has nothing to re-read after
+ * a frame it missed. The velocity is the hand's, signed, in px/ms, measured on
+ * the events' own timestamps over the trailing window a throw is judged on — a
+ * caller finishing a pull at the hand's speed reads it rather than timing the
+ * frames it handled, which a busy main thread delays.
  *
  * Nothing travels back either: a `move` or a `leave` beside it whose answer
  * rejects normally sends the element home, and there is no home to send it to
@@ -224,10 +228,10 @@
  * stays set up with nothing to take it down: a bank counting the chip in the hand
  * before it lands has no way to stop counting it when it lands nowhere.
  *
- * Its detail is `{ id, x, y, outcome }`. `outcome` is which of the five is about to
- * answer, or null when the release means none of them — told BEFORE that answer
- * runs, so what the grab put up can come down at the moment the hand lets go while
- * still knowing whether something is on its way.
+ * Its detail is `{ id, x, y, velocityX, velocityY, outcome }`. `outcome` is which
+ * of the five is about to answer, or null when the release means none of them —
+ * told BEFORE that answer runs, so what the grab put up can come down at the
+ * moment the hand lets go while still knowing whether something is on its way.
  *
  * Told, not asked, like `grab`, and no more an interaction of its own: a moment of
  * a drag needs a drag to happen in.
@@ -277,6 +281,53 @@
  * vibration for a finger, nothing more for a mouse whose cursor has already said
  * it.
  *
+ * Two more things refuse a carry the same way, at the same instant, without being
+ * declared. A control around the element that a write would not get through —
+ * disabled, read-only, busy — says why, as it answers a press: every outcome
+ * goes through its gate, and a gate asked only at the release would let the hand
+ * carry the thing across the board before saying it was never free to go. And
+ * an outcome declaring what it writes (`reorder: { answer, verb: "PUT" }`, see
+ * interaction_registry.js) is held by a network policy holding writes: the
+ * policy's words are said, and `refuse` is told. A write that fails after the
+ * gesture played is what the policy exists to avoid.
+ *
+ * ANSWERED AT ONCE: `optimistic`.
+ *
+ *   interactions={{
+ *     land: {
+ *       optimistic: true,
+ *       answer: async (event) => {
+ *         const { syncCloneWithDropTarget } = event.detail;
+ *         await startViewTransition(() => {
+ *           syncCloneWithDropTarget();
+ *           applyMove(move);
+ *         }).finished;
+ *         try {
+ *           await GAME.PATCH(move);
+ *         } catch (error) {
+ *           undoMove(move);
+ *           throw error;
+ *         }
+ *       },
+ *     },
+ *   }}
+ *
+ * A `reorder` or a `land` whose answer is drawn at once and written after — a
+ * player already stands where they were put, the card is the game — must not hold its
+ * copy in the air for the length of the request. Declared `optimistic`, the carry
+ * is over once the answer has DRAWN: when the transition it started (through the
+ * function `ensureDocumentStartViewTransition()` returns, the one this can see)
+ * has finished, or a couple of frames after it ran when it started none. The
+ * answer's promise is the write: the element wears `data-optimistic` until it
+ * settles, `settle` is told then, and a rejection is said on the element once it
+ * stands visible again — the answer puts its own state back, as it would after
+ * any refusal. Refused before the drawing is over, the copy goes home like any
+ * refused carry. Nothing waits for a write still out: a second carry is answered
+ * on its own.
+ *
+ * Only those two: a `move` hands its position over at the end of the answer, and
+ * a throw has nothing to draw at once.
+ *
  * WHEN IT IS ALL OVER: `settle`.
  *
  *   interactions={{ land: placeSeat, settle: () => setCarrying(false) }}
@@ -322,15 +373,15 @@ import {
   refuseDragTo,
   startDragTo,
 } from "@jsenv/dom";
-import { isValidElement } from "preact";
 
-import {
-  errorIsDisplayed,
-  markErrorAsDisplayedBy,
-  reportErrorIfNobodyDisplaysIt,
-} from "../../action/action_error_report.js";
-import { openCallout } from "../rules/callout/callout.js";
+import { peekLastViewTransition } from "../../transition/start_view_transition_polyfill.js";
 import { defineInteractionDetector } from "./interaction_registry.js";
+import {
+  findControlRefusingWrites,
+  sayControlRefusal,
+  sayHeldByNetworkPolicy,
+  sayRefusal,
+} from "./interaction_refusal.js";
 
 const MOVE = "move";
 // The same carry, told while it happens instead of once it is over.
@@ -407,7 +458,18 @@ defineInteractionDetector({
   // The press is the beginning of the gesture, not an answer: nothing may read
   // it until it is known whether the hand is dragging or just pressing.
   disputesPress: true,
-  setup: (element, trigger, { types, readConfig, isRefused, isDeclared }) => {
+  setup: (
+    element,
+    trigger,
+    {
+      types,
+      readConfig,
+      isRefused,
+      isDeclared,
+      isHeldByNetworkPolicy,
+      isOptimistic,
+    },
+  ) => {
     const canMove = types.includes(MOVE);
     const canMoving = types.includes(MOVING);
     const canReorder = types.includes(REORDER);
@@ -474,6 +536,15 @@ defineInteractionDetector({
       console.warn(
         `interactions: "reorder" and "land" cannot both answer one release — a release either takes a place between two items or comes down on one. "land" wins here.`,
       );
+    }
+    if (import.meta.dev) {
+      for (const type of [MOVE, MOVING, TOSS, LEAVE]) {
+        if (types.includes(type) && isOptimistic(type)) {
+          console.warn(
+            `interactions: "${type}" is declared optimistic, and only "${REORDER}" and "${LAND}" can be — they draw where the copy comes down and write after. "${type}" waits for its answer.`,
+          );
+        }
+      }
     }
     // Read at setup rather than at the press: a container can say it, and it is
     // what the gesture is about rather than something it discovers.
@@ -554,6 +625,71 @@ defineInteractionDetector({
         placesLookedFor = true;
         warnWhenNothingToLandOn(element, dropContainer, canLeave);
       }
+      const tellSettled = (outcome, refused) => {
+        if (tellsWhenSettled) {
+          trigger(SETTLE, causeEvent, { id: element.id, outcome, refused });
+        }
+      };
+      // The write of the last optimistic answer of this carry, which goes on
+      // once the carry is over: `settle` and a refusal wait for it.
+      let optimisticWrite = null;
+      // A `reorder` or a `land` declared optimistic (see the top of this file):
+      // the carry holds its copy for the drawing only, and the answer's
+      // promise — the write — is followed on its own.
+      const answer = (type, detail) => {
+        if (!isOptimistic(type)) {
+          return trigger(type, causeEvent, detail);
+        }
+        const transitionBefore = peekLastViewTransition();
+        const pending = trigger(type, causeEvent, detail);
+        if (!pending) {
+          return pending;
+        }
+        // Started while the answer ran, before its first await: what it drew
+        // with. Read off the transition funnel, since the answer returns its
+        // write rather than its transition.
+        const transitionAfter = peekLastViewTransition();
+        const drawn =
+          transitionAfter === transitionBefore
+            ? afterFrames(2)
+            : transitionAfter.finished.then(NOOP, NOOP);
+        const write = {
+          settled: false,
+          refused: false,
+          error: undefined,
+          carryOver: false,
+          outcome: type,
+        };
+        optimisticWrite = write;
+        markOptimistic(element);
+        const writeSettled = () => {
+          write.settled = true;
+          unmarkOptimistic(element);
+          if (write.carryOver) {
+            if (write.refused) {
+              sayRefusalOnceShown(element, write.error);
+            }
+            tellSettled(write.outcome, write.refused);
+            return;
+          }
+          if (write !== optimisticWrite && write.refused) {
+            // A copy taken back in hand answered again meanwhile: that answer
+            // ends the carry, and this refusal has only its words left to say.
+            sayRefusalOnceShown(element, write.error);
+          }
+        };
+        pending.then(writeSettled, (error) => {
+          write.refused = true;
+          write.error = error;
+          writeSettled();
+        });
+        // Refused before the drawing is over, the copy goes home with the
+        // refusal, as any refused carry's does.
+        return new Promise((resolve, reject) => {
+          drawn.then(resolve);
+          pending.catch(reject);
+        });
+      };
       // What this element says a release can mean. The gesture then runs only what
       // those need — no copy for a move, no drop hint for something that can only
       // be thrown away.
@@ -607,35 +743,52 @@ defineInteractionDetector({
         // landing, a throw, nothing at all, the gesture taken away mid-air. Told
         // before the outcome below is answered, and nothing is done with what
         // comes back either.
-        onRelease: tellsWhenReleased
-          ? ({ x, y, outcome }) => {
-              trigger(RELEASE, causeEvent, {
-                id: element.id,
-                x,
-                y,
-                outcome,
-              });
-            }
-          : undefined,
+        onRelease: ({ gestureInfo, x, y, outcome }) => {
+          // A release of its own, whatever an earlier one of this carry left
+          // writing (a copy taken back in hand on its way home).
+          optimisticWrite = null;
+          if (tellsWhenReleased) {
+            trigger(RELEASE, causeEvent, {
+              id: element.id,
+              x,
+              y,
+              velocityX: gestureInfo.velocityX,
+              velocityY: gestureInfo.velocityY,
+              outcome,
+            });
+          }
+        },
         // Handed straight back in every case: what `trigger` returns is a
         // promise while the answer is still going, which is what the gesture waits
         // on before it lets go of what it carries.
         onReorder: (fromId, toId, syncCloneWithDropTarget) =>
-          trigger(REORDER, causeEvent, {
+          answer(REORDER, {
             fromId,
             toId,
             syncCloneWithDropTarget,
           }),
-        onLand: (detail) => trigger(LAND, causeEvent, detail),
+        onLand: (detail) => answer(LAND, detail),
         // Over: what an answer refused with is said now that the thing stands
-        // where it was, and the moment is told.
+        // where it was, and the moment is told — or, for an optimistic answer
+        // still writing, once the write is in.
         onCarryEnd: ({ outcome, refused, error }) => {
           if (refused) {
             sayRefusal(element, error);
+            tellSettled(outcome, refused);
+            return;
           }
-          if (tellsWhenSettled) {
-            trigger(SETTLE, causeEvent, { id: element.id, outcome, refused });
+          const write = optimisticWrite;
+          if (write && !write.settled) {
+            write.carryOver = true;
+            return;
           }
+          if (write?.refused) {
+            // Refused between the end of the drawing and the end of the carry.
+            sayRefusal(element, write.error);
+            tellSettled(outcome, true);
+            return;
+          }
+          tellSettled(outcome, false);
         },
         onToss: ({ gestureInfo }) =>
           trigger(TOSS, causeEvent, {
@@ -646,24 +799,66 @@ defineInteractionDetector({
           }),
         onLeave: ({ x, y }) =>
           trigger(LEAVE, causeEvent, { id: element.id, x, y }),
-        onMove: ({ x, y }) => trigger(MOVE, causeEvent, { x, y }),
+        onMove: ({ gestureInfo, x, y }) =>
+          trigger(MOVE, causeEvent, {
+            x,
+            y,
+            velocityX: gestureInfo.velocityX,
+            velocityY: gestureInfo.velocityY,
+          }),
         // Every frame, and nothing is waited on: the caller is drawing, and a
         // draw that has to be awaited before the next frame is one frame late.
         onMoving: canMoving
-          ? ({ x, y }) => {
-              trigger(MOVING, causeEvent, { x, y });
+          ? ({ gestureInfo, x, y }) => {
+              trigger(MOVING, causeEvent, {
+                x,
+                y,
+                velocityX: gestureInfo.velocityX,
+                velocityY: gestureInfo.velocityY,
+              });
             }
           : undefined,
       });
     };
 
-    const onPointerDown = (pointerDownEvent) => {
-      // Asked at every press and never once: what an interaction does is the
-      // caller's latest render, and a thing is locked and unlocked while its
-      // listeners stay where they are. One outcome saying no is enough — the
-      // element is carried or it is not, and each of the five is an answer to
-      // that same carry.
+    // Why this carry cannot happen, or null when it can. Asked at every press
+    // and never once: what an interaction does is the caller's latest render,
+    // and a thing is locked and unlocked while its listeners stay where they
+    // are. One outcome saying no is enough — the element is carried or it is
+    // not, and each of the five is an answer to that same carry. The answer is
+    // how the refusal is said, given the event it answers.
+    const readRefusal = () => {
       if (carries.some(isRefused)) {
+        return (refusalEvent, pointerType) => {
+          if (tellsWhenRefused) {
+            trigger(REFUSE, refusalEvent, { pointerType });
+          }
+        };
+      }
+      // The gate every outcome goes through, asked now rather than at the
+      // release: what it would refuse then, it refuses before anything moves.
+      // No `refuse` is told, since that callback would be one more
+      // interaction the gate refuses.
+      const controlHost = findControlRefusingWrites(element);
+      if (controlHost) {
+        return (refusalEvent) => {
+          sayControlRefusal(controlHost, refusalEvent, carries[0]);
+        };
+      }
+      if (carries.some(isHeldByNetworkPolicy)) {
+        return (refusalEvent, pointerType) => {
+          sayHeldByNetworkPolicy(element);
+          if (tellsWhenRefused) {
+            trigger(REFUSE, refusalEvent, { pointerType });
+          }
+        };
+      }
+      return null;
+    };
+
+    const onPointerDown = (pointerDownEvent) => {
+      const sayRefused = readRefusal();
+      if (sayRefused) {
         refuseDragTo(pointerDownEvent, {
           draggedElement: element,
           threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
@@ -674,13 +869,9 @@ defineInteractionDetector({
           // have been anything. Who keeps the press meanwhile is refuseDragTo's
           // to say — a surface under the element pans from it, and nothing else
           // wants it.
-          onRefuse: tellsWhenRefused
-            ? () => {
-                trigger(REFUSE, pointerDownEvent, {
-                  pointerType: pointerDownEvent.pointerType,
-                });
-              }
-            : undefined,
+          onRefuse: () => {
+            sayRefused(pointerDownEvent, pointerDownEvent.pointerType);
+          },
         });
         return;
       }
@@ -696,12 +887,9 @@ defineInteractionDetector({
       if (!pressEvent) {
         return;
       }
-      if (carries.some(isRefused)) {
-        if (tellsWhenRefused) {
-          trigger(REFUSE, requestEvent, {
-            pointerType: pressEvent.pointerType,
-          });
-        }
+      const sayRefused = readRefusal();
+      if (sayRefused) {
+        sayRefused(requestEvent, pressEvent.pointerType);
         return;
       }
       if (!carriesCopy) {
@@ -761,33 +949,53 @@ const warnWhenNothingToLandOn = (element, dropContainer, canLeave) => {
   );
 };
 
-// What a refused outcome rejected with, said on the element in an error callout
-// the way a control says its action failed, and read the way an errorMapping
-// answer is (see "WHY IT WAS REFUSED" above). An error something already shows —
-// the control an outcome asked for its action — is not said a second time.
-const sayRefusal = (element, error) => {
-  if (error === undefined || error === null) {
+const NOOP = () => {};
+
+const afterFrames = (count) =>
+  new Promise((resolve) => {
+    const next = (remaining) => {
+      if (remaining === 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(() => next(remaining - 1));
+    };
+    next(count);
+  });
+
+// The element wears it for as long as one of its optimistic writes is out:
+// two carries answered in a row each leave theirs going.
+const optimisticWriteCountMap = new WeakMap();
+const markOptimistic = (element) => {
+  const count = optimisticWriteCountMap.get(element) || 0;
+  optimisticWriteCountMap.set(element, count + 1);
+  element.setAttribute("data-optimistic", "");
+};
+const unmarkOptimistic = (element) => {
+  const count = optimisticWriteCountMap.get(element) - 1;
+  optimisticWriteCountMap.set(element, count);
+  if (count === 0) {
+    element.removeAttribute("data-optimistic");
+  }
+};
+
+// A write refused once its carry is over is said where the element stands —
+// after the carry that holds it again, if the hand took it meanwhile: hidden
+// under its copy, it is nowhere to point at.
+const sayRefusalOnceShown = (element, error) => {
+  if (!element.hasAttribute("navi-drag-clone-source")) {
+    sayRefusal(element, error);
     return;
   }
-  if (errorIsDisplayed(error)) {
-    return;
-  }
-  let message = error;
-  let anchorElement = element;
-  if (
-    typeof error === "object" &&
-    !Error.isError(error) &&
-    !isValidElement(error)
-  ) {
-    message = error.message;
-    anchorElement = error.target || element;
-  }
-  if (message === undefined || !anchorElement.isConnected) {
-    // Nothing to show, or nowhere to show it: the error goes where every error
-    // nothing displays goes.
-    reportErrorIfNobodyDisplaysIt(error);
-    return;
-  }
-  openCallout(message, { anchorElement, status: "error" });
-  markErrorAsDisplayedBy(error, "interactions: refused outcome");
+  const observer = new MutationObserver(() => {
+    if (element.hasAttribute("navi-drag-clone-source")) {
+      return;
+    }
+    observer.disconnect();
+    sayRefusal(element, error);
+  });
+  observer.observe(element, {
+    attributes: true,
+    attributeFilter: ["navi-drag-clone-source"],
+  });
 };

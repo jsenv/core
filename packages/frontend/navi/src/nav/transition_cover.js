@@ -15,8 +15,16 @@
  * fixed_bar_space.js): measured rather than declared, and the largest of the
  * elements sharing an edge rather than their sum — during a route movement the
  * outgoing and the incoming row are both mounted, pinned to the same edge, one
- * over the other. Nothing takes its layout from these variables, though, so the
- * write happens where it is measured, with no frame to wait for.
+ * over the other.
+ *
+ * A page that fits the free band takes its height from these variables too
+ * (docs/safe_area.md), so they are written when a layout may follow. A size a
+ * render caused is written where it is measured, in that commit: a movement
+ * starting on that render is cut at the row as it now is, and the page sized
+ * from it moves in the frame the row does. A size no render caused waits for
+ * the frame its resize produced, as a fixed bar's does: written from inside a
+ * resize callback, it resizes the page there, and the browser reports a
+ * ResizeObserver loop for every observer of what that moved.
  */
 
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -71,7 +79,7 @@ export const useTransitionCover = (elementRef, edge = "top") => {
       // What no render caused: a font arriving late, content coming from
       // outside, a rotation.
       const resizeObserver = new ResizeObserver(() => {
-        writeCover(edge, element, measureCover(element, edge));
+        requestCover(edge, element, measureCover(element, edge));
       });
       resizeObserver.observe(element);
       observedRef.current = { element, edge, resizeObserver };
@@ -86,7 +94,27 @@ const measureCover = (element, edge) => {
   return edge === "left" || edge === "right" ? width : height;
 };
 
+// The sizes a resize said, written in the frame it produced (see the top of
+// this file). A write for the same element in between is newer and wins.
+const pendingCoverByElement = new Map();
+let pendingCoverFrame = null;
+const requestCover = (edge, element, size) => {
+  pendingCoverByElement.set(element, { edge, size });
+  if (pendingCoverFrame !== null) {
+    return;
+  }
+  pendingCoverFrame = requestAnimationFrame(() => {
+    pendingCoverFrame = null;
+    const pendingCovers = [...pendingCoverByElement];
+    pendingCoverByElement.clear();
+    for (const [pendingElement, pending] of pendingCovers) {
+      writeCover(pending.edge, pendingElement, pending.size);
+    }
+  });
+};
+
 const writeCover = (edge, element, size) => {
+  pendingCoverByElement.delete(element);
   let sizeMap = sizeMapByEdge.get(edge);
   if (!sizeMap) {
     sizeMap = new Map();

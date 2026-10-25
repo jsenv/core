@@ -37,10 +37,11 @@
  * content appearing later where the box landed. So the opening waits for it
  * (TARGET_WAIT_MS), and lifts the moment it is there.
  *
- * A closing may land where no opening took off: a dialog opened the plain way
- * (`animation={{ open, close: "lifting" }}` in dialog.jsx), closing into a box the close
- * itself brings — the state `onClose` writes renders the place the lifted node
- * belongs to. So the box a closing comes back to is read once the change is
+ * A closing may land where no opening took off: a dialog or a popover opened
+ * the plain way (`animation={{ open, close: "lifting" }}`), closing into a box
+ * the close itself brings — the state `onClose` writes renders the place the
+ * lifted node belongs to. A popover lifts on this close only: it opens placed
+ * against its anchor, never out of it. So the box a closing comes back to is read once the change is
  * made, inside the transition, and when the caller named it (`liftAnchor`) it
  * is waited for (LANDING_WAIT_MS): the new picture is taken once it is there.
  *
@@ -51,7 +52,7 @@
  * The page around is photographed too, the browser's default, kept on
  * purpose: the wall and what the popup holds around the lifted node live in
  * the top layer, which the browser paints during a transition only as part of
- * the root's picture (see the CSS in dialog.jsx). The fixed bars are part of
+ * the root's picture (see the css below). The fixed bars are part of
  * that picture, under the wall like the rest of the page. The popup is placed
  * between the bars, and its picture keeps to the room between them on the
  * way as well: the moving box is clipped to that room (animateMovingBox),
@@ -131,6 +132,129 @@ const BACKGROUND_IMAGE_PROPERTY = "--navi-popup-lift-background-image";
 // authored values interpolated on the group's own clock (see
 // animateMovingBox).
 const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
+
+const css = /* css */ `
+  /* While a popup is lifting out of the element that opened it, or back into
+     one. The page around IS taken as a picture, the browser's own default, and
+     on purpose: the wall and what the popup holds around the lifted node live
+     in the top layer, and the browser paints the top layer during a transition
+     only as part of the root's picture — with the root opted out
+     (view-transition-name: none), wall and popup go unpainted for the length
+     of the movement, and the picture of the lifted node comes out empty
+     (Chrome 153, reproduced in a bare page). The price is a page frozen and
+     unpressable while the movement plays: under a modal wall at the opening,
+     and for the popup's --popup-animation-duration at the closing. */
+  :root[data-navi-popup-lift] {
+    /* The popup's own pace, published on ::view-transition below: the
+       pictures inherit from nowhere else. A dialog's wall reads it off the
+       dialog itself (the [data-lifting] backdrop rules in dialog.jsx). */
+    &::view-transition-group(navi-popup-lift),
+    &::view-transition-old(navi-popup-lift),
+    &::view-transition-new(navi-popup-lift),
+    /* The page's own picture too: it carries the wall's arrival and what the
+       popup holds around the lifted node, and one movement has one clock —
+       left to the browser's default, the wall would be up in a quarter of a
+       second under a card still travelling. */
+    &::view-transition-group(root),
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+      animation-duration: var(--navi-popup-lift-duration, 0.25s);
+    }
+
+    /* Each picture is drawn at its own size, from the box's top-left corner,
+       and clipped to the box: the box is what changes size, the content it
+       carries does not — a card growing wider does not zoom its own text, it
+       gains room, and the picture of what it becomes is uncovered as the box
+       grows and covered back as it shrinks. Drawn as wide as the box instead
+       (the browser's default), the picture being left would be scaled with
+       the box, and a change of width would read as the same card zooming
+       then swapping.
+
+       A picture holds the element's ink past its own box too — a halo, a
+       shadow — and the clip cuts that along with the content, at the box's
+       corners. When both pictures fit the box the whole way
+       (picturesFitTheBox) there is no content to uncover, only ink to lose:
+       the clip is lifted and the box carries its ink along.
+
+       The box paints what the lifted card paints behind its content
+       (publishBoxPaint): where it has grown past the picture it carries, it
+       is the card that has grown. Its corners are those of the box it leaves,
+       and travel to those of the box it arrives on — a corner is written per
+       box, the same card at two sizes not wanting the same round (see
+       animateMovingBox). */
+    &::view-transition-image-pair(navi-popup-lift) {
+      background-image: var(--navi-popup-lift-background-image, none);
+      background-color: var(--navi-popup-lift-background-color, transparent);
+      border-radius: var(--navi-popup-lift-border-radius, 0);
+      overflow: clip;
+    }
+    &::view-transition-old(navi-popup-lift),
+    &::view-transition-new(navi-popup-lift) {
+      block-size: auto;
+      inline-size: auto;
+    }
+    &[data-navi-popup-lift-fit]::view-transition-image-pair(navi-popup-lift) {
+      overflow: visible;
+    }
+
+    /* The card leaves as itself and arrives as what it became: the picture
+       being left stays whole for most of the way, the arriving one only shows
+       near the end. The browser's own cross-fade over the whole movement is
+       what makes a change of size read as a fade. Blended normally rather than
+       added (the browser's plus-lighter is for two pictures summing to one over
+       nothing): over the box's own paint, added pictures would burn. */
+    &::view-transition-old(navi-popup-lift) {
+      mix-blend-mode: normal;
+      animation-name: navi-popup-lift-leave;
+    }
+    &::view-transition-new(navi-popup-lift) {
+      mix-blend-mode: normal;
+      animation-name: navi-popup-lift-arrive;
+    }
+
+    /* One scene through two frames (lift="scene"): the thumbnail is a band
+       cut from the middle of the scene, as wide as it. Here the content DOES
+       scale with the box — a drawing enlarged is the same drawing bigger — so
+       both pictures are drawn at the box's width and centred in it, and the
+       band lands on the middle of the whole scene at every width the box
+       passes through. Not covered: a cover scales each picture to its own
+       box, and the band, covered into the whole scene's square, arrives three
+       times too big and off to one side. */
+    &[data-navi-popup-lift-kind="scene"] {
+      &::view-transition-old(navi-popup-lift),
+      &::view-transition-new(navi-popup-lift) {
+        inset-block: 0;
+        inline-size: 100%;
+        margin-block: auto;
+      }
+    }
+  }
+  @keyframes navi-popup-lift-leave {
+    0%,
+    55% {
+      opacity: 1;
+    }
+    85%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes navi-popup-lift-arrive {
+    0%,
+    45% {
+      opacity: 0;
+    }
+    85%,
+    100% {
+      opacity: 1;
+    }
+  }
+`;
+
+// Shared by Dialog and Popover, which both lift (a popover on its close only).
+export const installPopupLiftCss = () => {
+  import.meta.css = css;
+};
 
 let releaseLiftInProgress = null;
 // What the moving box is told frame by frame on top of the browser's own morph
@@ -308,7 +432,7 @@ export const liftPopupFromAnchor = (
             releaseLiftInProgress === release
           ) {
             console.warn(
-              `[navi] Dialog's "liftAnchor" named nothing on screen within ${LANDING_WAIT_MS}ms of the close, so the dialog closes without landing. The element it names is where the box comes back to: in the document at the close, or rendered by what the close changes (onClose).`,
+              `[navi] "liftAnchor" named nothing on screen within ${LANDING_WAIT_MS}ms of the close, so the popup closes without landing. The element it names is where the box comes back to: in the document at the close, or rendered by what the close changes (onClose).`,
             );
           }
           resolve(element);
@@ -350,6 +474,30 @@ export const liftPopupFromAnchor = (
     }
     release();
   });
+};
+
+/**
+ * The element a `liftAnchor` names, read at the close: a popup one walks
+ * through puts something else in front than what was pressed — a row of cards
+ * shown one at a time, the walk carrying on from the card the press opened on
+ * — and the box then has to come back to what is in front NOW, which only the
+ * caller knows. A function is asked with what the popup was open on, which
+ * the signal holding it no longer says once the close has started (see
+ * usePopupValue). Null when it names nothing: the close may be what renders
+ * it, and liftPopupFromAnchor asks again until it is there.
+ */
+export const resolveNamedLiftAnchor = (liftAnchor, popupValue) => {
+  const named =
+    typeof liftAnchor === "function" ? liftAnchor(popupValue) : liftAnchor;
+  if (!named) {
+    return null;
+  }
+  if (typeof named === "string") {
+    return document.getElementById(named);
+  }
+  // A ref is unwrapped even when it holds nothing: the ref object itself has
+  // no box to come back to.
+  return "current" in named ? named.current : named;
 };
 
 // A drawing under lift="box" is drawn at its own size in a box that is not:

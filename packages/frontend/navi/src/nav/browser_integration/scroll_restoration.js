@@ -28,7 +28,8 @@
  * (recallScrollerPosition). What a push means for them is what it means for
  * the document — an arrival opens at the top (see startAtTop): the page
  * arrived at has its named positions dropped before its lists render, so a
- * list recalls only on the way back. A scroller that outlives a navigation —
+ * list recalls only on the way back — or on a push that says it is one (see
+ * link_return.js). A scroller that outlives a navigation —
  * its page stays under a new address, or it lives outside the page that
  * changed — is shown under the new address too, and is carried to it (see
  * carryScrollersOnceRendered). A scroller that goes while its page stays — a
@@ -621,6 +622,17 @@ const carryScrollersOnceRendered = (url) => {
       writeScrollerPosition(url, name, said.position);
     }
   });
+};
+
+// A push that reads as a return (see link_return.js) lands where its address
+// was last left, as a traversal does (restoreScrollPositionOnReturn) — when it
+// was ever left: an address never read is an arrival like any other, and a push
+// that keeps the page moves nothing either way.
+export const hasScrollPositionToReturnTo = (url, { from }) => {
+  if (!isArrival(url, { from })) {
+    return false;
+  }
+  return positionByUrl.has(new URL(url, window.location.href).href);
 };
 
 // The same arrival, for the page's own scrollers. The document is scrolled to

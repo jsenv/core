@@ -127,9 +127,7 @@ const css = /* css */ `
     }
 
     > .navi_expandable_ui {
-      display: flex;
       flex-shrink: 0;
-      flex-direction: row;
       align-items: center;
       gap: 0.2em;
       cursor: pointer;
@@ -156,8 +154,13 @@ const css = /* css */ `
            to go through this box, which the app does not render. */
         min-width: 0;
         flex: 1;
-        align-items: center;
-        gap: 0.2em;
+        /* The caller lays out what it gives the UI part and never renders
+           this box: the layout props given to the UI part (alignX, alignY,
+           spacing, flex) are read here too. */
+        flex-direction: inherit;
+        align-items: inherit;
+        justify-content: inherit;
+        gap: inherit;
       }
     }
 
@@ -210,13 +213,11 @@ const css = /* css */ `
       flex-direction: row;
 
       > .navi_expandable_ui {
-        flex-direction: column;
         align-items: center;
 
         > .navi_expandable_ui_label {
           /* Same floor, on the axis the label stacks along in this layout. */
           min-height: 0;
-          flex-direction: column;
         }
       }
       > .navi_expandable_content_container {
@@ -301,6 +302,7 @@ const useExpandableContext = (partName) => {
  *   signal?: import("@preact/signals").Signal,
  *   value?: any,
  *   navState?: boolean | string | { id?: string, type?: "push" | "replace" },
+ *   ownSignals?: import("@preact/signals").Signal[],
  *   onClose?: (event: Event) => void,
  *   onToggle?: (event: Event) => void,
  *   action?: Function,
@@ -339,6 +341,8 @@ const useExpandableContext = (partName) => {
  *   between rewriting the entry ("replace", the default) and pushing one
  *   ("push"), where closing goes back. Source of truth — excludes
  *   `open`/`signal`.
+ * @param ownSignals - State that belongs to this section alone, emptied
+ *   (written `undefined`) by every close (see Dialog's own `ownSignals`).
  * @param onClose - Called when the expandable actually closes, whatever asked
  *   for it. Not preventable.
  * @param onToggle - Listens the "toggle" event dispatched on the root (a
@@ -350,7 +354,11 @@ const useExpandableContext = (partName) => {
  * @param loading - Shows the loading spinner on the marker regardless of
  *   `action`'s own loading state.
  * @param animation - Off by default. `true` plays the reveal transition;
- *   duration comes from `--navi-expandable-animation-duration` (0.3s).
+ *   duration comes from `--navi-expandable-animation-duration` (0.3s). The
+ *   root wears `data-settled` while nothing moves: it is gone from the press
+ *   that opens or closes until the reveal ends — a row that must stay above
+ *   the rows under it while it collapses reads
+ *   `:is([aria-expanded="true"], :not([data-settled]))`.
  * @param layout - `"row"` (default): the parts stack, the content expands
  *   vertically. `"column"`: the parts sit side by side sharing their height,
  *   the content expands horizontally next to the UI part.
@@ -408,6 +416,7 @@ export const Expandable = (props) => {
     signal,
     value,
     navState,
+    ownSignals,
     onClose,
     action,
     loading,
@@ -887,6 +896,7 @@ export const Expandable = (props) => {
     hasAction,
     effectiveAction,
     markerDirection,
+    isColumn,
     openController,
     onUIClick,
     onUIPointerDown,
@@ -975,7 +985,9 @@ export const Expandable = (props) => {
  * itself (role button — click, Space/Enter, arrow keys), holding the marker
  * plus whatever it is given — any markup, a function of `{ open }` included.
  * Controls inside it keep their own behavior and do not toggle. A Box, so it
- * takes the layout and style props every Box takes.
+ * takes the layout and style props every Box takes; its layout props
+ * (`alignX`, `alignY`, `spacing`, `flex`) also lay out what it is given, which
+ * navi wraps in a box of its own next to the marker.
  *
  * @type {import("preact").FunctionComponent<{
  *   marker?: false | import("preact").ComponentChildren,
@@ -989,6 +1001,7 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
     opened,
     loading,
     markerDirection,
+    isColumn,
     openController,
     onUIClick,
     onUIPointerDown,
@@ -1000,6 +1013,9 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
     <Box
       ref={uiRef}
       baseClassName="navi_expandable_ui"
+      // Said to Box so alignX/alignY/spacing land as the flex properties the
+      // label box inherits (see .navi_expandable_ui_label).
+      flex={isColumn ? "y" : "x"}
       role="button"
       tabIndex={0}
       aria-expanded={opened}

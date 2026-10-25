@@ -62,9 +62,17 @@ import {
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
+import {
+  linkAsksToOpen,
+  NAV_STATE_ENTERED_VALUE,
+  readPageStateUnderPopup,
+  resolveOpenOnArrival,
+} from "./link_open.js";
 import { linkAsksForReplace } from "./link_replace.js";
+import { linkAsksForReturn } from "./link_return.js";
 import {
   forgetScrollersOnArrival,
+  hasScrollPositionToReturnTo,
   installScrollRestoration,
   isArrival,
   restoreScrollPositionOnReturn,
@@ -205,6 +213,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       stateLeft,
       landing,
       pressWrites,
+      asReturn,
     },
   ) => {
     const redirectionUrl = resolveRouteRedirection(url);
@@ -246,8 +255,9 @@ export const setupBrowserIntegrationViaNavigation = ({
     // The page's own scrollers are told of an arrival before the routing
     // renders anything: a list arriving decides where it opens in its first
     // render (see scroll_restoration.js). The document itself is moved once
-    // the page is there, below.
-    if (navigationType === "push") {
+    // the page is there, below. A push that says it is a return keeps them
+    // (see link_return.js).
+    if (navigationType === "push" && !asReturn) {
       forgetScrollersOnArrival(url, { from: urlLeft });
     }
     if (abortController) {
@@ -283,7 +293,13 @@ export const setupBrowserIntegrationViaNavigation = ({
     // a replace: only the row that travels knows one of its own is an arrival.
     // A landing is the back's return, whatever the replace that writes it (see
     // navBack's `landOn`).
-    if (navigationType === "push") {
+    if (
+      navigationType === "push" &&
+      asReturn &&
+      hasScrollPositionToReturnTo(url, { from: urlLeft })
+    ) {
+      restoreScrollPositionOnReturn(url);
+    } else if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
     } else if (navigationType === "traverse" || landing) {
       restoreScrollPositionOnReturn(url);
@@ -527,6 +543,25 @@ export const setupBrowserIntegrationViaNavigation = ({
       return;
     }
 
+    // A link to a page with one of its popups open (see link_open.js):
+    // declined and re-asked as the entries it is, the page's and the popup's.
+    if (
+      navigationType === "push" &&
+      event.sourceElement &&
+      linkAsksToOpen(event.sourceElement)
+    ) {
+      event.preventDefault();
+      navToWithPopupOpen(
+        url,
+        {
+          replace: linkAsksForReplace(event.sourceElement),
+          info: { element: event.sourceElement },
+        },
+        linkAsksToOpen(event.sourceElement),
+      );
+      return;
+    }
+
     // A link that takes the place of the current entry rather than stacking on
     // it (see link_replace.js). The browser has already decided this is a push
     // and nothing can turn a live push into a replace, so the navigation is
@@ -646,6 +681,12 @@ export const setupBrowserIntegrationViaNavigation = ({
             stateLeft,
             landing: isLanding,
             pressWrites,
+            // Said by the link pressed, or by the navTo() call in `info` (see
+            // link_return.js).
+            asReturn: Boolean(
+              (pressElement && linkAsksForReturn(pressElement)) ||
+              event.info?.asReturn,
+            ),
           });
           // The handler's promise IS the navigation for the browser (its
           // loading UI follows it) — but a routing that fails is displayed by
@@ -714,7 +755,7 @@ export const setupBrowserIntegrationViaNavigation = ({
 
   const navTo = async (
     url,
-    { replace, state, routeTransition, debounce } = {},
+    { replace, state, routeTransition, debounce, asReturn, open } = {},
   ) => {
     if (replace && debounce && state === undefined) {
       replaceAddressWhenSettled(url, debounce);
@@ -724,16 +765,63 @@ export const setupBrowserIntegrationViaNavigation = ({
       // The entry being stacked on must carry the address the document is at.
       flushPendingReplace();
     }
+    // Not state: what is asked of a transition, and whether a push is a
+    // return (see link_return.js), are about the navigation, not about the
+    // entry it leaves behind. `info` is exactly that — handed to the
+    // navigate event and forgotten afterwards.
+    const info =
+      routeTransition === undefined && !asReturn
+        ? undefined
+        : { routeTransition, asReturn };
+    if (open) {
+      await navToWithPopupOpen(url, { replace, state, info }, open);
+      return;
+    }
     navigation.navigate(url, {
-      // Not state: what is asked of a transition is about the navigation, not
-      // about the entry it leaves behind. `info` is exactly that — handed to
-      // the navigate event and forgotten afterwards.
-      info: routeTransition === undefined ? undefined : { routeTransition },
+      info,
       // undefined stays "inherit" through the event: navigate() stores no
       // state, destination.getState() answers undefined, and runRouting reads
       // that as a neutral navigation (see resolveEffectiveDocumentState).
       state,
       history: replace ? "replace" : "auto",
+    });
+  };
+  // The page's entry, then the one the popup's opening writes over it (see
+  // link_open.js). Stacked once the page's routing is over: a navigation
+  // started meanwhile aborts the one in progress, routing included.
+  const navToWithPopupOpen = async (url, { replace, state, info }, open) => {
+    const { id, type } = resolveOpenOnArrival(open);
+    const urlLeft = readAddress();
+    // Already on the page: only the popup's opening is left to write.
+    const onThePage = url === urlLeft;
+    const pageState = readPageStateUnderPopup(url, {
+      state,
+      urlLeft,
+      stateLeft: getDocumentState(),
+    });
+    if (type !== "push") {
+      navigation.navigate(url, {
+        info,
+        state: { ...pageState, [id]: NAV_STATE_ENTERED_VALUE },
+        history: replace || onThePage ? "replace" : "push",
+      });
+      return;
+    }
+    if (!onThePage) {
+      const { finished } = navigation.navigate(url, {
+        info,
+        state: pageState,
+        history: replace ? "replace" : "push",
+      });
+      await finished.catch(() => {});
+    }
+    // Where the page landed: a redirection may have taken it elsewhere.
+    navigation.navigate(readAddress(), {
+      info: onThePage ? info : undefined,
+      state: { ...getDocumentState(), [id]: NAV_STATE_ENTERED_VALUE },
+      // A push to the address displayed, which "auto" would turn into a
+      // replace.
+      history: "push",
     });
   };
 

@@ -50,6 +50,43 @@ export const isUIStateHeld = (controller) => {
 };
 
 /**
+ * The same question asked part by part, the way Form asks it of its fields
+ * (readHeldUIState in form.jsx): what a Picker holds when its popup is a group
+ * of named parts. A part on its suggestion leaves the whole answer open — a day
+ * shown because nobody chose one, next to an hour that IS chosen, makes a
+ * picker whose keeping close says "that day" — while a part showing nothing
+ * leaves nothing to confirm. Named parts only, one level down: a nested group
+ * is one part, held as soon as one of its controls is (isUIStateHeld).
+ */
+export const isUIStateHeldPartByPart = (controller) => {
+  if (!controller) {
+    return false;
+  }
+  if (controller.hasStateProp || controller.hasValueProp) {
+    return true;
+  }
+  const facadeChild = controller.facadeChild;
+  if (facadeChild) {
+    return isUIStateHeldPartByPart(facadeChild);
+  }
+  if (controller.props?.signal || controller.defaultValue !== undefined) {
+    return isUIStateHeld(controller);
+  }
+  const childControllers = controller.getChildControllers?.() || [];
+  const parts = childControllers.filter((child) => child.name);
+  if (parts.length === 0) {
+    return isUIStateHeld(controller);
+  }
+  return parts.every((part) => {
+    if (isUIStateHeld(part)) {
+      return true;
+    }
+    const uiState = part.uiState;
+    return uiState === undefined || uiState === null || uiState === "";
+  });
+};
+
+/**
  * Tell a control — and everything inside it — that what it is showing is now
  * the answer, without its state having to move.
  *

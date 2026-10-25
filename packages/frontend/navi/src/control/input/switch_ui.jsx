@@ -45,6 +45,20 @@ const css = /* css */ `
         var(--switch-background-color-checked) 15%,
         #d3d3d3
       );
+      /* The track keeps a real 1px border, transparent until an app gives a
+         pale track its edge back. */
+      --switch-border-color: transparent;
+      --switch-border-color-hover: var(--switch-border-color);
+      --switch-border-color-readonly: var(--switch-border-color);
+      --switch-border-color-disabled: var(--switch-border-color);
+      --switch-border-color-checked: transparent;
+      --switch-border-color-hover-checked: var(--switch-border-color-checked);
+      --switch-border-color-readonly-checked: var(
+        --switch-border-color-checked
+      );
+      --switch-border-color-disabled-checked: var(
+        --switch-border-color-checked
+      );
       --switch-thumb-color: white;
 
       &[data-accent-very-light] {

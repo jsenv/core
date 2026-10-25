@@ -7,7 +7,8 @@ edit sheet; a drawing in a corner becomes the drawing full width. The page
 recedes behind a wall, the box leaves its place, travels and grows, and comes
 back into its place on close — or, with
 `animation={{ open: "scaling", close: "lifting" }}`, only lands somewhere on
-close (see [lifting on the way back only](#lifting-on-the-way-back-only)).
+close, which a `Popover` does too (see
+[lifting on the way back only](#lifting-on-the-way-back-only)).
 
 It is not a way to open a dialog with a nicer entrance. A dialog that shows
 something else than what was pressed — a menu, a confirmation, a form the
@@ -255,6 +256,16 @@ does the opening's own exit play: while a closing lift runs, the dialog's
 transitions are off, or `scaling`'s exit would keep the dialog painted into the
 picture of the state it closes into.
 
+**A popover lands the same way.** A `Popover` — a `Popup` or a `Picker` in
+popover mode — takes the same `animation={{ open, close: "lifting" }}` and
+`liftAnchor`: an invitation shown out of the top bar, whose "Later" puts the
+app's tile away in the settings wheel, flies the tile into the wheel as it
+closes. Left without `liftAnchor`, the lifted node goes back into the anchor the
+popover was placed against. The popover itself leaves with the page's picture,
+fading as the node travels; its own exit is off for the same reason as the
+dialog's. Only the close lifts: a popover opens placed against its anchor,
+never out of it, so a plain `"lifting"` gives it no movement either way.
+
 **The box it lands in is rendered by the close.** `liftAnchor` is read once the
 close has been made, `onClose` included, inside the transition: a state written
 in `onClose` has rendered by the time the landing is looked up. It is also the
@@ -275,8 +286,9 @@ and dev warns.
 
 **Tell the collecting close from the others.** Escape, the back button and a
 press on the wall close the dialog too, and usually mean "not now" rather than
-"collect". A `Dialog`'s `onClose` receives who asked (`e.detail.requester`, the
-button of a `--navi-close`), and only the close that collects writes the state.
+"collect". A `Dialog`'s or a `Popover`'s `onClose` receives who asked
+(`e.detail.requester`, the button of a `--navi-close`), and only the close that
+collects writes the state.
 The others land nowhere: the fixed `liftAnchor` names nothing, so they wait out
 those 300 ms, fade out, and dev warns.
 

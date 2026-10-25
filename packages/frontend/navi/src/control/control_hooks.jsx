@@ -741,6 +741,15 @@ export const useControlProps = (
         (props.action !== undefined && actionEvent !== "custom");
       const keyDownDefaultOnInput = (e) => {
         if (e.key === "Enter") {
+          if (props.enterSendsNothing) {
+            // Left to the browser, so its own Enter still happens (a datalist
+            // choice) — except inside a <form>, where that Enter is the form's
+            // implicit submission.
+            if (ref.current.form) {
+              e.preventDefault();
+            }
+            return null;
+          }
           if (enterAnsweredByInputEffect) {
             return null;
           }
@@ -1547,6 +1556,7 @@ export const useControlgroupProps = (
   const [boundAction] = useActionBoundToOneParam(
     action,
     uiGroupStateController.uiStateSignal,
+    { verb: props.actionVerb },
   );
   // Mirror single-input behaviour: a controlled value with nobody listening
   // makes the group read-only so children don't appear interactive when they

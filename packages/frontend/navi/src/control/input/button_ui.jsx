@@ -1,6 +1,7 @@
 import { useContext } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { BadgeMark, resolveBadgeLabel } from "../../graphic/badge_mark.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import {
   usePreloadOnIntent,
@@ -66,6 +67,12 @@ const css = /* css */ `
       --button-border-color-current: var(--button-border-color);
       --button-background-color-current: var(--button-background-color);
       --button-color-current: var(--button-color);
+      /* Applied: a --navi-update shortcut whose value is the one its target
+         holds. Nothing by default either — the app says how its shortcuts
+         show it. */
+      --button-border-color-applied: var(--button-border-color);
+      --button-background-color-applied: var(--button-background-color);
+      --button-color-applied: var(--button-color);
       /* Pressed */
       --button-border-color-pressed: color-mix(
         in srgb,
@@ -405,6 +412,12 @@ const css = /* css */ `
       --x-button-background-color: var(--button-background-color-current);
       --x-button-color: var(--button-color-current);
     }
+    /* Applied */
+    &[data-applied] {
+      --x-button-border-color: var(--button-border-color-applied);
+      --x-button-background-color: var(--button-background-color-applied);
+      --x-button-color: var(--button-color-applied);
+    }
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
@@ -567,7 +580,14 @@ export const ButtonUI = (props) => {
     // what is busy is the control, and the outline belongs around the whole
     // of it (see split_button.jsx).
     loadingOutline,
+    badge,
+    badgeLabel,
   } = props;
+  const badgeLabelling = resolveBadgeLabel({
+    badge,
+    badgeLabel,
+    ariaLabel: props["aria-label"],
+  });
   const [
     buttonControlRootProps,
     buttonControlHostProps,
@@ -635,6 +655,11 @@ export const ButtonUI = (props) => {
       cta={undefined}
       pressEffect={undefined}
       loadingOutline={undefined}
+      badge={undefined}
+      badgeLabel={undefined}
+      {...(badgeLabelling.ariaLabel
+        ? { "aria-label": badgeLabelling.ariaLabel }
+        : null)}
       ref={ref}
       as={as}
       href={href}
@@ -707,6 +732,8 @@ export const ButtonUI = (props) => {
               ? undefined
               : (props.flex ?? (icon ? "x" : undefined))
           }
+          badge={badge}
+          badgeLabelElement={badgeLabelling.labelElement}
         >
           {children}
         </ButtonContent>
@@ -722,6 +749,8 @@ const ButtonContent = ({
   spacing,
   contentDisplay = "inherit",
   flex,
+  badge,
+  badgeLabelElement,
   children,
 }) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
@@ -732,6 +761,17 @@ const ButtonContent = ({
       flex={flex}
       spacing={spacing}
       className="navi_button_content"
+      // On the frame, which is positioned: its corner is the button's visible
+      // one. Under contentDisplay="contents" the frame has no box, and the
+      // button itself is what the mark is placed against.
+      childrenOutsideFlow={
+        badge ? (
+          <>
+            <BadgeMark badge={badge} />
+            {badgeLabelElement}
+          </>
+        ) : null
+      }
     >
       {children}
       <ButtonShadow />
@@ -766,6 +806,11 @@ const ButtonStyleCSSVars = {
     borderColor: "--button-border-color-current",
     color: "--button-color-current",
   },
+  ":-navi-applied": {
+    backgroundColor: "--button-background-color-applied",
+    borderColor: "--button-border-color-applied",
+    color: "--button-color-applied",
+  },
   ":read-only": {
     backgroundColor: "--button-background-color-readonly",
     borderColor: "--button-border-color-readonly",
@@ -779,6 +824,7 @@ const ButtonStyleCSSVars = {
 };
 const ButtonPseudoClasses = [
   ":-navi-href-current",
+  ":-navi-applied",
   ":hover",
   ":active",
   ":-navi-pressed",

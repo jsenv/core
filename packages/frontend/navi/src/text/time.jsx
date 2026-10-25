@@ -28,6 +28,7 @@ import {
 import {
   hourTickSignal,
   minuteTickSignal,
+  secondTickSignal,
   todaySignal,
 } from "../utils/clock.js";
 import { languagesSignal } from "./lang_signal.js";
@@ -72,7 +73,8 @@ import { Text } from "./text.jsx";
  *   - `"second"`   → seconds as duration (e.g. 90 → "1 minute 30 secondes")
  *     These three promote to the largest fitting unit, days included (36 hours
  *     → "1 jour et 12 heures"); see `forceUnit` to stay in the given unit.
- *   - `"duration"` → duration string/object/number (seconds); `format="iso"` → ISO 8601
+ *   - `"duration"` → duration string/object/number (seconds); `format="iso"` → ISO 8601;
+ *                    with `since` instead of children, the time elapsed since that instant, counting (see `since`)
  *   - `"relative"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
  *                    Handles past, present, and future.
  *                    `format="short"` → "dans 1 h et 30 min"; `format="narrow"`
@@ -99,7 +101,7 @@ import { Text } from "./text.jsx";
  *                      digits, so `type="date"`/`"month"`/`"datetime"` write the
  *                      all-digit spelling ("17/09/2026", "17/09 14:30")
  *   - `"numeric"`    → numeric date, for `type="date"` and `type="month"` (e.g. "11/09/2026", "09/2026")
- *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30"; `type="second"` always writes the hours, "00:01:30" for 90)
+ *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, `type="second"` and a `type="duration"` running `since` an instant (e.g. "14:30"; `type="second"` always writes the hours, "00:01:30" for 90)
  *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
  *   - an object      → `type="date"` only, one verbosity per part
  *                      (`{ weekday: "long", month: "short" }`): a narrow card
@@ -129,12 +131,26 @@ import { Text } from "./text.jsx";
  *   the shape one says out loud instead: bare hour, minutes only when there are
  *   any ("8h", "8h30"). The spelled-out formats put their units in words and
  *   need neither, so they ignore it.
- * @param {"hour"|"minute"} [precision]
- *   `type="time"` + `format="compact"` only, and rarely set by hand — whether a
- *   zero minute is written ("8h00") or dropped ("8h"). Defaults to whatever
- *   `pad` implies; the one reason to force `"minute"` on an unpadded clock is
- *   to agree with a partner that has minutes of its own, which is what
- *   `<TimeRange>` does for you.
+ * @param {"hour"|"minute"|"second"} [precision]
+ *   `"second"` writes the seconds, for `type="time"` in every format ("14:30:07",
+ *   "14h30min07s", "14 heures, 30 minutes et 7 secondes") and for
+ *   `type="datetime"` ("11/05, 14:30:07"): a log line, two events within one
+ *   minute.
+ *   `"hour"` and `"minute"` are for `type="time"` + `format="compact"` only, and
+ *   rarely set by hand — whether a zero minute is written ("8h00") or dropped
+ *   ("8h"). Defaults to whatever `pad` implies; the one reason to force
+ *   `"minute"` on an unpadded clock is to agree with a partner that has minutes
+ *   of its own, which is what `<TimeRange>` does for you.
+ * @param {Date|number|string} [since]
+ *   `type="duration"` only, in place of children — the instant a duration
+ *   runs from: it writes the whole seconds elapsed since then ("1 minute 16
+ *   secondes", the units promoted as for `type="second"`), counting each second
+ *   on one timer shared by every running duration, while rendered. Never below
+ *   zero, for an instant a little ahead of this device's clock.
+ *   `format="timestring"` writes it as a stopwatch ("00:01:16").
+ * @param {Date|number|string} [until]
+ *   With `since`, where the duration ends: it stops counting and writes the
+ *   span between the two.
  * @param {boolean|"auto"} [year]
  *   `type="date"` only — whether the year is written. `"auto"` writes it only
  *   when the date is not in the current year, the way a calendar does
@@ -297,6 +313,7 @@ const TimeDatetime = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  precision,
   ...props
 }) => {
   if (children === undefined || children === null) {
@@ -312,7 +329,7 @@ const TimeDatetime = ({
     return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
-  const text = formatDatetime(date, { lang, format });
+  const text = formatDatetime(date, { lang, format, precision });
   const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -341,7 +358,9 @@ const TimeTime = ({
 
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
-  const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  const dateTime = precision === "second" ? `${hh}:${mm}:${ss}` : `${hh}:${mm}`;
   // The whole clock shaping (timestring, clockStyle, the midnight wording)
   // lives in formatTimeOfDay so a plain string — a `title` attribute, a
   // notification — reads exactly like this component.
@@ -483,8 +502,21 @@ const TimeDuration = ({
   lang = languagesSignal.value,
   format = "long",
   decimals,
+  since,
+  until,
   ...props
 }) => {
+  if (since !== undefined && since !== null) {
+    return (
+      <TimeElapsed
+        since={since}
+        until={until}
+        lang={lang}
+        format={format}
+        {...props}
+      />
+    );
+  }
   if (children === undefined || children === null) {
     return <TimeText {...props}>--</TimeText>;
   }
@@ -528,6 +560,46 @@ const TimeDuration = ({
   }
 
   const text = formatDuration(duration, { lang, format, decimals });
+  return (
+    <TimeText dateTime={isoString} {...props}>
+      {text}
+    </TimeText>
+  );
+};
+
+// A duration running since an instant, in whole seconds: written again on
+// each tick of one second timer shared by every running duration, until
+// `until` gives it an end.
+const TimeElapsed = ({ since, until, lang, format, ...props }) => {
+  const sinceDate = toDate(since);
+  if (!sinceDate) {
+    return <TimeText {...props}>{String(since)}</TimeText>;
+  }
+  let endMs;
+  if (until === undefined || until === null) {
+    // eslint-disable-next-line no-unused-expressions
+    secondTickSignal.value;
+    endMs = Date.now();
+  } else {
+    const untilDate = toDate(until);
+    if (!untilDate) {
+      return <TimeText {...props}>{String(until)}</TimeText>;
+    }
+    endMs = untilDate.getTime();
+  }
+  const elapsedMs = endMs - sinceDate.getTime();
+  // Never below zero: an instant from a server may be a little ahead of this
+  // device's clock.
+  const seconds = elapsedMs > 0 ? Math.floor(elapsedMs / 1000) : 0;
+  const isoString = durationToISOString({ seconds });
+  let text;
+  if (format === "iso") {
+    text = isoString;
+  } else if (format === "timestring") {
+    text = formatClock(seconds);
+  } else {
+    text = formatSecondDuration(seconds, { lang, format });
+  }
   return (
     <TimeText dateTime={isoString} {...props}>
       {text}

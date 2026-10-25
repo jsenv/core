@@ -154,10 +154,13 @@ error message, a section, a row — put the testid on the surrounding component
 built on `Box` forwards it to its own element.
 
 A selectable `List.Item` is a control too, and the rule holds there: its host is
-the real checkbox or radio the row selects with, an input navi draws invisible
-and lays under the row's content. A `data-testid` on the item names that input —
-what `toBeChecked()` reads, not what the eye sees. A test that presses the row,
-or waits for it to show, targets what the row draws: a testid on its content.
+the real checkbox or radio the row selects with, an input navi draws invisible,
+as big as the row, under the row's content — content that lets the pointer
+through to it (`selectableArea="all"`, the default). A `data-testid` on the item
+names that input: it is what a press on the row reaches and what `toBeChecked()`
+reads. A test that presses the row, or waits for it, targets the item's testid.
+A testid on the content is for reading what the row says: Playwright refuses a
+click on it, since the input is what the pointer meets there.
 
 What navi builds itself is named through props. A `data-testid` on a `<Picker>`
 names the trigger; `popupTestId` names the popup it builds (the callout, under

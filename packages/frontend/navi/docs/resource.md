@@ -66,6 +66,25 @@ it yourself is the point:
   (see [When the backend answers a sub-route with the whole
   parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)).
 
+A pushed message is an answer — JSON, every object in it new — and enters
+through `store.upsertAnswer(row)`, which compares it in depth to the row held:
+the readers of a row that did not move stay still. `store.upsert()` compares
+each field by reference, so a pushed row equal to the one held re-renders its
+readers as soon as it carries a nested object. The store is not a list: a row
+it did not hold joins no `GET_MANY` and no `GET_RANGE` composition. Read again
+what it belongs to, as a `POST` of the resource would:
+
+```js
+socket.addEventListener("message", (message) => {
+  const run = JSON.parse(message.data);
+  const known = RUN.store.select(run.id);
+  RUN.store.upsertAnswer(run);
+  if (!known) {
+    RUN.GET_RANGE.invalidate(); // or RUN.GET_MANY.rerun()
+  }
+});
+```
+
 A list that loads its rows a slice at a time is **not** one of those cases —
 that is `GET_RANGE`, below.
 
@@ -129,6 +148,14 @@ What stays the app's, because only the app knows:
   the drawn row for the whole request. It waits on `data` being set — the
   emptiness test of data_states.md — and the refresh is shown as usual.
 
+**An identity change is a fresh document.** Sign-out, switching to another
+account, taking an invited account, leaving a "view as": write `undefined` into
+the kept signals (`persist`, `keepPageOnScreen`), then
+`window.location.replace(…)`. navi's `reload()` reruns the route actions only;
+the stores, the component reads and the lists' compositions stay, and they are
+the previous person's. A list of things to reset one by one is a list nobody
+can tell is complete.
+
 What the copy is not:
 
 - **an answer.** The `GET` goes out every time; a screen must not read `data` as
@@ -170,10 +197,16 @@ keepPageOnScreen({
 screens: `GAME.GET` for any game opened, `USER.GET_MANY` for a tab and for
 every search. Kept per resource, that is every game ever opened. The page's
 reads are what navi already runs for it: the route actions asking something for
-the page (`activeRouteActionsSignal`; `activeRouteReadsSignal` is the same set
-without the page's code, what the app reruns when it comes back to the
-foreground), and the compositions the `<List.Items>`
+the page (`activeRouteActionsSignal`), and the compositions the `<List.Items>`
 on screen read. A navigation replaces the slot with the next page's reads.
+
+The same reads are what the app reads again when it comes back to the
+foreground: `rerunActions(activeRouteReadsSignal.peek())`. That set is the
+route actions without the page's code, plus the `GET_RANGE` readers of the
+lists on screen; a reader handed to `rerunActions` revalidates — its lists ask
+again for the window they draw, their rows kept, and every composition stays
+(`reader.revalidate()`, where `invalidate()` would send the lists off screen
+back to skeletons).
 
 What is kept, for the next document's first run of the same read with the same
 params:
@@ -481,6 +514,37 @@ for its verb. A dependent names it like a callback —
 `{ resource: ORDER, on: ["cancel"] }` reruns after a cancel, not after an
 archive — and a resource listed bare counts it with every other write.
 
+A scoped relation takes `writes` as well. A sub-collection with several
+writes — seat a player, move one, take one out — is a `.scopedMany()` naming
+each of them, never `op`s dispatched inside the owner's `PATCH`. A
+`.scopedMany()` write may also take a plural verb, for a route answering the
+whole owner:
+
+```js
+const GAME_SEATS = GAME.scopedMany("participants", {
+  idKey: "slot",
+  writes: {
+    add: {
+      verb: "POST_MANY",
+      callback: async ({ id, ...body }) => {
+        const game = await post(`/games/${id}/participants`, body);
+        return [game.id, game.participants];
+      },
+    },
+    move: { verb: "PATCH_MANY", callback: moveParticipant },
+    remove: { verb: "DELETE", callback: removeParticipant },
+  },
+});
+const ALERT = resource("alert", {
+  dependencies: [{ resource: GAME_SEATS, on: ["add", "remove"] }],
+  GET,
+});
+```
+
+Each answers in the relation's shape for its verb — `[ownerId, items]` for a
+plural one, which replaces the collection and reruns nothing on the owner
+([Relations and autorerun](#relations-and-autorerun)).
+
 ## Callback return contracts
 
 These are not guessable — each relationship method has its own shape, written
@@ -492,9 +556,15 @@ out with an example in its JSDoc:
   `GET`/`POST` that embeds the child inline works too.
 - **`.many(propertyName, CHILD, callbacks)`** — `GET_MANY` returns the
   **parent** with the array nested inside; `GET`/`POST`/`PUT`/`PATCH` the
-  **child**, upserted into the child store but not joining the parent's array,
-  which only a `GET_MANY` rewrites; `DELETE` `[parentId, childId]`,
-  `DELETE_MANY` `[parentId, [childId, …]]`.
+  **child**, upserted into the child store but not joining the parent's array;
+  `POST` `[parentId, child]` upserts the child **and** appends it to the
+  parent's array (putting someone in a group); `POST_MANY`/`PUT_MANY`/`PATCH_MANY`
+  an array of children, upserted only, or `[parentId, [child, …]]`, which also
+  replaces the parent's array; `DELETE` `[parentId, childId]`, `DELETE_MANY`
+  `[parentId, [childId, …]]`. A `POST` never renames, so its array is always the
+  join; a child is never an array, so a plural answer is never ambiguous. A
+  parent the store does not hold yet is left alone: its array comes with its
+  next read.
 - **`.scopedOne(propertyName, callbacks)`** — every callback returns
   `[ownerId, props | null]`; the property is `null` until one does.
 - **`.scopedMany(propertyName, { idKey, … })`** — `[ownerId, props]`; `PUT` (an
@@ -540,10 +610,12 @@ const GAME_CANDIDATES = GAME.scopedMany("candidates", {
 ```
 
 For `.many()`, the equivalent is its `GET_MANY` callback, which already takes
-the parent object with the array nested inside — return the response untouched.
-Deletion is the exception: `DELETE`/`DELETE_MANY` drop by id rather than
-replace, so return `[ownerId, deletedId]` from the id you already have in the
-params, and ignore the full parent the backend sent back.
+the parent object with the array nested inside — return the response untouched
+— and, for a write, a plural callback returning `[parentId, children]` (a
+favourite toggled, answered with the whole list of favourites). Deletion is the
+exception: `DELETE`/`DELETE_MANY` drop by id rather than replace, so return
+`[ownerId, deletedId]` from the id you already have in the params, and ignore
+the full parent the backend sent back.
 
 The parent's own fields in such a response (a `status`, a `score`) are applied
 only where the callback returns the parent: `.one()`'s `GET`/`PUT` and
@@ -557,17 +629,21 @@ explicitly.
 Relationship mutations do **not** invalidate their parent by default. The rules:
 
 - `.scopedMany` child **POST** reruns the owner's singular `GET`, whether it
-  goes through the child or through a `withParams()` scope of it — but only when
-  the last GET response actually embedded that property. GET_MANY on the parent
-  is never rerun by a child POST (a list of parents is not stale because one of
-  them gained a child).
-- `.scopedMany` child **PUT / PATCH / DELETE** rerun nothing: the callback result
-  already carries the updated child.
+  goes through the child, a `withParams()` scope of it or a write named with
+  that verb — but only when the last GET response actually embedded that
+  property. GET_MANY on the parent is never rerun by a child POST (a list of
+  parents is not stale because one of them gained a child).
+- `.scopedMany` child **PUT / PATCH / DELETE**, and every **`*_MANY`** write
+  (`POST_MANY` included), rerun nothing on the owner: the callback result
+  already carries the updated child, or the whole collection. Its own reads
+  still follow its `rerunOn` (`POST` covers `POST_MANY` there).
 - `.scopedOne` mutations rerun nothing, ever — the result is the new value.
 - `.one` / `.many` children live in an independent store; mutating them never
-  reruns the parent. Declare it with
-  [`dependencies`](#dependencies-rerun-after-another-resource-writes) if you
-  need it.
+  reruns the parent. A `.many()` write changes the parent's array only through
+  the answers naming it (`[parentId, …]`, see
+  [Callback return contracts](#callback-return-contracts)); otherwise declare
+  it with [`dependencies`](#dependencies-rerun-after-another-resource-writes)
+  if you need it.
 - Within a relationship resource, the usual defaults still apply: its own
   `GET_MANY` reruns after its own `POST`. A `.one`/`.many` `GET` is reset (not
   rerun) by its own `DELETE`, as a root `GET` is; a scoped `GET` is not reset —
@@ -673,6 +749,31 @@ whose verb is `PATCH`, so each write keeps its own answer. A name that is not a
 write, or that the resource does not define, throws at declaration — a
 dependency that never fires leaves a count on its old value with nothing to say
 so.
+
+A resource can only list one declared before it: a `const` further down the
+file is not there yet. When two resources each change what the other shows —
+the members of a group are users, and starring a user writes into a group — or
+when a file's order would decide it, give `dependencies` as a function:
+
+```js
+const USER = resource("user", {
+  dependencies: () => [
+    { resource: PLAYER_GROUP, on: ["addMember", "removeMember"] },
+  ],
+  GET,
+});
+const PLAYER_GROUP = resource("player_group", {
+  dependencies: [USER],
+  GET,
+  writes: { addMember, removeMember },
+});
+```
+
+It is called once, before the first request of any resource leaves — every
+module has been evaluated by then — and what it returns is checked as a list
+written in place is; what fails throws into that first run. A cycle is fine: a
+rerun is one hop, and it reruns reads only. `createAction`'s `dependencies` take
+the same function form.
 
 ## A function calling the verb, or the instance
 

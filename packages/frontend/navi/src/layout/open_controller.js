@@ -28,6 +28,7 @@ import {
 } from "../utils/focus/focus_transfer.js";
 import { isEditableTarget } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
+import { takePopupAsk } from "./popup_ask_chain.js";
 
 /*
  * How many presses the page has seen, and which one a popup opened during.
@@ -140,6 +141,7 @@ export const createOpenController = (
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
   let focusedAtClose = null; // what held the focus when the close was decided, see performClose
+  let pendingAsk = null; // the askPopup() this opening answers, see popup_ask.js
 
   // Set true while we're waiting to see whether the click that follows a
   // press-close will land back on whatever would reopen us — see
@@ -424,6 +426,9 @@ export const createOpenController = (
         // content must outlive (see popup_content_mount.js).
         controller.unmountContent?.();
         controller.onOpenedChange?.(false, closeEvent);
+        const ask = pendingAsk;
+        pendingAsk = null;
+        ask?.answer(closeEvent);
       },
       { opened: false, event: closeEvent },
     );
@@ -505,7 +510,17 @@ export const createOpenController = (
       // The refusals below read the decision (`opened`), which is written
       // before a change waiting for its view transition runs: a refused open
       // must not force that change through and take its picture away.
-      if (controller.opened || !controller.openEffect) {
+      if (controller.opened) {
+        // Asked again while open: the opening still going on answers the
+        // latest question.
+        const ask = takePopupAsk(e);
+        if (ask) {
+          pendingAsk?.supersede(e);
+          pendingAsk = ask;
+        }
+        return;
+      }
+      if (!controller.openEffect) {
         return;
       }
       if (suppressNextOpenRequest) {
@@ -531,6 +546,9 @@ export const createOpenController = (
         cancelable: true,
       });
       chainEvent(requestOpenEvent, e);
+      // Taken now, while the asker still waits within its request: the change
+      // below may run a frame later (see runChange).
+      pendingAsk = takePopupAsk(requestOpenEvent);
       // we prepare focus transfer before actually opening the popover/dialog
       // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
       const focusTransfer = prepareFocusTransfer(
@@ -882,13 +900,26 @@ const writeInSignal = (signal, value, { history }) => {
 // to read, not its to write. Opening writes `true` only into a signal that
 // reads closed; closing writes `false` where the signal held `true`, so a
 // boolean signal keeps its boolean, and `undefined` for anything else.
-const writeOpenedInSignal = (signal, opened, event, popupValue) => {
+//
+// `discard` empties what belongs to the popup alone (its `ownSignals`): before
+// a keep-close reads the url it lands on, and once a back has landed — the
+// entry behind may hold them too, written by an `onOpen` before the push.
+const writeOpenedInSignal = (
+  signal,
+  opened,
+  event,
+  popupValue,
+  discard = NO_DISCARD,
+) => {
   const signalValue = signal.peek();
   if (readOpened(signalValue, popupValue) === opened) {
     // The signal already says so, meaning this open/close IS what it asked
     // for: a back press that took the popup out of the url, the application
     // writing it. Nothing to write back — and nothing to go back to either,
     // since the navigation navBack would undo is the one that asked for this.
+    if (!opened) {
+      discard();
+    }
     return;
   }
   if (opened) {
@@ -905,16 +936,36 @@ const writeOpenedInSignal = (signal, opened, event, popupValue) => {
     canNavBackSignal.peek()
   ) {
     if (event?.detail?.isCancel) {
-      navBack();
+      Promise.resolve(navBack()).then(discard);
       return;
     }
+    discard();
     writeInSignal(signal, closedValue, { history: "replace" });
     // The address this document says it is at: the one the browser shows may
     // be a replace behind it (see via_history.js).
     navBack({ landOn: { url: documentUrlSignal.peek() } });
     return;
   }
+  discard();
   writeInSignal(signal, closedValue, { history: "replace" });
+};
+const NO_DISCARD = () => {};
+// What a popup's `ownSignals` hold means nothing once it is closed: emptied
+// the way its own open state is, `undefined` being a state signal's default
+// and so out of the url. A signal already empty is not written again. One
+// write at a time, not batched: a write's history is read as it is made (see
+// stateSignal's `set`), and a batch would leave each to its state's own.
+const createOwnSignalsDiscard = (ownSignals) => {
+  if (!ownSignals || ownSignals.length === 0) {
+    return NO_DISCARD;
+  }
+  return () => {
+    for (const ownSignal of ownSignals) {
+      if (ownSignal.peek() !== undefined) {
+        writeInSignal(ownSignal, undefined, { history: "replace" });
+      }
+    }
+  };
 };
 export const readOpened = (signalValue, popupValue) => {
   if (popupValue === undefined) {
@@ -943,7 +994,7 @@ const readClosedValue = (openSignalValue) => {
  * `expandable.jsx` (open in flow rather than on a layer, same decision).
  *
  * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
- * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"} }} props
+ * @param {{ id?: string, open?: boolean|"interaction", defaultOpen?: boolean|"interaction", signal?: import("@preact/signals").Signal, value?: any, navState?: boolean|string|{id?: string, type?: "push"|"replace"}, ownSignals?: import("@preact/signals").Signal[] }} props
  * @param {string} [name] What the dev warnings call the thing being opened.
  * @returns {boolean|undefined} Where whoever holds the open state says the
  *   popup is — what a trigger shows as its `aria-expanded` (a picker drives
@@ -954,7 +1005,7 @@ export const useOpenPropsEffectOnOpenController = (
   props,
   name = "popup",
 ) => {
-  const { signal, value, defaultOpen, navState } = props;
+  const { signal, value, defaultOpen, navState, ownSignals } = props;
   warnSignalAsState(props, name, ["open", "defaultOpen"]);
   const { id: navStateId, type: navStateType } = resolveNavStateProp(
     navState,
@@ -1031,8 +1082,14 @@ export const useOpenPropsEffectOnOpenController = (
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
   // --navi-close command) writes what happened where the caller keeps it, so
   // whoever holds it always reads where the popup is.
+  //
+  // What belongs to the popup alone (`ownSignals`) is emptied by the same
+  // close, at the moment the one holding the open state says (see
+  // writeOpenedInSignal): whichever way it closes, the address it leaves
+  // behind holds nothing of it.
+  const discardOwnSignals = createOwnSignalsDiscard(ownSignals);
   openController.onOpenedChange =
-    navStateId || signal
+    navStateId || signal || ownSignals
       ? (opened, event) => {
           if (navStateId) {
             if (opened) {
@@ -1046,11 +1103,21 @@ export const useOpenPropsEffectOnOpenController = (
               leaveNavState({
                 isBack: Boolean(event?.detail?.isCancel),
                 event,
+                discard: discardOwnSignals,
               });
             }
           }
           if (signal) {
-            writeOpenedInSignal(signal, opened, event, value);
+            writeOpenedInSignal(
+              signal,
+              opened,
+              event,
+              value,
+              navStateId ? undefined : discardOwnSignals,
+            );
+          }
+          if (!opened && !navStateId && !signal) {
+            discardOwnSignals();
           }
         }
       : null;
@@ -1110,8 +1177,8 @@ export const useOpenPropsEffectOnOpenController = (
 
     if (isFirstRun) {
       // "interaction" is said even over what the caller holds reading open: a
-      // popup built by the request that opens it — a dialog standing in until
-      // its signal said open, see DialogStandIn in dialog.jsx — mounts BECAUSE
+      // popup built by the request that opens it — a popup standing in until
+      // its signal said open, see popup_stand_in.js — mounts BECAUSE
       // of that opening.
       const mountOpenReason =
         open && defaultOpen === "interaction"

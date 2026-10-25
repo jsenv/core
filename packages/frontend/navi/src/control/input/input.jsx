@@ -18,6 +18,7 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   value?: any,
  *   boolean?: boolean,
  *   selectOnPress?: boolean,
+ *   enterSendsNothing?: boolean,
  *   variant?: "checkbox" | "switch" | "icon" | "button",
  *   buttonVariant?: "discrete",
  *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
@@ -60,6 +61,13 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   mouse or a finger, and a second press places the caret. A focus that came
  *   without a press (a dialog opening, Tab, code) selects nothing; the first key
  *   that types selects first, so it replaces the text.
+ * @param {boolean} [enterSendsNothing] Enter in this textual field sends
+ *   nothing. By default Enter sends the group around the field — the form, the
+ *   picker whose popup holds it —, `standalone` or not, the way Enter submits
+ *   an HTML form; this is for a field that only helps find the answer (a
+ *   street before its suggestion filled the city) and whose Enter would send
+ *   an answer still missing its other half. The browser's own Enter is kept (a
+ *   datalist choice), except in a `<Form>`, where it is the submission.
  */
 export const Input = (props) => {
   resolveInputProps(props);

@@ -6,6 +6,7 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../../control/selection/selection.jsx";
+import { BadgeMark, resolveBadgeLabel } from "../../graphic/badge_mark.jsx";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
   LinkBlankTargetSvg,
@@ -24,7 +25,9 @@ import {
 } from "../browser_integration/href_target_info.js";
 import { usePreloadOnIntent } from "../use_preload_on_intent.js";
 import { LINK_DOCUMENT_ATTRIBUTE } from "../browser_integration/link_document.js";
+import { LINK_OPEN_ATTRIBUTE } from "../browser_integration/link_open.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
+import { LINK_RETURN_ATTRIBUTE } from "../browser_integration/link_return.js";
 import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
@@ -535,6 +538,15 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   `true`/`undefined` uses the default chain SVG, `false` suppresses it, any
  *   other node replaces it. To render a plain `#` instead, prefer writing it as
  *   the link's children (`<Link anchor href="#x">#</Link>`).
+ * @param {boolean|import("preact").ComponentChildren} [props.badge] - A mark
+ *   across the top-right corner of the link saying something waits where it
+ *   leads (a menu entry with a task to do). `true` draws a dot; anything else
+ *   is drawn there as given. A `stretch` link marks the corner of its press
+ *   area. On an icon the link holds, put `badge` on the `<Icon>`. Same mark and
+ *   variables as Button's `badge`.
+ * @param {string} [props.badgeLabel] - What the mark means, joined to the
+ *   link's name (to its `aria-label` when it has one). Without it the mark is
+ *   silent.
  * @param {boolean} [props.revealOnInteraction] - Hide the link until its
  *   container is hovered/focused (`data-reveal-on-interaction`), floating it
  *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
@@ -573,6 +585,18 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   way there changes. What a row of tabs wants — the neighbour is a lateral
  *   move, not a step deeper, so the whole row weighs one entry and the back
  *   button leaves by where the reader came in.
+ * @param {boolean} [props.asReturn] - The press is a return by meaning, though
+ *   it stacks a new entry: the page lands where its address was last left —
+ *   the document's offset, the positions its lists kept — as a back would
+ *   bring it, instead of opening at its top. For an entry leading back to a
+ *   screen whose address names where one was reading (a bar entry to a thread
+ *   at `?at=<item>`). An address never left lands at the top as usual.
+ * @param {string|{id: string, type?: "push"|"replace"}} [props.open] - Lands
+ *   with one of the destination's popups open, named the way its `navState`
+ *   names it (`open={{ id: "results", type: "push" }}`): the page's entry,
+ *   then the popup's own as its opening would write it, so closing it leaves
+ *   the reader on the page and Back then leaves the page. A popup whose open
+ *   state is a url param needs none of this: it is in the address.
  * @param {boolean} [props.document] - The address is ANOTHER DOCUMENT of this
  *   origin — an admin panel, a status page, anything built as its own entry
  *   point — so the press is left to the browser and loads that page. Without
@@ -694,6 +718,8 @@ const LinkPlain = (props) => {
     anchorIcon,
     startIcon,
     endIcon,
+    badge,
+    badgeLabel,
     revealOnInteraction = false,
     stretch,
     hrefFallback = !anchor,
@@ -701,6 +727,8 @@ const LinkPlain = (props) => {
     routeTransition,
     pressableDuringRouteTransition,
     replace,
+    asReturn,
+    open,
     document: isDocument,
     prefetch = true,
 
@@ -840,6 +868,11 @@ const LinkPlain = (props) => {
   // that whoever answers the press reads it off the anchor (see
   // link_replace.js, which owns the name and does the reading).
   const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
+  // Same mouth for a push that is a return (see link_return.js).
+  const returnRequest = asReturn ? { [LINK_RETURN_ATTRIBUTE]: "" } : null;
+  // And for a page reached with one of its popups open (see link_open.js).
+  const openRequest =
+    open === undefined ? null : { [LINK_OPEN_ATTRIBUTE]: JSON.stringify(open) };
 
   // That this address is another document is the link's to say, worn where the
   // interception looks for it (see link_document.js).
@@ -848,6 +881,11 @@ const LinkPlain = (props) => {
   const innerChildren = children || (hrefFallback ? hrefText : children);
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
+  const badgeLabelling = resolveBadgeLabel({
+    badge,
+    badgeLabel,
+    ariaLabel: props["aria-label"],
+  });
 
   // Bold by painting the glyphs unless asked for the bold face itself, because
   // that one costs a second copy of the label in the element's text (see the
@@ -903,11 +941,18 @@ const LinkPlain = (props) => {
       anchorIcon={undefined}
       startIcon={undefined}
       endIcon={undefined}
+      badge={undefined}
+      badgeLabel={undefined}
+      {...(badgeLabelling.ariaLabel
+        ? { "aria-label": badgeLabelling.ariaLabel }
+        : null)}
       hrefFallback={undefined}
       hrefText={undefined}
       routeTransition={undefined}
       pressableDuringRouteTransition={undefined}
       replace={undefined}
+      asReturn={undefined}
+      open={undefined}
       document={undefined}
       prefetch={undefined}
       data-navi-route-transition-request={routeTransitionRequest}
@@ -915,6 +960,8 @@ const LinkPlain = (props) => {
         ? { [PRESSABLE_ATTRIBUTE]: "" }
         : null)}
       {...replaceRequest}
+      {...returnRequest}
+      {...openRequest}
       {...documentRequest}
       // The control's own handlers first — the interaction gate, the caller's
       // onClick/onKeyDown, the command and the action — then what only a link
@@ -997,6 +1044,8 @@ const LinkPlain = (props) => {
             color="var(--link-loader-color)"
           />
           {currentIndicatorEl}
+          <BadgeMark badge={badge} />
+          {badgeLabelling.labelElement}
         </>
       }
     >

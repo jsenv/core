@@ -33,6 +33,7 @@ import { humanizeI18n } from "@jsenv/humanize";
  *   - `"spin.*"`       — the ends of a steppable range
  *   - `"list.*"`       — empty/no-match/failed-rows messages
  *   - `"badge_list.*"` — the "+[count] more" overflow badge
+ *   - `"sort.*"`       — which way a sort header orders its column
  *   - `"interaction.*"` — what a gesture says when it did nothing on purpose
  *   - `"constraint.*"` — every field validation message
  *   - `"network_policy.*"` — what an action settles with when the policy kept it from the network
@@ -97,6 +98,12 @@ export const buttonI18n = /*#__PURE__*/ defineNaviMessages({
     fr: "Fermer",
   },
   "button.cancel": {
+    en: "Cancel",
+    fr: "Annuler",
+  },
+  // Calls off the run a busy control is waiting on (`actionAbortable`), from
+  // the sentence a second press is answered with.
+  "button.abort_run": {
     en: "Cancel",
     fr: "Annuler",
   },
@@ -216,6 +223,19 @@ export const badgeListI18n = /*#__PURE__*/ defineNaviMessages({
   "badge_list.more": {
     en: "+[count] more",
     fr: "+[count] de plus",
+  },
+});
+
+// Which way a sort header orders its column, read after its name where no
+// header cell is there to say it with aria-sort.
+export const sortI18n = /*#__PURE__*/ defineNaviMessages({
+  "sort.ascending": {
+    en: "sorted ascending",
+    fr: "tri croissant",
+  },
+  "sort.descending": {
+    en: "sorted descending",
+    fr: "tri décroissant",
   },
 });
 

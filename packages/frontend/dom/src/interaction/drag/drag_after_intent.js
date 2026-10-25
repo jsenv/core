@@ -46,6 +46,16 @@
  * property away, and getting it wrong the wrong way means the list runs away
  * under the finger that meant to reorder it. Only the application knows it has
  * taken the scroll away.
+ *
+ * A source that walks ONE axis there takes only that one. A handle pulled
+ * sideways in a page that scrolls down is the same ambiguity cut in half: along
+ * its axis a finger travelling can only be pulling it, across it a finger
+ * travelling is the page's scroll, which lands on the handle as often as not. So
+ * the other axis stays the browser's (`touch-action`, see the stylesheet), and a
+ * finger whose first pixels go across, clearly, is given back at the threshold
+ * instead of starting the drag — read before the browser's own slop, with the
+ * lean a thumb's arc gets on a box that travels one axis (AXIS_CROSS_DOMINANCE).
+ * A source walking both axes has none to leave, and keeps the whole finger.
  */
 
 import { waitForPressHeld } from "../press_held.js";
@@ -100,9 +110,9 @@ const css = /* css */ `
   }
   [data-drag-on-contact] [data-drag-source],
   [data-drag-source][data-drag-on-contact] {
-    /* Nothing scrolls here, so there is no pan to leave to anyone — the finger
-       may travel from the first pixel. Zoom is kept: it belongs to the reader,
-       not to the gesture, and two fingers are never a drag. */
+    /* The finger may travel from the first pixel, so there is no pan to leave
+       along what the source walks. Zoom is kept: it belongs to the reader, not
+       to the gesture, and two fingers are never a drag. */
     touch-action: pinch-zoom;
     /* And nothing here is text to select — the wait is gone, so a finger held
        still is answered by nobody but the browser, whose long press selects the
@@ -117,6 +127,17 @@ const css = /* css */ `
        iPhone is exactly what this long press comes from. */
     user-select: none;
     -webkit-user-select: none;
+  }
+  /* …except across a source that walks one axis: the page may scroll that way,
+     and a finger scrolling it often lands on the source (see the top of this
+     file, and dragAfterDistance, which gives such a finger back). */
+  [data-drag-on-contact] [data-drag-source="x"],
+  [data-drag-source="x"][data-drag-on-contact] {
+    touch-action: pan-y pinch-zoom;
+  }
+  [data-drag-on-contact] [data-drag-source="y"],
+  [data-drag-source="y"][data-drag-on-contact] {
+    touch-action: pan-x pinch-zoom;
   }
   /* Except where the press was never the drag's: something saying its press is
      its own business and a layer OVER the surface (the same list, read for the
@@ -257,6 +278,15 @@ export const dragSourceThatStoodDown = (pressEvent) => {
 // drag_to.js): that is the same question, asked of the hand holding it.
 export const DRAG_INTENT_THRESHOLD = 5;
 
+// How much the cross axis must dominate the axis a box travels or a source
+// walks, over the first reported pixels, to take the press away from it (see
+// the axis decision of drag_to_travel.js, and crossAxisWins below). Sized
+// against the two hands it separates: a thumb's arc leans up to about twice as
+// far off-axis as along it at the start of a sideways swipe, while a scroll is
+// four or five times purer than that on its own axis. Kept here, below both
+// readers, so a hand learns one number.
+export const AXIS_CROSS_DOMINANCE = 2;
+
 /**
  * Waits for the user to mean it, then starts a drag gesture.
  *
@@ -363,6 +393,7 @@ const dragAfterDistance = (
   threshold,
   selection,
 ) => {
+  const axisLeftToThePage = readAxisLeftToThePage(grabEvent);
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
@@ -372,6 +403,11 @@ const dragAfterDistance = (
     selection,
     onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
+      if (axisLeftToThePage && crossAxisWins(gestureInfo, axisLeftToThePage)) {
+        // The page's scroll, landed on the source: nothing was refused up to
+        // here, so the browser pans at its own slop, a few pixels on.
+        return;
+      }
       startDragGesture(dragGestureInitializer, gestureInfo.dragEvent);
     },
   });
@@ -385,6 +421,40 @@ const dragAfterDistance = (
       // would tell them theirs is over.
       pointerCaptureDeferred: true,
     });
+};
+
+// The axis a finger may still scroll the page along, from a source taken on
+// contact that walks the other one (see the top of this file) — null for a
+// mouse, which scrolls with its wheel, and for a source walking both axes.
+const readAxisLeftToThePage = (grabEvent) => {
+  if (grabEvent.pointerType === "mouse") {
+    return null;
+  }
+  const target = grabEvent.target;
+  if (!target.closest || !target.closest("[data-drag-on-contact]")) {
+    return null;
+  }
+  const axes = target
+    .closest("[data-drag-source]")
+    ?.getAttribute("data-drag-source");
+  if (axes === "x") {
+    return "y";
+  }
+  if (axes === "y") {
+    return "x";
+  }
+  return null;
+};
+
+// Over the first reported pixels, with the lean a one-axis box gives its own
+// axis: a thumb pulling sideways arcs, a scroll is near-pure from the start.
+const crossAxisWins = (gestureInfo, crossAxis) => {
+  const reachX = Math.abs(gestureInfo.dragX - gestureInfo.grabX);
+  const reachY = Math.abs(gestureInfo.dragY - gestureInfo.grabY);
+  if (crossAxis === "y") {
+    return reachY > reachX * AXIS_CROSS_DOMINANCE;
+  }
+  return reachX > reachY * AXIS_CROSS_DOMINANCE;
 };
 
 const dragAfterLongPress = (

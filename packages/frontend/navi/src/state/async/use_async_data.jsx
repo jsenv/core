@@ -23,9 +23,9 @@ import {
   IDLE,
   RUNNING,
 } from "../../action/action_run_states.js";
+import { isPollRun, startPolling } from "../../action/action_poll.js";
 import { getActionPrivateProperties } from "../../action/action_private_properties.js";
 import { createAction } from "../../action/actions.js";
-import { peekNetworkPolicy } from "../../action/network_policy.js";
 import { prerunUnwatched, runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
@@ -139,7 +139,8 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   revalidation, not a load: the answer held stays drawn and `loading` stays
  *   false until the new one lands. It stops for good when `until(data)` says
  *   so, when `for` milliseconds have passed, or on a failure — shown like any
- *   failed refresh, and asked again by `rerun()`, not by a timer.
+ *   failed refresh, and asked again by `rerun()`, not by a timer. Code that
+ *   awaits the answer, with no component mounted, calls `action.poll()`.
  * @returns {[data: unknown, loading: boolean, error: Error | undefined, dismissError: (() => void) | undefined]}
  *
  * @example <caption>Default — delegate both states (least code)</caption>
@@ -411,7 +412,7 @@ const useActionAsyncData = (
 
   // A poll's own rerun revalidates what is on screen (see usePoll): the
   // answer held stays drawn, and nothing is loading for whoever reads it.
-  if (runningState === RUNNING && pollRunActionWeakSet.has(action)) {
+  if (runningState === RUNNING && isPollRun(action)) {
     const dataHeld = action.dataSignal.peek();
     if (dataHeld !== undefined) {
       return [dataHeld, false, undefined];
@@ -580,11 +581,9 @@ const useOnLoad = (action, onLoad) => {
 };
 
 // Asking again on a timer what the server moves on its own (see `poll` in the
-// JSDoc above). The ticks follow the action's own runs rather than a clock:
-// the next one is set when a run settles, so a slow answer never has a second
-// request stacked behind it, and a run someone else started counts as a tick.
-// Reading the reader's visibility and the network policy at each tick is what
-// keeps a screen nobody looks at, or one that is offline, from talking.
+// JSDoc above), for as long as this reader is mounted: the rules are
+// action_poll.js's, shared with `action.poll()`. The latest options count at
+// each tick.
 const usePoll = (action, poll) => {
   const pollRef = useRef(poll);
   pollRef.current = poll;
@@ -593,108 +592,11 @@ const usePoll = (action, poll) => {
     if (!polling) {
       return undefined;
     }
-    const startedAt = Date.now();
-    let timeout = null;
-    let over = false;
-    const stop = () => {
-      over = true;
-      clearTimeout(timeout);
-      timeout = null;
-    };
-    const isDone = () => {
-      const { until, for: duration } = pollRef.current;
-      if (duration !== undefined && Date.now() - startedAt >= duration) {
-        return true;
-      }
-      const data = action.dataSignal.peek();
-      return Boolean(until && data !== undefined && until(data));
-    };
-    const schedule = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(tick, pollRef.current.every);
-    };
-    const settle = () => {
-      if (isDone()) {
-        stop();
-        return;
-      }
-      schedule();
-    };
-    const tick = () => {
-      timeout = null;
-      if (over) {
-        return;
-      }
-      if (document.visibilityState !== "visible") {
-        // Taken back by visibilitychange below.
-        return;
-      }
-      if (action.runningStateSignal.peek() !== COMPLETED) {
-        // A run under way, or none answered yet: its end sets the next tick.
-        return;
-      }
-      if (isDone()) {
-        stop();
-        return;
-      }
-      if (peekNetworkPolicy()?.readsFromStore) {
-        schedule();
-        return;
-      }
-      markPollRun(action);
-      runUnwatched(() => action.rerun({ reason: "useAsyncData({ poll })" }));
-    };
-    const unsubscribeFromRunningState = subscribeToChanges(
-      action.runningStateSignal,
-      (state) => {
-        if (over) {
-          return;
-        }
-        if (state === COMPLETED) {
-          settle();
-          return;
-        }
-        if (state === FAILED) {
-          // A failure is shown, not asked again on a timer: a poll retrying it
-          // would retry it while the network is down — that is rerun()'s job.
-          stop();
-        }
-      },
-    );
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        tick();
-        return;
-      }
-      clearTimeout(timeout);
-      timeout = null;
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    if (action.runningStateSignal.peek() === COMPLETED) {
-      settle();
-    }
-    return () => {
-      stop();
-      unsubscribeFromRunningState();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
+    return startPolling(action, () => pollRef.current, {
+      reason: "useAsyncData({ poll })",
+    });
     // Another action is another question, polled on its own `for`.
   }, [action, polling]);
-};
-// The runs a poll started, for every reader of the action (see the RUNNING
-// branch of useActionAsyncData). The mark ends with the run, whatever ends it,
-// and not with the component: a reader unmounting mid-run leaves the others
-// reading a run that is still a revalidation.
-const pollRunActionWeakSet = new WeakSet();
-const markPollRun = (action) => {
-  pollRunActionWeakSet.add(action);
-  const unsubscribe = subscribeToChanges(action.runningStateSignal, (state) => {
-    if (state === RUNNING) {
-      return;
-    }
-    pollRunActionWeakSet.delete(action);
-    unsubscribe();
-  });
 };
 
 // ─── Loading ──────────────────────────────────────────────────────────────────

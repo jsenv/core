@@ -500,7 +500,15 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     return item;
   };
   const upsert = (...args) => upsertWith(args, valueChangedByWrite);
-  // The same, for the result of a callback — what the server answered.
+  /**
+   * Writes what the server sent — a callback's answer, a pushed message (a
+   * websocket's, a server-sent event's) — into the store. Takes what `upsert`
+   * takes and returns the same: a row equal in depth to the one held stays
+   * the one held, and its readers stay still, where `upsert` compares by
+   * reference and JSON makes every nested object a new one. A new row joins no
+   * `GET_MANY` and no `GET_RANGE` composition: read again what it belongs to
+   * (docs/resource.md).
+   */
   const upsertAnswer = (...args) => upsertWith(args, valueChangedByAnswer);
   const drop = (...args) => {
     const removedItemArray = [];

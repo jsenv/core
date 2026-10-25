@@ -332,6 +332,13 @@ const css = /* css */ `
   .navi_picker_spin > .navi_picker_spin_way_out[data-unavailable] {
     color: color-mix(in srgb, currentColor 35%, transparent);
   }
+  /* …unless the spin says an end by leaving its chevron out
+     (wayOutAtEnd="hidden"): the room is kept, so the value does not move, and
+     a hidden box takes neither the pointer nor a place in what is read out. */
+  .navi_picker_spin[data-way-out-at-end="hidden"]
+    > .navi_picker_spin_way_out[data-at-end] {
+    visibility: hidden;
+  }
   .navi_picker_spin[data-readonly] > .navi_picker_spin_way_out,
   .navi_picker_spin[data-disabled] > .navi_picker_spin_way_out {
     cursor: default;
@@ -511,8 +518,11 @@ const TRAVELS_NONE = [];
  *   editable?: boolean,
  *   growsUpward?: boolean,
  *   fallbackValue?: any,
- *   valueAtStep: (value: any, count: number) => any,
+ *   options?: any[],
+ *   loop?: boolean,
+ *   valueAtStep?: (value: any, count: number) => any,
  *   compareValues?: (a: any, b: any) => number,
+ *   wayOutAtEnd?: "muted" | "hidden",
  *   renderValue?: (value: any, context: { maxLines?: number }) => import("preact").ComponentChildren,
  *   controlProps?: object,
  *   duration?: number,
@@ -529,15 +539,28 @@ const TRAVELS_NONE = [];
  * @param {any} [value] The value shown. Held from above: `uiAction` says when
  *   it should move. Say `signal` for a two-way binding instead, or
  *   `defaultValue` to let the spin hold the value itself.
- * @param {(value: any, count: number) => any} valueAtStep What is `count` steps
- *   away from `value` — the whole of what a spin has to know about what it
- *   steps through. Called with -1 and +1 (times `step`) for the two ways out.
+ * @param {(value: any, count: number) => any} [valueAtStep] What is `count`
+ *   steps away from `value` — the whole of what a spin has to know about what
+ *   it steps through. Called with -1 and +1 (times `step`) for the two ways
+ *   out. `undefined` says there is nothing that way: the chevron is refused
+ *   like one at `max`.
+ * @param {any[]} [options] The values one steps through, in order — three
+ *   ways to frame a picture, the sizes a shirt comes in. Says `valueAtStep`
+ *   and `compareValues` (a value's place in the list), and the two ends are
+ *   the first and the last. Values are told apart with `===`.
+ * @param {boolean} [loop] With `options`: the list goes round, the step after
+ *   the last value is the first.
  * @param {(a: any, b: any) => number} [compareValues] Which of two values comes
  *   first, the way a sort comparator answers. Only `min`/`max` need it, and the
  *   default compares them as they compare with `<` — which is what an ISO date
  *   wants and what a number does not.
+ * @param {"muted"|"hidden"} [wayOutAtEnd="muted"] What the chevron at an end
+ *   becomes. "muted" draws it pale and keeps it pressable, to say why nothing
+ *   happens; "hidden" leaves it out, its room kept — for a short list where a
+ *   pale chevron would still read as a way to go.
  * @param {any} [fallbackValue] What is shown when nobody said anything: a spin
- *   always shows a value, so there is always one to fall back on.
+ *   always shows a value, so there is always one to fall back on. The first of
+ *   `options` when there are some.
  * @param {string} [type="text"] What kind of value it is, handed to the control
  *   holding it — a picker's `type` ("date", "time"…) or an input's.
  * @param {boolean} [editable] The middle is typed into rather than pressed:
@@ -595,8 +618,11 @@ export const Spin = ({
   editable,
   growsUpward,
   fallbackValue,
+  options,
+  loop,
   valueAtStep,
-  compareValues = compareValuesDefault,
+  compareValues,
+  wayOutAtEnd = "muted",
   renderValue = renderValueDefault,
   controlProps,
   vertical,
@@ -612,6 +638,13 @@ export const Spin = ({
   ...rest
 }) => {
   import.meta.css = css;
+  if (options) {
+    valueAtStep ??= (value, count) => optionAtStep(options, value, count, loop);
+    compareValues ??= (a, b) => options.indexOf(a) - options.indexOf(b);
+    fallbackValue ??= options[0];
+  } else {
+    compareValues ??= compareValuesDefault;
+  }
   const id = useId();
   // What the group around it says, when there is one: how big the whole thing
   // is written is said once, on the group, and every spin in it follows.
@@ -771,8 +804,19 @@ export const Spin = ({
   const valueNext = valueAtStep(valueShown, step);
   const hasMin = min !== undefined && min !== "";
   const hasMax = max !== undefined && max !== "";
-  const previousAllowed = !hasMin || compareValues(valuePrevious, min) >= 0;
-  const nextAllowed = !hasMax || compareValues(valueNext, max) <= 0;
+  // A step lands somewhere one may go: there is something that way, and it is
+  // not past the end of what one may reach.
+  const reachable = (valueStepped, goingNext) => {
+    if (valueStepped === undefined) {
+      return false;
+    }
+    if (goingNext) {
+      return !hasMax || compareValues(valueStepped, max) <= 0;
+    }
+    return !hasMin || compareValues(valueStepped, min) >= 0;
+  };
+  const previousAllowed = reachable(valuePrevious, false);
+  const nextAllowed = reachable(valueNext, true);
 
   // Where the keyboard is put back after a press on a chevron: whatever holds
   // it in this spin, so one can keep going with the keys where one was. Found
@@ -850,6 +894,10 @@ export const Spin = ({
       // Nowhere to travel to — the erase a calendar offers, say.
       return;
     }
+    if (options && !options.includes(valueRequested)) {
+      // Not a place on the list: nothing to travel along, the value is set.
+      return;
+    }
     const travelsQueued = travelsPendingRef.current;
     // Where the spin stands when this travel starts: behind the ones already
     // queued, rather than where the eye is now.
@@ -865,12 +913,10 @@ export const Spin = ({
     // may reach, or one step past it — the first step of the travel is the very
     // one the chevron that way is refused.
     const outOfReach = goingNext
-      ? hasMax &&
-        (compareValues(valueRequested, max) > 0 ||
-          compareValues(valueAtStep(valueFrom, step), max) > 0)
-      : hasMin &&
-        (compareValues(valueRequested, min) < 0 ||
-          compareValues(valueAtStep(valueFrom, -step), min) < 0);
+      ? (hasMax && compareValues(valueRequested, max) > 0) ||
+        !reachable(valueAtStep(valueFrom, step), true)
+      : (hasMin && compareValues(valueRequested, min) < 0) ||
+        !reachable(valueAtStep(valueFrom, -step), false);
     if (outOfReach) {
       // The same refusal a chevron gives, in the same words — said at the value
       // rather than at the chevron that way, because the press was not on a
@@ -958,6 +1004,7 @@ export const Spin = ({
         onPointerDown={(e) => {
           wayOutPointerTypeRef.current = e.pointerType;
         }}
+        atEnd={!allowed}
         unavailable={!allowed || loadingResolved || readOnlyResolved}
         unavailableMessage={() => wayOutMessage(allowed, isNext)}
         label={
@@ -1015,6 +1062,7 @@ export const Spin = ({
       data-vertical={vertical ? "" : undefined}
       data-readonly={readOnlyResolved ? "" : undefined}
       data-disabled={disabledResolved ? "" : undefined}
+      data-way-out-at-end={wayOutAtEnd === "hidden" ? "hidden" : undefined}
     >
       {/* Around the whole box, the way a button wears it: the value is on its
           way somewhere, and it is the value one is looking at. */}
@@ -1183,8 +1231,12 @@ export const Spin = ({
             >
               {/* Three places, not three values: "start" is the one above (or
                   to the left), whichever value the spin puts there. */}
+              {/* Nothing is drawn past an end: valueAtStep said there is
+                  nothing that way, and that is not a value to render. */}
               <Slide area="start" flex align="center">
-                {renderValue(valueDrawnAtStart, { maxLines })}
+                {valueDrawnAtStart === undefined
+                  ? null
+                  : renderValue(valueDrawnAtStart, { maxLines })}
               </Slide>
               <Slide
                 area="current"
@@ -1199,7 +1251,9 @@ export const Spin = ({
                 {renderValue(valueShown, { maxLines })}
               </Slide>
               <Slide area="end" flex align="center">
-                {renderValue(valueDrawnAtEnd, { maxLines })}
+                {valueDrawnAtEnd === undefined
+                  ? null
+                  : renderValue(valueDrawnAtEnd, { maxLines })}
               </Slide>
             </SlideContainer>
           </>
@@ -1220,6 +1274,7 @@ export const Spin = ({
 // this.
 const WayOut = ({
   atStart,
+  atEnd,
   commandFor,
   unavailable,
   unavailableMessage,
@@ -1265,6 +1320,9 @@ const WayOut = ({
       data-testid={testId}
       aria-disabled={unavailable ? "true" : undefined}
       data-unavailable={unavailable ? "" : undefined}
+      // What makes it unavailable, when it is an end of what one may reach:
+      // the one reason a spin may say by hiding the chevron (see the CSS).
+      data-at-end={atEnd ? "" : undefined}
       // At the chevron, not beside it: a callout aims its arrow at where the
       // anchor's text starts, and there is no text here — only a glyph in the
       // middle of the box, which is what one pressed and what the answer is
@@ -1362,6 +1420,21 @@ const compareValuesDefault = (a, b) => {
 };
 
 const renderValueDefault = (value) => String(value ?? "");
+
+// One step along a list: the value `count` places away, or nothing past either
+// end unless the list goes round. A value not on the list stands before its
+// first, so stepping on from it lands on the first.
+const optionAtStep = (options, value, count, loop) => {
+  const index = options.indexOf(value) + count;
+  const length = options.length;
+  if (loop) {
+    return options[((index % length) + length) % length];
+  }
+  if (index < 0 || index >= length) {
+    return undefined;
+  }
+  return options[index];
+};
 
 /**
  * Several spins read as one value: "7h30" is an hour, not a 7 beside a 30. The

@@ -5810,9 +5810,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   debounce?: number,
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
- *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
- *   groupLabelProps?: (item: any, index: number) => object,
+ *   groupOfMissing?: (index: number) => any,
+ *   renderGroupLabel?: (item: any, index: number, groupKey: any) => import("preact").ComponentChildren,
+ *   groupLabelProps?: (item: any, index: number, groupKey: any) => object,
  *   groupLabelSticky?: boolean,
+ *   groupProps?: (item: any, index: number, groupKey: any) => object,
  *   pageSize?: number,
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
@@ -5844,7 +5846,8 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   no part to play, and no item is ever a skeleton. Every item takes its
  *   room, whether the run draws it or holds it in a filler: a search that
  *   is to remove items (`searchNoMatchMode="remove"`) is applied to the array
- *   itself — see `useSearchText` — not to the items it draws.
+ *   itself — `useSearchText(…, { noMatch: "remove" })` — not to the items it
+ *   draws.
  * @param {(range: object) => any} [props.itemsAction]
  *   Where the items come from when the collection is read a slice at a time:
  *   a resource's range reader (`RESOURCE.GET_RANGE.bindParams(...)`).
@@ -5869,18 +5872,37 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   `<List.Group>` whose label (`renderGroupLabel`) stays on screen for as long
  *   as one of them is. The groups are found in the data as it arrives, which is
  *   the only way a list that discovers its items page by page can have any.
- *   Style the label, not the group element: a group the render window cuts is
- *   laid out by the list, its label over its first items, so that the label
- *   and the gap before it — held in the room of the item opening the group —
- *   take no room twice.
- * @param {(item: any, index: number) => any} [props.renderGroupLabel]
- *   The label of the group an item opens, given that item.
- * @param {(item: any, index: number) => object} [props.groupLabelProps]
+ *   A group the render window cuts is laid out by the list, its label over its
+ *   first items, so that the label and the gap before it — held in the room of
+ *   the item opening the group — take no room twice: what the group element
+ *   is given may paint (see `groupProps`), never take room.
+ * @param {(index: number) => any} [props.groupOfMissing]
+ *   The group of an item the run does not hold yet, when the app knows it
+ *   before the item arrives (the spans of a thread: past, today, the days
+ *   ahead). Its skeleton is then drawn in that group, label included, so
+ *   nothing moves when the page lands. It must answer what `groupBy` will for
+ *   that item — the group is otherwise replaced at landing, which dev warns
+ *   about. `undefined`: navi's own rule, an item not held between two items of
+ *   one group is in that group, one at a group's edge in none. A group opened
+ *   by an item not held calls `renderGroupLabel`, `groupLabelProps` and
+ *   `groupProps` with `item` undefined: they read the index or the group key.
+ * @param {(item: any, index: number, groupKey: any) => any} [props.renderGroupLabel]
+ *   The label of the group an item opens, given that item and the group's key.
+ * @param {(item: any, index: number, groupKey: any) => object} [props.groupLabelProps]
  *   The props the label of the group an item opens carries — `class`,
  *   `data-*`, anything a `<span>` takes. For a label that says something about
  *   its group (a day behind us, today, one ahead) rather than just naming it:
  *   the state then sits on the element the CSS styles, instead of being read
  *   back from a child.
+ * @param {(item: any, index: number, groupKey: any) => object} [props.groupProps]
+ *   The props the group element carries — `className`, `data-*` — for what
+ *   belongs to the whole group: a frame around today's games, a background
+ *   behind a section. Asked of the item opening the group as drawn, which is
+ *   its first item the window holds when the window cuts the group: say
+ *   something every item of the group shares, the group key at best, or the
+ *   props change as the window slides. A paint is fine (a border, a
+ *   background, an `::after` absolutely placed); a padding or a margin breaks
+ *   the layout of a cut group (see `groupBy`).
  * @param {boolean} [props.groupLabelSticky=true]
  *   `false`: the label stays in the flow, a boundary scrolled past with its
  *   group instead of riding the top of the screen — a thread of days whose
@@ -6068,14 +6090,22 @@ const useRunItems = (
     pageSize,
     itemSize,
     groupBy,
+    groupOfMissing,
     renderGroupLabel,
     groupLabelProps,
     groupLabelSticky = true,
+    groupProps,
     renderSkeleton,
     renderError,
   },
 ) => {
   const ownerId = useId();
+  // Dev only: the group `groupOfMissing` put an item not held in, by rank,
+  // checked against `groupBy` once the item lands.
+  const missingGroupCheckRef = useRef(null);
+  if (missingGroupCheckRef.current === null) {
+    missingGroupCheckRef.current = { keyByRank: new Map(), warned: false };
+  }
   const listItems = useContext(ListItemsContext);
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
@@ -6354,6 +6384,7 @@ const useRunItems = (
     groupCountByKey.set(group.key, groupCount);
     nodes.push(
       <ListItemGroup
+        {...group.props}
         key={
           groupCount === 1
             ? `${ownerId}_group_${group.key}`
@@ -6369,10 +6400,11 @@ const useRunItems = (
     );
     group = null;
   };
-  // An item not held has no group of its own. Between two items of the open
-  // group it is a line of that group whose content has not arrived: drawn
-  // outside, it would cut the group in two and show its label twice. A hole at
-  // a group's edge stays outside — nothing says which side it belongs to.
+  // An item not held has no group of its own, unless the app knows it
+  // (`groupOfMissing`). Between two items of the open group it is a line of
+  // that group whose content has not arrived: drawn outside, it would cut the
+  // group in two and show its label twice. A hole at a group's edge stays
+  // outside — nothing in the items says which side it belongs to.
   let holeTo = -1;
   let holeGroupKey;
   const groupKeyOfHole = (itemIndex) => {
@@ -6401,10 +6433,34 @@ const useRunItems = (
     if (!groupBy) {
       return undefined;
     }
+    const missingGroupCheck = missingGroupCheckRef.current;
     if (item === undefined) {
+      if (groupOfMissing) {
+        const missingKey = groupOfMissing(itemIndex);
+        if (missingKey !== undefined) {
+          if (import.meta.dev) {
+            missingGroupCheck.keyByRank.set(rankOf(itemIndex), missingKey);
+          }
+          return missingKey;
+        }
+      }
       return groupKeyOfHole(itemIndex);
     }
-    return groupBy(item, itemIndex);
+    const groupKey = groupBy(item, itemIndex);
+    if (import.meta.dev && missingGroupCheck.keyByRank.size > 0) {
+      const rank = rankOf(itemIndex);
+      if (missingGroupCheck.keyByRank.has(rank)) {
+        const missingKey = missingGroupCheck.keyByRank.get(rank);
+        missingGroupCheck.keyByRank.delete(rank);
+        if (missingKey !== groupKey && !missingGroupCheck.warned) {
+          missingGroupCheck.warned = true;
+          console.warn(
+            `<List.Items>: groupOfMissing(${itemIndex}) put the item not held yet in group "${missingKey}", but groupBy answers "${groupKey}" for the item that landed there: the group drawn around its skeleton is replaced, and what is under it moves. groupOfMissing must answer what groupBy will.`,
+          );
+        }
+      }
+    }
+    return groupKey;
   };
   // Where a group opened at that item began, when not there (see
   // data-continued): "above" the window, or in the "hole" of items not held
@@ -6428,10 +6484,16 @@ const useRunItems = (
       return undefined;
     }
     const itemBefore = getItemAt(windowFrom - 1);
-    if (
-      itemBefore === undefined ||
-      groupBy(itemBefore, windowFrom - 1) === groupKey
-    ) {
+    if (itemBefore === undefined) {
+      const missingKeyBefore = groupOfMissing
+        ? groupOfMissing(windowFrom - 1)
+        : undefined;
+      if (missingKeyBefore === undefined || missingKeyBefore === groupKey) {
+        return "above";
+      }
+      return undefined;
+    }
+    if (groupBy(itemBefore, windowFrom - 1) === groupKey) {
       return "above";
     }
     return undefined;
@@ -6445,12 +6507,17 @@ const useRunItems = (
     }
     if (!group || group.key !== groupKey) {
       closeGroup();
+      // `item` is undefined for a group opened by an item not held, which
+      // only groupOfMissing does.
       group = {
         key: groupKey,
-        label: renderGroupLabel ? renderGroupLabel(item, itemIndex) : groupKey,
+        label: renderGroupLabel
+          ? renderGroupLabel(item, itemIndex, groupKey)
+          : groupKey,
         labelProps: groupLabelProps
-          ? groupLabelProps(item, itemIndex)
+          ? groupLabelProps(item, itemIndex, groupKey)
           : undefined,
+        props: groupProps ? groupProps(item, itemIndex, groupKey) : undefined,
         continued: whereGroupContinues(groupKey, itemIndex),
         children: [],
       };
@@ -7550,6 +7617,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   selectable?: boolean,
  *   multiple?: boolean,
  *   deselectable?: boolean,
+ *   placeholder?: any[],
  *   maxLength?: number,
  *   maxLengthGuard?: number,
  *   parallelGuard?: number,
@@ -7816,6 +7884,17 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   again, lets go. Without it the list is a radio group — a choice, once
  *   made, moves to another item but never goes away. A `multiple` list toggles
  *   its items already.
+ * @param {any[]} [props.placeholder]
+ *   The values a `selectable` list that holds nothing means — an alert with no
+ *   level chosen means the person's own level, nobody chosen as organizer means
+ *   me. While the list holds nothing, the items whose value is in it are drawn
+ *   marked (`[data-placeholder]`, `:-navi-placeholder` in `style`,
+ *   `--list-item-background-color-placeholder` and its `-color` / `-border-color`
+ *   siblings; `useListItemState().placeholder` inside the item) and the
+ *   keyboard starts on the first of them. Nothing is selected: holding nothing
+ *   still sends nothing, assistive tech hears no selection, and a press on one
+ *   of them is a real choice. An emptiness that means several items lists them
+ *   all. Unlike `defaultValue`, it never becomes the answer.
  * @param {number} [props.maxLength]
  *   How many items a `selectable multiple` list accepts — the same word, and
  *   the same behaviour, as `maxLength` on a text field: a rule the list is

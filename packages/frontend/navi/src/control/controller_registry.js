@@ -23,6 +23,41 @@ const naviJsRegistry = new Map();
 const controllersWarned = new WeakSet();
 
 export const getUIStateControllerById = (id) => controllersById.get(id);
+
+// For a reader naming a control by id that may arrive after it (a shortcut
+// rendered before the control it updates, a control mounted by a later
+// render): called each time a controller takes that id. Told after the render
+// that registers it, never during it: what the reader does with it (subscribe,
+// set its own state) is not something to run inside another component's render.
+const registrationCallbacksById = new Map();
+export const listenControllerRegistration = (id, callback) => {
+  let callbackSet = registrationCallbacksById.get(id);
+  if (!callbackSet) {
+    callbackSet = new Set();
+    registrationCallbacksById.set(id, callbackSet);
+  }
+  callbackSet.add(callback);
+  return () => {
+    callbackSet.delete(callback);
+    if (callbackSet.size === 0) {
+      registrationCallbacksById.delete(id);
+    }
+  };
+};
+const tellControllerRegistered = (id, uiStateController) => {
+  const callbackSet = registrationCallbacksById.get(id);
+  if (!callbackSet) {
+    return;
+  }
+  queueMicrotask(() => {
+    if (controllersById.get(id) !== uiStateController) {
+      return;
+    }
+    for (const callback of callbackSet) {
+      callback(uiStateController);
+    }
+  });
+};
 export const getRadioSiblings = (radioUIStateController) => {
   const siblings = radioControllersByName.get(radioUIStateController.name);
   return siblings;
@@ -73,7 +108,11 @@ export const onUIStateControllerCreated = (uiStateController) => {
         );
       }
     }
+    const entering = controllersById.get(id) !== uiStateController;
     controllersById.set(id, uiStateController);
+    if (entering) {
+      tellControllerRegistered(id, uiStateController);
+    }
   }
   const proxyFor = uiStateController.props["navi-control-proxy-for"];
   if (proxyFor) {

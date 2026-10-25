@@ -63,6 +63,13 @@ export const holdViewTransition = (release) => {
   };
 };
 
+// The last transition started here, for code that runs a callback of the
+// application's and has to know whether that callback started one — an
+// optimistic drag answer draws inside one and returns its write instead (see
+// interaction_drag.js).
+let lastViewTransition = null;
+export const peekLastViewTransition = () => lastViewTransition;
+
 const startViewTransition = (updateCallback) => {
   if (releaseHeldViewTransition) {
     const release = releaseHeldViewTransition;
@@ -73,6 +80,7 @@ const startViewTransition = (updateCallback) => {
   viewTransition.updateCallbackDone.catch(ignoreSkip);
   viewTransition.ready.catch(ignoreSkip);
   viewTransition.finished.catch(ignoreSkip);
+  lastViewTransition = viewTransition;
   return viewTransition;
 };
 

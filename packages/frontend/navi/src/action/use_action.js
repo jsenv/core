@@ -6,13 +6,17 @@ import { createAction } from "./actions.js";
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
-export const useActionBoundToOneParam = (action, paramsSignal) => {
+export const useActionBoundToOneParam = (
+  action,
+  paramsSignal,
+  { verb } = {},
+) => {
   if (!isSignal(paramsSignal)) {
     throw new Error(
       `useActionBoundToOneParam expects a signal as second argument, got: ${paramsSignal}`,
     );
   }
-  const boundAction = useBoundAction(action, paramsSignal);
+  const boundAction = useBoundAction(action, paramsSignal, verb);
   const getValue = useCallback(() => paramsSignal.value, []);
   const setValue = useCallback((value) => {
     paramsSignal.value = value;

@@ -103,6 +103,9 @@ export const CONTROL_PROP_SET = new Set([
   "autoFocusSelect",
 
   "eventReactionDefinitions",
+  // Enter in this field sends nothing: no --navi-send to the group around it
+  // (see keyDownDefaultOnInput in control_hooks.jsx).
+  "enterSendsNothing",
 
   "onCancel",
   "cancelOnBlurInvalid",

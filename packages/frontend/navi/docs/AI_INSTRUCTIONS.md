@@ -167,12 +167,14 @@ start when unsure which export solves a problem.
 ### Gestures
 
 - `interactions.md` — a gesture is named, not read by hand: the `interactions`
-  prop, swipes, holds, counted taps, the gate, `selfInteractions`, registering a
-  detector. Before a `pointerdown` listener of your own, and before stopping
-  propagation to keep a popup shut.
+  prop, swipes, holds, counted taps, the gate, a gesture's write verb
+  (`{ answer, verb }`, held by the network policy), `selfInteractions`,
+  registering a detector. Before a `pointerdown` listener of your own, and before
+  stopping propagation to keep a popup shut.
 - `drag_interactions.md` — an element carried: `move`, `reorder`, `land`,
-  `toss`, `leave`, `moving`, the `grab`/`release`/`refuse` moments,
-  `--navi-grab`, dressing the clone. Before moving anything with the pointer.
+  `toss`, `leave`, `moving`, the `grab`/`release`/`refuse` moments, an
+  `optimistic` drop, `--navi-grab`, dressing the clone. Before moving anything
+  with the pointer.
 - `pan_zoom.md` — a surface under the hand: `pan`, `zoom`, and what a touch or a
   wheel over it may do to the page around it.
 - `mobile_touch.md` — what Chrome and Safari do with a finger, measured, and how

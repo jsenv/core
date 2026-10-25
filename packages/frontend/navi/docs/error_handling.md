@@ -29,8 +29,15 @@ validation message on the **requester** (the submit button, not the form):
 ```
 
 - `errorMapping(error)` turns the raw error into what to show: a string, an
-  `Error`, an element, or `{ message, target }` to point the message at another
-  element. Two returns matter as much as those:
+  `Error`, an element, or `{ message, target, status }` to point the message at
+  another element, or to draw it as something other than a red error:
+  `status: "warning"` for an attempt that did not work while nothing is broken
+  (the position could not be found, a permission is blocked), `"info"` for a
+  plain word. `status` is read on that object only, never on an `Error` (which
+  often carries an HTTP `status` of its own). A warning is still a failure of
+  the control (`role="alert"`, `aria-invalid`), closed by the next interaction
+  rather than kept until the next action; an info is said without either. Two
+  returns matter as much as those:
   - **`return error` — the error untouched — is how a mapping says "not mine"**.
     It is then shown exactly as if there were no mapping at all, so a mapping
     only has to know about the cases it dresses.

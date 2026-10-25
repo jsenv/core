@@ -27,9 +27,12 @@ what follows the send still follows it — the popup closes, the slide moves on,
 the page changes. The user is done either way; there was simply nothing to
 send.
 
-`canSendWhileUnchanged` turns that off, for a form where sending the same thing
-twice is the point — a single button firing a notification, an action whose
-duplicates are fine.
+`canSendWhileUnchanged` turns that off, for a form whose send is the act itself
+rather than its fields: a request that exists even empty (join, ask, raise a
+hand), a step that moves on, a creation whose screen opens already filled —
+from the url, from last time's answers, from the defaults a `stateSignal`
+declares — and a send whose duplicates are the point (a single button firing a
+notification).
 
 ```jsx
 <Form action={notify} canSendWhileUnchanged>
@@ -89,11 +92,13 @@ are what keep an empty one from being sent.
 
 A creation lands on the page the server just made, and its id comes back with
 the response — too late for a prop. Do it in the action, which is where the
-answer is (a creation always has something to send, so there is no "the press
-did nothing" case for `command` to cover):
+answer is. A creation that may open already filled — a draft restored from the
+url — takes `canSendWhileUnchanged`, or its press does nothing at all: no send,
+and the navigation that lives in the action never runs:
 
 ```jsx
 <Form
+  canSendWhileUnchanged
   action={async (value) => {
     const game = await createGame(value);
     navTo(`/games/${game.id}`);
@@ -200,6 +205,16 @@ something, a list acting on every touch. They say so with `standalone`:
 does not register with the group around it. Nothing goes up (its value is not
 collected, the form stays unchanged whatever it does) and nothing comes down
 (the form's reset, its validation cascade).
+
+Enter is the exception. In a text field, standalone or not, Enter sends the
+group around it (`--navi-send`), the way Enter submits an HTML form; in a
+picker's popup it sends the picker — its own value, not the field's — and
+closes it. A field with an `action` of its own commits that action instead. A
+field that helps find the answer says which list it drives with `navi-list`:
+Enter then picks the row under the arrows, and does nothing while none is. A
+field whose Enter must send nothing at all — a street typed before its
+suggestion filled the city — says `enterSendsNothing`; the browser's own Enter
+(a datalist choice) still happens.
 
 What it does **not** say is "ignore everything around me". `disabled`,
 `readOnly` and `loading` travel on their own contexts and go on reaching it,

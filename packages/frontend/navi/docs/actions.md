@@ -524,6 +524,23 @@ once when it shows again), never while a network policy answers reads from the
 store, and each tick revalidates: the answer stays drawn and `loading` stays
 false. `until`, `for` and a failure end it.
 
+Code that awaits the answer polls the instance itself — a gesture waiting for
+an account linked in another app, once the sheet it came from has closed:
+
+```js
+const link = await TELEGRAM_LINK.bindParams({ token }).poll({
+  every: 2000,
+  until: (link) => link.linked,
+  for: 180_000,
+  signal,
+});
+```
+
+The same rules, with no reader mounted. It resolves with the data `until`
+accepted, or the data held when `for` ran out; a failure rejects it, and so do
+`signal` aborting and a newer `poll()` of the same instance. An instance nobody
+ran is asked at once.
+
 `rerunActions(actionSet)` reruns several at once;
 `updateActions({ prerunSet, runSet, rerunSet, resetSet })` settles the four
 kinds of request in one pass — a route change goes through it.

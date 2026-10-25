@@ -4,13 +4,17 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
+import { useCalloutRequestClose } from "../rules/callout/callout.jsx";
+import { provideBusyAbortMessage } from "../rules/interaction/busy_abort_message.js";
 import { useSelfInteractionsHidden } from "../self_interactions.js";
 import { ButtonConfirmResolver } from "./button_confirm.jsx";
 import { ButtonHrefResolver } from "./button_href.jsx";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
+import { ButtonUpdateAppliedResolver } from "./button_update_applied.jsx";
 
 const ButtonFirstResolver = (props) => {
   const Next = useNextResolver();
@@ -136,8 +140,23 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   currentExcept?: object | object[],
  *   currentAlso?: object | object[],
  *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+ *   badge?: boolean | import("preact").ComponentChildren,
+ *   badgeLabel?: string,
  *   [key: string]: any,
  * }>}
+ * @param {boolean|import("preact").ComponentChildren} [badge] A mark across the
+ *   top-right corner of the button's frame saying something waits where it
+ *   leads (a contact means to repair, a task to do). `true` draws a dot;
+ *   anything else is drawn there as given. Drawn from the state:
+ *   `badge={brokenCount > 0}`. An icon button without a size of its own has a
+ *   frame hugging its icon, so the mark sits on the icon; a button whose press
+ *   area is larger than its glyph puts `badge` on its `<Icon>` instead. Read
+ *   through `--navi-badge-mark-color` (the accent), `--navi-badge-mark-size`,
+ *   `--navi-badge-mark-ring-color` (the paper) and
+ *   `--navi-badge-mark-ring-width`.
+ * @param {string} [badgeLabel] What the mark means, joined to the button's name
+ *   ("Réglages, Un moyen de contact à réparer") — to its `aria-label` when it
+ *   has one. Without it the mark is silent.
  * @param {object} [route] Where the press leads, as a `<Link route>` says it:
  *   the button is drawn as an `<a>` to the route's url (with `routeParams`),
  *   and says whether it is the page one is on — `[data-href-current]` for the
@@ -159,6 +178,12 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   press drawn as a button; and the reason to say it rather than navigate
  *   from an `action` is that the button stays a real link (an address, a
  *   middle click, "open in new tab"). Nothing is prefetched on the way there.
+ * @param {string} [commandFor] The id of what `command` acts on. The button is
+ *   the command's source — what a Popover is placed against, what a lifting
+ *   Dialog lifts from and lands back into. A button bigger than what the popup
+ *   comes out of names that part with `navi-command-proxy-for="<id>"`: the
+ *   element with that id is the source the popup reads, while the press, the
+ *   value and the focus stay the button's (docs/popup_open.md#the-anchor).
  * @param {boolean} [prefetch=true] Fetch the code of where this leads when the
  *   pointer or the focus arrives, ahead of the press (see
  *   docs/dynamic_import.md): the route actions that ask nothing of the
@@ -221,7 +246,9 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   docs/popup_open.md#closing-when-a-button-also-runs-an-action).
  * @param {boolean} [actionAbortable] The person waiting may give up on this
  *   button's action: closing the popup the run holds calls it off and goes
- *   through, instead of being refused. For a run whose answer may never come —
+ *   through, instead of being refused, and a second press on the busy button
+ *   answers « in progress » with a way to call it off (« Annuler »,
+ *   `button.abort_run`). For a run whose answer may never come —
  *   a request over a network that stops answering — where a popup with no way
  *   out is worse than an answer lost. Aborting frees the client and nothing
  *   more: the work may already have happened on the other side (see
@@ -262,7 +289,31 @@ export const Button = /*#__PURE__*/ createComponentResolver([
   ButtonFirstResolver,
   ButtonRouteResolver,
   ButtonCommandPropResolver,
+  ButtonUpdateAppliedResolver,
   ButtonConfirmResolver,
   ButtonHrefResolver,
   ButtonUI,
 ]);
+
+// The way out a busy control offers when its wait may be called off (see
+// busy_abort_message.js): filled from here, the one module that may import a
+// Button without closing a cycle through the control hooks.
+const BusyAbortMessage = ({ message, abort }) => {
+  const requestClose = useCalloutRequestClose();
+  return (
+    <Box flex="x" alignY="center" spacing="s">
+      <span>{message}</span>
+      <Button
+        uiAction={(value, e) => {
+          abort();
+          requestClose?.(e, "aborted");
+        }}
+      >
+        {buttonI18n("button.abort_run")}
+      </Button>
+    </Box>
+  );
+};
+provideBusyAbortMessage((message, abort) => (
+  <BusyAbortMessage message={message} abort={abort} />
+));

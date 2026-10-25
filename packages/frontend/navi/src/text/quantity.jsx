@@ -72,6 +72,9 @@ const css = /* css */ `
  *   size?: string,
  *   lang?: string,
  *   integer?: boolean,
+ *   minimumFractionDigits?: number,
+ *   maximumFractionDigits?: number,
+ *   signDisplay?: "auto" | "always" | "exceptZero" | "negative" | "never",
  *   loading?: boolean,
  *   readOnly?: boolean,
  *   disabled?: boolean,
@@ -93,6 +96,12 @@ const css = /* css */ `
  *   `"0"` to glue the unit to the value. Defaults to a regular space
  *   character. Ignored when `unitPosition="bottom"`, where the unit sits on
  *   its own line.
+ * @param {number} [minimumFractionDigits] `formatNumber`'s, as Intl reads
+ *   it: with `maximumFractionDigits` at the same count, a fixed precision
+ *   ("1,0 km", "7,2 km").
+ * @param {"auto"|"always"|"exceptZero"|"negative"|"never"} [signDisplay]
+ *   `formatNumber`'s, as Intl reads it: `"exceptZero"` writes a delta with
+ *   its sign ("+3", "−1,5", "0").
  */
 export const Quantity = ({
   children,
@@ -106,6 +115,9 @@ export const Quantity = ({
   size,
   lang,
   integer,
+  minimumFractionDigits,
+  maximumFractionDigits,
+  signDisplay,
   loading,
   readOnly,
   disabled,
@@ -118,7 +130,12 @@ export const Quantity = ({
     integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted =
     typeof valueRounded === "number"
-      ? formatNumber(valueRounded, { lang })
+      ? formatNumber(valueRounded, {
+          lang,
+          minimumFractionDigits,
+          maximumFractionDigits,
+          signDisplay,
+        })
       : valueRounded;
   const unitBottom = unitPosition === "bottom";
   // The language's rule, never `> 1`: "0 billet" in French, "0 tickets" in

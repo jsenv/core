@@ -9,7 +9,12 @@ export const memoIntl = (constructorName, lang, options) => {
   let key = `${constructorName}|${Array.isArray(lang) ? lang.join() : lang}`;
   if (options) {
     for (const optionName of Object.keys(options)) {
-      key += `|${optionName}:${options[optionName]}`;
+      const optionValue = options[optionName];
+      // Intl reads an undefined option as absent: one formatter for both.
+      if (optionValue === undefined) {
+        continue;
+      }
+      key += `|${optionName}:${optionValue}`;
     }
   }
   const cached = intlCache.get(key);

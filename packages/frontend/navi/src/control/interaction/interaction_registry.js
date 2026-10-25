@@ -21,6 +21,21 @@
  * interaction_drag.js). It is the answer to something that would be a bug read
  * from outside: a thing that stays put under the hand, silently.
  *
+ * A value can also be declared with what it is besides what it does, as
+ * `{ answer, verb, optimistic }` — `answer` one of the four above:
+ *
+ *   interactions={{
+ *     reorder: { answer: saveOrder, verb: "PUT" },
+ *     toss: { answer: remove, verb: "DELETE" },
+ *   }}
+ *
+ * `verb` says the answer is a write, which a callback cannot say about itself:
+ * under a network policy holding writes it does not run, and the policy's words
+ * are said where the hand made it — before anything moves, for a gesture whose
+ * detector asks (isHeldByNetworkPolicy below), the way a control bound to a
+ * write is held before the press. `optimistic` is the drag's (see
+ * interaction_drag.js).
+ *
  * An interaction that asks for the action does not say WHICH work: the action is
  * one, and it reads which interaction asked from the event it already receives.
  *
@@ -59,6 +74,8 @@ import { chainEvent } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
 import { reportErrorIfNobodyDisplaysIt } from "../../action/action_error_report.js";
+import { isWriteVerb, peekNetworkPolicy } from "../../action/network_policy.js";
+import { warnUnknownOptions } from "../../utils/warn_unknown_options.js";
 import { findNearestControlHost } from "../control_dom.js";
 import {
   dispatchRequestAction,
@@ -69,6 +86,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
+import { sayHeldByNetworkPolicy } from "./interaction_refusal.js";
 
 const detectors = [];
 
@@ -112,16 +130,21 @@ const detectors = [];
  *   `claimsRefusals` — and rejecting with nothing at all is a refusal that says
  *   nothing on purpose, never reported.
  *
- *   The third argument carries `{ types, readConfig, isRefused, isDeclared }`: the
- *   claimed names actually declared, a number read off the element or any ancestor
- *   carrying that attribute (so a whole list is tuned in one place), whether an
- *   interaction is currently declared "refuse", and whether a name is declared at
- *   all — including one this detector does not claim, which is how a word two
- *   gestures share ("grab" and "release", told by a drag and by a surface) finds
- *   out which of them it belongs to here. The last two are asked at the moment
- *   they matter and never at setup: what an interaction does is the caller's
- *   latest render, and something is locked and unlocked while its listeners stay
- *   where they are.
+ *   The third argument carries `{ types, readConfig, isRefused, isDeclared,
+ *   isHeldByNetworkPolicy, isOptimistic }`: the claimed names actually declared,
+ *   a number read off the element or any ancestor carrying that attribute (so a
+ *   whole list is tuned in one place), whether an interaction is currently
+ *   declared "refuse", whether a name is declared at all — including one this
+ *   detector does not claim, which is how a word two gestures share ("grab" and
+ *   "release", told by a drag and by a surface) finds out which of them it
+ *   belongs to here —, whether its `verb` is a write the network policy holds
+ *   right now, and whether it is declared `optimistic`. All but the first two
+ *   are asked at the moment they matter and never at setup: what an interaction
+ *   does is the caller's latest render, and something is locked and unlocked
+ *   while its listeners stay where they are. A detector reading a gesture asks
+ *   isHeldByNetworkPolicy before anything moves; one that does not ask is still
+ *   held when the interaction happens, nothing running and the policy's words
+ *   said on the element.
  * @param {(type: string) => boolean} [definition.claimsRefusals] Whether this
  *   detector says, itself, what that interaction's callback rejected with — a
  *   drag outcome refused, said on the element once it is back (see
@@ -145,6 +168,19 @@ const REQUEST_UI_ACTION = "request_ui_action";
 // Not an effect but the absence of one, answered by the detector that reads the
 // interaction rather than from here.
 const REFUSE = "refuse";
+
+// A value declared as `{ answer, verb, optimistic }` rather than as its answer
+// alone: everything reading what an interaction DOES reads the answer.
+const DECLARATION_KEY_SET = new Set(["answer", "verb", "optimistic"]);
+const isDeclarationObject = (value) =>
+  value !== null && typeof value === "object";
+const answerOf = (value) => (isDeclarationObject(value) ? value.answer : value);
+// Asked when it matters, never remembered: the policy comes and goes while the
+// listeners stay where they are.
+const isHeldByNetworkPolicy = (value) =>
+  isDeclarationObject(value) &&
+  isWriteVerb(value.verb) &&
+  peekNetworkPolicy() !== null;
 
 /**
  * The interactions as declared, plus the ones they imply, minus the ones turned
@@ -177,7 +213,9 @@ export const resolveInteractions = (interactions) => {
   const kept = {};
   let keptSome = false;
   for (const type of Object.keys(resolved)) {
-    if (resolved[type]) {
+    // `{ answer: canArchive && archive, verb }` is "not this one" as surely as
+    // the answer written alone.
+    if (answerOf(resolved[type])) {
       kept[type] = resolved[type];
       keptSome = true;
     }
@@ -188,9 +226,22 @@ export const resolveInteractions = (interactions) => {
   resolved = kept;
   if (import.meta.dev) {
     for (const type of Object.keys(resolved)) {
+      const value = resolved[type];
+      if (isDeclarationObject(value)) {
+        warnUnknownOptions(
+          `interactions "${type}"`,
+          value,
+          DECLARATION_KEY_SET,
+        );
+        if (value.verb !== undefined && !isWriteVerb(value.verb)) {
+          console.warn(
+            `interactions "${type}": "verb" says what the answer writes — "POST", "PUT", "PATCH" or "DELETE" — and "${value.verb}" is none of them, so nothing holds it under a network policy.`,
+          );
+        }
+      }
       const detector = detectors.find((candidate) => candidate.claims(type));
       if (detector) {
-        if (resolved[type] === REFUSE && !detector.refusable?.(type)) {
+        if (answerOf(value) === REFUSE && !detector.refusable?.(type)) {
           console.warn(
             `interactions: "${type}" is declared "refuse", and "${detector.name}" has no refusal to give — it reads the interaction and tells that it happened, which is all it can do. Give "${type}" something to do, or take it off.`,
           );
@@ -226,7 +277,7 @@ export const interactionsDisputeThePress = (interactions) => {
     return false;
   }
   for (const type of Object.keys(interactions)) {
-    if (!interactions[type]) {
+    if (!answerOf(interactions[type])) {
       // Same as resolveInteractions: a falsy effect means "not this one".
       continue;
     }
@@ -280,7 +331,8 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
     // nothing ran at all, else a promise that mirrors the effect (see the
     // trigger contract on defineInteractionDetector).
     const perform = (type, interactionEvent, detector) => {
-      const effect = interactionsNow()[type];
+      const declared = interactionsNow()[type];
+      const effect = answerOf(declared);
       if (!effect) {
         return null;
       }
@@ -289,6 +341,12 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         // before it happens, which is the only place it can be — so a detector
         // that asked (isRefused) never gets here, and one that did not is told by
         // the dev warning in resolveInteractions.
+        return null;
+      }
+      if (isHeldByNetworkPolicy(declared)) {
+        // A gesture's detector asks before anything moves; this is a shortcut,
+        // a hold, or a policy that came on while the hand was down.
+        sayHeldByNetworkPolicy(element);
         return null;
       }
       const controlHost = findNearestControlHost(element);
@@ -436,8 +494,14 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         types,
         readConfig: (attribute, defaultValue) =>
           readNumberFromDom(element, attribute, defaultValue),
-        isRefused: (type) => interactionsNow()[type] === REFUSE,
-        isDeclared: (type) => Boolean(interactionsNow()[type]),
+        isRefused: (type) => answerOf(interactionsNow()[type]) === REFUSE,
+        isDeclared: (type) => Boolean(answerOf(interactionsNow()[type])),
+        isHeldByNetworkPolicy: (type) =>
+          isHeldByNetworkPolicy(interactionsNow()[type]),
+        isOptimistic: (type) => {
+          const value = interactionsNow()[type];
+          return isDeclarationObject(value) && Boolean(value.optimistic);
+        },
       });
       if (typeof cleanup === "function") {
         cleanups.push(cleanup);

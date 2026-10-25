@@ -206,7 +206,12 @@ names none, and on whoever asked when nothing else says. In that order:
    the press is the only thing that knows that point.
 2. **the `anchor` prop** — where this popup opens when nobody says.
 3. **`detail.source`** — who asked. A button therefore opens the popup on
-   itself, and a popup passed as its own source is its own anchor.
+   itself, and a popup passed as its own source is its own anchor. A source
+   bigger than what the popup comes out of — a whole row pressed, a crest
+   inside it — names that part: `navi-command-proxy-for="<id>"` on the button
+   makes the element with that id the source the popup reads, what a Popover
+   is placed against and what a lifting Dialog lifts from and lands back into.
+   The press, the value and the focus stay the button's.
 
 A `Popover` is positioned against it; a `Dialog` only reads it for
 `sizeFromAnchor` and `animation="lifting"` (see [popup_lift.md](./popup_lift.md)).
@@ -470,6 +475,40 @@ asking a yes/no question after a gesture already over answers it there
 can veto: `onClose` is the close happening, not a request to close. The refusals
 are navi's: a close over a control mid-action, and a `Picker`'s close over a
 value that does not validate.
+
+### Awaiting the answer: `askPopup`
+
+A gesture whose outcome is a question waits for it where the gesture is: a card
+thrown off the list asks "delete it?" and either goes or flies home, a player
+dropped on the release zone asks "remove them from the game?". The question is a
+popup, and the answer is how it closed. `askPopup` opens it as `--navi-open`
+does and settles once it has closed:
+
+```js
+import { askPopup } from "@jsenv/navi";
+
+toss: async (event) => {
+  const { confirmed } = await askPopup(deleteDialogRef.current, event, {
+    value: alert.id,
+  });
+  if (!confirmed) {
+    throw undefined; // the card goes home, nothing said
+  }
+},
+```
+
+`confirmed` is a yes: a `--navi-confirm`, or a send the popup closed on — a
+`<Form>` inside it, a row's `--navi-send`. Everything else is a no, every way
+out included: Escape, the backdrop, the cross, a link leaving, Back, the popup
+leaving the page. It settles after `onClose`, and after the yes's own action:
+a button's command waits for its action, so a confirm that deletes has deleted.
+Asked again while the popup is still open, the earlier question is answered no
+and the new one waits for the close. Nothing opening — no popup found, a press
+that closed it a moment ago — rejects with `undefined`, which a gesture's answer
+reads as a refusal to say nothing about.
+
+The popup stays the popup: uncontrolled, with its own say over closing, and
+nothing in it knows it was asked rather than opened.
 
 ### Closing when a button also runs an action
 
@@ -800,6 +839,54 @@ it — the shape of a popup that is a LAYER over the screen, whose address is
 [navigation.md](./navigation.md#a-layer-over-the-screen-what-its-address-may-say)'s
 decision.
 
+To land on a page with such a popup open — "see the details" leading to a
+profile with its results sheet over it — the link says which, the way the
+popup's `navState` says it:
+
+```jsx
+<Link
+  route={PROFILE}
+  routeParams={{ id }}
+  open={{ id: "results", type: "push" }}
+>
+  Voir le détail du calcul
+</Link>
+// or navTo(PROFILE.buildUrl({ id }), { open: { id: "results", type: "push" } })
+```
+
+The page's entry is pushed, then the popup's own, as its opening would write
+it: closing the sheet leaves the reader on the profile, and Back then leaves
+the profile. The popup need not be mounted yet — it reads its key when the
+page mounts it. A popup whose open state is a url param needs none of this:
+its `buildUrl` already says it.
+
+### State that belongs to the popup: `ownSignals`
+
+What a popup was opened on beside its `value` — the seat of a game a share
+sheet is about — and what is chosen inside it — the result slide shown in a
+level sheet — often lives in the address too, so a reload or a return finds
+it. It means nothing once the popup is closed, and navi writes it away with
+the open state:
+
+```jsx
+<Dialog
+  signal={gameShareSignal}
+  value={game.id}
+  ownSignals={[gameShareSlotSignal]}
+>
+```
+
+Every close empties them (writes `undefined`, a state signal's default, out of
+the url), whatever closes the popup — its cross, a keep-close landing back,
+Escape, Back — and at the moment that close says: a keep-close lands on an
+address without them, a cancel going back empties what the entry behind still
+held, written by an `onOpen` before the push. A `navState` popup closed by a
+link leaving keeps them on the entry left, where Back finds the popup open on
+what it was showing. A signal two popups share (a sheet and the
+plate opening it both reading `?rank_result=`) is emptied by whichever
+closes. `Dialog`, `Popover`, `SidePanel`, `Popup` and `Expandable` take it; a
+`Picker` writes its own in `onClose`, which runs before its close lands.
+
 ### `open`, and what it costs
 
 `open` is the one-way half of `signal` — the parent re-renders with a boolean
@@ -980,6 +1067,17 @@ the gesture that opens the popup; `useAsyncData` reads it (see
 and aborts of a screen left ([network_policy.md](./network_policy.md)) apply; a
 reload keeps the open state, so it keeps the request too.
 
+**The request leaves at the press, the content is built at the hover.** A press
+on what opens the popup — a `--navi-open` or `--navi-toggle` button — preruns
+the route actions its opening changes, read as if the popup were already open:
+the request leaves at the pointerdown, not when the open state is written. The
+content may be built earlier: a `Picker`, or a popup given an `anchor`, builds
+it when the pointer rests there (see `mount`, below). On a computer the rows
+therefore arrive a press later than the content they fill. That is the price of
+a read keyed by the popup — one sheet per card, one request per card: a pointer
+crossing a list of cards has chosen none of them, and a hover that asked would
+ask for each card it crossed.
+
 The popup owning its request — `useAsyncData(action, { run: true })` — is the
 fallback, for a parameter chosen inside the popup and dying with it: a filter
 the sheet itself holds and nothing else remembers. Hand-written, with `run()`
@@ -996,15 +1094,17 @@ not leave with the close. A `Picker` told no value whose value something reads
 is the exception: it builds its popup as soon as that value is read (see
 [above](#a-press-that-opens-a-popup-and-acts-on-it)).
 
-A `Dialog` nobody has asked for yet is not even built. It stands in as its bare
-`<dialog>` — the id a command finds, the element a press announces itself on —
-and the dialog proper is built at the first request: an open, a press on what
-opens it, its `signal` or `open` saying open. From then on it stays built. So a
-list whose rows each hold a few dialogs (a sheet per seat, a share sheet per
-card) pays one element per closed dialog at every mount, not a dialog: a row
-may carry the dialogs of its own actions. It is built at once when something
-needs it from the start — open at mount, a `navState`, an `anchor` (a hover
-builds the content ahead of the click), or a `mount` other than the default.
+A `Dialog` or a `Popover` nobody has asked for yet is not even built — nor a
+`Popup` or a `SidePanel`, which render one of the two. It stands in as one bare
+element (a `<dialog>`, a `<div>`) — the id a command finds, the element a press
+announces itself on — and the popup proper is built at the first request: an
+open, a press on what opens it, its `signal` or `open` saying open. From then on
+it stays built. So a list whose rows each hold a few popups (a sheet per seat, a
+share sheet per card) pays one element per closed popup at every mount, not a
+popup: a row may carry the popups of its own actions. It is built at once when
+something needs it from the start — open at mount, a `navState`, an `anchor` (a
+hover builds the content ahead of the click), or a `mount` other than the
+default. A `Picker`'s popup is the picker's own, built with it.
 
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:

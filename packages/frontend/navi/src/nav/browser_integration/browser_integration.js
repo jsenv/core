@@ -26,6 +26,7 @@ import {
   isLikelyPreactGeneratedId,
 } from "./document_state_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
+import { NAV_STATE_ENTERED_VALUE } from "./link_open.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 import { setupBrowserIntegrationViaNavigation } from "./via_navigation.js";
 
@@ -153,12 +154,33 @@ setOnAllRouteReady((v) => {
 setRouteIntegration(browserIntegration);
 
 export const navIntegratedVia = browserIntegration.integration;
+/**
+ * Go to `target`, a url resolved against the address the document is at.
+ *
+ * @param {string} target
+ * @param {object} [options]
+ * @param {boolean} [options.replace] - Take the place of the current history
+ *   entry rather than stacking on it (see `<Link replace>`).
+ * @param {object} [options.state] - What the new entry holds (see useNavState).
+ * @param {string|object} [options.routeTransition] - What this navigation asks
+ *   of a route transition (see `<Link routeTransition>`).
+ * @param {boolean} [options.asReturn] - A push that is a return by meaning:
+ *   the page lands where its address was last left — the document's offset,
+ *   the lists' positions — as a back would bring it, instead of opening at its
+ *   top. An address never left lands at the top as usual (see `<Link asReturn>`).
+ * @param {string|{id: string, type?: "push"|"replace"}} [options.open] - Land
+ *   with one of the page's popups open, named the way its `navState` names it
+ *   (`{ id: "results", type: "push" }`): the page's entry, then the popup's
+ *   own as its opening would write it — closing it leaves the reader on the
+ *   page, and Back then leaves the page. A popup whose open state is a url
+ *   param needs none of this: it is in the address (`buildUrl`).
+ */
 export const navTo = (target, options) => {
   // Resolved against the address this document says it is at, not the one the
   // browser shows: a replace may be on its way there (see via_history.js).
   const currentUrl = documentUrlSignal.peek();
   const url = new URL(target, currentUrl).href;
-  if (url === currentUrl) {
+  if (url === currentUrl && !options?.open) {
     if (options?.state === undefined) {
       return null;
     }
@@ -193,7 +215,10 @@ export const stopLoad = (reason = "stopLoad() called") => {
  * reads, is not asked again. Nor does it bring back code whose `import()`
  * failed — the document refuses that address again without a request — so
  * the way out of a failed import is a fresh document,
- * `window.location.reload()` (docs/dynamic_import.md).
+ * `window.location.reload()` (docs/dynamic_import.md). Not the way out of an
+ * identity change either — sign-out, another account: the stores, the
+ * component reads and the lists' compositions stay, and they are the previous
+ * person's (docs/resource.md, "An identity change is a fresh document").
  */
 export const reload = browserIntegration.reload;
 /**
@@ -423,7 +448,7 @@ const useNavStateBasic = (
   // Calling enter() without a value stores "on" — the mere presence of the key
   // in the document state is enough to match; the value just allows associating
   // extra data with the entry when needed.
-  const enter = (value = "on") => {
+  const enter = (value = NAV_STATE_ENTERED_VALUE) => {
     enteredRef.current = true;
     const currentStateCopy = browserIntegration.getDocumentState() || {};
     if (Object.hasOwn(currentStateCopy, id) && currentStateCopy[id] === value) {
@@ -456,9 +481,16 @@ const useNavStateBasic = (
   //   --navi-close) is made by the navigation that link starts: the entry the
   //   link leads to does not hold the key, and every entry behind is left as
   //   the reader saw it — a back finds the state still entered.
-  const leave = ({ isBack, event } = {}) => {
+  //
+  // discard: writes that must not outlive the state (a popup's `ownSignals`),
+  //   made where the leave puts them: before a kept url is read, once a back
+  //   has landed, and not at all when a link's navigation carries the leave —
+  //   the entry left keeps the state entered, and them with it.
+  const leave = ({ isBack, event, discard = NO_OP } = {}) => {
     enteredRef.current = false;
     if (!Object.hasOwn(browserIntegration.getDocumentState() || {}, id)) {
+      // Left already, by the outside: a back press.
+      discard();
       return;
     }
     if (
@@ -469,23 +501,24 @@ const useNavStateBasic = (
           delete stateWithoutKey[id];
           return stateWithoutKey;
         },
-        otherwise: () => leaveEntry({ isBack }),
+        otherwise: () => leaveEntry({ isBack, discard }),
       })
     ) {
       return;
     }
-    leaveEntry({ isBack });
+    leaveEntry({ isBack, discard });
   };
-  const leaveEntry = ({ isBack }) => {
-    const currentStateCopy = browserIntegration.getDocumentState() || {};
-    if (!Object.hasOwn(currentStateCopy, id)) {
+  const leaveEntry = ({ isBack, discard }) => {
+    if (!Object.hasOwn(browserIntegration.getDocumentState() || {}, id)) {
       return;
     }
+    if (effectiveType === "push" && canNavBackSignal.peek() && isBack) {
+      Promise.resolve(browserIntegration.navBack()).then(discard);
+      return;
+    }
+    discard();
+    const currentStateCopy = browserIntegration.getDocumentState() || {};
     if (effectiveType === "push" && canNavBackSignal.peek()) {
-      if (isBack) {
-        browserIntegration.navBack();
-        return;
-      }
       delete currentStateCopy[id];
       browserIntegration.navBack({
         landOn: { url: documentUrlSignal.peek(), state: currentStateCopy },
@@ -536,7 +569,8 @@ const useNavStateBasic = (
  *     or goes back in history when `type` is "push").
  *     `leave({ event })` with the event that asked for it: asked by the press
  *     of a link that navigates, the key is left out of the entry the link
- *     leads to, and the entry it leaves keeps it.
+ *     leads to, and the entry it leaves keeps it. `leave({ discard })` makes
+ *     writes that must not outlive the state (see the comment above leave()).
  */
 export const useNavState = import.meta.dev
   ? useNavStateWithWarnings

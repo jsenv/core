@@ -76,7 +76,6 @@
 import {
   applyNewPosition,
   createPubSub,
-  dispatchCustomEvent,
   ELEMENT_SIZE_CHANGE,
   findEvent,
   getElementSignature,
@@ -89,15 +88,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { computed } from "@preact/signals";
-import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
@@ -116,32 +107,31 @@ import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { isDebugNoop, useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
-  readOpened,
-  readOpenValue,
   UNMOUNT_EVENT_TYPE,
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
-import {
-  requestBuildOnPress,
-  usePopupContentMount,
-} from "./popup_content_mount.js";
-import { preloadState } from "../nav/route.js";
+import { usePopupContentMount } from "./popup_content_mount.js";
+import { usePopupStandIn } from "./popup_stand_in.js";
 import {
   pushPopupThemeColor,
   readBackdropColor,
   readPopupThemeColor,
 } from "../nav/theme_color.js";
-import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
-import { liftPopupFromAnchor } from "./popup_lift.js";
+import {
+  installPopupLiftCss,
+  liftPopupFromAnchor,
+  resolveNamedLiftAnchor,
+} from "./popup_lift.js";
 import {
   armOutsidePressClose,
   armPointerDownOutsideClose,
   clearTextSelectionInside,
+  dropPickerPopupProps,
   handlePressOnOutsideRegion,
   keepFocusedElementVisible,
   mayHaveHiddenFocus,
@@ -789,122 +779,6 @@ const css = /* css */ `
     }
   }
 
-  /* While a dialog is lifting out of the element that opened it
-     (popup_lift.js). The page around IS taken as a picture, the browser's own
-     default, and on purpose: the wall and what the dialog holds around the
-     lifted node live in the top layer, and the browser paints the top layer
-     during a transition only as part of the root's picture — with the root
-     opted out (view-transition-name: none), wall and dialog go unpainted for
-     the length of the movement, and the picture of the lifted node comes out
-     empty (Chrome 153, reproduced in a bare page). The price is a page frozen
-     and unpressable while the movement plays: under a modal wall at the
-     opening, and for the popup's --popup-animation-duration at the closing. */
-  :root[data-navi-popup-lift] {
-    /* The popup's own pace, published on ::view-transition by popup_lift.js:
-       the pictures inherit from nowhere else. The wall reads it off the
-       dialog itself (the [data-lifting] backdrop rules above). */
-    &::view-transition-group(navi-popup-lift),
-    &::view-transition-old(navi-popup-lift),
-    &::view-transition-new(navi-popup-lift),
-    /* The page's own picture too: it carries the wall's arrival and what the
-       dialog holds around the lifted node, and one movement has one clock —
-       left to the browser's default, the wall would be up in a quarter of a
-       second under a card still travelling. */
-    &::view-transition-group(root),
-    &::view-transition-old(root),
-    &::view-transition-new(root) {
-      animation-duration: var(--navi-popup-lift-duration, 0.25s);
-    }
-
-    /* Each picture is drawn at its own size, from the box's top-left corner,
-       and clipped to the box: the box is what changes size, the content it
-       carries does not — a card growing wider does not zoom its own text, it
-       gains room, and the picture of what it becomes is uncovered as the box
-       grows and covered back as it shrinks. Drawn as wide as the box instead
-       (the browser's default), the picture being left would be scaled with
-       the box, and a change of width would read as the same card zooming
-       then swapping.
-
-       A picture holds the element's ink past its own box too — a halo, a
-       shadow — and the clip cuts that along with the content, at the box's
-       corners. When both pictures fit the box the whole way (popup_lift.js,
-       picturesFitTheBox) there is no content to uncover, only ink to lose:
-       the clip is lifted and the box carries its ink along.
-
-       The box paints what the lifted card paints behind its content
-       (published by popup_lift.js): where it has grown past the picture it
-       carries, it is the card that has grown. Its corners are those of the
-       box it leaves, and travel to those of the box it arrives on — a corner
-       is written per box, the same card at two sizes not wanting the same
-       round (see animateMovingBox in popup_lift.js). */
-    &::view-transition-image-pair(navi-popup-lift) {
-      background-image: var(--navi-popup-lift-background-image, none);
-      background-color: var(--navi-popup-lift-background-color, transparent);
-      border-radius: var(--navi-popup-lift-border-radius, 0);
-      overflow: clip;
-    }
-    &::view-transition-old(navi-popup-lift),
-    &::view-transition-new(navi-popup-lift) {
-      block-size: auto;
-      inline-size: auto;
-    }
-    &[data-navi-popup-lift-fit]::view-transition-image-pair(navi-popup-lift) {
-      overflow: visible;
-    }
-
-    /* The card leaves as itself and arrives as what it became: the picture
-       being left stays whole for most of the way, the arriving one only shows
-       near the end. The browser's own cross-fade over the whole movement is
-       what makes a change of size read as a fade. Blended normally rather than
-       added (the browser's plus-lighter is for two pictures summing to one over
-       nothing): over the box's own paint, added pictures would burn. */
-    &::view-transition-old(navi-popup-lift) {
-      mix-blend-mode: normal;
-      animation-name: navi-popup-lift-leave;
-    }
-    &::view-transition-new(navi-popup-lift) {
-      mix-blend-mode: normal;
-      animation-name: navi-popup-lift-arrive;
-    }
-
-    /* One scene through two frames (Dialog's lift="scene"): the thumbnail is a
-       band cut from the middle of the scene, as wide as it. Here the content
-       DOES scale with the box — a drawing enlarged is the same drawing bigger
-       — so both pictures are drawn at the box's width and centred in it, and
-       the band lands on the middle of the whole scene at every width the box
-       passes through. Not covered: a cover scales each picture to its own
-       box, and the band, covered into the whole scene's square, arrives three
-       times too big and off to one side. */
-    &[data-navi-popup-lift-kind="scene"] {
-      &::view-transition-old(navi-popup-lift),
-      &::view-transition-new(navi-popup-lift) {
-        inset-block: 0;
-        inline-size: 100%;
-        margin-block: auto;
-      }
-    }
-  }
-  @keyframes navi-popup-lift-leave {
-    0%,
-    55% {
-      opacity: 1;
-    }
-    85%,
-    100% {
-      opacity: 0;
-    }
-  }
-  @keyframes navi-popup-lift-arrive {
-    0%,
-    45% {
-      opacity: 0;
-    }
-    85%,
-    100% {
-      opacity: 1;
-    }
-  }
-
   ${surfaceTextCss}
   ${popupCss}
 `;
@@ -1191,6 +1065,12 @@ const css = /* css */ `
  *   (`?seat=<gameId>` over a list of cards): open while `signal.value` is this
  *   value, closed otherwise; opening writes it, closing writes `undefined`
  *   (a state signal's default). Without it the signal holds a boolean.
+ * @param {import("@preact/signals").Signal<any>[]} [props.ownSignals] - State
+ *   that belongs to this dialog alone — what it was opened on beside its
+ *   `value` (`?share_slot=`), what is chosen inside it (`?rank_result=`) —
+ *   emptied (written `undefined`) by every close: its own, Escape, Back, a
+ *   keep-close, which then lands on an address without them. A signal two
+ *   popups share is emptied by whichever closes.
  * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
  *   initial open state. `true` plays no entrance animation: the dialog was
  *   already open when the page appeared, and nothing was ever shown as "closed"
@@ -1209,7 +1089,10 @@ const css = /* css */ `
  *   request. What refuses a close is navi's: a control inside still
  *   running its action (see popup_busy.js for the runs that let it through).
  *   `event.detail.isCancel` says the close meant "revert", and
- *   `event.detail.isConfirm` that a `--navi-confirm` said yes.
+ *   `event.detail.isConfirm` that a `--navi-confirm` said yes, and
+ *   `event.detail.isSend` that a send aimed at the dialog itself closed it
+ *   (a row's `--navi-send`). To await that answer from where the opening is
+ *   decided, open it with `askPopup` instead.
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it
@@ -1249,6 +1132,7 @@ const css = /* css */ `
  * @param {import("preact").ComponentChildren} props.children
  */
 export const Dialog = (props) => {
+  installPopupLiftCss();
   import.meta.css = css;
 
   if (props.openController) {
@@ -1257,55 +1141,10 @@ export const Dialog = (props) => {
   return <DialogStandIn {...props} />;
 };
 
-// A dialog nobody has asked for yet stands in as its bare <dialog>. That
-// element is all that reaches a closed dialog before its first opening: a
-// command finds it by id (`commandfor`) and asks it to open, a press on what
-// opens it announces itself on it (navi_open_press), --navi-toggle reads its
-// aria-expanded. The dialog proper — its open controller, its box, its focus
-// and pseudo-class wiring — is built at the first request: an open, a press
-// about to open it, its signal or its `open` saying open. A list whose rows
-// each hold a few dialogs mounts hundreds of them, and would pay for every one
-// at every mount, for openings that mostly never come. Built once, the dialog
-// stays: the next opening finds it there.
+// A dialog nobody has asked for yet stands in as its bare <dialog> (see
+// popup_stand_in.js).
 const DialogStandIn = (props) => {
-  const { ref, id, signal, value, open } = props;
-  const ownRef = useRef();
-  const dialogRef = ref || ownRef;
-  // Why the dialog proper exists, once it does; never undone.
-  const builtRef = useRef(null);
-  const mountedRef = useRef(false);
-  const isMount = !mountedRef.current;
-  mountedRef.current = true;
-  // Its own reading of the signal: the dialog of one card among many, told
-  // apart by `value`, follows whether IT is the one open rather than every
-  // write the others cause.
-  const openedSignal = useMemo(
-    () => (signal ? computed(() => readOpened(signal.value, value)) : null),
-    [signal, value],
-  );
-  const openedBySignal = openedSignal ? openedSignal.value : false;
-  if (builtRef.current === null) {
-    if (isMount && (needsDialogFromMount(props) || open || openedBySignal)) {
-      builtRef.current = "mount";
-    } else if (open || openedBySignal) {
-      // Asked open while this stood in: the opening is happening now, and it
-      // plays like any other (see defaultOpen "interaction").
-      builtRef.current = "interaction";
-    }
-  }
-  const [, setBuildCount] = useState(0);
-  const warmRef = useRef(null);
-  const build = (reason) => {
-    if (builtRef.current !== null) {
-      return;
-    }
-    builtRef.current = reason;
-    flushSyncRendering(() => {
-      setBuildCount((count) => count + 1);
-    });
-  };
-
-  const builtReason = builtRef.current;
+  const [builtReason, dialogRef, standInProps] = usePopupStandIn(props);
   if (builtReason !== null) {
     return (
       <UncontrolledDialog
@@ -1317,64 +1156,7 @@ const DialogStandIn = (props) => {
       />
     );
   }
-  return (
-    <dialog
-      ref={dialogRef}
-      id={id}
-      className="navi_dialog"
-      // eslint-disable-next-line react/no-unknown-property
-      navi-hidden=""
-      // eslint-disable-next-line react/no-unknown-property
-      navi-out-of-flow=""
-      aria-expanded="false"
-      data-testid={props["data-testid"]}
-      // eslint-disable-next-line react/no-unknown-property
-      onnavi_request_open={(e) => {
-        // Built in this same event, and asked again: the opening is the one
-        // the dialog proper would have had — its source, its anchor, its value.
-        build("request");
-        const opened = dispatchCustomEvent(
-          dialogRef.current,
-          "navi_request_open",
-          e.detail,
-        );
-        if (!opened) {
-          e.preventDefault();
-        }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onnavi_open_press={(e) => {
-        // What the opening will read is asked for at once, as the dialog
-        // proper does (see open_controller.js); the dialog itself once the
-        // press is taken for one (see requestBuildOnPress) — the click that
-        // follows opens it built, or builds it itself when it comes sooner.
-        if (signal) {
-          preloadState(signal, readOpenValue(value));
-        }
-        if (warmRef.current) {
-          return;
-        }
-        warmRef.current = requestBuildOnPress(e, {
-          onBuild: () => {
-            warmRef.current = null;
-            build("press");
-          },
-          onGiveUp: () => {
-            warmRef.current = null;
-          },
-        });
-      }}
-    />
-  );
-};
-// What needs the dialog proper from the start: an opening at mount, content
-// built ahead of any opening, a history entry to read, an anchor whose hover
-// or focus builds the content ahead of the click.
-const needsDialogFromMount = (props) => {
-  if (props.defaultOpen || props.navState || props.anchor !== undefined) {
-    return true;
-  }
-  return props.mount !== undefined && props.mount !== "from-first-open";
+  return <dialog className="navi_dialog" {...standInProps} />;
 };
 
 // No openController passed: this Dialog is used declaratively (e.g. driven
@@ -1437,6 +1219,7 @@ const UncontrolledDialog = (props) => {
       value={undefined}
       defaultOpen={undefined}
       navState={undefined}
+      ownSignals={undefined}
       onClose={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
@@ -1461,6 +1244,7 @@ const UncontrolledDialog = (props) => {
         const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,
           isConfirm: e.detail?.isConfirm,
+          isSend: e.detail?.isSend,
           requester: e.detail?.source,
         });
         if (!closing) {
@@ -1641,8 +1425,9 @@ const useDialogProps = (props) => {
     // Read by usePopupName below, never written on the element.
     openerAriaLabel,
     openerAriaLabelledBy,
-    ...rest
+    ...restGiven
   } = props;
+  const rest = dropPickerPopupProps(restGiven, "Dialog");
   // Assigned on every render, like openEffect below, so it always closes over
   // the latest prop. Called by openController.open() before the content is
   // built: what this popup opens ON is known before anything reads it.
@@ -1872,31 +1657,11 @@ const useDialogProps = (props) => {
     return undefined;
   };
 
-  // A popup one walks through puts something else in front than what was
-  // pressed — a row of cards shown one at a time, the walk carrying on from
-  // the card the press opened on — and the box then has to come back to what
-  // is in front NOW, which only the caller knows. Resolved at the close for
-  // that reason: the element it names changes while the popup is open, so
-  // anything read at the opening would be the walk's starting point again.
-  // Silent when it names nothing: the close may be what renders it, and
-  // popup_lift.js asks again until it is there (and warns past that).
-  const resolveLiftAnchorElement = () => {
-    // Asked with what the dialog was open on, which the signal holding it no
-    // longer says once the close has started (see usePopupValue).
-    const named =
-      typeof liftAnchor === "function"
-        ? liftAnchor(openController.popupValueSignal.peek())
-        : liftAnchor;
-    if (!named) {
-      return null;
-    }
-    if (typeof named === "string") {
-      return document.getElementById(named);
-    }
-    // A ref is unwrapped even when it holds nothing, the same way `anchor` is:
-    // the ref object itself has no box to come back to.
-    return "current" in named ? named.current : named;
-  };
+  // Resolved at the close: the element it names changes while the popup is
+  // open (see resolveNamedLiftAnchor), so anything read at the opening would be
+  // the walk's starting point again.
+  const resolveLiftAnchorElement = () =>
+    resolveNamedLiftAnchor(liftAnchor, openController.popupValueSignal.peek());
 
   // The dialog and the anchor are the same box at two sizes, so the opening
   // and the closing are one becoming the other. The browser draws that itself

@@ -1826,7 +1826,7 @@ const startCalloutInsertionImpactCheck = (calloutContainer, anchorElement) => {
     console.warn(
       `opening a callout on ${getElementSignature(anchorElement)} ${what}: ${formatBox(boxBefore)} -> ${formatBox(boxAfter)}.
 A callout draws nothing in the flow, but while it is open it is an element child of ${getElementSignature(calloutContainer)}: a rule counting children there (:last-child, :nth-child, :only-child, :empty, > * + *) counts it too and matches something else than what it aims at.
-Say which children the rule counts: :nth-last-child(1 of S) / :nth-child(An+B of S), where S names yours (a class, or :not([navi-out-of-flow]) — the marker navi's out-of-flow elements carry). A sibling rule takes the marker between its compounds: > *:not([navi-out-of-flow]) + *:not([navi-out-of-flow]).
+Say which children the rule counts: :nth-last-child(1 of S) / :nth-child(An+B of S), where S names yours (a class, or :not([navi-out-of-flow]) — the marker navi's out-of-flow elements carry). A sibling rule takes the marker between its compounds, joined by ~ rather than + (+ reads the element right before, which may be a callout or a popup): > *:not([navi-out-of-flow]) ~ *:not([navi-out-of-flow]).
 See @jsenv/navi docs/css_architecture.md.`,
     );
   };

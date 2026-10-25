@@ -100,21 +100,6 @@ const css = /* css */ `
       flex: 0 0 auto;
       align-items: center;
       justify-content: center;
-
-      .navi_control_swap_badge {
-        position: absolute;
-        top: 0;
-        right: 0;
-        z-index: 1;
-        width: 0.45em;
-        height: 0.45em;
-        background-color: var(
-          --navi-control-swap-badge-color,
-          var(--navi-accent-color)
-        );
-        border-radius: 100em;
-        transform: translate(30%, -30%);
-      }
     }
 
     /* The window on the track: exactly the room the two controls share, and
@@ -383,6 +368,7 @@ export const ControlSwap = (props) => {
  *   the collapsed one — the side holding the floor spells out in full what a
  *   dot could only hint at — so it is read straight off the state
  *   (`badge={Boolean(groupId)}`), with no "and this side is hidden" to add.
+ *   It is the cap's Button `badge`: the same mark, variables and `badgeLabel`.
  * @param autoFocus - On by default: the focus goes into this control when its
  *   own cap (or `value`/`signal`) gives it the floor, where navi's ladder puts
  *   it — an `autoFocus` inside the control first, its first focusable
@@ -421,15 +407,11 @@ const ControlSwapCap = ({ ref, side, slotId, active, onPress }) => {
       aria-expanded={active}
       aria-controls={slotId}
       onClick={onPress}
+      badge={badgeToDraw}
     >
       <Icon width="50%" square>
         {icon}
       </Icon>
-      {badgeToDraw ? (
-        <span className="navi_control_swap_badge" aria-hidden="true">
-          {badgeToDraw === true ? null : badgeToDraw}
-        </span>
-      ) : null}
     </Button>
   );
 };

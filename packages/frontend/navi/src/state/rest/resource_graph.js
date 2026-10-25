@@ -108,6 +108,33 @@ const RESOURCE_OPTIONS = new Set([
   "DELETE",
   "DELETE_MANY",
 ]);
+const SCOPED_ONE_OPTIONS = new Set([
+  "idKey",
+  "rerunOn",
+  "dependencies",
+  "writes",
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+]);
+const SCOPED_MANY_OPTIONS = new Set([
+  "idKey",
+  "rerunOn",
+  "dependencies",
+  "writes",
+  "GET",
+  "GET_MANY",
+  "POST",
+  "POST_MANY",
+  "PUT",
+  "PUT_MANY",
+  "PATCH",
+  "PATCH_MANY",
+  "DELETE",
+  "DELETE_MANY",
+]);
 /**
  * Creates a reactive REST resource backed by a shared signal store.
  * Returns a `stateFacade` exposing one action per REST callback provided
@@ -138,11 +165,13 @@ const RESOURCE_OPTIONS = new Set([
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
- * @param {Array<Object | { resource: Object, on: string[] }>} [restCallbacks.dependencies] -
+ * @param {Array<Object | { resource: Object, on: string[] }> | (() => Array<Object | { resource: Object, on: string[] }>)} [restCallbacks.dependencies] -
  *   resources whose writes rerun this one's reads: one listed bare counts every
  *   write, `{ resource, on: ["PATCH_MANY", "DELETE"] }` only the callbacks it
  *   names (`PATCH` is not `PATCH_MANY`), a write named in its `writes`
- *   included
+ *   included. A function returning that list names resources declared after
+ *   this one (two resources depending on each other): it is called once, before
+ *   the first request of any resource leaves
  * @param {Record<string, { verb: "POST" | "PUT" | "PATCH" | "DELETE", callback: Function, rerunOn?: { GET?: boolean, GET_MANY?: boolean, GET_RANGE?: boolean } }>} [restCallbacks.writes] -
  *   the writes on an item that are not its sub-objects — cancel, archive, mark
  *   as seen — one action each, exposed under its name (`ORDER.cancel`) beside
@@ -152,7 +181,8 @@ const RESOURCE_OPTIONS = new Set([
  *   `{ resource: ORDER, on: ["cancel"] }`. Its `rerunOn` says which reads of
  *   this resource it reruns (`{ GET_RANGE: true }`); a read it leaves out
  *   follows `rerunOn` for its verb. A name a verb takes, or one the resource
- *   already exposes (`withParams`, `store`…), throws.
+ *   already exposes (`withParams`, `store`…), throws. A `.scopedOne()` or
+ *   `.scopedMany()` takes `writes` too, `.scopedMany()` with the plural verbs.
  * @param {{ signal: import("@preact/signals").Signal, when?: () => boolean }} [restCallbacks.persist] -
  *   mirrors the rows `GET` lands with into `signal` — a `stateSignal` with
  *   `persists: true` and `type: "object"` keeps them across a reload, whose
@@ -377,9 +407,10 @@ const createResource = (
     paramScope,
     rerunOn,
     dependencies,
-    // The writes named in resource()'s `writes`: a root resource and its
-    // withParams() scopes have them, a relation does not.
+    // The writes named in `writes`: a root resource, a scoped relation and
+    // their withParams() scopes have them, a `.one()`/`.many()` does not.
     writes,
+    namedWriteVerbs = NAMED_WRITE_VERBS,
     // Set on a scoped child: the resource owning each of its items, which
     // live in one store per owner (`store` is the owner's).
     ownerName,
@@ -520,6 +551,7 @@ const createResource = (
       rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
       writes,
+      namedWriteVerbs,
       ownerName,
       getChildStore,
       ownerDependency,
@@ -721,9 +753,20 @@ const createResource = (
    *   `async ({ id }) => ({ id, friends: [{ id: 2 }, { id: 3 }] })` — a full-parent
    *   response is absorbed as-is; the array replaces the relationship
    * - GET / POST / PUT / PATCH → the child object; it is upserted into the child store
-   *   but does NOT join the parent's array, which only a GET_MANY refresh changes
+   *   but does NOT join the parent's array
+   * - POST → also `[parentId, child]`: the child is upserted AND appended to the
+   *   parent's array, once (putting someone in a group). A POST creates, so an array
+   *   never renames there, as it does for GET / PUT / PATCH (`[oldId, props]`)
+   * - POST_MANY / PUT_MANY / PATCH_MANY → an array of child objects, upserted only; or
+   *   `[parentId, [child, …]]`, which also replaces the parent's array, as GET_MANY's
+   *   parent does (a route answering the whole membership). A child is an object, never
+   *   an array, so the two cannot be confused
    * - DELETE → `[parentId, childId]`
    * - DELETE_MANY → `[parentId, [childId, childId, …]]`
+   *
+   * A parent the store does not hold is left alone: its array comes with its next read.
+   * Declared on a scoped child, the forms naming the parent throw: a scoped item's id
+   * does not say which owner holds it.
    *
    * Returns the relationship resource, itself chainable; its items are the child
    * resource's own, as for `.one()`.
@@ -763,6 +806,16 @@ const createResource = (
     const childStore = childResource.store;
     const childIdKey = childResource.idKey;
     const childName = `${name}.${propertyName}`;
+    // Declared on a scoped child, the answers naming the parent cannot say
+    // which owner holds it (see refuseCallbacksNamingScopedItem); which form
+    // a callback answers is only known once it has.
+    const throwJoinOnScopedItem = (actionName) => {
+      throw new TypeError(
+        `${actionName} returned [itemId, …]: a "${name}" item exists only inside its "${ownerName}", and its id does not say which "${ownerName}" holds it.
+Return the child alone, and "${propertyName}" embedded in what the "${name}" callbacks return.
+${name}.many("${propertyName}") source location: ${declarationSite}`,
+      );
+    };
     addItemSetup((item) => {
       const childItemIdArraySignal = signal([]);
       const updateChildItemIdArray = createChildIdArrayUpdater(
@@ -837,13 +890,40 @@ const createResource = (
               }
               return childItemId;
             }
-          : (childData) => {
-              // an array is [property, value, props], used to rename the child id
-              const childItem = Array.isArray(childData)
-                ? childStore.upsertAnswer(...childData)
-                : childStore.upsertAnswer(childData);
-              return childItem[childIdKey];
-            };
+          : verb === "POST"
+            ? (childData) => {
+                if (!Array.isArray(childData)) {
+                  return childStore.upsertAnswer(childData)[childIdKey];
+                }
+                const [itemId, childProps] = childData;
+                const childItem = childStore.upsertAnswer(childProps);
+                joinParentArray(itemId, childItem);
+                return childItem[childIdKey];
+              }
+            : (childData) => {
+                // an array is [property, value, props] or [oldId, props], used to rename the child id
+                const childItem = Array.isArray(childData)
+                  ? childStore.upsertAnswer(...childData)
+                  : childStore.upsertAnswer(childData);
+                return childItem[childIdKey];
+              };
+      const joinParentArray = (itemId, childItem) => {
+        const item = store.select(itemId);
+        if (!item) {
+          return;
+        }
+        const childItemArray = item[propertyName];
+        const childItemId = childItem[childIdKey];
+        for (const childItemCandidate of childItemArray) {
+          if (childItemCandidate[childIdKey] === childItemId) {
+            return;
+          }
+        }
+        store.upsert({
+          [idKey]: item[idKey],
+          [propertyName]: [...childItemArray, childItem],
+        });
+      };
       const throwInvalidResult = createInvalidResultThrower(
         `${name}.${verb}`,
         declarationSite,
@@ -859,6 +939,21 @@ const createResource = (
                 `an array [itemId, childItemId] (that will be used to remove relationship)`,
                 result,
               );
+            }
+          } else if (verb === "POST" && Array.isArray(result)) {
+            if (
+              result.length !== 2 ||
+              !isProps(result[1]) ||
+              Array.isArray(result[1])
+            ) {
+              throwInvalidResult(
+                action.name,
+                `the child object, or an array [itemId, child] (the child joining the "${propertyName}" of that item)`,
+                result,
+              );
+            }
+            if (ownerName) {
+              throwJoinOnScopedItem(action.name);
             }
           } else if (!isProps(result)) {
             throwInvalidResult(
@@ -913,8 +1008,22 @@ const createResource = (
                 }
                 return deletedChildItemIdArray;
               }
-            : (childDataArray) => {
+            : (result) => {
+                if (!isParentAnswer(result)) {
+                  const childItemArray = childStore.upsertAnswer(result);
+                  return childItemArray.map(
+                    (childItem) => childItem[childIdKey],
+                  );
+                }
+                const [itemId, childDataArray] = result;
                 const childItemArray = childStore.upsertAnswer(childDataArray);
+                const item = store.select(itemId);
+                if (item) {
+                  store.upsert({
+                    [idKey]: item[idKey],
+                    [propertyName]: childItemArray,
+                  });
+                }
                 return childItemArray.map((childItem) => childItem[childIdKey]);
               };
       const throwInvalidResult = createInvalidResultThrower(
@@ -948,9 +1057,11 @@ const createResource = (
           } else if (!Array.isArray(result)) {
             throwInvalidResult(
               action.name,
-              `an array of objects (that will be used to upsert child items)`,
+              `an array of objects (that will be used to upsert child items), or [itemId, childArray] (replacing the "${propertyName}" of that item)`,
               result,
             );
+          } else if (ownerName && isParentAnswer(result)) {
+            throwJoinOnScopedItem(action.name);
           }
           return applyResultToValue(result);
         },
@@ -1011,29 +1122,35 @@ const createResource = (
    * GET_MANY/DELETE/DELETE_MANY, any `.scopedOne()`/`.scopedMany()` callback): such a
    * result cannot say which user holds it, and the declaration throws.
    *
+   * Writes named in `writes` take the root's rules (see `resource()`): one action each
+   * under its name, answering `[ownerId, props | null]` as its `verb` does.
+   *
    * @param {string} propertyName - property holding the sub-object on each owner item
-   * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, POST, PUT, PATCH, DELETE }`
+   * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, writes, GET, POST, PUT, PATCH, DELETE }`
    * @see docs/resource.md
    */
-  stateFacade.scopedOne = (
-    propertyName,
-    {
+  stateFacade.scopedOne = (propertyName, scopedOneOptions = {}) => {
+    const relationLabel = `${name}.scopedOne("${propertyName}")`;
+    if (import.meta.dev) {
+      warnUnknownOptions(relationLabel, scopedOneOptions, SCOPED_ONE_OPTIONS);
+    }
+    const {
       idKey: childIdKey = "id",
       rerunOn: scopedOneRerunOn,
       dependencies: scopedOneDependencies,
+      writes: scopedOneWrites,
 
       GET,
       POST,
       PUT,
       PATCH,
       DELETE,
-    } = {},
-  ) => {
+    } = scopedOneOptions;
     const declarationSite = getDeclarationSite();
     if (ownerName) {
       refuseCallbacksNamingScopedItem(
-        `${name}.scopedOne("${propertyName}")`,
-        { GET, POST, PUT, PATCH, DELETE },
+        relationLabel,
+        { GET, POST, PUT, PATCH, DELETE, ...scopedOneWrites },
         { name, ownerName, propertyName, declarationSite },
       );
     }
@@ -1102,12 +1219,14 @@ const createResource = (
     const createRestActionForScopedOne = (
       verb,
       callback,
-      { onActionComplete, paramScope },
+      { onActionComplete, paramScope, writeName, writeRerunOn },
     ) => {
-      const childActionName = `${childName}.${verb}`;
+      const childActionName = `${childName}.${writeName || verb}`;
       return createAction(callback, {
         name: childActionName,
-        meta: { verb, isMany: false, paramScope },
+        meta: writeName
+          ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
+          : { verb, isMany: false, paramScope },
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length !== 2) {
             throw new TypeError(
@@ -1150,6 +1269,7 @@ const createResource = (
       paramScope,
       rerunOn: resolveRerunOn(scopedOneRerunOn, rerunOn),
       dependencies: scopedOneDependencies ?? dependencies,
+      writes: scopedOneWrites,
       ownerName: name,
     });
   };
@@ -1175,7 +1295,15 @@ const createResource = (
    * `ownerId` may also be `{ [uniqueKey]: value }` when the owner is known by an alternate key.
    * A singular POST upserts the child but does not append it to the collection; ordering is
    * the backend's, so the owner's GET is rerun instead (only when its last response embedded
-   * `propertyName`), and the child's own GET_MANY reruns per its `rerunOn`.
+   * `propertyName`), and the child's own GET_MANY reruns per its `rerunOn`. A `*_MANY`
+   * answer is the collection: the owner's GET is not rerun.
+   *
+   * A sub-collection with several writes (add, move, remove a seat) names them in
+   * `writes`, with the root's rules (see `resource()`): one action each under its name,
+   * answered as its `verb` is — the plural verbs included, so a write whose route answers
+   * the whole owner returns `[ownerId, items]` and replaces the collection without
+   * rerunning anything:
+   * `writes: { add: { verb: "POST_MANY", callback: async (body) => [ownerId, items] } }`.
    *
    * Returns the child relationship resource, itself chainable:
    * `TABLE_COLUMNS.one("dataType", DATA_TYPE)` adds a reactive `.dataType` property on each column,
@@ -1188,15 +1316,19 @@ const createResource = (
    * `admins.email` never share one.
    *
    * @param {string} propertyName - property holding the collection on each owner item
-   * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+   * @param {Object} [restCallbacks] - `{ idKey, rerunOn, dependencies, writes, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
    * @see docs/resource.md
    */
-  stateFacade.scopedMany = (
-    propertyName,
-    {
+  stateFacade.scopedMany = (propertyName, scopedManyOptions = {}) => {
+    const relationLabel = `${name}.scopedMany("${propertyName}")`;
+    if (import.meta.dev) {
+      warnUnknownOptions(relationLabel, scopedManyOptions, SCOPED_MANY_OPTIONS);
+    }
+    const {
       idKey: childIdKey = "id",
       rerunOn: scopedManyRerunOn,
       dependencies: scopedManyDependencies,
+      writes: scopedManyWrites,
 
       GET,
       GET_MANY,
@@ -1208,12 +1340,11 @@ const createResource = (
       PATCH_MANY,
       DELETE,
       DELETE_MANY,
-    } = {},
-  ) => {
+    } = scopedManyOptions;
     const declarationSite = getDeclarationSite();
     if (ownerName) {
       refuseCallbacksNamingScopedItem(
-        `${name}.scopedMany("${propertyName}")`,
+        relationLabel,
         {
           GET,
           GET_MANY,
@@ -1225,6 +1356,7 @@ const createResource = (
           PATCH_MANY,
           DELETE,
           DELETE_MANY,
+          ...scopedManyWrites,
         },
         { name, ownerName, propertyName, declarationSite },
       );
@@ -1323,12 +1455,14 @@ const createResource = (
     const createRestActionForScopedMany = (
       verb,
       callback,
-      { isMany, onActionComplete, paramScope },
+      { isMany, onActionComplete, paramScope, writeName, writeRerunOn },
     ) => {
-      const childActionName = `${childName}.${verb}`;
+      const childActionName = `${childName}.${writeName || verb}`;
       return createAction(callback, {
         name: childActionName,
-        meta: { verb, isMany, paramScope },
+        meta: writeName
+          ? { verb, isMany, paramScope, writeName, writeRerunOn }
+          : { verb, isMany, paramScope },
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length < 2) {
             throw new TypeError(
@@ -1421,6 +1555,8 @@ const createResource = (
       paramScope,
       rerunOn: resolveRerunOn(scopedManyRerunOn, rerunOn),
       dependencies: scopedManyDependencies ?? dependencies,
+      writes: scopedManyWrites,
+      namedWriteVerbs: NAMED_WRITE_VERBS_OF_SCOPED_MANY,
       ownerName: name,
       // Declared on a scoped child, the scopes are kept per item and never
       // registered by id (see addItemSetup above): there is no owner key to
@@ -1446,7 +1582,9 @@ const createResource = (
       // (see resource_range_reader.js).
       stateFacade.GET_RANGE = createRangeReader(
         `${name}.GET_RANGE`,
-        applyNetworkPolicy(restCallback, { verb: "GET", isMany: true }),
+        readLazyDependenciesFirst(
+          applyNetworkPolicy(restCallback, { verb: "GET", isMany: true }),
+        ),
         { store, params },
       );
       resourceLifecycleManager.registerRangeReader(
@@ -1459,11 +1597,13 @@ const createResource = (
     const verb = isMany
       ? restCallbackKey.replace("_MANY", "")
       : restCallbackKey;
-    const restCallbackUnderPolicy = applyNetworkPolicy(restCallback, {
-      verb,
-      isMany,
-      findItemInStore,
-    });
+    const restCallbackUnderPolicy = readLazyDependenciesFirst(
+      applyNetworkPolicy(restCallback, {
+        verb,
+        isMany,
+        findItemInStore,
+      }),
+    );
     let restAction = createRestAction(verb, restCallbackUnderPolicy, {
       isMany,
       onActionComplete,
@@ -1479,13 +1619,23 @@ const createResource = (
   // expose one action per write named in `writes`
   if (writes) {
     for (const [writeName, write] of Object.entries(writes)) {
-      assertWriteCanBeNamed(name, writeName, write, stateFacade);
-      const { verb, callback, rerunOn: writeRerunOn } = write;
+      assertWriteCanBeNamed(
+        name,
+        writeName,
+        write,
+        stateFacade,
+        namedWriteVerbs,
+      );
+      const { verb: writeVerb, callback, rerunOn: writeRerunOn } = write;
+      const isMany = writeVerb.endsWith("_MANY");
+      const verb = isMany ? writeVerb.replace("_MANY", "") : writeVerb;
       let writeAction = createRestAction(
         verb,
-        applyNetworkPolicy(callback, { verb, isMany: false }),
+        readLazyDependenciesFirst(
+          applyNetworkPolicy(callback, { verb, isMany }),
+        ),
         {
-          isMany: false,
+          isMany,
           onActionComplete,
           paramScope,
           writeName,
@@ -1724,11 +1874,28 @@ const applyNetworkPolicy = (
   };
 };
 
+// A `dependencies` given as a function is read before the first request
+// leaves (see item_lifecycle_manager.js).
+const readLazyDependenciesFirst = (restCallback) => {
+  return (params, context) => {
+    resourceLifecycleManager.resolvePendingDependencies();
+    return restCallback(params, context);
+  };
+};
+
 // A write named in `writes` sits on the facade beside the verbs: a name a verb
 // takes, or one the facade already holds, would hide what is there. What it
 // declares is checked here too, since nothing would ever say a write that
-// cannot run or a rerun that cannot fire is wrong.
+// cannot run or a rerun that cannot fire is wrong. A scopedMany child also
+// takes the plural verbs: its answer `[ownerId, items]` is the collection.
 const NAMED_WRITE_VERBS = ["POST", "PUT", "PATCH", "DELETE"];
+const NAMED_WRITE_VERBS_OF_SCOPED_MANY = [
+  ...NAMED_WRITE_VERBS,
+  "POST_MANY",
+  "PUT_MANY",
+  "PATCH_MANY",
+  "DELETE_MANY",
+];
 const VERB_KEYS = [
   "GET",
   "GET_MANY",
@@ -1743,7 +1910,13 @@ const VERB_KEYS = [
   "DELETE_MANY",
 ];
 const WRITE_RERUN_READS = ["GET", "GET_MANY", "GET_RANGE"];
-const assertWriteCanBeNamed = (name, writeName, write, stateFacade) => {
+const assertWriteCanBeNamed = (
+  name,
+  writeName,
+  write,
+  stateFacade,
+  namedWriteVerbs,
+) => {
   const where = `resource(${name}) writes.${writeName}`;
   if (VERB_KEYS.includes(writeName.toUpperCase())) {
     throw new Error(
@@ -1759,9 +1932,9 @@ const assertWriteCanBeNamed = (name, writeName, write, stateFacade) => {
     throw new Error(`${where}: expects { verb, callback }, received ${write}`);
   }
   const { verb, callback, rerunOn } = write;
-  if (!NAMED_WRITE_VERBS.includes(verb)) {
+  if (!namedWriteVerbs.includes(verb)) {
     throw new Error(
-      `${where}: "verb" says how its answer is applied, one of ${NAMED_WRITE_VERBS.join(", ")} — received ${verb}`,
+      `${where}: "verb" says how its answer is applied, one of ${namedWriteVerbs.join(", ")} — received ${verb}`,
     );
   }
   if (typeof callback !== "function") {
@@ -1918,6 +2091,12 @@ const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
+};
+
+// A `.many()` plural write answering `[parentId, childArray]` rather than the
+// children alone: a child is an object, never an array.
+const isParentAnswer = (result) => {
+  return result.length === 2 && Array.isArray(result[1]);
 };
 
 const resolveOwnerId = (rawOwnerId, store, idKey, uniqueKeys, actionName) => {

@@ -1,4 +1,5 @@
 import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
+import { useComputed } from "@preact/signals";
 import { createContext } from "preact";
 import {
   useContext,
@@ -15,6 +16,7 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { getNetworkPolicyReadOnlyMessage } from "@jsenv/navi/src/action/network_policy.js";
 import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import {
   ControlIdContext,
@@ -28,6 +30,7 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
@@ -66,6 +69,18 @@ const css = /* css */ `
       --list-item-background-color-selected: var(--navi-accent-color);
       --list-item-border-color-selected: var(
         --list-item-background-color-selected
+      );
+      /* Placeholder — what the list means while it holds nothing */
+      --list-item-color-placeholder: var(--list-item-color);
+      --list-item-background-color-placeholder: color-mix(
+        in srgb,
+        var(--navi-accent-color) 12%,
+        transparent
+      );
+      --list-item-border-color-placeholder: color-mix(
+        in srgb,
+        var(--navi-accent-color) 50%,
+        transparent
       );
       /* Disabled */
       --list-item-color-disabled: light-dark(#aaa, #555);
@@ -244,6 +259,16 @@ const css = /* css */ `
       }
     }
 
+    /* After hover/pointed: what the empty list means stays drawn under the
+       pointer, as a selection does. */
+    &[data-placeholder] {
+      --x-list-item-border-color: var(--list-item-border-color-placeholder);
+      --x-list-item-background-color: var(
+        --list-item-background-color-placeholder
+      );
+      --x-list-item-color: var(--list-item-color-placeholder);
+    }
+
     &[data-disabled] {
       --x-list-item-color: var(--list-item-color-disabled);
       --x-list-item-background-color: var(
@@ -268,6 +293,9 @@ const SelectableListDeselectableContext = createContext(false);
 // only there to be read). Also set to false by a non-selectable list, so a list
 // nested inside a selectable row does not inherit the outer list's answer.
 const ListSelectableContext = createContext(false);
+// The values a selectable list means while it holds nothing (its
+// `placeholder`), or null while it holds something.
+const ListPlaceholderContext = createContext(null);
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
@@ -289,8 +317,14 @@ const ListSelectable = (props) => {
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
-  const { ref, multiple, deselectable, focusGroupDirection, focusGroupWrap } =
-    props;
+  const {
+    ref,
+    multiple,
+    deselectable,
+    focusGroupDirection,
+    focusGroupWrap,
+    placeholder,
+  } = props;
   const [listControlRootProps, listControlProps, childrenWrapperProps] =
     useControlgroupProps(
       {
@@ -303,6 +337,9 @@ const ListSelectable = (props) => {
         resetOnAbort: true,
         resetOnError: true,
         ...props,
+        // An input's placeholder is an attribute of its own; a list's is read
+        // here, by its items.
+        placeholder: undefined,
       },
       {
         // A list draws the rows it needs and no more, so a selected row may be
@@ -317,6 +354,24 @@ const ListSelectable = (props) => {
       },
     );
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
+  // A computed boolean: the list renders again when it starts or stops holding
+  // something, not at every selection.
+  const holdsNothing = useComputed(() => {
+    const uiState = uiGroupStateController.uiStateSignal.value;
+    return uiState === null || uiStateHoldsNothing(uiState);
+  }).value;
+  // Kept while equal by content: an app writes `placeholder={[ownLevel]}`, a new
+  // array at each render, and every item reads it.
+  const placeholderRef = useRef(null);
+  if (!holdsNothing || !placeholder || placeholder.length === 0) {
+    placeholderRef.current = null;
+  } else if (
+    placeholderRef.current === null ||
+    !compareTwoJsValues(placeholderRef.current, placeholder)
+  ) {
+    placeholderRef.current = placeholder;
+  }
+  const placeholderShown = placeholderRef.current;
   useFocusGroup(ref, {
     direction: focusGroupDirection,
     wrap: focusGroupWrap,
@@ -374,7 +429,8 @@ const ListSelectable = (props) => {
     }
     return navigableEls;
   };
-  // On mount: set the initial current item to the first selected, else the first navigable.
+  // On mount: set the initial current item to the first selected, else the
+  // first one the empty list means (its placeholder), else the first navigable.
   // After that, focusin events on the list keep currentIdRef up to date.
   useLayoutEffect(() => {
     const navigableEls = getNavigableElements();
@@ -388,6 +444,11 @@ const ListSelectable = (props) => {
         initialEl = el;
         break;
       }
+    }
+    if (!initialEl) {
+      initialEl = navigableEls.find((el) =>
+        el.hasAttribute("data-placeholder"),
+      );
     }
     if (!initialEl) {
       initialEl = navigableEls[0];
@@ -416,6 +477,7 @@ const ListSelectable = (props) => {
         selectable={undefined}
         multiple={undefined}
         deselectable={undefined}
+        placeholder={undefined}
         focusGroupDirection={undefined}
         focusGroupWrap={undefined}
         // Track focus inside the list: whichever item gets focus becomes current.
@@ -555,7 +617,9 @@ const ListSelectable = (props) => {
         <SelectableListDeselectableContext.Provider
           value={Boolean(deselectable)}
         >
-          {listVnode}
+          <ListPlaceholderContext.Provider value={placeholderShown}>
+            {listVnode}
+          </ListPlaceholderContext.Provider>
         </SelectableListDeselectableContext.Provider>
       </SelectableListMultipleContext.Provider>
     </ListSelectableContext.Provider>
@@ -571,8 +635,9 @@ const SelectableRealInputContext = createContext(null);
  * — that one goes stale as soon as the list moves on its own (a press inside
  * a popup, a reset, a cancel).
  *
- * @returns {{ selected: boolean, readOnly: boolean, value: any } | null}
- *   `null` outside a row of a selectable list.
+ * @returns {{ selected: boolean, placeholder: boolean, readOnly: boolean, value: any } | null}
+ *   `null` outside a row of a selectable list. `placeholder`: the list holds
+ *   nothing and this item is what that means (see List's `placeholder`).
  */
 export const useListItemState = () => {
   const realInput = useContext(SelectableRealInputContext);
@@ -581,6 +646,7 @@ export const useListItemState = () => {
   }
   return {
     selected: Boolean(realInput.checked),
+    placeholder: realInput.placeholder,
     readOnly: Boolean(realInput.readOnly),
     value: realInput.value,
   };
@@ -707,16 +773,31 @@ const ListItemSelectable = (props) => {
   // Everything holding the control back, not only the row's own `readOnly`
   // above: the list above it, a maxLengthGuard with no room left.
   const readOnlyResolved = basePseudoState[":read-only"];
+  const placeholderValues = useContext(ListPlaceholderContext);
+  const isPlaceholder =
+    placeholderValues !== null &&
+    placeholderValues.some((placeholderValue) =>
+      compareTwoJsValues(placeholderValue, value),
+    );
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
       type: inputType,
       checked,
+      placeholder: isPlaceholder,
       readOnly: readOnlyResolved,
       value,
       deselectable,
     };
-  }, [inputId, inputType, checked, readOnlyResolved, value, deselectable]);
+  }, [
+    inputId,
+    inputType,
+    checked,
+    isPlaceholder,
+    readOnlyResolved,
+    value,
+    deselectable,
+  ]);
 
   return (
     <Next
@@ -735,6 +816,7 @@ const ListItemSelectable = (props) => {
       pseudoClasses={SELECTABLE_PSEUDO_CLASSES}
       basePseudoState={{
         ":-navi-selected": checked,
+        ":-navi-placeholder": isPlaceholder,
         ":-navi-pointed": pointed,
         ...basePseudoState,
       }}
@@ -771,6 +853,7 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":-navi-loading",
   ":-navi-pointed",
   ":-navi-selected",
+  ":-navi-placeholder",
 ];
 const SelectableRealInput = (props) => {
   // here for some reason we can't use <Input, so instead we use <Box
@@ -798,12 +881,15 @@ const SELECTABLE_INPUT_PSEUDO_CLASSES = [
 ];
 
 const SelectableInputProxy = (props) => {
-  const selectableRealInputProps = useContext(SelectableRealInputContext);
-  if (!selectableRealInputProps) {
+  const realInputState = useContext(SelectableRealInputContext);
+  if (!realInputState) {
     throw new Error(
       "SelectableInput must be used within a row of a selectable List",
     );
   }
+  // The item's placeholder state is drawn by the item, not by the mark.
+  // eslint-disable-next-line no-unused-vars
+  const { placeholder, ...selectableRealInputProps } = realInputState;
 
   // Reset FieldToInterfaceContext to ensure we don't read id or report our
   // states (real input should take id and report)

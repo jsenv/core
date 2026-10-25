@@ -43,7 +43,11 @@ Live examples: `src/control/demos/15_group_demo.html`.
 - **Seams**: a member with a member before it is pulled back by one border
   width, so the two borders along a seam become one line — the member's own
   `--border-width` when it declares one, else the group's `--group-border-width`
-  (default: `--navi-control-border-width`).
+  (default: `--navi-control-border-width`). Members that draw no border have
+  no line to share: `seamColor` (and `seamWidth`, 1px by default) sets them
+  that far apart and paints the gap — `<SplitButton seamColor="…">` for two
+  borderless halves. In css, `--group-seam-color` and `--group-seam-width`,
+  set on the group or around it.
 - **Corners**: a member loses the radius on each side where it faces another
   member. A single member keeps its own radius — a group of one looks like the
   control alone.

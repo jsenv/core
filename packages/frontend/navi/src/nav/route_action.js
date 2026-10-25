@@ -8,6 +8,7 @@ import { prerunUnwatched } from "../action/run_unwatched.js";
 import {
   getKeptReadKey,
   isKeepableRead,
+  shownRangeReadersSignal,
   takeKeptRead,
 } from "../state/rest/kept_reads.js";
 import { readStateAsIf } from "../state/state_signal.js";
@@ -78,16 +79,19 @@ export const routeActionYetToAskSignal = computed(() => {
 
 let activeRouteReadsPrevious = new Set();
 /**
- * `activeRouteActionsSignal` without the page's code: what to rerun to read
- * the page on screen again, the app back from the background. A page's code
- * has nothing to read again — a module does not change until a deploy — and
- * rerunning it is not free: a page reading its code the delegated way
- * (`useAsyncData(CODE)` under a `<Loading>`) leaves the document for the frame
- * the import takes, and its lists lose their scroll position.
+ * What to hand `rerunActions` to read the page on screen again, the app back
+ * from the background: `activeRouteActionsSignal` without the page's code, and
+ * the `GET_RANGE` readers the `<List.Items>` on screen read through — rerun, a
+ * reader revalidates (its lists ask again for the window they draw, their rows
+ * kept).
  *
- * Code is told by its answer: a function (the page component) or a module
- * namespace. An import that failed has none and stays in the set; rerun, it
- * fails again at once, since the document refuses a module it failed to fetch.
+ * A page's code has nothing to read again — a module does not change until a
+ * deploy — and rerunning it is not free: a page reading its code the delegated
+ * way (`useAsyncData(CODE)` under a `<Loading>`) leaves the document for the
+ * frame the import takes, and its lists lose their scroll position. Code is
+ * told by its answer: a function (the page component) or a module namespace.
+ * An import that failed has none and stays in the set; rerun, it fails again
+ * at once, since the document refuses a module it failed to fetch.
  *
  * @type {import("@preact/signals").ReadonlySignal<Set<object>>}
  */
@@ -98,6 +102,9 @@ export const activeRouteReadsSignal = computed(() => {
       continue;
     }
     reads.add(routeAction);
+  }
+  for (const rangeReader of shownRangeReadersSignal.value.keys()) {
+    reads.add(rangeReader);
   }
   if (haveSameMembers(reads, activeRouteReadsPrevious)) {
     return activeRouteReadsPrevious;

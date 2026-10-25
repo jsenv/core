@@ -45,7 +45,10 @@ import { useStableCallback } from "../../utils/use_stable_callback.js";
 import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { ControlIdContext } from "../control_context.js";
 import { isControlValueGivenByProps } from "../control_hooks.jsx";
-import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
+import {
+  commitUIStateAsAnswer,
+  isUIStateHeldPartByPart,
+} from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { createOpenToken } from "../rules/control_callout.js";
 import {
@@ -508,11 +511,12 @@ const PickerCustom = (props) => {
       let valueAtOpen = getPickerInputUIState(ref.current);
       // Whether that value is an ANSWER or only a suggestion. A picker showing
       // a defaultValue holds nothing, so closing on it untouched IS the answer
-      // ("yes, 2h15") — the same rule Form applies to an untouched field (see
-      // isUIStateHeld). Read at open, before anything inside can change it.
+      // ("yes, 2h15") — the same rule Form applies to an untouched field, part
+      // by part (see isUIStateHeldPartByPart). Read at open, before anything
+      // inside can change it.
       const pickerInput = getPickerInput(ref.current);
       const pickerController = pickerInput?.__uiStateController__;
-      let heldAtOpen = isUIStateHeld(pickerController);
+      let heldAtOpen = isUIStateHeldPartByPart(pickerController);
       // What a cancel must not take back: see followOutsideSinceOpen.
       const statesAtOpen = pickerController
         ? readStatesAtOpen(pickerController)
@@ -532,7 +536,7 @@ const PickerCustom = (props) => {
           return;
         }
         valueAtOpen = e.detail.value;
-        heldAtOpen = isUIStateHeld(pickerController);
+        heldAtOpen = isUIStateHeldPartByPart(pickerController);
       };
       pickerInput?.addEventListener(
         "navi_ui_state_change",
@@ -1446,8 +1450,10 @@ const PickerContentInsidePopup = (props) => {
             isPopover ? undefined : dockedOnSmallTouchScreen
           }
           sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
-          lift={isPopover ? undefined : lift}
-          liftAnchor={isPopover ? undefined : liftAnchor}
+          // A popover lifts on its close only (animation={{ open, close:
+          // "lifting" }}), which is all these two are read for there.
+          lift={lift}
+          liftAnchor={liftAnchor}
         >
           {/* Let the popup content branch on the mode via usePopupMode(). */}
           <PopupModeContext.Provider value={mode}>

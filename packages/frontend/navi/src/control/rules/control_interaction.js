@@ -30,7 +30,11 @@ import { isAimedAtSelfInteractionsBelow } from "../self_interactions.js";
 import { preventClickToExpand } from "./click_to_expand.js";
 import { getConstraintMessage } from "./constraint_message.js";
 import { createOpenToken } from "./control_callout.js";
-import { BUSY_CONSTRAINT } from "./interaction/busy_constraint.js";
+import { busyAbortMessage } from "./interaction/busy_abort_message.js";
+import {
+  BUSY_CONSTRAINT,
+  abortControlRun,
+} from "./interaction/busy_constraint.js";
 import { DISABLED_CONSTRAINT } from "./interaction/disabled_constraint.js";
 import { READONLY_CONSTRAINT } from "./interaction/readonly_constraint.js";
 
@@ -214,12 +218,17 @@ export const createControlInteraction = (
       event,
       `reportInteractivity (${interactionFailedConstraintInfo.name})`,
     );
-    const { message } = getConstraintMessage(
+    let { message } = getConstraintMessage(
       controller,
       interactionFailedConstraintInfo.constraint,
       interactionFailedConstraintInfo.message,
       {},
     );
+    if (interactionFailedConstraintInfo.abortable) {
+      message = busyAbortMessage(message, () => {
+        abortControlRun(controller, "called off from the busy control");
+      });
+    }
     callout.addOpenToken(INTERACTION_TOKEN, {
       message,
       status: interactionFailedConstraintInfo.status,

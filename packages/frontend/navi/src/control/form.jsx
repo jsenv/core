@@ -51,9 +51,17 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   notification, an action whose duplicates are fine. See also
  *   `readOnlyWhileFormUnchanged` on `Button`, for a submit that should say it
  *   is waiting rather than accept a press that sends nothing.
+ * @param {"POST"|"PUT"|"PATCH"|"DELETE"} [props.actionVerb] - What a plain
+ *   function `action` does to the server. A write verb puts the form under the
+ *   network policy: its fields and its submit held read-only up front, with the
+ *   policy's message, instead of failing after the press
+ *   (docs/network_policy.md). An action bound to a resource verb says it
+ *   already. A form whose function writes one verb or another depending on what
+ *   it holds says either: the policy only asks whether it writes.
  * @param {boolean} [props.actionAbortable] - The person waiting may give up on
  *   the send: closing the popup this form holds calls the run off and goes
- *   through, instead of being refused. For a send whose answer may never come —
+ *   through, instead of being refused, and a press on its busy submit answers
+ *   « in progress » with a way to call it off. For a send whose answer may never come —
  *   a request over a network that stops answering — where a sheet with no way
  *   out is worse than an answer lost. Aborting frees the client and nothing
  *   more: the write may already have landed on the other side (see

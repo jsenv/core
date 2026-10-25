@@ -312,6 +312,73 @@ export const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
  * more — and once the data arrives the subtree is rebuilt from scratch, closed
  * and empty. Nothing is thrown, nothing is drawn, and the press is lost.
  */
+// What a Picker calls its popup's props, and what the popup itself calls them:
+// a Picker's own name for a popup prop is prefixed (dialogMaxWidth), because
+// the bare name already says something about the picker. A sheet moved out of
+// a Picker into a Dialog of its own keeps the Picker's names, and they would
+// do nothing — written on the element as stray attributes.
+const PICKER_POPUP_PROP_NAMES = {
+  dialogMinWidth: "minWidth",
+  dialogMinHeight: "minHeight",
+  dialogMaxWidth: "maxWidth",
+  dialogMaxHeight: "maxHeight",
+  dialogExpand: "expand",
+  dialogExpandX: "expandX",
+  dialogExpandY: "expandY",
+  dialogSizeFromAnchor: "sizeFromAnchor",
+  dialogBorderWidth: "borderWidth",
+  popoverMaxHeight: "maxHeight",
+  popoverSpacing: "marginWithAnchor",
+  popoverMode: "positionArea",
+  // Undoes the trigger's width as the popover's floor, which only a Picker's
+  // popover has: anything else is as wide as its content already.
+  popupWidthFitContent: null,
+  popupBackgroundColor: "backgroundColor",
+  popupBorderRadius: "borderRadius",
+  popupBoxShadow: "boxShadow",
+  popupLayer: "layer",
+  popupTestId: "data-testid",
+  popupAriaLabel: "aria-label",
+  popupAriaLabelledBy: "aria-labelledby",
+  popupAriaDescribedBy: "aria-describedby",
+};
+const PICKER_POPUP_PROP_NAME_LIST = Object.keys(PICKER_POPUP_PROP_NAMES);
+let warnedPickerPopupPropSet = null;
+const warnPickerPopupPropDev = (componentName, name) => {
+  warnedPickerPopupPropSet = warnedPickerPopupPropSet || new Set();
+  const key = `${componentName}:${name}`;
+  if (warnedPickerPopupPropSet.has(key)) {
+    return;
+  }
+  warnedPickerPopupPropSet.add(key);
+  const ownName = PICKER_POPUP_PROP_NAMES[name];
+  console.warn(
+    ownName
+      ? `[navi] ${componentName}: "${name}" is a Picker's name for its popup's "${ownName}" — on a ${componentName}, write "${ownName}". "${name}" is ignored.`
+      : `[navi] ${componentName}: "${name}" is a Picker's prop for its popup, and means nothing on a ${componentName}: it is as wide as its content unless "minWidth" says otherwise. "${name}" is ignored.`,
+  );
+};
+const warnPickerPopupProp = import.meta.dev ? warnPickerPopupPropDev : () => {};
+/**
+ * `props` without the names only a Picker gives its popup (see
+ * PICKER_POPUP_PROP_NAMES), said once per name in dev. The same object when it
+ * holds none, which is every render of a popup written with its own names.
+ */
+export const dropPickerPopupProps = (props, componentName) => {
+  let propsWithout = null;
+  for (const name of PICKER_POPUP_PROP_NAME_LIST) {
+    if (props[name] === undefined) {
+      continue;
+    }
+    warnPickerPopupProp(componentName, name);
+    if (propsWithout === null) {
+      propsWithout = { ...props };
+    }
+    delete propsWithout[name];
+  }
+  return propsWithout || props;
+};
+
 export const warnPopupHasNoElementToOpen = (popupKind) => {
   console.warn(
     `[navi] a "${popupKind}" was asked to open and has no element to open. What usually did it: content inside it suspended, and the <Loading> that caught the wait is above the popup rather than inside it — the popup was set aside with the rest of what that boundary holds, and this opening is lost (the next one works). Put a <Loading> inside the popup, or draw the wait in the component itself with useAsyncData(action, { loading: true }).`,

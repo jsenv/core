@@ -52,7 +52,7 @@
  * a [data-horizontal] variant.
  */
 
-import { useSignal } from "@preact/signals";
+import { signal, useSignal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 import {
@@ -242,6 +242,14 @@ const css = /* css */ `
     /* NO will-change: transform. translate3d already composites the track;
        will-change additionally pins it to its own layer, which the glass panes'
        backdrop-filter then samples with a bright fringe (halo) around each glyph. */
+  }
+
+  /* A row past the bounds of its group (see WheelGroup's min/max): still
+     there to scroll through, drawn pale like a chevron with nothing that way —
+     landing on it brings the group back to the bound. Mixed from the ink it
+     inherits, so it fades in either layer. */
+  .navi_wheel_item[data-unavailable] {
+    color: color-mix(in srgb, currentColor 35%, transparent);
   }
 
   /* type is informative metadata; a couple of types get a rendering hint.
@@ -1287,6 +1295,17 @@ function WheelUI(props) {
   const showZoom = Boolean(zoomResolved);
   const zoomFactor =
     typeof zoomResolved === "number" ? zoomResolved : undefined;
+  // A group bounded on its whole value (WheelGroup min/max) is told what this
+  // wheel holds, and answers which of its rows go past the bound.
+  const bounds = group?.bounds;
+  const name = props.name;
+  const boundsTracked = Boolean(bounds && name);
+  if (boundsTracked) {
+    bounds.register(name, ref);
+  }
+  const isRowUnavailable = boundsTracked
+    ? (value) => bounds.isRowPastBound(name, value)
+    : undefined;
 
   // Collect every Wheel.Item's {value, label, itemProps} in order, robustly
   // (children may be wrapped). This ordered list is the source of truth for the
@@ -1478,7 +1497,16 @@ function WheelUI(props) {
   const onUIStateChange = (e) => {
     const setRequest = findEvent(e, "navi_set_ui_state");
     pendingBehaviorRef.current = setRequest ? setRequest.detail.behavior : null;
+    if (boundsTracked) {
+      bounds.report(name, e.detail.value);
+    }
   };
+  // What the wheel starts on, which no change announces.
+  useLayoutEffect(() => {
+    if (boundsTracked) {
+      bounds.report(name, currentValueRef.current);
+    }
+  });
   // The glide loop is bound once (mount effect) but the speed can change live
   // (e.g. a demo control) — read it through a ref so it uses the latest.
   const glideSpeedRef = useRef(glideSpeed);
@@ -2141,6 +2169,7 @@ function WheelUI(props) {
               visibleCount={visibleCount}
               tracker={tracker}
               isLoop={isLoop}
+              isRowUnavailable={isRowUnavailable}
               onBaseCommit={commitRenderedBase}
             />
           </ul>
@@ -2156,6 +2185,7 @@ function WheelUI(props) {
               visibleCount={visibleCount}
               tracker={tracker}
               isLoop={isLoop}
+              isRowUnavailable={isRowUnavailable}
             />
           </ul>
         </div>
@@ -2195,6 +2225,7 @@ const WheelWindow = ({
   visibleCount,
   tracker,
   isLoop,
+  isRowUnavailable,
   onBaseCommit,
 }) => {
   // Subscribing is what re-renders this window when items are added or removed
@@ -2234,6 +2265,9 @@ const WheelWindow = ({
         key={slot}
         {...item.itemProps}
         baseClassName="navi_wheel_item"
+        data-unavailable={
+          isRowUnavailable && isRowUnavailable(item.value) ? "" : undefined
+        }
       >
         {item.label}
       </Box>,
@@ -2284,9 +2318,19 @@ Wheel.Item = WheelItem;
  *
  * @type {import("preact").FunctionComponent<{
  *   horizontal?: boolean,
+ *   min?: { [wheelName: string]: any },
+ *   max?: { [wheelName: string]: any },
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {{ [wheelName: string]: any }} [props.min] - The smallest value the
+ *   wheels may make together, said part by part — `{ hours: 0, minutes: 15 }`
+ *   for "15 minutes at least". Compared in the order the wheels stand, each
+ *   part with `<`, so a later part only counts while the earlier ones sit on
+ *   the bound; a part the bound leaves out allows anything. The rows that would
+ *   go past it are drawn pale, and a wheel landing past it brings the group
+ *   back to it: with the hours on 0, the minute wheel landing on 0 glides to
+ *   15. `max` is its twin ("21:00 at the latest").
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
@@ -2300,10 +2344,37 @@ export const WheelGroup = (props) => {
   // props are consumed here; the rest flow into the group hook.
   // `spacing` is NOT consumed here — it flows through to the underlying Box as a
   // plain flex gap between the wheels/separators (not a wheel concept).
-  const { horizontal, glass, frameBorder, zoom, style } = props;
+  const { horizontal, glass, frameBorder, zoom, min, max, style } = props;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   const groupRef = props.ref;
+  const boundsRef = useRef(null);
+  const bounded = min !== undefined || max !== undefined;
+  if (bounded && !boundsRef.current) {
+    boundsRef.current = createWheelGroupBounds();
+  }
+  const bounds = bounded ? boundsRef.current : null;
+  if (bounds) {
+    bounds.min = min;
+    bounds.max = max;
+  }
+  // Brought back to the bound as a wheel settles past it, and before anything
+  // hears that settle: in the capture phase, ahead of a listener on this very
+  // element (TimeRangeWheel reading the whole time to keep its bounds apart),
+  // and ahead of the action the wheel sends right after.
+  useLayoutEffect(() => {
+    if (!bounds) {
+      return undefined;
+    }
+    const el = groupRef.current;
+    const onSettle = (e) => {
+      bounds.bringBackWithin(e);
+    };
+    el.addEventListener("navi_wheel_settle", onSettle, true);
+    return () => {
+      el.removeEventListener("navi_wheel_settle", onSettle, true);
+    };
+  }, [bounds]);
 
   // Named wheels aggregate into { hours, minutes, … }; a nameless wheel warns
   // (name it or it won't be in the value), same as any control group.
@@ -2386,6 +2457,8 @@ export const WheelGroup = (props) => {
       glass={undefined}
       frameBorder={undefined}
       zoom={undefined}
+      min={undefined}
+      max={undefined}
       aggregateChildStates={undefined}
       distributeChildUIState={undefined}
       distributeChildStates={undefined}
@@ -2395,7 +2468,7 @@ export const WheelGroup = (props) => {
       pseudoClasses={WHEEL_GROUP_PSEUDO_CLASSES}
     >
       <WheelGroupContext.Provider
-        value={{ glass, frameBorder, zoom, horizontal }}
+        value={{ glass, frameBorder, zoom, horizontal, bounds }}
       >
         <ControlgroupChildrenWrapper
           {...childrenWrapperProps}
@@ -2454,3 +2527,108 @@ const WheelColon = (props) => {
   );
 };
 Wheel.Colon = WheelColon;
+
+// What a WheelGroup bounded on its whole value knows about its wheels: their
+// order (the order they first render in, which is the order they stand in),
+// what each holds, and where each is — to say which rows go past the bound,
+// and to bring a wheel back to it. The parts are a signal so a wheel's rows
+// are drawn again when another wheel of the group moves.
+const createWheelGroupBounds = () => {
+  const names = [];
+  const refByName = new Map();
+  const partsSignal = signal({});
+
+  const bounds = {
+    min: undefined,
+    max: undefined,
+    register: (name, ref) => {
+      if (!refByName.has(name)) {
+        names.push(name);
+      }
+      refByName.set(name, ref);
+    },
+    report: (name, value) => {
+      const parts = partsSignal.peek();
+      if (compareTwoJsValues(parts[name], value)) {
+        return;
+      }
+      partsSignal.value = { ...parts, [name]: value };
+    },
+    // A row is past the bound when the value as far as that wheel — the wheels
+    // before it as they stand, this row in place of this wheel — already is:
+    // the wheels after it cannot bring it back.
+    isRowPastBound: (name, value) => {
+      const index = names.indexOf(name);
+      if (index === -1) {
+        return false;
+      }
+      // Read only when there are wheels before this one: the first wheel's
+      // rows do not depend on the others, and need not be drawn again with them.
+      const parts = index === 0 ? {} : partsSignal.value;
+      const prefixNames = names.slice(0, index + 1);
+      const prefix = { ...parts, [name]: value };
+      return (
+        comparePartsWithBound(prefix, bounds.min, prefixNames) < 0 ||
+        comparePartsWithBound(prefix, bounds.max, prefixNames) > 0
+      );
+    },
+    // Each wheel whose part differs from the bound's glides to it — said as a
+    // value set from outside ("smooth"), so its arrival is no settle of its
+    // own and runs no action: the wheel that settled past the bound runs it,
+    // on the value brought back.
+    bringBackWithin: (e) => {
+      const parts = partsSignal.peek();
+      let bound;
+      if (comparePartsWithBound(parts, bounds.min, names) < 0) {
+        bound = bounds.min;
+      } else if (comparePartsWithBound(parts, bounds.max, names) > 0) {
+        bound = bounds.max;
+      } else {
+        return;
+      }
+      for (const name of names) {
+        if (!Object.prototype.hasOwnProperty.call(bound, name)) {
+          continue;
+        }
+        if (compareTwoJsValues(parts[name], bound[name])) {
+          continue;
+        }
+        const wheelEl = refByName.get(name).current;
+        if (!wheelEl) {
+          continue;
+        }
+        dispatchRequestSetUIState(wheelEl, bound[name], {
+          event: e,
+          behavior: "smooth",
+        });
+      }
+    },
+  };
+  return bounds;
+};
+
+// Where the parts stand against a bound, part by part in `names` order: -1
+// below it, 1 past it, 0 within. A part the bound leaves out, or one a wheel
+// holds nothing for, ends the comparison — nothing after it can say more.
+const comparePartsWithBound = (parts, bound, names) => {
+  if (!bound) {
+    return 0;
+  }
+  for (const name of names) {
+    if (!Object.prototype.hasOwnProperty.call(bound, name)) {
+      return 0;
+    }
+    const part = parts[name];
+    if (part === undefined || part === null || part === "") {
+      return 0;
+    }
+    const boundPart = bound[name];
+    if (part < boundPart) {
+      return -1;
+    }
+    if (part > boundPart) {
+      return 1;
+    }
+  }
+  return 0;
+};

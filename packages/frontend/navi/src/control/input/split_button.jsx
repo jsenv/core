@@ -119,6 +119,8 @@ const css = /* css */ `
  *   escapeEffect?: "cancel" | "close",
  *   popupLayer?: "top" | "local",
  *   popupTestId?: string,
+ *   seamColor?: string,
+ *   seamWidth?: number | string,
  *   [key: string]: any,
  * }>}
  * @param {Array<{value: any, label: import("preact").ComponentChildren}>} options
@@ -165,6 +167,8 @@ const css = /* css */ `
  *   the whole split button in popover mode, relative to the viewport in dialog
  *   mode. Same grammar as Picker/Popover. The default only applies to a
  *   popover; a dialog keeps Dialog's own "center".
+ * @param {string} [seamColor] The line folding the two halves when they draw no
+ *   border (Group's `seamColor`); `seamWidth` its thickness, 1px by default.
  *
  * Every other prop the Picker's popup answers to is forwarded as-is —
  * `dockedOnSmallTouchScreen`, `dialogExpand*`, `dialogMinWidth`/`Height`,
@@ -217,6 +221,8 @@ export const SplitButton = (props) => {
     borderColor,
     borderWidth,
     borderRadius,
+    seamColor,
+    seamWidth,
     // A split button is a frame the user's eye reads as one box; the left half
     // shrinking under the finger while the right half stays put breaks it.
     pressEffect = "none",
@@ -316,7 +322,7 @@ export const SplitButton = (props) => {
         inset={-1}
         color="var(--button-loader-color)"
       />
-      <Group>
+      <Group seamColor={seamColor} seamWidth={seamWidth}>
         <Button
           id={idResolved}
           value={valueResolved}

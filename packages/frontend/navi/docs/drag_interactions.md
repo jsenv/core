@@ -15,6 +15,7 @@ stands in a box that travels is in [drag_to_travel.md](./drag_to_travel.md).
   - [Saying the grab is acquired: `grab`](#saying-the-grab-is-acquired-grab)
   - [Saying the hold is let go: `release`](#saying-the-hold-is-let-go-release)
   - [The hand pulls and nothing follows: `refuse`](#the-hand-pulls-and-nothing-follows-refuse)
+  - [Answered at once: `optimistic`](#answered-at-once-optimistic)
   - [A press made elsewhere: `--navi-grab`](#a-press-made-elsewhere---navi-grab)
   - [Dressing the clone](#dressing-the-clone)
   - [What says a thing can be picked up](#what-says-a-thing-can-be-picked-up)
@@ -51,17 +52,23 @@ What each one is told, in `event.detail` beside `event` — the `pointerdown` th
 carry began with, for the release as well (unlike a swipe's), except for
 [a press handed over](#a-press-made-elsewhere---navi-grab):
 
-| interaction      | `event.detail`                                                   |
-| ---------------- | ---------------------------------------------------------------- |
-| `move`, `moving` | `{ x, y }`, how far from the grab: once, or on every frame       |
-| `reorder`        | `{ fromId, toId, syncCloneWithDropTarget }`                      |
-| `land`           | `{ fromId, toId, x, y, width, height, syncCloneWithDropTarget }` |
-| `toss`           | `{ id, velocity, x, y }`                                         |
-| `leave`          | `{ id, x, y }`                                                   |
-| `grab`           | `{ pointerType, gestureInfo }`                                   |
-| `release`        | `{ id, x, y, outcome }`                                          |
-| `settle`         | `{ id, outcome, refused }`                                       |
-| `refuse`         | `{ pointerType }`                                                |
+| interaction      | `event.detail`                                                                   |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `move`, `moving` | `{ x, y, velocityX, velocityY }`, how far from the grab: once, or on every frame |
+| `reorder`        | `{ fromId, toId, syncCloneWithDropTarget }`                                      |
+| `land`           | `{ fromId, toId, x, y, width, height, syncCloneWithDropTarget }`                 |
+| `toss`           | `{ id, velocity, x, y }`                                                         |
+| `leave`          | `{ id, x, y }`                                                                   |
+| `grab`           | `{ pointerType, gestureInfo }`                                                   |
+| `release`        | `{ id, x, y, velocityX, velocityY, outcome }`                                    |
+| `settle`         | `{ id, outcome, refused }`                                                       |
+| `refuse`         | `{ pointerType }`                                                                |
+
+`velocityX` and `velocityY` are the hand's, signed, in px/ms, measured on the
+events' own timestamps over the trailing window a `toss` is judged on: finishing
+a pull at the speed it was let go — a curtain opening the rest of its way — reads
+them rather than timing frames at handler time, which a busy main thread slows
+down.
 
 Items and places are named by their `id`. **What an outcome returns is waited
 on**: the gesture holds what it carries until that promise settles, and a
@@ -270,6 +277,15 @@ scrolls by default and an `overflow` is one property away — and guessing it wr
 this way means the list runs away under the finger that meant to reorder it. You
 know you took the scroll away; say so.
 
+**A source that walks one axis takes only that one**, so it may be taken on
+contact in a page that scrolls the other way: a handle pulled sideways
+(`data-drag-axis="x"`) leaves the vertical scroll to the browser, and a finger
+whose first pixels go clearly up or down is the page's scroll that landed on the
+handle — it is given back before the browser decides, and the page scrolls. A
+thumb pulling sideways arcs, and leans that way at first: across has to win by
+far to be the scroll's. A source walking both axes has nothing to leave, and
+takes the whole finger.
+
 ### Landing on a place: `land`
 
 `reorder` and `land` both come down on an item, and what separates them is **what
@@ -465,6 +481,20 @@ is answered. `refuse` is told then, where feedback is expected, with no
 asked — a vibration for a finger, nothing extra for a mouse whose cursor has
 already said it. One outcome refusing refuses the whole carry.
 
+Two things refuse a carry the same way, at the same instant, without being
+declared. **A control around the element that a write would not get through** —
+disabled, read-only, busy — says why in its own words, as it answers a press:
+every outcome goes through its gate (see
+[interactions.md](./interactions.md#reaching-the-control)), and asked only at
+the release it would let the hand carry the thing across the board before saying
+it was never free to go. `refuse` is not told then: it would be one more
+interaction the gate turns down. **An outcome declaring what it writes** —
+`reorder: { answer: saveOrder, verb: "PUT" }` — is held by a
+[network policy](./network_policy.md) holding writes: the policy's words are
+said, and `refuse` is told. Declared without its verb, an outcome plays to the
+end offline and the write it calls is refused after, said on the element once it
+is home.
+
 **It walks no axis, so it takes none.** Whatever reads what a drag source walks
 to know what is left for itself — a box that travels, a surface that pans — steps
 over an element that is refusing: a swipe starting on a locked row is the row of
@@ -480,6 +510,55 @@ answer afterwards, and the click the release leaves behind is swallowed. The
 exception is a box declaring `pan`/`zoom`, the one thing that takes a press whole
 and in every direction: there the surface keeps it, and the refusal is told
 without taking anything — no pointer, no click, nothing prevented.
+
+### Answered at once: `optimistic`
+
+A `reorder` or a `land` usually answers in two halves: it draws the new state —
+inside a view transition, the copy coming down on its place — then writes it.
+Held for the whole answer, the copy hangs in the air for the length of the
+request, and a second drop waits on the first. Where the screen IS the state —
+a player already stands on the seat they were put on — the answer is declared
+optimistic:
+
+```jsx
+const startViewTransition = ensureDocumentStartViewTransition();
+
+<Seat
+  interactions={{
+    land: {
+      optimistic: true,
+      answer: async (event) => {
+        const move = moveOf(event.detail);
+        await startViewTransition(() => {
+          event.detail.syncCloneWithDropTarget();
+          applyMove(move);
+        }).finished;
+        try {
+          await GAME.PATCH(move);
+        } catch (error) {
+          undoMove(move);
+          throw error;
+        }
+      },
+    },
+  }}
+/>;
+```
+
+The carry is over once the answer has **drawn**: when the transition it started
+has finished — started through the function `ensureDocumentStartViewTransition()`
+returns, before the answer's first `await`, which is how navi sees it — or a
+couple of frames after the answer ran when it started none. The copy is gone and
+the element shown where the answer drew it. What the answer returns is the
+**write**: the element wears `data-optimistic` until it settles, `settle` is told
+then, and a rejection is said on the element, where it stands — after the answer
+has put its own state back, as above. A write refused before the drawing is over
+sends the copy home like any refused carry. Nothing waits on a write still out:
+the next drop is answered on its own, so an answer that replays its moves over
+the state it was given keeps two drops in a row in order.
+
+Only `reorder` and `land`: a `move` hands its position over when the answer is
+in, and a throw has nothing to draw at once.
 
 ### A press made elsewhere: `--navi-grab`
 

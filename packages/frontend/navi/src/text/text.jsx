@@ -9,6 +9,7 @@ import {
   isSizeSpacingKey,
   stringifySpacingStyle,
 } from "../box/box_style_util.js";
+import { BadgeMark, BadgeMarkLabel } from "../graphic/badge_mark.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { TextAnchor } from "./text_anchor.jsx";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
@@ -280,6 +281,11 @@ const css = /* css */ `
       text-rendering: optimizeLegibility;
     }
   }
+  /* What its badge mark is placed against. */
+  .navi_icon[data-badge],
+  [data-icon-text][data-badge] {
+    position: relative;
+  }
 
   /* A block icon whose width follows from its height through the aspect ratio
      has nothing for max-width: 100% to measure against when the parent is
@@ -504,6 +510,7 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   bold?: boolean,
  *   noWrap?: boolean,
  *   maxLines?: number,
+ *   onTruncatedChange?: (truncated: boolean) => void,
  *   spacing?: string | number | import("preact").ComponentChildren,
  *   loading?: boolean,
  *   skeleton?: boolean,
@@ -531,6 +538,15 @@ const shouldInjectSpacingBetween = (left, right) => {
  *   Truncation only happens if the element may become narrower than its
  *   content: `maxLines` sets `min-width: 0` here, but each `Box` between this
  *   one and the element that carries the width must set it too.
+ *
+ * @param {(truncated: boolean) => void} [onTruncatedChange]
+ *   Told whether `maxLines` cuts the text: once measured, then each time the
+ *   answer changes — the text changing, the box resizing (a rotation, a wider
+ *   column), a font arriving late. For a cut text that opens the whole of it
+ *   on a press, and only when something is actually cut. While it is cut the
+ *   element also wears `data-truncated`, for a rule to read. Nothing is
+ *   measured or observed unless this is given; without `maxLines` nothing is
+ *   ever cut.
  *
  * @param {string|number} [spacing]
  *   Separator injected between child nodes. Accepts a size token (`"s"`, `"m"`, …),
@@ -606,6 +622,9 @@ export const Text = (props) => {
           : { ...props, noWrap: false };
     }
   }
+  if (props.onTruncatedChange) {
+    return <TextReportingTruncation {...props} />;
+  }
   if (props.loading || props.skeleton) {
     return <TextSkeleton {...props} />;
   }
@@ -669,6 +688,64 @@ const TextShrinkWrap = (props) => {
   return (
     <Text {...props} ref={ref} data-shrinkwrap="" shrinkWrap={undefined} />
   );
+};
+// Whether the text is cut is read on the axis navi cuts it on: one line ends
+// in an ellipsis on the inline axis, n lines are clamped on the block one. The
+// 1px is the rounding of a box that exactly fits.
+const isTextTruncated = (element, maxLines) => {
+  if (maxLines === 1 || maxLines === "1") {
+    return element.scrollWidth - element.clientWidth > 1;
+  }
+  if (maxLines > 1) {
+    return element.scrollHeight - element.clientHeight > 1;
+  }
+  return false;
+};
+const TextReportingTruncation = ({ onTruncatedChange, ...props }) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const truncatedRef = useRef();
+  const onTruncatedChangeRef = useRef();
+  onTruncatedChangeRef.current = onTruncatedChange;
+  const maxLinesRef = useRef();
+  maxLinesRef.current = props.maxLines;
+
+  const measure = () => {
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+    const truncated = isTextTruncated(element, maxLinesRef.current);
+    if (truncated === truncatedRef.current) {
+      return;
+    }
+    truncatedRef.current = truncated;
+    // Written here rather than rendered: a render answering a measure would
+    // measure again.
+    element.toggleAttribute("data-truncated", truncated);
+    onTruncatedChangeRef.current(truncated);
+  };
+
+  // Every render: the text, or the number of lines, may have changed in a box
+  // that did not.
+  useLayoutEffect(measure);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    // The box resizing (a rotation, a wider column) changes the answer for the
+    // same text, and so does a font arriving after the first measure.
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(element);
+    document.fonts.addEventListener("loadingdone", measure);
+    return () => {
+      resizeObserver.disconnect();
+      document.fonts.removeEventListener("loadingdone", measure);
+    };
+  }, []);
+
+  return <Text {...props} ref={ref} />;
 };
 const TextUI = (props) => {
   import.meta.css = css;
@@ -909,6 +986,20 @@ const TextWithSelectRange = ({ ref, selectRange, ...props }) => {
  *   `"x"` when the icon is sized.
  * @param {boolean} [props.grid] - Forces block/grid layout.
  * @param {string} [props.className] - Merged with the base `"navi_icon"` class.
+ * @param {boolean|import("preact").ComponentChildren} [props.badge] - A mark
+ *   across the top-right corner of the icon saying something waits there (a
+ *   bell's unseen notifications). `true` draws a dot sized on the icon (40% of
+ *   it); anything else (`<BadgeCount>`, an svg of the app's) is drawn there as
+ *   given. Drawn from the state, so `badge={unseenCount > 0}`. Read through
+ *   `--navi-badge-mark-color` (the accent), `--navi-badge-mark-size`,
+ *   `--navi-badge-mark-ring-color` (the paper) and
+ *   `--navi-badge-mark-ring-width`. The same mark on a `Button` or a `Link`
+ *   sits at the corner of their frame instead: on the icon is where it goes
+ *   when the button's press area is larger than its glyph.
+ * @param {string} [props.badgeLabel] - What the mark means, read after the
+ *   control's name ("Nouvelles notifications"). Without it the mark is
+ *   silent. Read only where the control is named by its content: one named by
+ *   `aria-label` takes the label on the `Button`/`Link` itself.
  */
 export const Icon = ({
   href,
@@ -919,6 +1010,8 @@ export const Icon = ({
   lineLayout,
   lineOverflow,
   fillLine,
+  badge,
+  badgeLabel,
   ...props
 }) => {
   import.meta.css = css;
@@ -955,23 +1048,26 @@ export const Icon = ({
   }
   const ariaProps = decorative ? { "aria-hidden": "true" } : {};
   const textRef = useRef();
+  const badgeMark = badge ? <BadgeMark badge={badge} on="icon" /> : null;
+  const badgeHost = badge ? "" : undefined;
 
+  let icon;
   if (typeof children === "string") {
-    return (
+    icon = (
       <Text
         {...props}
         {...ariaProps}
         data-icon-text=""
         data-line-overflow={lineOverflow}
         data-fill-line={fillLine ? "" : undefined}
+        data-badge={badgeHost}
+        childrenOutsideFlow={badgeMark}
       >
         {children}
       </Text>
     );
-  }
-
-  if (flex || grid) {
-    return (
+  } else if (flex || grid) {
+    icon = (
       <Box
         square
         {...props}
@@ -983,39 +1079,54 @@ export const Icon = ({
         data-interactive={onClick ? "" : undefined}
         data-line-overflow={lineOverflow}
         data-fill-line={fillLine ? "" : undefined}
+        data-badge={badgeHost}
         onClick={onClick}
       >
         {innerChildren}
+        {badgeMark}
       </Box>
     );
-  }
-
-  return (
-    <TextAnchor
-      childRef={textRef}
-      textAnchor={textAnchor}
-      textSize={props.size}
-      lineLayout={lineLayout}
-    >
-      <Text
-        {...props}
-        {...ariaProps}
-        className={withPropsClassName("navi_icon", props.className)}
-        spacing="pre"
-        data-icon-char=""
-        data-line-overflow={lineOverflow}
-        data-fill-line={fillLine ? "" : undefined}
-        data-width-fixed={widthFixed ? "" : undefined}
-        data-height-fixed={heightFixed ? "" : undefined}
-        data-interactive={onClick ? "" : undefined}
-        onClick={onClick}
-        ref={textRef}
+  } else {
+    icon = (
+      <TextAnchor
+        childRef={textRef}
+        textAnchor={textAnchor}
+        textSize={props.size}
+        lineLayout={lineLayout}
       >
-        <span style="user-select:none">&#8203;</span>
-        {innerChildren}
-      </Text>
-    </TextAnchor>
-  );
+        <Text
+          {...props}
+          {...ariaProps}
+          className={withPropsClassName("navi_icon", props.className)}
+          spacing="pre"
+          data-icon-char=""
+          data-line-overflow={lineOverflow}
+          data-fill-line={fillLine ? "" : undefined}
+          data-width-fixed={widthFixed ? "" : undefined}
+          data-height-fixed={heightFixed ? "" : undefined}
+          data-interactive={onClick ? "" : undefined}
+          data-badge={badgeHost}
+          onClick={onClick}
+          ref={textRef}
+          childrenOutsideFlow={badgeMark}
+        >
+          <span style="user-select:none">&#8203;</span>
+          {innerChildren}
+        </Text>
+      </TextAnchor>
+    );
+  }
+  if (badge && badgeLabel) {
+    // Beside the icon rather than in it: a decorative icon is aria-hidden, and
+    // the label must be heard all the same.
+    return (
+      <>
+        {icon}
+        <BadgeMarkLabel>{badgeLabel}</BadgeMarkLabel>
+      </>
+    );
+  }
+  return icon;
 };
 
 // On the string rather than with ::first-letter, which needs a block container:

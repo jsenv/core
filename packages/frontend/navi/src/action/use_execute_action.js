@@ -57,6 +57,7 @@ export const useExecuteAction = (
       target = undefined;
     }
     let message;
+    let status;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
       // Anything the chain below does not recognize — nothing returned, above
@@ -78,13 +79,16 @@ export const useExecuteAction = (
       ) {
         message = errorMappingResult.message || error.message;
         target = errorMappingResult.target || target;
+        // Read on the plain-object answer only: an Error often carries an HTTP
+        // `status` of its own, which says nothing about how to draw it.
+        status = readMappedStatus(errorMappingResult.status);
       }
     } else {
       message = error;
     }
     const controller = element.__uiStateController__;
     if (controller) {
-      setActionError(controller, message, { target });
+      setActionError(controller, message, { target, status });
     }
   };
   const removeErrorMessage = () => {
@@ -238,4 +242,20 @@ export const useExecuteAction = (
   );
 
   return executeAction;
+};
+
+const MAPPED_STATUS_SET = new Set(["error", "warning", "info"]);
+const readMappedStatus = (status) => {
+  if (status === undefined) {
+    return undefined;
+  }
+  if (MAPPED_STATUS_SET.has(status)) {
+    return status;
+  }
+  if (import.meta.dev) {
+    console.warn(
+      `errorMapping answered status "${status}": expected "error", "warning" or "info". Drawn as "error".`,
+    );
+  }
+  return undefined;
 };
