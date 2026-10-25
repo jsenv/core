@@ -47,8 +47,11 @@ const readLists = async () => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
+    // The run's budget ("jsenv:allocate") is the limit: under a full test run
+    // the first load, which cooks all of navi, outlasts Playwright's 30s.
     await page.goto(
       `${devServer.origin}/tests/list_run_after_declared_rows/client/main.html`,
+      { timeout: 0 },
     );
     await page.waitForSelector("#alone li");
     // A second ask, when there is one, goes out on the render that follows the

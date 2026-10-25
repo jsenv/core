@@ -47,7 +47,8 @@
     "executionEnd": "<X>",
     "teardownEnd": "<X>",
     "coverageTeardownEnd": "<X>",
-    "end": "<X>"
+    "end": "<X>",
+    "previousRunEnd": null
   },
   "rootDirectoryUrl": "base/",
   "patterns": [

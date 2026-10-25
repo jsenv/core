@@ -87,8 +87,11 @@ const openPage = async (query) => {
   });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // The run's budget ("jsenv:allocate") is the limit: under a full test run the
+  // first load, which cooks all of navi, outlasts Playwright's 30s.
   await page.goto(
     `${devServer.origin}/tests/list_reload_held_on_an_item/client/main.html?${query}`,
+    { timeout: 0 },
   );
   await page.waitForSelector("[navi-list-item-real]");
   await page.waitForTimeout(500);

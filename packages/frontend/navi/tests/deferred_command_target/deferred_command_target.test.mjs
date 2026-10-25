@@ -12,6 +12,8 @@
  * it replaces it.
  */
 
+"jsenv:allocate 60s";
+
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
@@ -72,7 +74,9 @@ const pressAndRead = async (page, id) => {
 
 const openPage = async () => {
   const page = await browser.newPage();
-  await page.goto(pageUrl);
+  // The run's budget ("jsenv:allocate") is the limit: under a full test run the
+  // first load, which cooks all of navi, outlasts Playwright's 30s.
+  await page.goto(pageUrl, { timeout: 0 });
   await settle(page);
   // The dev server covers the viewport when the workspace it serves has drifted
   // (a dependency installed at a version package.json does not ask for). It is

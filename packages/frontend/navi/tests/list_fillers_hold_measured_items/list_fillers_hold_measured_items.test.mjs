@@ -58,8 +58,11 @@ const openThread = async (search = "", { phone } = {}) => {
   });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // The run's budget ("jsenv:allocate") is the limit: under a full test run the
+  // first load, which cooks all of navi, outlasts Playwright's 30s.
   await page.goto(
     `${devServer.origin}/tests/list_fillers_hold_measured_items/client/main.html${search}`,
+    { timeout: 0 },
   );
   await page.waitForSelector("#thread [navi-list-item-real]");
   await page.evaluate(() => window.waitFrames(10)); // eslint-disable-line no-undef

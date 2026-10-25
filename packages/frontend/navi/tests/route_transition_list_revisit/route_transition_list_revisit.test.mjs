@@ -151,8 +151,11 @@ const openAndComeBack = async (
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
+    // The run's budget ("jsenv:allocate") is the limit: under a full test run
+    // the first load, which cooks all of navi, outlasts Playwright's 30s.
     await page.goto(
       `${devServer.origin}/tests/route_transition_list_revisit/client/${name}/${name}.html${search}`,
+      { timeout: 0 },
     );
     await page.waitForSelector(OPEN_ROW);
     await settle(page);

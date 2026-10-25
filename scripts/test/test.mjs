@@ -32,6 +32,10 @@ await executeTestPlan({
   executionTimings: true,
   parallel: {
     maxAhead: 1,
+    // A heavy execution (one allowed more than 30s) keeps about two cores busy,
+    // e.g. a navi browser test: its own dev server cooking all of navi plus a
+    // chromium. More than 4 of them at once outlast their budget.
+    maxHeavy: 4,
   },
   logs: {
     level: "info",

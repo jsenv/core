@@ -8,7 +8,7 @@
  *   has nothing to do, because an action with no params suspends forever.
  */
 
-"jsenv:allocate 30s";
+"jsenv:allocate 60s";
 
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
@@ -71,7 +71,9 @@ const settle = (page) => page.waitForTimeout(300);
 
 const openPage = async (url) => {
   const page = await browser.newPage();
-  await page.goto(url);
+  // The run's budget ("jsenv:allocate") is the limit: under a full test run the
+  // first load, which cooks all of navi, outlasts Playwright's 30s.
+  await page.goto(url, { timeout: 0 });
   await settle(page);
   return page;
 };
