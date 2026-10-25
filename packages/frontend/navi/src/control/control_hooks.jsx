@@ -731,8 +731,7 @@ export const useControlProps = (
       }
 
       // A field with an action of its own has Enter answered already: the
-      // input effect (input_effect.js) commits it — through the change Enter
-      // fires, or on the keydown itself under actionDebounce — and an action
+      // input effect (input_effect.js) commits it on the keydown, and an action
       // run on every keystroke has nothing left to commit. --navi-send would
       // run that same action a second time. Nothing answers it under
       // actionEvent="custom", where the field's caller does.
@@ -741,16 +740,13 @@ export const useControlProps = (
         (props.action !== undefined && actionEvent !== "custom");
       const keyDownDefaultOnInput = (e) => {
         if (e.key === "Enter") {
-          if (props.enterSendsNothing) {
-            // Left to the browser, so its own Enter still happens (a datalist
-            // choice) — except inside a <form>, where that Enter is the form's
-            // implicit submission.
+          if (props.enterSendsNothing || enterAnsweredByInputEffect) {
+            // Nothing around the field hears it. Left to the browser, so its
+            // own Enter still happens (a datalist choice) — except inside a
+            // <form>, where that Enter is the form's implicit submission.
             if (ref.current.form) {
               e.preventDefault();
             }
-            return null;
-          }
-          if (enterAnsweredByInputEffect) {
             return null;
           }
           return enterToSend(e);

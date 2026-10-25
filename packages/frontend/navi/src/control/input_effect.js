@@ -111,10 +111,18 @@ export const addInputEffect = (
       (e) => {
         onEvent(e, { skipDebounce: true });
       },
-      { getState, changeOnEnter: true },
+      { getState },
     );
     addTeardown(() => {
       stop();
+    });
+    // What the user gave up on (addInputCancel) does not go out later either.
+    const oncancel = () => {
+      clearTimeout(debounceTimeout);
+    };
+    input.addEventListener("navi_cancel", oncancel);
+    addTeardown(() => {
+      input.removeEventListener("navi_cancel", oncancel);
     });
   } else {
     onEvent = (e) => {
@@ -198,36 +206,38 @@ export const addInputEffect = (
   return teardown;
 };
 
-const listenInputStateChange = (
-  input,
-  callback,
-  { getState, changeOnEnter },
-) => {
+const listenInputStateChange = (input, callback, { getState }) => {
   const [teardown, addTeardown] = createPubSub();
 
+  // Enter commits on its own keydown, not through the "change" the browser
+  // fires after it: a field answering Enter for itself takes the key from its
+  // <form> (keyDownDefaultOnInput in control_hooks.jsx), and the browser then
+  // holds that "change" until the blur. Committed only when the user typed
+  // since the last commit, which is when the browser would fire one.
+  let typedSinceCommit = false;
+  // A "change" carrying this value was answered by a key already: committed by
+  // Enter, or given up by Escape.
   let stateAtInteraction;
-  const oninput = () => {
+  const commit = (e) => {
+    typedSinceCommit = false;
+    callback(e);
+  };
+  const oninput = (e) => {
     stateAtInteraction = undefined;
+    if (e.isTrusted) {
+      typedSinceCommit = true;
+    }
   };
   const onkeydown = (e) => {
     if (e.key === "Enter") {
-      /**
-       * Browser trigger a "change" event right after the enter is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action twice
-       */
       stateAtInteraction = getState();
-      if (changeOnEnter) {
-        onchange(e);
+      if (typedSinceCommit) {
+        commit(e);
       }
+      return;
     }
     if (e.key === "Escape") {
-      /**
-       * Browser trigger a "change" event right after the escape is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action when
-       * we actually want to cancel
-       */
+      typedSinceCommit = false;
       stateAtInteraction = getState();
     }
   };
@@ -236,7 +246,7 @@ const listenInputStateChange = (
       stateAtInteraction = undefined;
       return;
     }
-    callback(e);
+    commit(e);
   };
   input.addEventListener("input", oninput);
   // Capture: the guard is set before the control reacts to the key. Its
