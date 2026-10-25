@@ -88,10 +88,6 @@ const css = /* css */ `
   [data-drag-source] {
     -webkit-touch-callout: none;
   }
-  [data-drag-handle] {
-    /* A dedicated handle has nothing to share: it takes the gesture on contact. */
-    touch-action: none;
-  }
   [data-drag-source] {
     /* A source taken by long press must let the scroll through until the grab —
        which is exactly what the long press is there to tell apart. Zoom has
@@ -138,6 +134,14 @@ const css = /* css */ `
   [data-drag-on-contact] [data-drag-source="y"],
   [data-drag-source="y"][data-drag-on-contact] {
     touch-action: pan-x pinch-zoom;
+  }
+  /* A dedicated handle has nothing to share: it takes the gesture on contact
+     (see dragAfterIntent), wherever it sits. After the source rules and at
+     their weight, because a handle with drag interactions of its own is its
+     own source too, and is still a handle. */
+  [data-drag-handle],
+  [data-drag-handle][data-drag-source] {
+    touch-action: none;
   }
   /* Except where the press was never the drag's: something saying its press is
      its own business and a layer OVER the surface (the same list, read for the

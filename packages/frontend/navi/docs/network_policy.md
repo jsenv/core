@@ -102,7 +102,7 @@ was asked:
 
 - **A write is refused before the press.** A control holding a write verb's
   instance — `GAME.DELETE`, `GAME.DELETE.bindParams({ id })` — or any control
-  inside a `<Form>` holding one, is read-only while the policy holds, and
+  feeding a `<Form>` holding one, is read-only while the policy holds, and
   answers the press with `readOnlyMessage`.
 
 Which actions the policy sees: those declaring a verb (`meta.verb`) — every
@@ -130,6 +130,17 @@ not happen, and the policy's message is said where the hand made it, before
 anything moves: a carried thing is not picked up, a swiped row resists as a wall
 does. Undeclared, the gesture plays to the end and the write it calls fails
 after — said on the element, the way any refused answer is.
+
+What a held form holds is what feeds its write: its fields, and a press that
+sends or updates what it holds. A button or a link asking nothing of that write
+stays pressable — a travel between slides or a step back in a wizard
+(`--navi-left`, `--navi-go-to-slide:recap`, `--navi-back`), a page (a `Link`,
+`--navi-nav-to`), a `uiAction`, a function of its own without `actionVerb` (a
+"Cancel", `ButtonCopyToClipboard`) — and so is a way out (`--navi-close`,
+`--navi-cancel`). The same goes for what a held control holds: a `Link` in the
+popup of a held `Picker` still leads to its page. The form's own read-only and
+busy state hold them all the same; `whenSelfInteractionsBlocked="ignore"` is what
+takes a button out of those too.
 
 ## Holding writes while reads go out
 
@@ -195,6 +206,15 @@ has nothing to decide which one says why.
     readOnlyMessage="…"
   />;
   ```
+
+  A `<Picker>` whose popup is that form is held the same way with
+  `openWhileReadOnly={false}` beside `readOnly`. Read-only alone, a picker
+  still opens, so that what it holds can be read, and everything in its popup
+  is held in turn — the right answer when the sheet has something to show, a
+  step for nothing when it only fills a form. When that form is bound to a
+  write or declares its `actionVerb`, navi holds it anyway, and marking the
+  opener only decides where the refusal is said: on the opener, before
+  anything opens, or in the sheet.
 
 - **What a screen says on a `NetworkPolicyError`** — "no network" is a fact
   about the device, "offline mode" a decision, "we are only looking" neither;

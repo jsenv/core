@@ -165,13 +165,16 @@ const SCOPED_MANY_OPTIONS = new Set([
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
- * @param {Array<Object | { resource: Object, on: string[] }> | (() => Array<Object | { resource: Object, on: string[] }>)} [restCallbacks.dependencies] -
+ * @param {Array<Object | { resource: Object, on?: string[], reads?: Array<"GET" | "GET_MANY" | "GET_RANGE"> }> | (() => Array<Object | { resource: Object, on?: string[], reads?: Array<"GET" | "GET_MANY" | "GET_RANGE"> }>)} [restCallbacks.dependencies] -
  *   resources whose writes rerun this one's reads: one listed bare counts every
  *   write, `{ resource, on: ["PATCH_MANY", "DELETE"] }` only the callbacks it
  *   names (`PATCH` is not `PATCH_MANY`), a write named in its `writes`
- *   included. A function returning that list names resources declared after
- *   this one (two resources depending on each other): it is called once, before
- *   the first request of any resource leaves
+ *   included. A heard write reruns every completed `GET` and `GET_MANY` and
+ *   invalidates the `GET_RANGE` readers; `reads: ["GET_RANGE"]` narrows that to
+ *   the reads it names (with no `on`, after every write). A function returning
+ *   that list names resources declared after this one (two resources depending
+ *   on each other): it is called once, before the first request of any
+ *   resource leaves
  * @param {Record<string, { verb: "POST" | "PUT" | "PATCH" | "DELETE", callback: Function, rerunOn?: { GET?: boolean, GET_MANY?: boolean, GET_RANGE?: boolean } }>} [restCallbacks.writes] -
  *   the writes on an item that are not its sub-objects — cancel, archive, mark
  *   as seen — one action each, exposed under its name (`ORDER.cancel`) beside
@@ -1112,7 +1115,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
    *
    * `ownerId` may also be `{ [uniqueKey]: value }` when the owner is known by an alternate key.
    * The property is `null` until a callback provides data; setting it to `null` clears it.
-   * Mutations apply directly to the owner's signal, so the parent GET is never rerun.
+   * Mutations apply directly to the owner's signal, so the parent GET is never rerun; an
+   * owner the store does not hold yet is left alone, its child comes with its next read.
    *
    * Returns the child relationship resource, itself chainable:
    * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile,
@@ -1170,10 +1174,13 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         childSetup(childItem);
       }
       const childSignal = signal(null);
+      // The child keeps its identity while its props change, so the owner's
+      // getter also reads this version, bumped by each change in place:
+      // whichever way the props came in — the owner's row, a write of this
+      // relation, `owner[propertyName] = …` — whoever reads the child sees it.
+      const childVersionSignal = signal(0);
       // Returns whether the child changed — what the store asks a relation
-      // (see assign in array_signal_store.js). Assigned in place, the child
-      // tells nobody itself: a prop it receives changed is a change of the
-      // owner's row, which is how its readers see it.
+      // (see assign in array_signal_store.js).
       const applyProps = (props) => {
         if (!props) {
           if (childSignal.peek() === null) {
@@ -1198,7 +1205,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         }
         if (childSignal.peek() !== childItem) {
           childSignal.value = childItem; // first activation: null → childItem
-          changed = true;
+          return true;
+        }
+        if (changed) {
+          childVersionSignal.value = childVersionSignal.peek() + 1;
         }
         return changed;
       };
@@ -1212,7 +1222,11 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       applyProps(ownerItem[propertyName]);
 
       Object.defineProperty(ownerItem, propertyName, {
-        get: () => childSignal.value,
+        get: () => {
+          // eslint-disable-next-line no-unused-expressions
+          childVersionSignal.value;
+          return childSignal.value;
+        },
         set: applyProps,
       });
     });
@@ -1241,13 +1255,13 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
             uniqueKeys,
             childActionName,
           );
+          // An owner the store does not hold yet is left alone, as `.many()`
+          // leaves a parent: the server wrote, and the owner's next read
+          // brings its child.
           const applyProps = applyPropsMap.get(ownerId);
-          if (!applyProps) {
-            throw new Error(
-              `${childActionName}: no item found for scope id "${ownerId}"`,
-            );
+          if (applyProps) {
+            applyProps(props);
           }
-          applyProps(props);
           return [ownerId, props];
         },
         completeSideEffect: onActionComplete,
@@ -1297,6 +1311,12 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
    * the backend's, so the owner's GET is rerun instead (only when its last response embedded
    * `propertyName`), and the child's own GET_MANY reruns per its `rerunOn`. A `*_MANY`
    * answer is the collection: the owner's GET is not rerun.
+   *
+   * What the collection arrives in — a `*_MANY` answer, an owner answer embedding
+   * `propertyName` — sets each child to what it received: a field the held child has and
+   * the answer lacks becomes `undefined` (a seat changing hands keeps nothing of whoever sat
+   * there), a relation chained on the child is left alone. A singular answer
+   * (`[ownerId, props]`) merges into the child, as it may carry a part of it.
    *
    * A sub-collection with several writes (add, move, remove a seat) names them in
    * `writes`, with the root's rules (see `resource()`): one action each under its name,
@@ -1424,6 +1444,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         childStore,
         childIdKey,
         idArraySignal,
+        { wholeChildren: true },
       );
       // The parent may not carry the property at all (e.g. created by a POST
       // that does not embed it): leave the collection of a reused scope
@@ -1504,8 +1525,14 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
 
           if (isMany) {
             // GET_MANY, POST_MANY, PUT_MANY etc: rest[0] is the array of items,
-            // and it replaces the whole collection.
-            const itemArray = childStore.upsertAnswer(rest[0]);
+            // and it replaces the whole collection, each child included.
+            const itemArray = childStore.upsertAnswer(
+              rest[0].map((childProps) =>
+                isProps(childProps)
+                  ? toWholeScopedChild(childStore, childIdKey, childProps)
+                  : childProps,
+              ),
+            );
             const idArray = itemArray.map((childItem) => childItem[childIdKey]);
             idArraySignal.value = idArray;
             return [ownerId, idArray];
@@ -2023,7 +2050,14 @@ ${relationLabel} source location: ${declarationSite}`,
 // only touched when the resulting ids actually differ.
 // Returns whether the children the row points to changed — what the store asks
 // a relation (see assign in array_signal_store.js).
-const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
+// `wholeChildren` (.scopedMany()): each child received is the whole child, see
+// toWholeScopedChild.
+const createChildIdArrayUpdater = (
+  childStore,
+  childIdKey,
+  idArraySignal,
+  { wholeChildren = false } = {},
+) => {
   return (valueArray) => {
     const currentIdArray = idArraySignal.peek();
     if (!Array.isArray(valueArray)) {
@@ -2038,7 +2072,9 @@ const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
     for (const value of valueArray) {
       let childItemProps;
       if (isProps(value)) {
-        childItemProps = value;
+        childItemProps = wholeChildren
+          ? toWholeScopedChild(childStore, childIdKey, value)
+          : value;
       } else if (primitiveCanBeId(value)) {
         childItemProps = { [childIdKey]: value };
       } else {
@@ -2057,6 +2093,36 @@ const createChildIdArrayUpdater = (childStore, childIdKey, idArraySignal) => {
     }
     return false;
   };
+};
+
+// A scoped child has no identity outside its owner, so nothing else holds a
+// part of it: received in its collection it is the whole child, and a field
+// the held one has and the props lack is gone (written undefined) — a slot
+// changing hands keeps nothing of whoever sat there. The store merges
+// otherwise, which is right for a shared entity (a list row and a profile
+// carry different parts of one person). A relation on the child (an accessor)
+// absent from the props is left alone, as an owner's is: it has reads of its
+// own.
+const toWholeScopedChild = (childStore, childIdKey, props) => {
+  const heldChild = untracked(() => childStore.select(props[childIdKey]));
+  if (!heldChild) {
+    return props;
+  }
+  let wholeProps = props;
+  for (const key of Object.keys(heldChild)) {
+    if (Object.hasOwn(props, key)) {
+      continue;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(heldChild, key);
+    if (descriptor.get || descriptor.set) {
+      continue;
+    }
+    if (wholeProps === props) {
+      wholeProps = { ...props };
+    }
+    wholeProps[key] = undefined;
+  }
+  return wholeProps;
 };
 
 const syncIdArrayOnRename = (store, idKey, idArraySignal) => {

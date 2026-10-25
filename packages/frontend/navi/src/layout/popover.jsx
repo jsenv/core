@@ -70,7 +70,10 @@ import {
 } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
-import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
+import {
+  dispatchRequestInteraction,
+  onRequestInteraction,
+} from "../control/rules/control_interaction.js";
 import {
   findControlsHoldingPopup,
   giveUpOnControlsHoldingPopup,
@@ -79,7 +82,11 @@ import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
+import {
+  useDebugFocus,
+  useDebugInteraction,
+  useDebugPopup,
+} from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
   UNMOUNT_EVENT_TYPE,
@@ -1090,6 +1097,7 @@ const usePopoverProps = (props) => {
   const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // `{ open, close: "lifting" }`: the opening is `open`, the close lifts. A
   // popover opens placed against its anchor, never out of it, so a plain
@@ -2063,6 +2071,11 @@ const usePopoverProps = (props) => {
     "onnavi_command": (e) => {
       onNaviCommand(e);
       rest.onnavi_command?.(e);
+    },
+    // Its own requests (Escape) are judged here — see the same listener in
+    // dialog.jsx.
+    "onnavi_request_interaction": (e) => {
+      onRequestInteraction(e, { debugInteraction });
     },
     // A popup scrolls, and asking Box for that overflow is also what lets what
     // it contains claim header/footer/body (see box.jsx) — a popup is always a

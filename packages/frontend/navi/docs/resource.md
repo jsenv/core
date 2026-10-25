@@ -566,12 +566,19 @@ out with an example in its JSDoc:
   parent the store does not hold yet is left alone: its array comes with its
   next read.
 - **`.scopedOne(propertyName, callbacks)`** — every callback returns
-  `[ownerId, props | null]`; the property is `null` until one does.
+  `[ownerId, props | null]`; the property is `null` until one does. An owner
+  the store does not hold yet is left alone: the answer is the action's value,
+  and the owner's next read brings its child.
 - **`.scopedMany(propertyName, { idKey, … })`** — `[ownerId, props]`; `PUT` (an
   id rename) `[ownerId, oldId, props]`; `DELETE` `[ownerId, childId]`; any
   `*_MANY` `[ownerId, itemArray]`, which replaces the whole collection;
   `DELETE_MANY` `[ownerId, [childId, …]]`. `idKey` names the child's own key
-  inside its owner (`"id"` by default).
+  inside its owner (`"id"` by default). Where the collection arrives — a
+  `*_MANY` answer, an owner answer embedding the property — each child is set
+  to what it received: a field the held child has and the answer lacks becomes
+  `undefined`, since nothing else holds a part of a scoped child (a seat
+  changing hands keeps nothing of whoever sat there). A singular answer merges
+  into the child, as it may carry a part of it.
 
 `ownerId` may be `{ [uniqueKey]: value }` when the owner is known by an
 alternate key. A scoped child takes relations of its own —
@@ -637,7 +644,8 @@ Relationship mutations do **not** invalidate their parent by default. The rules:
   (`POST_MANY` included), rerun nothing on the owner: the callback result
   already carries the updated child, or the whole collection. Its own reads
   still follow its `rerunOn` (`POST` covers `POST_MANY` there).
-- `.scopedOne` mutations rerun nothing, ever — the result is the new value.
+- `.scopedOne` mutations rerun nothing, ever — the result is the new value,
+  and whoever reads the property is drawn again with it.
 - `.one` / `.many` children live in an independent store; mutating them never
   reruns the parent. A `.many()` write changes the parent's array only through
   the answers naming it (`[parentId, …]`, see
@@ -774,6 +782,31 @@ module has been evaluated by then — and what it returns is checked as a list
 written in place is; what fails throws into that first run. A cycle is fine: a
 rerun is one hop, and it reruns reads only. `createAction`'s `dependencies` take
 the same function form.
+
+As written, that `USER` entry reruns every profile and every list of people
+read in the session at each member added or removed — five more requests for
+three profiles and two lists, growing with the session. A member written moves
+the ranks of the group's list, read by slices, and changes no profile: name
+the reads a heard write reaches with `reads`:
+
+```js
+const USER = resource("user", {
+  dependencies: () => [
+    {
+      resource: PLAYER_GROUP,
+      on: ["addMember", "removeMember"],
+      reads: ["GET_RANGE"],
+    },
+  ],
+  GET,
+  GET_MANY,
+  GET_RANGE,
+});
+```
+
+`reads` takes `GET`, `GET_MANY` and `GET_RANGE`; left out, all three. Without
+`on`, it applies to every write of the resource. `createAction`'s
+`dependencies` refuse it: an action is one question, asked again whole.
 
 ## A function calling the verb, or the instance
 

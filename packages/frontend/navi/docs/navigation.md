@@ -580,7 +580,9 @@ Five cases, and they are not a policy to configure but five different facts:
   further down than that page is tall.
 - **Replacing the entry** (`<Link replace>`, `route.redirectTo()`, a param
   settling) moves nothing: the same place said differently — except in a row of
-  tabs, below.
+  tabs, below. A link to the address the document is at replaces too, as the
+  browser answers it: stacked, it would leave an entry that Back returns to
+  without moving.
 - **A reload** lands where one was, as it would have without navi, once the
   page is there ([below](#a-page-that-is-not-whole-yet)).
 
@@ -727,10 +729,19 @@ above the element has laid out, with nothing to tell it how long to wait.
 A mark that only designates — the row a notification points at, outlined until
 the reader moves on — is `:target` too, even though it restyles the element: it
 lasts until the page next writes its URL, which is the length of "this one". A
-search param would outlive it, as state the page does not act on. The alignment
-`setUrlTargetOptions({ block })` sets holds for the whole app; a target that wants
-to land with more room before it says so on itself, with a scroll-margin
-(`scrollMarginBlock` on a `Box`), which the landing honours.
+search param would outlive it, as state the page does not act on.
+
+Where the target lands is said for the app with `setUrlTargetOptions({ block })`,
+and by a target for itself with `data-url-target-block` — on the element, or on a
+box around it, a list saying it once for its items — read first. `"auto"` is the
+word for a target the app cannot size ahead: one that fits the screen (less the
+scroll-padding its bars reserve) lands in the middle, read with what is around
+it — the row a notification points at —, one taller lands on its top, where
+reading starts — an article of the terms. It is not the default: an `id` on a
+heading is short, and a heading is read from where it starts. A target that
+wants more room before it says so with a scroll-margin (`scrollMarginBlock` on a
+`Box`), which every alignment honours — never a margin computed to push it
+towards the middle, right for one height of row only.
 
 ### A row of tabs, where a replace IS an arrival
 

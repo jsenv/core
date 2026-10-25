@@ -102,7 +102,7 @@ const EVERY_WRITE = Symbol("every_write");
 // This handles ALL resource lifecycle logic (rerun/reset) across all resources
 export const createResourceLifecycleManager = () => {
   const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
-  const resourceDependencies = new Map(); // Map<resourceInstance, Map<dependentResource, Set<writeCallbackName>>> — user-configured
+  const resourceDependencies = new Map(); // Map<resourceInstance, Map<dependentResource, Map<writeCallbackName, Set<read>>>> — user-configured
   const scopedManyParents = new Map(); // Map<childResource, Set<{resource, propertyName}>> — auto from scopedMany
 
   // `dependencies` given as a function name resources declared after the one
@@ -168,37 +168,66 @@ export const createResourceLifecycleManager = () => {
   ) => {
     let index = 0;
     for (const dependency of dependencyArray) {
-      const [dependencyScope, writeNames] = resolveDependency(dependency, {
-        dependentLabel,
-        index,
-        lazy,
-      });
+      const [dependencyScope, writeNames, reads] = resolveDependency(
+        dependency,
+        {
+          dependentLabel,
+          index,
+          lazy,
+        },
+      );
       index++;
       let dependentMap = resourceDependencies.get(dependencyScope);
       if (!dependentMap) {
         dependentMap = new Map();
         resourceDependencies.set(dependencyScope, dependentMap);
       }
-      let writeNameSet = dependentMap.get(resourceScope);
-      if (!writeNameSet) {
-        writeNameSet = new Set();
-        dependentMap.set(resourceScope, writeNameSet);
+      let readSetByWriteName = dependentMap.get(resourceScope);
+      if (!readSetByWriteName) {
+        readSetByWriteName = new Map();
+        dependentMap.set(resourceScope, readSetByWriteName);
       }
+      // Kept per write: two entries on one resource may each send their own
+      // writes to their own reads.
       for (const writeName of writeNames) {
-        writeNameSet.add(writeName);
+        let readSet = readSetByWriteName.get(writeName);
+        if (!readSet) {
+          readSet = new Set();
+          readSetByWriteName.set(writeName, readSet);
+        }
+        for (const read of reads || RERUN_READS) {
+          readSet.add(read);
+        }
       }
     }
   };
-  // Whether `resourceScope` listed the facade that wrote, with this write
-  // among the ones that count.
-  const isWriteHeardBy = (resourceScope, triggeringAction, triggerScope) => {
-    const writeNameSet = resourceDependencies
+  // The reads of `resourceScope` a write reaches: those of the entries that
+  // listed the facade that wrote with this write among the ones that count,
+  // or null when none did.
+  const findReadsReachedBy = (
+    resourceScope,
+    triggeringAction,
+    triggerScope,
+  ) => {
+    const readSetByWriteName = resourceDependencies
       .get(triggerScope)
       ?.get(resourceScope);
-    if (!writeNameSet) {
-      return false;
+    if (!readSetByWriteName) {
+      return null;
     }
-    return isWriteHeardIn(writeNameSet, triggeringAction);
+    const writeName = writeCallbackNameOf(triggeringAction);
+    if (writeName === null) {
+      return null;
+    }
+    const everyWriteReadSet = readSetByWriteName.get(EVERY_WRITE);
+    const namedReadSet = readSetByWriteName.get(writeName);
+    if (!everyWriteReadSet) {
+      return namedReadSet || null;
+    }
+    if (!namedReadSet) {
+      return everyWriteReadSet;
+    }
+    return new Set([...everyWriteReadSet, ...namedReadSet]);
   };
   // createAction's `dependencies`: an action holds no rows and has no rerunOn,
   // only instances to ask again after a write it listed. Held weakly, like
@@ -230,15 +259,23 @@ export const createResourceLifecycleManager = () => {
     }
     let index = 0;
     for (const dependency of dependencyArray) {
-      const [dependencyScope, writeNames] = resolveDependency(dependency, {
-        dependentLabel,
-        index,
-        lazy,
-      });
+      const [dependencyScope, writeNames, reads] = resolveDependency(
+        dependency,
+        {
+          dependentLabel,
+          index,
+          lazy,
+        },
+      );
       index++;
       if (!registeredResources.has(dependencyScope)) {
         throw new Error(
           `createAction(${action.name}): a dependency is a resource or a scope of one, received ${dependencyScope}`,
+        );
+      }
+      if (reads) {
+        throw new Error(
+          `createAction(${action.name}) dependency on ${dependencyScope.name}: "reads" picks among a resource's reads, and an action is one question — a write it hears asks it again whole`,
         );
       }
       let dependentActionSet = dependentActionSetByScope.get(dependencyScope);
@@ -317,10 +354,14 @@ export const createResourceLifecycleManager = () => {
           triggerVerb === "PATCH") &&
         config.uniqueKeys.length > 0;
 
-      const isHeardDependency = isWriteHeardBy(
+      const readsReachedByDependency = findReadsReachedBy(
         resourceScope,
         triggeringAction,
         triggerResourceScope,
+      );
+      const dependencyRerunsGet = Boolean(readsReachedByDependency?.has("GET"));
+      const dependencyRerunsGetMany = Boolean(
+        readsReachedByDependency?.has("GET_MANY"),
       );
       // Read by no rerunOn rule: the owner's GET_MANY/GET settings say
       // nothing about the child collection its GET embeds.
@@ -334,7 +375,8 @@ export const createResourceLifecycleManager = () => {
         !shouldRerunGet &&
         triggerVerb !== "DELETE" &&
         !hasUniqueKeyAutorerun &&
-        !isHeardDependency &&
+        !dependencyRerunsGet &&
+        !dependencyRerunsGetMany &&
         !ownsPostedScopedMany
       ) {
         continue;
@@ -455,9 +497,15 @@ export const createResourceLifecycleManager = () => {
 
           // Cross-resource dependency effects: rerun dependent GET / GET_MANY
           // after a write the dependency counts — every write for a resource
-          // listed bare, the callbacks named in `on` otherwise.
+          // listed bare, the callbacks named in `on` otherwise — when its
+          // `reads` reach them (all of them when it names none).
           dependency_effect: {
-            if (isHeardDependency && candidateVerb === "GET") {
+            if (candidateVerb !== "GET") {
+              break dependency_effect;
+            }
+            if (
+              candidateIsPlural ? dependencyRerunsGetMany : dependencyRerunsGet
+            ) {
               actionsToRerun.add(actionCandidate);
               reasonSet.add("dependency autorerun");
               continue;
@@ -557,17 +605,20 @@ export const createResourceLifecycleManager = () => {
         continue;
       }
       const isSameResource = resourceScope === triggerResourceScope;
-      const isDependent = isWriteHeardBy(
-        resourceScope,
-        triggeringAction,
-        triggerResourceScope,
+      const isDependent = Boolean(
+        findReadsReachedBy(
+          resourceScope,
+          triggeringAction,
+          triggerResourceScope,
+        )?.has("GET_RANGE"),
       );
       if (!isSameResource && !isDependent) {
         continue;
       }
       // A write of a resource this one depends on reaches its lists as it
-      // reruns its GET and GET_MANY: being heard is the whole condition (see
-      // findEffectOnActions). rerunOn is about this resource's own writes.
+      // reruns its GET and GET_MANY: being heard with GET_RANGE among the
+      // reads it reaches is the whole condition (see findEffectOnActions).
+      // rerunOn is about this resource's own writes.
       if (
         isSameResource &&
         !shouldReadRerunAfter("GET_RANGE", config, triggeringAction, true)
@@ -642,17 +693,26 @@ const shouldReadRerunAfter = (
   return shouldRerunAfter(config.rerunOn[read], verb);
 };
 const isWriteHeardIn = (writeNameSet, triggeringAction) => {
-  const { verb, isMany, writeName } = triggeringAction.meta;
-  if (verb === "GET") {
+  const writeName = writeCallbackNameOf(triggeringAction);
+  if (writeName === null) {
     return false;
   }
   if (writeNameSet.has(EVERY_WRITE)) {
     return true;
   }
-  if (writeName) {
-    return writeNameSet.has(writeName);
+  return writeNameSet.has(writeName);
+};
+// What a dependent's `on` calls this write (see WRITE_CALLBACK_NAMES), or null
+// for a read.
+const writeCallbackNameOf = (triggeringAction) => {
+  const { verb, isMany, writeName } = triggeringAction.meta;
+  if (verb === "GET") {
+    return null;
   }
-  return writeNameSet.has(isMany ? `${verb}_MANY` : verb);
+  if (writeName) {
+    return writeName;
+  }
+  return isMany ? `${verb}_MANY` : verb;
 };
 const shouldRerunAfter = (rerunConfig, verb) => {
   if (rerunConfig === false) {
@@ -671,9 +731,11 @@ const shouldRerunAfter = (rerunConfig, verb) => {
   return false;
 };
 // A `dependencies` entry: a resource (every write counts), or
-// `{ resource, on }` naming the write callbacks that do — a write named in its
-// `writes` included. A name that cannot fire throws here: a dependency that
-// never fires leaves a read on its old value with nothing to say so.
+// `{ resource, on, reads }` — `on` naming the write callbacks that do, a write
+// named in its `writes` included, and `reads` the reads of the dependent they
+// reach (`null` when left out: all of them). A name that cannot fire throws
+// here: a dependency that never fires leaves a read on its old value with
+// nothing to say so.
 // An entry still `undefined` is a resource read before its declaration ran: a
 // `const` declared further down the file throws on its own, a registry filled
 // later does not.
@@ -689,13 +751,30 @@ const resolveDependency = (dependency, { dependentLabel, index, lazy }) => {
     throw nameMissing(dependency);
   }
   if (!Object.hasOwn(dependency, "resource")) {
-    return [dependency, [EVERY_WRITE]];
+    return [dependency, [EVERY_WRITE], null];
   }
-  const { resource: dependencyScope, on } = dependency;
+  const { resource: dependencyScope, on, reads } = dependency;
   if (dependencyScope === undefined || dependencyScope === null) {
     throw nameMissing(`{ resource: ${dependencyScope} }`);
   }
   const where = `${dependentLabel} dependency on ${dependencyScope.name}`;
+  if (reads !== undefined) {
+    if (!Array.isArray(reads) || reads.length === 0) {
+      throw new Error(
+        `${where}: "reads" lists the reads a write reaches, e.g. reads: ["GET_RANGE"] — leave it out for all of them`,
+      );
+    }
+    for (const read of reads) {
+      if (!RERUN_READS.includes(read)) {
+        throw new Error(
+          `${where}: "${read}" is not a read, "reads" takes ${RERUN_READS.join(", ")}`,
+        );
+      }
+    }
+    if (on === undefined) {
+      return [dependencyScope, [EVERY_WRITE], reads];
+    }
+  }
   if (!Array.isArray(on) || on.length === 0) {
     throw new Error(
       `${where}: "on" lists the writes that count, e.g. on: ["POST", "DELETE"] — list the resource itself for every write`,
@@ -716,7 +795,7 @@ const resolveDependency = (dependency, { dependentLabel, index, lazy }) => {
       );
     }
   }
-  return [dependencyScope, on];
+  return [dependencyScope, on, reads || null];
 };
 const isNamedWriteOf = (resourceScope, writeName) => {
   const writeAction = resourceScope[writeName];

@@ -1,13 +1,8 @@
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { moveFocusTo } from "../utils/focus/focus_transfer.js";
+import { useGeneratedId } from "../utils/use_generated_id.js";
 import { ControlIdContext, MessagePropsRefContext } from "./control_context.js";
 import { findControlRoot } from "./control_dom.js";
 import {
@@ -147,7 +142,7 @@ const FieldAsContainer = (props) => {
   });
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   props.fieldId = props.fieldId || `field_${idDefault}`;
 
   return (
@@ -191,7 +186,7 @@ export const Label = (props) => {
   const controlId = useContext(ControlIdContext);
   // What a popup opened from the control is named by (see getTriggerLabelIds
   // in picker_custom.jsx): aria-labelledby can only point at an id.
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   props.id = props.id || `label_${idDefault}`;
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);

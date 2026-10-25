@@ -5,9 +5,11 @@
  * under a control (« aujourd'hui », « 1h30 », « En semaine ») lights itself
  * from what the control holds, its suggestion included.
  *
- * Followed live through the target controller's ui state signal, found by id
- * (`commandFor`) — waiting for it when it mounts after the source — or as the
- * control around the source, the way the command itself resolves its target.
+ * Followed live through the target controller's ui state signal. The target is
+ * found as the command finds it (resolveUpdateTarget): an id naming the box
+ * around a control (a Spin's) is that control, here as at the press. Looked up
+ * again as controllers register, for a target mounting after the source or
+ * built again under it.
  */
 
 import { effect, useSignal } from "@preact/signals";
@@ -18,7 +20,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { resolveFirstParentControl } from "../commands.js";
+import { resolveUpdateTarget } from "../commands.js";
 import { findControlHost } from "../control_dom.js";
 import {
   getUIStateControllerById,
@@ -59,30 +61,38 @@ const ButtonUpdateApplied = (props) => {
 
   const [applied, setApplied] = useState(false);
   useLayoutEffect(() => {
+    const source = ref.current;
+    if (!source) {
+      return undefined;
+    }
+    let followed = null;
     let stopFollowing = () => {};
-    const follow = (targetController) => {
+    const follow = () => {
+      const targetController = findTargetController(source);
+      if (targetController === followed) {
+        return;
+      }
       stopFollowing();
+      followed = targetController;
+      if (!targetController) {
+        stopFollowing = () => {};
+        setApplied(false);
+        return;
+      }
       stopFollowing = effect(() => {
         const held = targetController.uiStateSignal.value;
         setApplied(isUpdateApplied(held, sourceValueSignal.value, { toggle }));
       });
     };
-    if (commandFor) {
-      const stopListening = listenControllerRegistration(commandFor, follow);
-      const targetController = getUIStateControllerById(commandFor);
-      if (targetController) {
-        follow(targetController);
+    follow();
+    const stopListening = listenControllerRegistration(() => {
+      if (followed && getUIStateControllerById(followed.id) === followed) {
+        return;
       }
-      return () => {
-        stopListening();
-        stopFollowing();
-      };
-    }
-    const targetController = findControllerAround(ref.current);
-    if (targetController) {
-      follow(targetController);
-    }
+      follow();
+    });
     return () => {
+      stopListening();
       stopFollowing();
     };
   }, [commandFor, toggle]);
@@ -100,15 +110,19 @@ const ButtonUpdateApplied = (props) => {
   );
 };
 
-// The control a source without `commandFor` updates: the one around it, found
-// the way the command itself finds it.
-const findControllerAround = (source) => {
-  if (!source) {
-    return null;
-  }
-  const target = resolveFirstParentControl(source);
+// The controller answering on the host the command dispatches to. Read in
+// the registry by the host's id as well: an effect attaches the controller to
+// its host, and a target rendered after the source in the same commit has not
+// run it yet, where the render registered it already.
+const findTargetController = (source) => {
+  const target = resolveUpdateTarget(source);
   if (!target) {
     return null;
   }
-  return (findControlHost(target) || target).__uiStateController__ || null;
+  const host = findControlHost(target) || target;
+  return (
+    host.__uiStateController__ ||
+    (host.id ? getUIStateControllerById(host.id) : undefined) ||
+    null
+  );
 };

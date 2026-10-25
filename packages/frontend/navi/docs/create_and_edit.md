@@ -237,22 +237,40 @@ typed in it, and coming back re-reads the resource. There is nothing to restore.
 ### A screen that stays open after Save
 
 Everything above assumes the screen is left on saving. One edited in place —
-a settings panel, saved, then edited again — has no shape that answers all of
-it yet, and each of the three leaves one thing out:
+a settings panel, saved, then edited again — asks three things at once: the
+form holds the record (an untouched Save sends nothing), follows it when it
+moves (another admin, a run ending), and never overwrites what is being typed.
+That is `<Form record>`:
 
-- `defaultValue={record.x}` follows the record and never undoes an edit, but is
-  not held: an untouched Save sends the record back.
-- `onLoad` + `pristineKey` is held, and stops following: a record moved while
-  the screen is open stays as `onLoad` found it.
-- `useSignalSync(record.x)` ([state_binding.md](./state_binding.md)) is held
-  and follows, but the record moving overwrites what is being typed. It
-  compares by content: a record read again as a new but equal array or object
-  is not a move.
+```jsx
+<Form action={saveSetting} record={setting}>
+  <Input name="interval_minutes" />
+  <CheckboxGroup name="sexes" required>
+    …
+  </CheckboxGroup>
+  <Button type="submit" readOnlyWhileFormUnchanged>
+    Enregistrer
+  </Button>
+</Form>
+```
 
-Until one shape answers all three, a block that stays on screen takes
-`useSignalSync`, one per field: what it gives up — a move landing over a field
-being typed — needs someone else saving the same record at that moment, the
-rarest of the three on a settings block.
+Each named field starts on its key, held. A new record — compared by content,
+so the same one read again is no move — is taken key by key: a field nobody
+touched shows it, a field being typed in keeps what is typed, and the form,
+measured against the new record from then on, reads changed exactly where an
+edit differs from it. Save then sends the edit with the other keys as the
+record now has them, not as they were when the screen opened. A send that went
+through needs nothing more: its answer, landing as the next record, is what
+the form holds. The record may be `undefined` while it loads — no
+`pristineKey`, no `onLoad` copy. Nothing tells the person typing that the
+record moved under their field: their Save is the answer.
+
+A single control that saves itself has the same three with
+`defaultValue={record.x}`, which follows and never undoes an edit; held only
+matters to a form. A control bound to a signal of the screen's own takes
+`useSignalSync(record.x)` ([state_binding.md](./state_binding.md)): held and
+following, compared by content, but the record moving overwrites what is being
+typed.
 
 What not to write: `useSignal(record.x)` with `key={record.updated_at}` on the
 block. The key throws away what is being typed each time the record moves.

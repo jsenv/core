@@ -563,15 +563,18 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
 
     // A link that takes the place of the current entry rather than stacking on
-    // it (see link_replace.js). The browser has already decided this is a push
-    // and nothing can turn a live push into a replace, so the navigation is
-    // declined and re-asked as one — carrying by hand what such a call has no
-    // sourceElement to say: the element pressed, and with it what that element
-    // asks of a route transition (it wears it as an attribute).
+    // it (see link_replace.js), or one to the address the document is at,
+    // which a page load would replace too: stacked, it would leave behind an
+    // entry that a Back returns to without moving. The browser has already
+    // decided this is a push and nothing can turn a live push into a replace,
+    // so the navigation is declined and re-asked as one — carrying by hand
+    // what such a call has no sourceElement to say: the element pressed, and
+    // with it what that element asks of a route transition (it wears it as an
+    // attribute).
     if (
       navigationType === "push" &&
       event.sourceElement &&
-      linkAsksForReplace(event.sourceElement)
+      (linkAsksForReplace(event.sourceElement) || url === readAddress())
     ) {
       event.preventDefault();
       navigation.navigate(url, {

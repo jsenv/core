@@ -18,8 +18,33 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * A heading: bold, on a heading element. It accepts every `Text` prop on top
+ * of the ones below.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   children?: import("preact").ComponentChildren,
+ *   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6",
+ *   size?: string | number,
+ *   [key: string]: any,
+ * }>}
+ *
+ * @param {"h1"|"h2"|"h3"|"h4"|"h5"|"h6"} [as]
+ *   The heading's level, for the page's outline and for a screen reader:
+ *   `"h1"` by default, `"h4"` inside a `MessageBox`; what the title holds
+ *   reads it through `useTitleLevel()`. There is no `level` prop.
+ *
+ * @param {string|number} [size]
+ *   The font size, when it is not the one the browser gives the level: a
+ *   section titled `as="h3"` that should read larger, or smaller.
+ */
 export const Title = (props) => {
   import.meta.css = css;
+  if (import.meta.dev && Object.hasOwn(props, "level")) {
+    console.warn(
+      `Title: "level" is not a prop, the level is the tag. Write as="h${props.level}".`,
+    );
+  }
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));

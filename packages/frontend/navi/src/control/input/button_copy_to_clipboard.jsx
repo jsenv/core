@@ -38,15 +38,24 @@ const css = /* css */ `
  * it did. Its mechanics are `useCopyToClipboard`, for a copy drawn any other
  * way.
  *
+ * A copy writes nothing: in a form the network policy holds, it still copies.
+ *
  * @type {import("preact").FunctionComponent<{
  *   children: string,
  *   "aria-label"?: string,
+ *   selfInteractions?: string,
+ *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   [key: string]: any,
  * }>}
+ * @param {"hide"|"refuse"|"ignore"} [whenSelfInteractionsBlocked] Said of the
+ *   button, as on any Button: `"ignore"` keeps the copy pressable in a zone
+ *   read-only, disabled or busy for its own reasons.
  */
 export const ButtonCopyToClipboard = ({
   children,
   "aria-label": ariaLabel = buttonI18n("button.copy"),
+  selfInteractions,
+  whenSelfInteractionsBlocked,
   ...props
 }) => {
   import.meta.css = css;
@@ -62,8 +71,11 @@ export const ButtonCopyToClipboard = ({
       <Button
         className="navi_copy_button"
         // The props land on the container; the name belongs to the button,
-        // which shows only an icon.
+        // which shows only an icon, and so does what it says of the zone it
+        // sits in.
         aria-label={ariaLabel}
+        selfInteractions={selfInteractions}
+        whenSelfInteractionsBlocked={whenSelfInteractionsBlocked}
         icon
         revealOnInteraction
         square

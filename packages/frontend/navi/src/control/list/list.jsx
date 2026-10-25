@@ -1360,6 +1360,22 @@ const ListUI = (props) => {
     }
   }
 
+  const scrollerAttribute = getScrollerAttribute(scroller);
+  const overflowVisibleAttribute = getOverflowVisibleAttribute(
+    overflow,
+    overflowX,
+    overflowY,
+  );
+  // The track of a horizontal list that scrolls itself is sized by its own
+  // rule (min-content, never narrower than its box — see the css), which
+  // already gives it what expandX asks. An inline width from expandX would beat
+  // that rule and lay the end room among the items again.
+  const trackSizedByItsRule =
+    horizontal &&
+    !scrollerAttribute &&
+    !overflowVisibleAttribute &&
+    !(columns || itemColumns);
+
   return (
     <Box
       {...rest}
@@ -1369,12 +1385,8 @@ const ListUI = (props) => {
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
       data-borderless={isBorderless(rest) ? "" : undefined}
-      data-scroller={getScrollerAttribute(scroller)}
-      data-overflow-visible={getOverflowVisibleAttribute(
-        overflow,
-        overflowX,
-        overflowY,
-      )}
+      data-scroller={scrollerAttribute}
+      data-overflow-visible={overflowVisibleAttribute}
       navi-hover-while-scrolling={hoverWhileScrolling ? "" : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       data-expand-y={expandY || expand ? "" : undefined}
@@ -1421,7 +1433,7 @@ const ListUI = (props) => {
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         itemTransition={itemTransition}
-        expandX={expandX || expand}
+        expandX={trackSizedByItsRule ? undefined : expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
         columns={columns}
@@ -5569,14 +5581,20 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     color: "--list-item-color-keyboard-pointed",
     backgroundColor: "--list-item-background-color-keyboard-pointed",
   },
+  // The mouse over an item is the item pointed by the mouse: what the
+  // selectable list's [data-hover] rule reads.
   ":hover": {
-    color: "--list-item-color-hover",
-    backgroundColor: "--list-item-background-color-hover",
+    color: "--list-item-color-mouse-pointed",
+    backgroundColor: "--list-item-background-color-mouse-pointed",
   },
   ":-navi-selected": {
     color: "--list-item-color-selected",
     backgroundColor: "--list-item-background-color-selected",
     borderColor: "--list-item-border-color-selected",
+  },
+  ":-navi-selected:hover": {
+    color: "--list-item-color-selected-hover",
+    backgroundColor: "--list-item-background-color-selected-hover",
   },
   ":disabled": {
     color: "--list-item-color-disabled",

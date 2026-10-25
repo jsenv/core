@@ -49,10 +49,7 @@ const css = /* css */ `
       --list-item-padding-x-default: var(--navi-list-item-padding-x-default);
       --list-item-padding-y-default: var(--navi-list-item-padding-y-default);
 
-      /* Hover (mouse) */
-      --list-item-background-color-hover: light-dark(#f5f5f5, #2a2a2a);
-      --list-item-color-hover: var(--list-item-color);
-      /* Pointed by mouse — subtle, just a shade above background */
+      /* Pointed by mouse (hovered) — subtle, just a shade above background */
       --list-item-background-color-mouse-pointed: light-dark(#ebebeb, #303030);
       --list-item-color-mouse-pointed: var(--list-item-color);
       /* Pointed by keyboard — subtle light blue highlight */
@@ -70,6 +67,11 @@ const css = /* css */ `
       --list-item-border-color-selected: var(
         --list-item-background-color-selected
       );
+      /* Selected and hovered — the selected colors unless an item says
+         otherwise. Reset here so an item hovered in an outer list does not
+         hand its own to a nested one. */
+      --list-item-color-selected-hover: initial;
+      --list-item-background-color-selected-hover: initial;
       /* Placeholder — what the list means while it holds nothing */
       --list-item-color-placeholder: var(--list-item-color);
       --list-item-background-color-placeholder: color-mix(
@@ -246,9 +248,13 @@ const css = /* css */ `
         --x-list-item-color: var(--list-item-color-selected);
 
         &[data-hover] {
+          --x-list-item-color: var(
+            --list-item-color-selected-hover,
+            var(--list-item-color-selected)
+          ) !important;
           --x-list-item-background-color: var(
-            --list-item-background-color-selected,
-            var(--list-item-background-color-mouse-pointed)
+            --list-item-background-color-selected-hover,
+            var(--list-item-background-color-selected)
           ) !important;
         }
 

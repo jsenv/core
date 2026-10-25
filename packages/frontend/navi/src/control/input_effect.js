@@ -209,11 +209,12 @@ export const addInputEffect = (
 const listenInputStateChange = (input, callback, { getState }) => {
   const [teardown, addTeardown] = createPubSub();
 
-  // Enter commits on its own keydown, not through the "change" the browser
-  // fires after it: a field answering Enter for itself takes the key from its
-  // <form> (keyDownDefaultOnInput in control_hooks.jsx), and the browser then
-  // holds that "change" until the blur. Committed only when the user typed
-  // since the last commit, which is when the browser would fire one.
+  // Enter commits on its own keydown, ahead of the key's default (the form's
+  // implicit submission, which keyDownDefaultOnInput in control_hooks.jsx
+  // refuses for a field answering Enter for itself). The "change" the browser
+  // fires for that Enter carries the committed value and is swallowed below.
+  // Committed only when the user typed since the last commit, which is when
+  // the browser would fire one.
   let typedSinceCommit = false;
   // A "change" carrying this value was answered by a key already: committed by
   // Enter, or given up by Escape.
@@ -285,6 +286,15 @@ const listenInputStateChange = (input, callback, { getState }) => {
     // if yes we fire the callback because input value did change
     let stateAtStart = getState();
     let interacted = false;
+    // A value set by code may also be sent by that code: a file picker's
+    // chooser holds the file and runs the field's action itself
+    // (PickerFileChooser). Sent is what this block exists to make happen, so
+    // the value an action last ran with is not sent again. Kept apart from
+    // stateAtStart: a refused value put back is where the focus found it.
+    let stateSent;
+    const onactionallowed = () => {
+      stateSent = getState();
+    };
 
     const onfocus = () => {
       interacted = false;
@@ -302,7 +312,8 @@ const listenInputStateChange = (input, callback, { getState }) => {
       if (interacted) {
         return;
       }
-      if (stateAtStart === getState()) {
+      const state = getState();
+      if (state === stateAtStart || state === stateSent) {
         return;
       }
       callback(e);
@@ -311,10 +322,12 @@ const listenInputStateChange = (input, callback, { getState }) => {
     input.addEventListener("focus", onfocus);
     input.addEventListener("input", oninput);
     input.addEventListener("blur", onblur);
+    input.addEventListener("navi_action_allowed", onactionallowed);
     addTeardown(() => {
       input.removeEventListener("focus", onfocus);
       input.removeEventListener("input", oninput);
       input.removeEventListener("blur", onblur);
+      input.removeEventListener("navi_action_allowed", onactionallowed);
     });
   }
 

@@ -537,28 +537,26 @@ export const useUIStateController = (
                 );
               }
             }
-            // initial_state_push is pure initialization (equivalent to defaultValue on the
-            // child itself): skip uiAction entirely so no side effects fire on mount.
-            // A value the outside moved since (see outside_value_follow) is the
-            // same initialization, later.
-            if (
-              e.type !== "initial_state_push" &&
-              e.type !== "outside_value_follow"
-            ) {
-              // Still fire uiAction so external listeners (e.g. signals) stay in
-              // sync, but do NOT fire the command and do NOT notify the parent —
-              // both would cause an infinite loop when a parent cascades state
-              // down to its children (child command would re-trigger the cascade).
-              // A control following what it was given (state_prop_change) does
-              // not write its bound signal either: the signal is what it
-              // follows. The one write that would change it is an emptied
-              // signal refilled with the suggestion the control fell back on —
-              // a state the app just took back, put back by the control.
-              controller.onUIAction(e, {
-                skipCommand: true,
-                skipBoundSignal: e.type === "state_prop_change",
-              });
-            }
+            // Still fire uiAction so external listeners (e.g. signals) stay in
+            // sync, but do NOT fire the command and do NOT notify the parent —
+            // both would cause an infinite loop when a parent cascades state
+            // down to its children (child command would re-trigger the cascade).
+            // What a group hands a control it builds (initial_state_push) is
+            // one of those values: the control did not start on it, it moved
+            // there, and a mirror that missed it would show the field empty
+            // until the first key (a popup's fields at the opening).
+            // A control following what it was given (state_prop_change, or
+            // the outside moving its default: outside_value_follow) does not
+            // write its bound signal either: the signal is what it follows.
+            // The one write that would change it is an emptied signal refilled
+            // with the suggestion the control fell back on — a state the app
+            // just took back, put back by the control.
+            controller.onUIAction(e, {
+              skipCommand: true,
+              skipBoundSignal:
+                e.type === "state_prop_change" ||
+                e.type === "outside_value_follow",
+            });
             if (
               e.type === "facade_propagate_up" ||
               e.type === "cancel_rollback" ||
@@ -1878,8 +1876,14 @@ export const useUIGroupStateController = (
           controller.placeChildrenUIState(newUIState, propagateDownEvent);
           const groupUIState = aggregateGroupUIState(newUIState);
           if (e.type === "initial_state_push") {
+            const moved = !compareTwoJsValues(groupUIState, controller.uiState);
             controller.syncInternalState(groupUIState);
             writeBoundSignal(groupUIState);
+            if (moved) {
+              // Heard as a leaf hears it (see useUIStateController): nobody
+              // acted, but what the group holds moved.
+              controller.onUIAction(e, { skipCommand: true });
+            }
             return;
           }
           applyState(groupUIState, e, { internalBehavior: true });
@@ -2109,7 +2113,8 @@ export const useUIGroupStateController = (
         // The leaf's rule (see useUIStateController), for a group given a
         // plain `defaultValue`: a new one is placed on the children the way
         // the first one was as they registered, while none of them holds an
-        // edit. A signal's own default is followed by the update below.
+        // edit — or, for an object, key by key (see placeAroundEdits). A
+        // signal's own default is followed by the update below.
         followDefaultValue: () => {
           if (controller.hasValueProp || controller.props.signal) {
             return;
@@ -2118,7 +2123,8 @@ export const useUIGroupStateController = (
           if (compareTwoJsValues(defaultValue, controller.defaultValueTaken)) {
             return;
           }
-          if (controller.holdsEdit()) {
+          const holdsEdit = controller.holdsEdit();
+          if (holdsEdit && !controller.placeAroundEdits) {
             return;
           }
           controller.defaultValueTaken = defaultValue;
@@ -2129,15 +2135,62 @@ export const useUIGroupStateController = (
             detail: {},
           });
           chainEvent(placeEvent, followEvent);
-          controller.setUIState(
-            defaultValue === undefined ? fallbackState : defaultValue,
-            placeEvent,
-          );
+          const newUIState =
+            defaultValue === undefined ? fallbackState : defaultValue;
+          if (holdsEdit) {
+            controller.placeAroundEdits(newUIState, placeEvent);
+          } else {
+            controller.setUIState(newUIState, placeEvent);
+          }
           s.parentUIStateController?.onChildUIAction(controller, followEvent, {
             stateChanged: true,
             silent: true,
           });
         },
+        // An object's keys are separate answers, so a new default is taken
+        // key by key: what nobody touched shows it, and a field holding an
+        // edit keeps showing the edit, measured from then on against its
+        // share of the default — where a rollback takes it, and what makes it
+        // hold no edit once both say the same. Waiting for the edit instead
+        // would send the old value of every other key with it: a record
+        // someone else moved meanwhile, overwritten by an untouched field.
+        // Not for one value spread over its children (a radio, a list): two
+        // of them would each end up claiming it.
+        placeAroundEdits:
+          defaults === GROUP_DEFAULTS.object && stateShapeIsTheDefaultOne
+            ? (newUIState, e) => {
+                if (newUIState === undefined) {
+                  newUIState = fallbackState;
+                }
+                controller.stateGivenFromAbove = true;
+                for (const child of childUIStateControllerArray) {
+                  if (!shouldPropagateStateToChild(child)) {
+                    continue;
+                  }
+                  if (!child.holdsEdit()) {
+                    controller.placeChildUIState(child, newUIState, e);
+                    continue;
+                  }
+                  const childNewState = resolvedDistributeChildUIState(
+                    newUIState,
+                    child,
+                  );
+                  if (childNewState === CANNOT_DERIVE) {
+                    continue;
+                  }
+                  if (child.placeAroundEdits) {
+                    child.placeAroundEdits(childNewState, e);
+                    continue;
+                  }
+                  // Another kind of group goes on showing its edit as it stands.
+                  if (child.getChildControllers || child.hasStateProp) {
+                    continue;
+                  }
+                  child.state = childNewState;
+                }
+                controller.syncInternalState(aggregateGroupUIState(newUIState));
+              }
+            : undefined,
         onActionEnd: (e) => {
           acknowledgeOwnAction(controller);
           controller.rules.validation.syncValidity(e);
@@ -2446,8 +2499,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             firstChildControllerRef.current = child;
             s.realUIStateController.facadeChild = child;
             // If the picker already has a meaningful state (from value or defaultValue),
-            // push it to the child on registration so it reflects the pre-set value
-            // without firing uiAction (equivalent to defaultValue on the child itself).
+            // push it to the child on registration so it reflects the pre-set value.
             const initialState = s.realUIStateController.uiState;
             if (initialState !== undefined) {
               warnIfChildCannotHold(props, child, initialState);
@@ -2708,7 +2760,8 @@ const INTERNAL_EVENT_SET = new Set([
   "facade_child_mount_sync",
   // Facade pushing its current state (from value/defaultValue) down to the first child
   // on registration, and group pushing value/defaultValue to children on registerChild.
-  // Equivalent to defaultValue initialization: no uiAction, no commands, no parent notification.
+  // Nobody acted: no commands, no parent notification. The child's state did
+  // move, so uiAction still hears it.
   "initial_state_push",
   // A picker's popup closed on a cancel (the no button, Escape, a click
   // outside): what the picker held at open goes back. Nobody acted — no
@@ -2730,8 +2783,9 @@ const INTERNAL_EVENT_SET = new Set([
   "auto_fix",
   // A control put on a value the outside moved while nobody was editing it: a
   // new defaultValue (see followDefaultValue), or what a cancel puts back
-  // (see followOutsideSinceOpen). Initialization arriving after mount, so
-  // nothing fires, and the groups above hear it silently.
+  // (see followOutsideSinceOpen). Initialization arriving after mount: uiAction
+  // hears the value move, nothing else fires, and the groups above hear it
+  // silently.
   "outside_value_follow",
 ]);
 const isInternalEvent = (e) => {

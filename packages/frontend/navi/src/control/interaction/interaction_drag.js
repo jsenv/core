@@ -328,6 +328,10 @@
  * Only those two: a `move` hands its position over at the end of the answer, and
  * a throw has nothing to draw at once.
  *
+ * `optimistic` may also be a function of the outcome's detail (what the answer
+ * reads as `event.detail`), asked as the answer is about to run: one `land`
+ * drawn at once on a seat holds its copy over a zone that asks a question first.
+ *
  * WHEN IT IS ALL OVER: `settle`.
  *
  *   interactions={{ land: placeSeat, settle: () => setCarrying(false) }}
@@ -637,7 +641,7 @@ defineInteractionDetector({
       // the carry holds its copy for the drawing only, and the answer's
       // promise — the write — is followed on its own.
       const answer = (type, detail) => {
-        if (!isOptimistic(type)) {
+        if (!isOptimistic(type, detail)) {
           return trigger(type, causeEvent, detail);
         }
         const transitionBefore = peekLastViewTransition();

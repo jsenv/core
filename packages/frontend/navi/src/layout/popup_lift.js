@@ -307,6 +307,14 @@ export const liftPopupFromAnchor = (
   applyChange,
   { opened, lift, waitForAnchor },
 ) => {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // Whoever asked to see less motion is answered first: the popup opens or
+    // closes where it stands. Not a cross-fade in its place: that is still a
+    // view transition, and the page is frozen under its pictures as long as it
+    // plays (see the css above) — for a fade nobody asked for.
+    applyChange();
+    return;
+  }
   const startViewTransition = ensureDocumentStartViewTransition();
   // A movement still wearing the name would make the name two elements wide,
   // and a name belonging to two elements aborts the transition for the whole

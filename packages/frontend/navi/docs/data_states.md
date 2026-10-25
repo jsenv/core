@@ -25,8 +25,9 @@ whether a missing list is a skeleton, a sentence or an illustration.
 
 ## Asking for a state means receiving it as a value
 
-Without options, `useAsyncData` **delegates**: it suspends while the data is not
-there and throws when the action failed, so the states are drawn by the
+Without options, `useAsyncData` **delegates**: it suspends while the action
+runs — a rerun over data already held included — and throws when the action
+failed, so the states are drawn by the
 `<Loading>` and `<ErrorBoundary>` above rather than by the component. Each
 option turns one of those from something done _to_ the component into a value
 the component reads:

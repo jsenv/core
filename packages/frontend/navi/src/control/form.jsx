@@ -61,7 +61,9 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  * @param {boolean} [props.actionAbortable] - The person waiting may give up on
  *   the send: closing the popup this form holds calls the run off and goes
  *   through, instead of being refused, and a press on its busy submit answers
- *   « in progress » with a way to call it off. For a send whose answer may never come —
+ *   « in progress » with a way to call it off. The form leaving the page while
+ *   it sends calls it off too — removed, or parked by a suspension around it.
+ *   For a send whose answer may never come —
  *   a request over a network that stops answering — where a sheet with no way
  *   out is worse than an answer lost. Aborting frees the client and nothing
  *   more: the write may already have landed on the other side (see
@@ -88,6 +90,17 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   of their own, so there is no tick to wait for on the caller's side. Change
  *   it once, when the screen is ready: taken again after someone started
  *   typing, it would call what they wrote the reference.
+ * @param {object} [props.record] - The record this form edits in place, for a
+ *   screen that stays open after Save (a settings block). Each named field
+ *   starts on its key, and the form holds it: a Save with nothing touched sends
+ *   nothing. A new record — compared by content, so the same one read again is
+ *   no move — is taken key by key: a field nobody touched shows it, a field
+ *   being typed in keeps what is typed (and the form reads changed), and the
+ *   form is measured against the new record from then on. After a send that
+ *   went through, its answer landing as the next record is what the form
+ *   holds. Undefined while the record loads, so no `pristineKey` is needed.
+ *   The action receives the record with the fields' answers in it, keys no
+ *   field answers for included. Excludes `value` and `defaultValue`.
  * @param {string} [props.command] - What follows a submission that went
  *   through: the form has answered its question, and this says what the screen
  *   does about it. Nothing runs when the submission is refused — the form then
@@ -124,6 +137,23 @@ const useFormGroup = (props) => {
   const propsForGroup = { ...props };
   delete propsForGroup.canSendWhileUnchanged;
   delete propsForGroup.pristineKey;
+  // The record is the group's default — placed on the fields as they
+  // register, followed key by key (see placeAroundEdits in
+  // ui_state_controller.js) — and what the form is measured against
+  // (useHeldUIStateAsSent).
+  delete propsForGroup.record;
+  const { record } = props;
+  if (record !== undefined) {
+    if (
+      import.meta.dev &&
+      (Object.hasOwn(props, "value") || Object.hasOwn(props, "defaultValue"))
+    ) {
+      console.warn(
+        `[navi] <Form record> excludes value and defaultValue: the record is what the fields start on.`,
+      );
+    }
+    propsForGroup.defaultValue = record;
+  }
   // Not the generic control `command`, which a control triggers on its own ui
   // actions — here it is what follows a SUCCESSFUL submission. So it is kept
   // out of the control machinery and left in the DOM for the send to read
@@ -167,7 +197,7 @@ const useFormGroup = (props) => {
       withoutEmptyFields(value),
       uiStateController.sentUIState,
     );
-  useHeldUIStateAsSent(uiStateController, props.pristineKey);
+  useHeldUIStateAsSent(uiStateController, props.pristineKey, record);
   useUnregisteredControlWarning(props.ref);
 
   const { basePseudoState, children } = formProps;
@@ -278,8 +308,9 @@ const FormNested = (props) => {
 // What the form HOLDS, as opposed to what it is showing — field by field, the
 // question isUIStateHeld answers: a field it was given an answer for is held,
 // a field merely showing a suggestion is not, and confirming that suggestion IS
-// an answer ("yes, 18").
-const readHeldUIState = (uiStateController) => {
+// an answer ("yes, 18"). A key of the record is an answer it was given, even
+// where the field's own suggestion says the same.
+const readHeldUIState = (uiStateController, record) => {
   const uiState = uiStateController.uiState;
   // A form given a value holds all of it, whatever its fields say.
   if (uiStateController.hasValueProp) {
@@ -287,12 +318,54 @@ const readHeldUIState = (uiStateController) => {
   }
   const held = { ...uiState };
   for (const child of uiStateController.getChildControllers?.() || []) {
-    if (child.name && !isUIStateHeld(child)) {
+    if (
+      child.name &&
+      !isUIStateHeld(child) &&
+      !Object.hasOwn(asObject(record), child.name)
+    ) {
       delete held[child.name];
     }
   }
   return withoutEmptyFields(held);
 };
+
+// The record moved: the baseline moves with it where it moved, and nowhere
+// else. A key nobody is editing is measured against what its field shows of
+// the record now; a key being edited, against the record itself — the edit
+// stays a change, and typing the record's value back makes it none.
+const moveBaselineWithRecord = (uiStateController, recordBefore, record) => {
+  const before = asObject(recordBefore);
+  const after = asObject(record);
+  const uiState = asObject(uiStateController.uiState);
+  const baseline = { ...uiStateController.sentUIState };
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const key of keys) {
+    if (compareTwoJsValues(before[key], after[key])) {
+      continue;
+    }
+    const field = findFieldAnswering(uiStateController, key);
+    baseline[key] = field && field.holdsEdit() ? after[key] : uiState[key];
+  }
+  return withoutEmptyFields(baseline);
+};
+// A nameless grouping answers for its controls' keys (see
+// readNamedChildUIStates in ui_state_controller.js).
+const findFieldAnswering = (groupController, key) => {
+  for (const child of groupController.getChildControllers()) {
+    if (child.name === key) {
+      return child;
+    }
+    if (!child.name && child.getChildControllers) {
+      const field = findFieldAnswering(child, key);
+      if (field) {
+        return field;
+      }
+    }
+  }
+  return undefined;
+};
+const asObject = (value) =>
+  value !== null && typeof value === "object" ? value : {};
 
 // A field holding nothing is a field the form has nothing to say about, and
 // whether it is absent or present-and-empty is an accident of when it
@@ -325,7 +398,12 @@ const withoutEmptyFields = (uiState) => {
 // these effects. A form measured before it would open already changed, and
 // would never take the reference again. Both takes are the same arrival, so the
 // second one costs a render only when it moves something.
-const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
+//
+// A record moving needs no retake: its follow is placed in the render that
+// brought it (followDefaultValue), so the baseline moves in the effect after,
+// and only where the record moved — a whole retake would call what is being
+// typed the reference.
+const useHeldUIStateAsSent = (uiStateController, pristineKey, record) => {
   // The render that brought a new pristineKey read `changed` against the
   // previous baseline, and nothing else is going to move: the button would stay
   // lit on a form that holds exactly what it was just given. So ask for the one
@@ -333,10 +411,14 @@ const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
   // tell, every field it is waiting for re-renders the form as it registers.
   const [, rereadBaseline] = useState(0);
   const isFirstRef = useRef(true);
+  const recordTakenRef = useRef(record);
   useLayoutEffect(() => {
     const takeBaseline = () => {
       const baselineBefore = uiStateController.sentUIState;
-      const baseline = readHeldUIState(uiStateController);
+      const baseline = readHeldUIState(
+        uiStateController,
+        recordTakenRef.current,
+      );
       uiStateController.sentUIState = baseline;
       return !compareTwoJsValues(baselineBefore, baseline);
     };
@@ -363,6 +445,23 @@ const useHeldUIStateAsSent = (uiStateController, pristineKey) => {
       abandoned = true;
     };
   }, [uiStateController, pristineKey]);
+  useLayoutEffect(() => {
+    const recordBefore = recordTakenRef.current;
+    if (compareTwoJsValues(recordBefore, record)) {
+      return;
+    }
+    recordTakenRef.current = record;
+    const baselineBefore = uiStateController.sentUIState;
+    const baseline = moveBaselineWithRecord(
+      uiStateController,
+      recordBefore,
+      record,
+    );
+    uiStateController.sentUIState = baseline;
+    if (!compareTwoJsValues(baselineBefore, baseline)) {
+      rereadBaseline((count) => count + 1);
+    }
+  }, [uiStateController, record]);
 };
 
 // A named form element the form does not know about is worse than a field with

@@ -557,6 +557,21 @@ sends the copy home like any refused carry. Nothing waits on a write still out:
 the next drop is answered on its own, so an answer that replays its moves over
 the state it was given keeps two drops in a row in order.
 
+One outcome may answer two kinds of drop: a player put on another seat stands
+there at once, the same player dropped on « Free the seat » is asked first, and
+the copy has to wait over the zone while the question is open. `optimistic` is
+then a function of the drop — the `event.detail` the answer reads, without the
+event —, asked as the answer is about to run:
+
+```jsx
+land: {
+  answer: (event) =>
+    event.detail.toId === releaseZoneId ? askRelease(event) : land(event),
+  verb: "PATCH",
+  optimistic: (detail) => detail.toId !== releaseZoneId,
+},
+```
+
 Only `reorder` and `land`: a `move` hands its position over when the answer is
 in, and a throw has nothing to draw at once.
 

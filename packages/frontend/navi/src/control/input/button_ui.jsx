@@ -8,7 +8,9 @@ import {
   usePreloadOpeningOnPress,
 } from "../../nav/use_preload_on_intent.js";
 import { LINK_DOCUMENT_ATTRIBUTE } from "../../nav/browser_integration/link_document.js";
+import { LINK_OPEN_ATTRIBUTE } from "../../nav/browser_integration/link_open.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
+import { LINK_RETURN_ATTRIBUTE } from "../../nav/browser_integration/link_return.js";
 import { PRESSABLE_ATTRIBUTE } from "../../nav/transition_press.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
@@ -564,6 +566,8 @@ export const ButtonUI = (props) => {
     target,
     rel,
     replace,
+    asReturn,
+    open,
     document: isDocument,
     pressableDuringRouteTransition,
     prefetch = true,
@@ -610,6 +614,11 @@ export const ButtonUI = (props) => {
   // Worn as an attribute, like a link's (see link_replace.js): read off the
   // anchor by the click handler, off the source by --navi-nav-to.
   const replaceRequest = replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null;
+  // The same for a push that is a return (see link_return.js), and for a page
+  // reached with one of its popups open (see link_open.js).
+  const returnRequest = asReturn ? { [LINK_RETURN_ATTRIBUTE]: "" } : null;
+  const openRequest =
+    open === undefined ? null : { [LINK_OPEN_ATTRIBUTE]: JSON.stringify(open) };
 
   // And this one says the address is another document of this origin, so the
   // press is the browser's (see link_document.js).
@@ -667,6 +676,10 @@ export const ButtonUI = (props) => {
       rel={rel}
       replace={undefined}
       {...replaceRequest}
+      asReturn={undefined}
+      {...returnRequest}
+      open={undefined}
+      {...openRequest}
       document={undefined}
       {...documentRequest}
       pressableDuringRouteTransition={undefined}

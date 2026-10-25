@@ -21,7 +21,9 @@
  *   browser would have done — target against the top edge, instantly — is
  *   applied here, after layout, so one rule holds whether the target was there
  *   all along or arrived late; `setUrlTargetOptions` lets an app pick another
- *   alignment or a smooth behavior. A page with nothing to scroll simply
+ *   alignment or a smooth behavior, and a target (or a box around it) its own
+ *   alignment, since a row a notification points at and an article of the
+ *   terms do not land the same way. A page with nothing to scroll simply
  *   does not move, which is the whole of the "the list already fits on screen"
  *   case — the transient mark alone then says which one was meant.
  *
@@ -50,15 +52,17 @@
  * has to be drawn into that same node for `:target` to stay on it.
  */
 
-import { elementIsFocusable } from "@jsenv/dom";
+import { elementIsFocusable, getScrollContainer } from "@jsenv/dom";
 import { computed, effect } from "@preact/signals";
 
 import { observeBeforeRouting } from "../browser_integration/before_routing.js";
 import { documentIsBusySignal } from "../browser_integration/document_loading_signal.js";
 import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
+import { documentLoadIsReturn } from "../browser_integration/scroll_restoration.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
+const URL_TARGET_BLOCK_ATTRIBUTE = "data-url-target-block";
 
 const css = /* css */ `
   @layer navi {
@@ -95,9 +99,14 @@ let urlTargetOptions = {
  * Adjusts how navi answers the element designated by the URL hash.
  *
  * @param {object} options
- * @param {"start"|"center"|"end"|"nearest"} [options.block="start"]
+ * @param {"start"|"center"|"end"|"nearest"|"auto"} [options.block="start"]
  *   Vertical alignment of the scroll. "start" by default — the alignment the
- *   browser itself uses when it answers a fragment.
+ *   browser itself uses when it answers a fragment. "auto" centres a target
+ *   that fits its scrollport (less the scroll-padding a bar reserves), read
+ *   with what is around it, and lands one taller on its top, where reading
+ *   starts. A target says its own with `data-url-target-block` (same values),
+ *   on itself or on a box around it — a list saying it once for its items —,
+ *   read before this one.
  * @param {ScrollBehavior} [options.behavior="instant"]
  *   "instant" by default, like the browser. When set to "smooth", it is
  *   overridden with "instant" under `prefers-reduced-motion: reduce`.
@@ -136,15 +145,6 @@ export const useUrlTargetId = () => {
 let stopWaitingForCurrentTarget = null;
 let currentTargetKey;
 
-const documentLoadIsReturn = () => {
-  const [navigationEntry] = performance.getEntriesByType("navigation");
-  if (!navigationEntry) {
-    return false;
-  }
-  return (
-    navigationEntry.type === "reload" || navigationEntry.type === "back_forward"
-  );
-};
 // The url the document is on its way back to — a back, a forward, a reload —
 // where the reader was, as opposed to a place just sent to. Said by the
 // navigation before it writes anything, and by the load for the first url.
@@ -326,12 +326,12 @@ const waitForUrlTarget = (id, onSettled) => {
 };
 
 const revealUrlTarget = (element) => {
-  const { block, behavior, markDuration } = urlTargetOptions;
+  const { behavior, markDuration } = urlTargetOptions;
   const prefersReducedMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
   ).matches;
   element.scrollIntoView({
-    block,
+    block: resolveTargetBlock(element),
     behavior: prefersReducedMotion ? "instant" : behavior,
   });
   // What the browser does when it handles a fragment itself: keyboard
@@ -343,6 +343,47 @@ const revealUrlTarget = (element) => {
   setTimeout(() => {
     element.removeAttribute(URL_TARGET_ATTRIBUTE);
   }, markDuration);
+};
+
+const resolveTargetBlock = (element) => {
+  const blockHolder = element.closest(`[${URL_TARGET_BLOCK_ATTRIBUTE}]`);
+  const block = blockHolder
+    ? blockHolder.getAttribute(URL_TARGET_BLOCK_ATTRIBUTE)
+    : urlTargetOptions.block;
+  if (block !== "auto") {
+    return block;
+  }
+  return fitsItsScrollport(element) ? "center" : "start";
+};
+// Against the scroller the element lands in, less the band it keeps free at
+// its edges for a bar: the room the reader actually sees it in. Its own
+// scroll-margin counts with it, since the alignment honours it.
+const fitsItsScrollport = (element) => {
+  // None for an id on the root itself: the document is what it lands in.
+  const scrollContainer =
+    getScrollContainer(element) || document.scrollingElement;
+  const scrollportHeight = scrollContainer.clientHeight;
+  const containerStyle = getComputedStyle(scrollContainer);
+  const room =
+    scrollportHeight -
+    resolveScrollPadding(containerStyle.scrollPaddingTop, scrollportHeight) -
+    resolveScrollPadding(containerStyle.scrollPaddingBottom, scrollportHeight);
+  const elementStyle = getComputedStyle(element);
+  const height =
+    element.getBoundingClientRect().height +
+    (parseFloat(elementStyle.scrollMarginTop) || 0) +
+    (parseFloat(elementStyle.scrollMarginBottom) || 0);
+  return height <= room;
+};
+const resolveScrollPadding = (value, scrollportSize) => {
+  const number = parseFloat(value);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  if (value.endsWith("%")) {
+    return (number / 100) * scrollportSize;
+  }
+  return number;
 };
 
 let targetWriteInProgress = false;

@@ -138,7 +138,8 @@ const detectors = [];
  *   detector does not claim, which is how a word two gestures share ("grab" and
  *   "release", told by a drag and by a surface) finds out which of them it
  *   belongs to here —, whether its `verb` is a write the network policy holds
- *   right now, and whether it is declared `optimistic`. All but the first two
+ *   right now, and whether it is declared `optimistic` (given the outcome's
+ *   detail, a function declared there is asked about it). All but the first two
  *   are asked at the moment they matter and never at setup: what an interaction
  *   does is the caller's latest render, and something is locked and unlocked
  *   while its listeners stay where they are. A detector reading a gesture asks
@@ -498,9 +499,18 @@ export const useInteractionsEffect = (ref, interactionsRef) => {
         isDeclared: (type) => Boolean(answerOf(interactionsNow()[type])),
         isHeldByNetworkPolicy: (type) =>
           isHeldByNetworkPolicy(interactionsNow()[type]),
-        isOptimistic: (type) => {
+        isOptimistic: (type, detail) => {
           const value = interactionsNow()[type];
-          return isDeclarationObject(value) && Boolean(value.optimistic);
+          if (!isDeclarationObject(value)) {
+            return false;
+          }
+          const { optimistic } = value;
+          if (typeof optimistic === "function") {
+            // Decided per outcome, by what it answers: asked without one (a
+            // setup check), the declaration is what counts.
+            return detail ? Boolean(optimistic(detail)) : true;
+          }
+          return Boolean(optimistic);
         },
       });
       if (typeof cleanup === "function") {

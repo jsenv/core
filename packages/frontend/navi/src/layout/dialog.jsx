@@ -91,7 +91,10 @@ import {
 import { useContext, useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
-import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
+import {
+  dispatchRequestInteraction,
+  onRequestInteraction,
+} from "../control/rules/control_interaction.js";
 import {
   findControlsHoldingPopup,
   giveUpOnControlsHoldingPopup,
@@ -104,7 +107,12 @@ import {
 } from "../box/box_style_util.js";
 import { smallTouchScreenSignal } from "./responsive.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { isDebugNoop, useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
+import {
+  isDebugNoop,
+  useDebugFocus,
+  useDebugInteraction,
+  useDebugPopup,
+} from "../navi_debug.jsx";
 import {
   openedDuringThisPress,
   UNMOUNT_EVENT_TYPE,
@@ -1515,6 +1523,7 @@ const useDialogProps = (props) => {
   const disarmBackdropHideRef = useRef(null);
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // positionDialog lives in openEffect's closure — created once, when the
   // dialog opens. Reading the placement props through a ref instead of that
@@ -2383,6 +2392,13 @@ const useDialogProps = (props) => {
     "onnavi_command": (e) => {
       onNaviCommand(e);
       rest.onnavi_command?.(e);
+    },
+    // Its own requests (Escape) are judged here, by the dialog, which holds
+    // no state a gate could refuse: what may keep it open is onRequestClose,
+    // asking the runs it holds. Left to the first control inside, a disabled
+    // button or a held form would answer for the whole dialog.
+    "onnavi_request_interaction": (e) => {
+      onRequestInteraction(e, { debugInteraction });
     },
     // Not a child on the line of whatever holds it: a popup renders inside its
     // opener's own subtree, so a Dialog written next to the control that opens it

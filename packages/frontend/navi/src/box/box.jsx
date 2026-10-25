@@ -51,6 +51,7 @@ import { getDefaultDisplay } from "./display_defaults.js";
 import { MountAfterPaint } from "./mount_after_paint.jsx";
 import {
   applyStyle,
+  getPseudoKeyRequiredStates,
   initPseudoStyles,
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
@@ -1135,7 +1136,13 @@ const computeBox = (props, parentBoxFlow) => {
         styleDeps.push(...pseudoClasses);
       }
       for (const key of pseudoClassesFromStyleSet) {
-        innerPseudoClasses.push(key);
+        if (key.startsWith("::")) {
+          innerPseudoClasses.push(key);
+        } else {
+          // ":-navi-selected:hover" applies while both states hold, so both
+          // are what gets tracked.
+          innerPseudoClasses.push(...getPseudoKeyRequiredStates(key));
+        }
         styleDeps.push(key);
       }
     } else {

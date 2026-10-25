@@ -1112,7 +1112,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 // matches; "::x:a:b" and ":a:b" ask for ":a" and ":b" — the state keys as
 // checkPseudoClasses writes them, colon included.
 const pseudoKeyRequiredStatesMap = new Map();
-const getPseudoKeyRequiredStates = (pseudoKey) => {
+export const getPseudoKeyRequiredStates = (pseudoKey) => {
   const cached = pseudoKeyRequiredStatesMap.get(pseudoKey);
   if (cached) {
     return cached;

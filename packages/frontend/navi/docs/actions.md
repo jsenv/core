@@ -456,9 +456,13 @@ on a read-only control — holds everywhere but on a control with
 button and a link hold no state to mirror: there, each press is one call). The
 user typing is one cause among several: a `value` prop coming back down after a
 render, a popup control propagating its choice up to the picker holding it, a
-group cascading a value into its children — all of them reach `uiAction`, so
-that a signal or a local variable listening to it never drifts out of sync.
-Reading it as "the user did something" is the natural mistake.
+group cascading a value into its children, a group filling a control it builds
+(a popup's fields at the opening), a new `defaultValue` taken by a field nobody
+edited — all of them reach `uiAction`, so that a signal or a local variable
+listening to it never drifts out of sync. The one value it does not hear is the
+one a control starts on by itself, its own `defaultValue` or `value`: a mirror
+reads that one at mount. Reading it as "the user did something" is the natural
+mistake.
 
 The second argument says which one it was. Every event navi dispatches carries
 the event that caused it, and `findEvent(event, type)` walks that chain back:

@@ -291,7 +291,9 @@ or taken back (the action failed, the popup was cancelled).
 
 This holds for a control, for a group given a `defaultValue` (a selectable list,
 a `ControlGroup`), and for everything inside a picker's popup, which stays
-mounted while closed.
+mounted while closed. An object — a `ControlGroup`, a `Form` — takes it key by
+key: a field holding an edit keeps it, measured against its key of the new
+default, while the fields around it follow.
 
 Where the record goes depends on who sends it. A control that saves itself —
 its own `action`, nothing around it to press — takes it as `defaultValue`

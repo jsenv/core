@@ -130,6 +130,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   selfInteractions?: string,
  *   whenSelfInteractionsBlocked?: "hide" | "refuse" | "ignore",
  *   replace?: boolean,
+ *   asReturn?: boolean,
+ *   open?: string | { id: string, type?: "push" | "replace" },
  *   document?: boolean,
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
@@ -171,6 +173,13 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   `--navi-nav-to` command — by TAKING THE PLACE of the current history entry
  *   rather than stacking on it: what `<Link replace>` says, for a press drawn
  *   as a button.
+ * @param {boolean} [asReturn] The push is a return by meaning: the page lands
+ *   where its address was last left (the document's offset, the positions its
+ *   lists kept), as a back would bring it — what `<Link asReturn>` says, read
+ *   off an `href`, a `route` or a `--navi-nav-to` command.
+ * @param {string|{id: string, type?: "push"|"replace"}} [open] Lands with one
+ *   of the destination's popups open, named the way its `navState` names it:
+ *   what `<Link open>` says, for a press drawn as a button.
  * @param {boolean} [document] The `href` is ANOTHER DOCUMENT of this origin —
  *   an admin panel, a status page, anything built as its own entry point — so
  *   the press is left to the browser and loads that page, instead of being
@@ -248,7 +257,9 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   button's action: closing the popup the run holds calls it off and goes
  *   through, instead of being refused, and a second press on the busy button
  *   answers « in progress » with a way to call it off (« Annuler »,
- *   `button.abort_run`). For a run whose answer may never come —
+ *   `button.abort_run`). The button leaving the page while it runs calls it
+ *   off too — removed, or parked by a suspension around it: nobody is left to
+ *   read the answer. For a run whose answer may never come —
  *   a request over a network that stops answering — where a popup with no way
  *   out is worse than an answer lost. Aborting frees the client and nothing
  *   more: the work may already have happened on the other side (see

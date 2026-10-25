@@ -344,7 +344,8 @@ const useExpandableContext = (partName) => {
  * @param ownSignals - State that belongs to this section alone, emptied
  *   (written `undefined`) by every close (see Dialog's own `ownSignals`).
  * @param onClose - Called when the expandable actually closes, whatever asked
- *   for it. Not preventable.
+ *   for it. Not preventable. `e.detail.requester` is who asked, when a press
+ *   did: the button of a `--navi-close`.
  * @param onToggle - Listens the "toggle" event dispatched on the root (a
  *   ToggleEvent with newState/oldState where supported). Fires on every actual
  *   state change, never on mount.
@@ -951,6 +952,7 @@ export const Expandable = (props) => {
         rest.onnavi_request_close?.(e);
         const closing = openController.requestClose(e, {
           isCancel: e.detail?.isCancel,
+          requester: e.detail?.source,
         });
         if (!closing) {
           // Said back to whoever asked: --navi-close:all stops climbing here.
@@ -1039,7 +1041,10 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
           openController.onOpeningPress?.(e);
         },
         onnavi_request_close: (e) => {
-          openController.requestClose(e, { isCancel: e.detail?.isCancel });
+          openController.requestClose(e, {
+            isCancel: e.detail?.isCancel,
+            requester: e.detail?.source,
+          });
         },
       }}
       {...rest}

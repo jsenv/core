@@ -129,7 +129,9 @@ today's) — and it is compared by value, so it can be computed at every render.
 left and come back to, or the page reloaded, the way the page does (its `id`
 must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-list));
 **`scrollResetOnNavigation`** opts out. A push to its screen is an arrival and
-forgets it, even when the address names the item one was reading: a link that is
+forgets it — so is a document loaded fresh at its address, typed or reached from
+outside the app, where only a reload or a back/forward load finds it again —
+even when the address names the item one was reading: a link that is
 a return by meaning says `asReturn`, and the list comes back where that address
 was left (see
 [navigation.md](./navigation.md#where-a-navigation-lands-the-scroll)). What it draws there before its source

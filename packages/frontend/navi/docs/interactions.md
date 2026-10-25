@@ -111,7 +111,8 @@ A value can also say what it is besides what it does, as
 happen, and the policy's words are said where the hand made it — before anything
 moves, for a gesture: a carried thing is not picked up, a swiped row resists like
 a wall. `optimistic` is for a `reorder` or a `land` drawn at once and written
-after ([drag_interactions.md](./drag_interactions.md#answered-at-once-optimistic)).
+after — `true`, or a function of the drop deciding it per drop
+([drag_interactions.md](./drag_interactions.md#answered-at-once-optimistic)).
 A falsy `answer` is "not this one" too.
 
 ### The interactions navi detects

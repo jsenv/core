@@ -24,36 +24,30 @@ const controllersWarned = new WeakSet();
 
 export const getUIStateControllerById = (id) => controllersById.get(id);
 
-// For a reader naming a control by id that may arrive after it (a shortcut
-// rendered before the control it updates, a control mounted by a later
-// render): called each time a controller takes that id. Told after the render
-// that registers it, never during it: what the reader does with it (subscribe,
-// set its own state) is not something to run inside another component's render.
-const registrationCallbacksById = new Map();
-export const listenControllerRegistration = (id, callback) => {
-  let callbackSet = registrationCallbacksById.get(id);
-  if (!callbackSet) {
-    callbackSet = new Set();
-    registrationCallbacksById.set(id, callbackSet);
-  }
-  callbackSet.add(callback);
+// For a reader whose control may arrive after it (a shortcut rendered before
+// the control it updates, a control mounted by a later render, a popup's
+// content built again at each open): called each time a controller takes an
+// id, so the reader looks its control up again — by the DOM, as a command
+// would (see button_update_applied.jsx): an id given to a control may sit on a
+// box around it rather than on the controller. Told after the render that
+// registers it, never during it: what the reader does with it (subscribe, set
+// its own state) is not something to run inside another component's render.
+const registrationCallbackSet = new Set();
+export const listenControllerRegistration = (callback) => {
+  registrationCallbackSet.add(callback);
   return () => {
-    callbackSet.delete(callback);
-    if (callbackSet.size === 0) {
-      registrationCallbacksById.delete(id);
-    }
+    registrationCallbackSet.delete(callback);
   };
 };
 const tellControllerRegistered = (id, uiStateController) => {
-  const callbackSet = registrationCallbacksById.get(id);
-  if (!callbackSet) {
+  if (registrationCallbackSet.size === 0) {
     return;
   }
   queueMicrotask(() => {
     if (controllersById.get(id) !== uiStateController) {
       return;
     }
-    for (const callback of callbackSet) {
+    for (const callback of registrationCallbackSet) {
       callback(uiStateController);
     }
   });

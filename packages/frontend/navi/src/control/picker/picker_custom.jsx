@@ -32,6 +32,10 @@ import {
   usePopupContentMount,
 } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
+import {
+  findControlsHoldingPopup,
+  giveUpOnControlsHoldingPopup,
+} from "@jsenv/navi/src/layout/popup_busy.js";
 import { PopupTitleContext } from "@jsenv/navi/src/layout/popup_title.jsx";
 import { PopupValueContext } from "@jsenv/navi/src/layout/popup_value.js";
 import {
@@ -564,8 +568,31 @@ const PickerCustom = (props) => {
 
       return {
         onRequestClose: (requestCloseEvent) => {
+          // A run inside the popup holds it, whatever the close means for the
+          // value — read the way a Dialog or a Popover reads it (see
+          // popup_busy.js): called off on the way out when every such run was
+          // declared givable-up, refused otherwise.
+          const popupEl = popupRef.current;
+          const controlsHolding = popupEl
+            ? findControlsHoldingPopup(popupEl)
+            : [];
+          if (
+            controlsHolding.length > 0 &&
+            !giveUpOnControlsHoldingPopup(
+              controlsHolding,
+              "the picker holding the run was closed",
+            )
+          ) {
+            dispatchRequestInteraction(controlsHolding[0].element, {
+              event: requestCloseEvent,
+              name: "picker request close",
+            });
+            requestCloseEvent.preventDefault();
+            confirmEventRef.current = null;
+            return;
+          }
           if (requestCloseEvent.detail.isCancel) {
-            // Cancelling always succeeds — nothing to validate.
+            // A cancel has no value to validate.
             return;
           }
           const pickerEl = ref.current;
@@ -860,6 +887,9 @@ const PickerCustom = (props) => {
               isCancel: e.detail.isCancel,
               isConfirm: e.detail.isConfirm,
               isSend: e.detail.isSend,
+              // Who asked — the button of a `--navi-close` —, read by onClose
+              // as on a Dialog or a Popover.
+              requester: e.detail.source,
             });
             if (!closing) {
               e.preventDefault();
@@ -1132,7 +1162,16 @@ const PickerCustom = (props) => {
             };
           },
           keyDown: (e) => {
-            return onKeyDownShortcuts(e);
+            // A shortcut that applies has been through the gate already, under
+            // its own name and intent: the key is answered. Handed back as the
+            // reaction, its boolean would be asked again, unnamed — as a write,
+            // which a held picker refuses. `false` rather than null: null lets
+            // the default reaction answer the same key a second time.
+            const answered = onKeyDownShortcuts(e);
+            if (answered === null || answered === undefined) {
+              return null;
+            }
+            return false;
           },
         },
       });

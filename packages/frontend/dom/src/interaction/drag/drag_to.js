@@ -240,11 +240,13 @@ const css = /* css */ `
      Only the resting cursor is set here: what it becomes once a drag is under
      way belongs to the gesture (see the backdrop in drag_gesture.js), the only
      thing that knows a drag actually started. */
-  [data-drag-handle] {
-    cursor: grab;
-  }
   [data-drag-source] {
     cursor: default;
+  }
+  /* After the source: a handle with drag interactions of its own is its own
+     source too, and is still a handle. */
+  [data-drag-handle] {
+    cursor: grab;
   }
   [data-drag-ignore],
   [data-self-interactions~="drag"],

@@ -465,8 +465,13 @@ export const setupBrowserIntegrationViaHistory = ({
     const linkRoutingOptions = {
       reason: `"click" on a[href="${href}"]`,
       // A link that takes the place of the current entry instead of stacking
-      // on it says so on itself (see link_replace.js).
-      navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
+      // on it says so on itself (see link_replace.js). One to the address the
+      // document is at replaces too, as the browser answers it: stacked, it
+      // would leave behind an entry that a Back returns to without moving.
+      navigationType:
+        linkAsksForReplace(linkElement) || href === readAddress()
+          ? "replace"
+          : "push",
       asReturn: linkAsksForReturn(linkElement),
       // Who started it. Announced with the navigation because a press
       // carries things the url does not: what a link asks of a route

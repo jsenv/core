@@ -176,6 +176,16 @@ export const popupCss = /* css */ `
       --popup-translate-duration: var(--popup-animation-duration);
       --popup-scale-duration: var(--popup-animation-duration);
     }
+    /* Whoever asked to see less motion gets the popup without its travel: a
+       scale or a slide lands at once, and the fade a kind carries (scaling,
+       expand-*) still plays — it moves nothing. */
+    @media (prefers-reduced-motion: reduce) {
+      .navi_popover,
+      .navi_dialog {
+        --popup-translate-duration: 0s;
+        --popup-scale-duration: 0s;
+      }
+    }
   }
 
   .navi_popover,

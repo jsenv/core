@@ -5,7 +5,9 @@ import {
   navTo,
 } from "../nav/browser_integration/browser_integration.js";
 import { afterPopupLift } from "../layout/popup_lift.js";
+import { linkAsksToOpen } from "../nav/browser_integration/link_open.js";
 import { linkAsksForReplace } from "../nav/browser_integration/link_replace.js";
+import { linkAsksForReturn } from "../nav/browser_integration/link_return.js";
 import {
   findClosestControlWithAction,
   findControlHost,
@@ -218,11 +220,11 @@ const resolveExplicitTarget = (element) => {
 };
 // The control around the source that a command can be about: one holding a
 // value of its own. A popup is a control root too (it answers interactions,
-// carries a callout), but it has no host of its own — asked for one, it
-// answers with the first control INSIDE it, which for a field sending
-// --navi-update from a picker's popup is that very field: the command then
-// sets the field to what it already holds, which fires the command again,
-// without end. Such a surface is walked past, up to the picker or the form.
+// carries a callout), but it has no host of its own, and a control root whose
+// first host belongs to a control nested in it is no better: taken for that
+// host, a field sending --navi-update from inside it would set itself to what
+// it already holds, which fires the command again, without end. Such a surface
+// is walked past, up to the picker or the form.
 export const resolveFirstParentControl = (el) => {
   let parentControl = getParentControl(el);
   while (parentControl && !ownsControlHost(parentControl)) {
@@ -240,7 +242,7 @@ const ownsControlHost = (controlRoot) => {
 const resolveFirstChildControl = (el) => {
   let startEl;
   if (isControlRoot(el)) {
-    startEl = findControlHost(el);
+    startEl = findControlHost(el) || el;
   } else {
     startEl = el;
   }
@@ -427,6 +429,21 @@ const voidCommand = (source) => {
   };
 };
 
+/**
+ * The element a `--navi-update` from `source` writes: the one its `commandfor`
+ * names, or the control around it. Also what the source reads to say it is
+ * applied (button_update_applied.jsx), so the mark lights on the very control a
+ * press would write — a Spin's id, for one, is on the box around its control.
+ * Silent: a `commandfor` naming nothing yet is a target still to mount, and the
+ * press says so on its own (see triggerNaviCommand).
+ */
+export const resolveUpdateTarget = (source) => {
+  const commandFor = source.getAttribute("commandfor");
+  if (commandFor) {
+    return document.getElementById(commandFor);
+  }
+  return resolveExplicitTarget(source) || resolveFirstParentControl(source);
+};
 // "--navi-update:smooth" asks the control to be SEEN moving to the value — a
 // wheel scrolls to it rather than swapping its digits, a spin plays the travel
 // its chevron would play — so a shortcut under a control shows which value it
@@ -438,8 +455,7 @@ const voidCommand = (source) => {
 // ("--navi-update:toggle:smooth").
 const updateCommand = (source, event, { argument }) => {
   const { toggle, smooth } = readUpdateCommandModifiers(argument);
-  const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+  const target = resolveUpdateTarget(source);
   if (!target) {
     return undefined;
   }
@@ -941,12 +957,14 @@ const navToCommand = (source, event, { argument }) => {
   return {
     target,
     // Which way there is worn by the source, as a link wears it (see
-    // link_replace.js): `<Button command="--navi-nav-to:/done" replace>`.
+    // link_replace.js, link_return.js, link_open.js):
+    // `<Button command="--navi-nav-to:/done" replace>`.
     implementation: () =>
-      navTo(
-        argument,
-        linkAsksForReplace(source) ? { replace: true } : undefined,
-      ),
+      navTo(argument, {
+        replace: linkAsksForReplace(source),
+        asReturn: linkAsksForReturn(source),
+        open: linkAsksToOpen(source),
+      }),
   };
 };
 

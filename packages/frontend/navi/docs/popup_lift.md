@@ -24,6 +24,7 @@ and everything below follows from that one fact.
 - [A row of cards: one popup that walks](#a-row-of-cards-one-popup-that-walks)
 - [Lifting on the way back only](#lifting-on-the-way-back-only)
 - [What it costs, and where the time goes](#what-it-costs-and-where-the-time-goes)
+- [Less motion](#less-motion)
 - [The wall, and the frame before the movement](#the-wall-and-the-frame-before-the-movement)
 - [What the browser does around it](#what-the-browser-does-around-it)
 
@@ -286,9 +287,9 @@ and dev warns.
 
 **Tell the collecting close from the others.** Escape, the back button and a
 press on the wall close the dialog too, and usually mean "not now" rather than
-"collect". A `Dialog`'s or a `Popover`'s `onClose` receives who asked
-(`e.detail.requester`, the button of a `--navi-close`), and only the close that
-collects writes the state.
+"collect". A `Dialog`'s, a `Popover`'s or a `Picker`'s `onClose` receives who
+asked (`e.detail.requester`, the button of a `--navi-close`), and only the
+close that collects writes the state.
 The others land nowhere: the fixed `liftAnchor` names nothing, so they wait out
 those 300 ms, fade out, and dev warns.
 
@@ -316,6 +317,19 @@ and one layout. So the lever is the content:
 
 The movement itself is the browser's: once it starts, the content's cost is
 over.
+
+## Less motion
+
+Under `prefers-reduced-motion: reduce` nothing lifts: the popup opens or closes
+where it stands. Only the movement is gone — the close is the same close,
+`onClose` and `liftAnchor` are read as before, the wall still fades in. Not a
+cross-fade in its place: that is still a view transition, and the page stays
+frozen under its pictures for as long as it plays.
+
+A popup's own opening and closing answer the setting too: `scaling` and
+`expand-*` keep their fade and lose their growth, a `slide-from-*` lands at
+once, `fading` is unchanged. So `{ open: "scaling", close: "lifting" }` closes
+with a fade.
 
 ## The wall, and the frame before the movement
 

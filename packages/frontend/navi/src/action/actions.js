@@ -854,7 +854,8 @@ const actionWeakMap = new WeakMap();
  *   `{ resource, on: ["POST", "DELETE"] }` only the callbacks it names (a
  *   write named in that resource's `writes` included), and a function
  *   returning that list is called once, before the first request of any
- *   resource leaves.
+ *   resource leaves. `reads` throws: an action is one question, asked again
+ *   whole.
  * @param {{ verb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }} [rootOptions.meta] -
  *   `verb` puts the action under the network policy (docs/network_policy.md).
  */

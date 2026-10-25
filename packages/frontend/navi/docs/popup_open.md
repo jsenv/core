@@ -1107,7 +1107,9 @@ share sheet per card) pays one element per closed popup at every mount, not a
 popup: a row may carry the popups of its own actions. It is built at once when
 something needs it from the start — open at mount, a `navState`, an `anchor` (a
 hover builds the content ahead of the click), or a `mount` other than the
-default. A `Picker`'s popup is the picker's own, built with it.
+default. A `Picker`'s popup is the picker's own, built with it: it is anchored
+on the picker's trigger, whose hover builds the content, and every way the
+picker opens asks its popup directly.
 
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:

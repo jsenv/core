@@ -18,7 +18,10 @@
  * Kept per URL rather than per history entry: an entry has no name of its own
  * that survives a reload, and two entries on the same URL are the same place
  * to a reader. Kept in the session too, so a reload lands where the browser
- * would have landed — the flag above is a promise to do the whole job.
+ * would have landed — the flag above is a promise to do the whole job. Only a
+ * reload or a back/forward load finds them: a document loaded fresh in the
+ * same tab — an address typed, a link from outside — is an arrival, which the
+ * browser lands at its top (see documentLoadIsReturn).
  *
  * The document is not the only scrollport of a page. A list scrolling itself
  * (a `<List expandY>` under a search field that stays put) is left and come
@@ -99,6 +102,23 @@ const readShownUrl = () => {
   return new URL(readRoutingAddress(), window.location.href).href;
 };
 
+/**
+ * Whether the document was loaded to come back to where the reader was — a
+ * reload, a back or a forward into it — rather than sent to its address.
+ */
+export const documentLoadIsReturn = () => {
+  const [navigationEntry] = performance.getEntriesByType("navigation");
+  if (!navigationEntry) {
+    return false;
+  }
+  return (
+    navigationEntry.type === "reload" || navigationEntry.type === "back_forward"
+  );
+};
+// Read as the document starts: the positions are loaded later, by whoever
+// needs them first, and the page may have moved by then.
+const urlArrivedAtByLoad = documentLoadIsReturn() ? null : window.location.href;
+
 // Read once, the first time anyone needs the positions: the document's
 // restoration is installed by the routing, and a list remembering itself may
 // mount in an app that never routes.
@@ -130,6 +150,13 @@ const loadStore = () => {
     }
   } catch {
     // Something else wrote there, or it was truncated.
+  }
+  // The address a fresh load arrived at is opened as an arrival, the document
+  // and its lists alike (see forgetScrollersOnArrival): what the session kept
+  // there is for a reload or a return.
+  if (urlArrivedAtByLoad !== null) {
+    positionByUrl.delete(urlArrivedAtByLoad);
+    scrollerPositionsByUrl.delete(urlArrivedAtByLoad);
   }
 };
 const storePositions = () => {

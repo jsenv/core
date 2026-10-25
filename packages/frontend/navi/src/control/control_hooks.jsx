@@ -23,7 +23,6 @@ import { computed, signal } from "@preact/signals";
 import {
   useCallback,
   useContext,
-  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -61,6 +60,7 @@ import {
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { useGeneratedId } from "@jsenv/navi/src/utils/use_generated_id.js";
 import { onNaviCommand, triggerNaviCommand } from "./commands.js";
 import {
   SELF_INTERACTIONS_ATTRIBUTE,
@@ -269,7 +269,7 @@ export const useControlProps = (
   // the whole of it happens.
   const { standalone } = props;
 
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   // A Field's id is what its Label points at, so only a control a label can
   // point at (see the set) takes it. A link in the label's own text is a
   // control too, but never that target: taking the id would make two elements
@@ -741,11 +741,13 @@ export const useControlProps = (
       const keyDownDefaultOnInput = (e) => {
         if (e.key === "Enter") {
           if (props.enterSendsNothing || enterAnsweredByInputEffect) {
-            // Nothing around the field hears it. Left to the browser, so its
-            // own Enter still happens (a datalist choice) — except inside a
-            // <form>, where that Enter is the form's implicit submission.
-            if (ref.current.form) {
-              e.preventDefault();
+            // Nothing around the field hears it. The key is left to the
+            // browser, so its own Enter still happens (WebKit takes the
+            // highlighted datalist option on it): only the implicit
+            // submission it may also cause is stopped.
+            const form = ref.current.form;
+            if (form) {
+              refuseImplicitSubmission(form);
             }
             return null;
           }
@@ -1871,8 +1873,22 @@ const useInteractiveProps = (
     // it does from a press outside, and refuses both alike when it holds a
     // change it cannot send.
     const zoneReadOnlyApplies = zoneStateApplies && !pressOnlyLeaves(props);
+    // A press feeding nothing to the write around it — a travel, a page, a
+    // uiAction, a function of its own — has nothing for the network policy to
+    // keep: only its own verb holds it, as anywhere else. What the zone holds
+    // for its own reasons (read-only, busy) still holds it.
+    const asksNothingOfTheWrite = pressAsksNothingOfTheWrite(
+      controlInfo.controlType,
+      props,
+      boundAction,
+    );
     const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
-    const controlReadOnly = zoneReadOnlyApplies && controlReadOnlyFromAbove;
+    const controlReadOnly =
+      zoneReadOnlyApplies &&
+      !(
+        asksNothingOfTheWrite && controlReadOnlyFromAbove === "network-policy"
+      ) &&
+      controlReadOnlyFromAbove;
     const controlLoading = zoneStateApplies && controlLoadingFromAbove;
 
     const disabledResolved = disabled || controlDisabled;
@@ -1903,7 +1919,10 @@ const useInteractiveProps = (
       networkPolicyReason !== null &&
       (isWriteAction(boundAction) ||
         Boolean(
-          zoneReadOnlyApplies && parentAction && isWriteAction(parentAction),
+          zoneReadOnlyApplies &&
+          !asksNothingOfTheWrite &&
+          parentAction &&
+          isWriteAction(parentAction),
         ) ||
         controlReadOnly === "network-policy");
     // Held back because the surface above already has as many runs in flight as
@@ -1970,6 +1989,28 @@ const useInteractiveProps = (
     // the control the run belongs to, so a field or a submit inheriting a
     // form's wait inherits this with it.
     uiStateController.actionAbortable = Boolean(actionAbortable);
+    // Nobody is left waiting on a run declared givable-up once the control
+    // that started it leaves the page: called off as a closing popup would.
+    // Only the run it started itself (a field leaving a form that sends leaves
+    // the form's run alone), and only while it runs: an answer that removes
+    // the control has completed the run by the time the page renders it away.
+    // A suspension parking the page runs this cleanup too (preact parks a
+    // subtree by running its effect cleanups), so it counts as a leave.
+    useLayoutEffect(
+      () => () => {
+        if (
+          !uiStateController.actionAbortable ||
+          uiStateController.optimistic
+        ) {
+          return;
+        }
+        const ownRun = uiStateController.runningActionSignal.peek();
+        if (ownRun && ownRun.runningStateSignal.peek() === RUNNING) {
+          ownRun.abort("the control holding the run was removed");
+        }
+      },
+      [uiStateController],
+    );
     // What the interaction rule last refused is only true while the control is
     // held; the state it was read from moves here (see refreshReport).
     useLayoutEffect(() => {
@@ -2501,6 +2542,64 @@ const splitControlProps = (
 const LEAVING_COMMAND_SET = new Set(["--navi-close", "--navi-cancel"]);
 const pressOnlyLeaves = (props) =>
   LEAVING_COMMAND_SET.has(props.command) && !props.action;
+// What these commands move reads only the person's place: the slide shown,
+// the item pointed at, the scroll, the page (see commands.js).
+const COMMANDS_ASKING_NOTHING_OF_THE_WRITE = new Set([
+  "--navi-right",
+  "--navi-left",
+  "--navi-down",
+  "--navi-up",
+  "--navi-previous",
+  "--navi-next",
+  "--navi-first",
+  "--navi-last",
+  "--navi-go-to-slide",
+  "--navi-back",
+  "--navi-scroll",
+  "--navi-nav-to",
+  "--navi-nav-back",
+]);
+// A press on a button or a link that feeds nothing to the write it sits in.
+// A field always feeds it, and so does a command sending, updating or opening
+// what holds it. An action of its own is held by its own verb — `actionVerb`
+// on a function — wherever the button stands.
+const pressAsksNothingOfTheWrite = (controlType, props, boundAction) => {
+  if (controlType !== "button" && controlType !== "link") {
+    return false;
+  }
+  const { command, action } = props;
+  if (
+    command &&
+    !COMMANDS_ASKING_NOTHING_OF_THE_WRITE.has(command.split(":")[0])
+  ) {
+    return false;
+  }
+  if (action) {
+    return !isWriteAction(boundAction);
+  }
+  return Boolean(
+    command ||
+    props.uiAction ||
+    props.href !== undefined ||
+    controlType === "link",
+  );
+};
+
+// An Enter's implicit submission is the form's `submit`, fired from the key's
+// default action within the task of its keydown. Stopped there rather than by
+// preventing the keydown, which would cancel every default of that key at once
+// (a datalist choice with the submission). Ahead of the form's own listeners:
+// capture, on the form itself.
+const refuseImplicitSubmission = (form) => {
+  const onsubmit = (submitEvent) => {
+    submitEvent.preventDefault();
+    submitEvent.stopImmediatePropagation();
+  };
+  form.addEventListener("submit", onsubmit, { capture: true, once: true });
+  setTimeout(() => {
+    form.removeEventListener("submit", onsubmit, { capture: true });
+  });
+};
 
 // `onPointerDown`, `onFocusOut`… but not navi's own events (`onnavi_command`),
 // which keep the element they are dispatched on.

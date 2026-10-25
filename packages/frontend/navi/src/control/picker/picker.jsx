@@ -217,6 +217,14 @@ const css = /* css */ `
       --picker-background-color-readonly: var(--picker-background-color);
       --picker-background-color-disabled: var(--picker-background-color);
     }
+    /* A picker that picks nothing draws a label where a value would be (see
+       picksNothing): drawn discrete, it stands for a discrete Button, and its
+       label is padded as that Button's is — its hover wash as wide. Not an
+       icon trigger, whose box is its icon's (see [data-icon] below). */
+    .navi_picker[data-variant="discrete"][data-picks-nothing]:not([data-icon]) {
+      --picker-padding-x-default: var(--navi-button-padding-x-default);
+      --picker-padding-y-default: var(--navi-button-padding-y-default);
+    }
     .navi_picker[data-variant="headless"] {
       --picker-padding-x-default: 0;
       --picker-padding-y-default: 0;
@@ -591,7 +599,9 @@ const css = /* css */ `
          glyph occupies and nothing on screen explains. Same reason a popup
          takes the number — see .navi_popup in popup.jsx. A "ui" given as a
          string is no drawing: it is a label, written on the control line as a
-         Button writes its own. */
+         Button writes its own — and so is whatever a picker standing for a
+         button draws in place of a value, an icon beside a word (see
+         drawsLabel in PickerButton). */
       &[data-picker-facade="drawing"] {
         line-height: var(--navi-line-height);
       }
@@ -875,14 +885,17 @@ const css = /* css */ `
       --x-picker-cursor: pointer;
     }
     /* Held by the network policy, a caller's drawing keeps its ink: what it
-       holds is not held with the picker (see faceReadOnly in PickerButton). */
-    &[data-readonly]:has(
+       holds is not held with the picker (see faceReadOnly in PickerButton).
+       Said on this root, which hands the ink down: --picker-color is
+       currentColor, and only here is currentColor still the ink around the
+       picker — on the drawing it would be the faded one this root wears. */
+    &[data-readonly]:not([data-disabled]):has(
         > .navi_picker_box
           > .navi_picker_input[data-readonly-reason="network-policy"]
-      )
-      > .navi_picker_box
-      > .navi_picker_value[data-picker-facade="drawing"] {
-      color: var(--picker-color);
+      ):has(
+        > .navi_picker_box > .navi_picker_value[data-picker-facade="drawing"]
+      ) {
+      --x-picker-color: var(--picker-color);
     }
     /* Focus. The second selector is the state held by hand (pseudoState on
        the picker lands on this root, which is never focused for real): a demo
@@ -1136,6 +1149,12 @@ const PickerButton = (props) => {
     variant === "button" ||
     variant === "border" ||
     variant === "discrete-border";
+  // What a picker standing for a button draws in place of a value is its
+  // label, whatever it is made of — an icon beside a word — and is written on
+  // the control line, as a Button writes its own content. Not a bare drawing,
+  // which is the page's, nor a word in a sentence, nor an icon trigger.
+  const drawsLabel =
+    (picksNothing || drawnAsButton) && !isBare && !isIcon && variant !== "text";
   const hasRightSlot =
     !picksNothing &&
     rightSlot !== null &&
@@ -1268,6 +1287,7 @@ const PickerButton = (props) => {
         baseClassName="navi_picker"
         pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
         data-variant={variant}
+        data-picks-nothing={picksNothing ? "" : undefined}
         data-cta={cta ? "" : undefined}
         data-icon={isIcon ? "" : undefined}
         data-chevron={hasRightSlot ? bareChevron : undefined}
@@ -1444,8 +1464,10 @@ const PickerButton = (props) => {
                 data-picker-facade={
                   ui === undefined
                     ? undefined
-                    : typeof ui === "string" || typeof ui === "number"
-                      ? "text"
+                    : typeof ui === "string" ||
+                        typeof ui === "number" ||
+                        drawsLabel
+                      ? "label"
                       : "drawing"
                 }
                 // A placeholder is the picker saying "nothing here yet" about
@@ -2136,6 +2158,7 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   calloutCloseButton?: boolean,
  *   calloutCloseByScroll?: boolean | number,
  *   popoverMode?: "nearby" | "overlay",
+ *   popoverSpacing?: number | string,
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
  *   loadingOutline?: "custom",
@@ -2252,6 +2275,14 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   placeholder text, as plain text, see docs/typography.md#badgelist.
  *   `"default"` draws nothing in the slot at all.
  *
+ *   A string is a label, written on the control line as a Button writes its
+ *   own — and so is the `ui` of a picker standing for a button
+ *   (`picksNothing`, or the `"button"`, `"border"` and `"discrete-border"`
+ *   variants), an icon beside a word. Any other drawing is written on the
+ *   page's line as a number (`--navi-line-height`), so each text it holds
+ *   keeps a line relative to its own size. Bare, text and icon triggers
+ *   follow their own variant.
+ *
  *   Under `variant="icon"` there is no value to draw, so this IS the trigger:
  *   left out it is the icon the right slot would have shown (`rightSlotIcon`,
  *   or the chevron), and given it is drawn instead — one icon of the caller's
@@ -2346,6 +2377,12 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   which scrolling away is done with.
  * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
  *   over the trigger, "nearby" leaves a small gap below it.
+ * @param {number|string} [popoverSpacing] The gap kept between the popover
+ *   and the trigger — and, unless `marginWithContainer` says otherwise,
+ *   between the popover and the edges of its container: a number of px, a
+ *   spacing word (`"s"`, read at the page's font size), a viewport length
+ *   (`"3appw"`) or a container length (`"3cqw"`). Defaults to 5 under
+ *   `popoverMode="nearby"`, 0 under `"overlay"`. Popover mode only.
  * @param {string} [positionArea] Where the popup goes — relative to the trigger
  *   in popover mode, relative to the viewport in dialog mode. Same grammar as
  *   Popover/Dialog's own `positionArea` ("top", "right-end", "inset(top-left)",
@@ -2400,7 +2437,8 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   on it.
  * @param {boolean} [picksNothing] The popup asks something rather than holding
  *   an answer, so the trigger draws a label and never a value: no chevron, no
- *   clear cross, in any variant — and the controls in the popup are their own
+ *   clear cross, in any variant, and under `variant="discrete"` the padding of
+ *   a discrete Button — and the controls in the popup are their own
  *   (a checkbox gating the yes), never the picker's value, so a bound `action`
  *   keeps the params it was bound with. `type="confirm"` says it for itself; say it
  *   for a popup of your own that is a menu of actions rather than a choice —

@@ -26,18 +26,27 @@
 import { SELF_INTERACTIONS_ATTRIBUTE } from "./self_interactions.js";
 
 /**
- * Returns the host element inside `el` — the element that holds the control's
- * value, UI state, and constraints (i.e. the element onto which
- * `useInteractiveProps` spreads `controlProps` and its event handlers).
+ * Returns the host of the control `el` stands for — the element that holds the
+ * control's value, UI state, and constraints (i.e. the element onto which
+ * `useInteractiveProps` spreads `controlProps` and its event handlers): `el`
+ * itself when it is the host, the host it wraps otherwise.
  *
- * Returns `null` when `el` is itself the host (no separate wrapper).
+ * Returns `null` when there is none — a popup, in particular, which marks
+ * itself as a control root to be recognised (`navi-control="dialog"` or
+ * `"popover"`) but is no control: the hosts inside it are the controls it
+ * holds, none of them its own. A request aimed at the popup (its Escape) is
+ * then the popup's to answer, not handed to whichever control comes first in it.
  */
 export const findControlHost = (el) => {
   if (el.hasAttribute("navi-control-host")) {
     return el;
   }
+  if (POPUP_CONTROL_SET.has(el.getAttribute("navi-control"))) {
+    return null;
+  }
   return el.querySelector("[navi-control-host]");
 };
+const POPUP_CONTROL_SET = new Set(["dialog", "popover"]);
 /**
  * The control this element belongs to, wherever it sits relative to it.
  *
