@@ -153,6 +153,7 @@ import {
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
 import { PopupTitle, PopupTitleContext, usePopupName } from "./popup_title.jsx";
+import { PopupValueContext } from "./popup_value.js";
 import {
   closePopupGroupsInside,
   PopupGroupContext,
@@ -1104,7 +1105,7 @@ const css = /* css */ `
  *   whatever triggered the open (`e.detail.source`). A string is resolved via
  *   `document.getElementById` when the dialog opens — see popover.jsx's own
  *   `anchor` doc for why (mainly `defaultOpen`).
- * @param {Element|{current: Element}|string} [props.liftAnchor] - Under
+ * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [props.liftAnchor] - Under
  *   `animation="lifting"` or `animation={{ open, close: "lifting" }}`, where the closing
  *   brings the box back to, when that is not where it came from: a popup one
  *   walks through (a row of cards shown one at a time) has something else in
@@ -1112,8 +1113,10 @@ const css = /* css */ `
  *   card the press opened on. Same grammar as `anchor` (element, ref or id),
  *   resolved once the close is made — after `onClose` — so whatever names the
  *   card currently in front, or the box the close itself renders, is read
- *   then and not at the opening. Left out, the box comes back to the anchor
- *   it came out of.
+ *   then and not at the opening. A function is called then with what the
+ *   dialog was open on (see `usePopupValue`): a close the holder asks for
+ *   (Back taking the id out of the address) has emptied its signal by then.
+ *   Left out, the box comes back to the anchor it came out of.
  * @param {boolean} [props.sizeFromAnchor=false] - Whether the dialog takes the
  *   anchor's width/height as a min-width/min-height floor
  *   (`--anchor-width`/`--anchor-height`). Off by default: unlike a popover,
@@ -1655,9 +1658,11 @@ const useDialogProps = (props) => {
     openerAriaLabelledBy,
   });
   const children = contentMounted ? (
-    <PopupTitleContext.Provider value={registerTitle}>
-      {childrenProp}
-    </PopupTitleContext.Provider>
+    <PopupValueContext.Provider value={openController.popupValueSignal}>
+      <PopupTitleContext.Provider value={registerTitle}>
+        {childrenProp}
+      </PopupTitleContext.Provider>
+    </PopupValueContext.Provider>
   ) : null;
   // Where it is placed, and whether there is a wall — the two questions that
   // pick the show call (see this file's top comment).
@@ -1876,12 +1881,21 @@ const useDialogProps = (props) => {
   // Silent when it names nothing: the close may be what renders it, and
   // popup_lift.js asks again until it is there (and warns past that).
   const resolveLiftAnchorElement = () => {
-    if (typeof liftAnchor === "string") {
-      return document.getElementById(liftAnchor);
+    // Asked with what the dialog was open on, which the signal holding it no
+    // longer says once the close has started (see usePopupValue).
+    const named =
+      typeof liftAnchor === "function"
+        ? liftAnchor(openController.popupValueSignal.peek())
+        : liftAnchor;
+    if (!named) {
+      return null;
+    }
+    if (typeof named === "string") {
+      return document.getElementById(named);
     }
     // A ref is unwrapped even when it holds nothing, the same way `anchor` is:
     // the ref object itself has no box to come back to.
-    return "current" in liftAnchor ? liftAnchor.current : liftAnchor;
+    return "current" in named ? named.current : named;
   };
 
   // The dialog and the anchor are the same box at two sizes, so the opening
@@ -2147,11 +2161,11 @@ const useDialogProps = (props) => {
         dialogEl.parentElement,
       );
       if (typeof marginWithContainerInPixels !== "number") {
-        // A value only CSS could evaluate (a spacing token resolving to a var(),
-        // a percentage…) — the placement below needs a real number, and letting
-        // it through would put the dialog at NaN.
+        // A value only CSS could evaluate (a percentage, a calc()…) — the
+        // placement below needs a real number, and letting it through would
+        // put the dialog at NaN.
         console.warn(
-          `Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a viewport length ("3appw", "3vvw", "2vvh") or a container length ("3cqw", "2cqh").`,
+          `Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a spacing word ("s", "m"…), a viewport length ("3appw", "3vvw", "2vvh") or a container length ("3cqw", "2cqh").`,
         );
         marginWithContainerInPixels = 0;
       }

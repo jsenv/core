@@ -117,7 +117,8 @@ const STATE_SIGNAL_OPTIONS = new Set([
  *   deploys holds one copy, not ten. Only the storage key changes, the id the url reads stays `id`.
  * @param {string} [options.type] - Type the value is coerced to, and read back as from localStorage and the url:
  *   any @jsenv/validity type (`"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"integer"`, `"date"`,
- *   `"time"`…). Without it the value is not coerced.
+ *   `"time"`…). Without it the value is not coerced. On a type that is not text (`"string"`, `"email"`,
+ *   `"url"`), `""` — what a cleared control writes — is absence.
  * @param {"string" | "number" | "boolean"} [options.itemType] - For array type: type of the array items.
  *   Used when reading the value back from a url search param, where everything is a string:
  *   `?level=3,4` becomes `[3, 4]` instead of `["3", "4"]`. Without it items stay strings.
@@ -212,6 +213,8 @@ const STATE_SIGNAL_OPTIONS = new Set([
  * const childTab = stateSignal(parentTab);
  * // childTab follows parentTab changes unless explicitly set
  */
+// The types "" is a value of: an empty text is still a text.
+const TEXT_TYPE_SET = new Set(["string", "email", "url"]);
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -412,8 +415,13 @@ export const stateSignal = (defaultValue, options = {}) => {
   };
 
   // Create signal with initial value: use stored value, or undefined to indicate no explicit value
+  // Whether "" says nothing at all: on a type that is not text, it is what a
+  // cleared control writes (an empty field, a picker's cross) — no number, no
+  // date — and kept, it would be an invalid value the address carries.
+  const emptyStringIsAbsence =
+    type !== undefined && !TEXT_TYPE_SET.has(type);
   const processValue = (value) => {
-    if (value === undefined) {
+    if (value === undefined || (value === "" && emptyStringIsAbsence)) {
       // Absence is never validated, and the verdict on the previous value
       // (validSignal, validity.valid) must not outlive it.
       clearValidity();

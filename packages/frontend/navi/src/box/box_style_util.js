@@ -907,6 +907,38 @@ const resolveContainerLength = (size, element) => {
   return (parseFloat(amount) / 100) * containerSize;
 };
 
+// "s", "-m" — the spacing scale, whose tokens are ems of the font where they
+// apply: a length only CSS knows, handed back as the var() it maps to, which
+// nothing can place with. Read off the given element (the root when none is),
+// for a caller asking for a number.
+const SCALE_WORD_REGEX = /^(-?)(xxs|xs|xl|xxl|[lms])$/;
+const TOKEN_LENGTH_REGEX = /^(-?[\d.]+)(px|r?em)$/;
+const resolveScaleLength = (size, element = document.documentElement) => {
+  if (typeof size !== "string") {
+    return null;
+  }
+  const match = SCALE_WORD_REGEX.exec(size);
+  if (!match) {
+    return null;
+  }
+  const [, sign, word] = match;
+  const computedStyle = getComputedStyle(element);
+  const token = computedStyle.getPropertyValue(`--navi-${word}`).trim();
+  const tokenMatch = TOKEN_LENGTH_REGEX.exec(token);
+  if (!tokenMatch) {
+    return null;
+  }
+  const [, amount, unit] = tokenMatch;
+  let unitInPx = 1;
+  if (unit === "em") {
+    unitInPx = parseFloat(computedStyle.fontSize);
+  } else if (unit === "rem") {
+    unitInPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  }
+  const length = parseFloat(amount) * unitInPx;
+  return sign ? -length : length;
+};
+
 export const resolveSpacingSize = (size, element, property = "padding") => {
   const viewportLength = resolveViewportLength(size);
   if (viewportLength !== null) {
@@ -915,6 +947,10 @@ export const resolveSpacingSize = (size, element, property = "padding") => {
   const containerLength = resolveContainerLength(size, element);
   if (containerLength !== null) {
     return containerLength;
+  }
+  const scaleLength = resolveScaleLength(size, element);
+  if (scaleLength !== null) {
+    return scaleLength;
   }
   return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };

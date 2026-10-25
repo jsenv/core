@@ -96,9 +96,12 @@ export const getPickerHostLabelId = (id, props) => {
  * right now: in the popup, what is being picked, before anything is sent; on
  * the façade, the answer the popup just closed on, before the server has said
  * anything, and put back if the action fails. `loading` is the run in flight;
- * `interactive` is false while the picker is disabled, read-only or busy.
+ * `interactive` is false while the picker is disabled, read-only or busy;
+ * `readOnly` says the picker is read-only or held by the network policy — a
+ * hold the controls a caller draws on the façade are not held by, so a face
+ * that wants to look held reads it here.
  *
- * @returns {{ value: any, loading: boolean, interactive: boolean } | null}
+ * @returns {{ value: any, loading: boolean, interactive: boolean, readOnly: boolean } | null}
  *   null outside a picker.
  */
 export const usePickerState = () => {
@@ -106,6 +109,6 @@ export const usePickerState = () => {
   if (!context) {
     return null;
   }
-  const { value, loading, interactive } = context;
-  return { value, loading, interactive };
+  const { value, loading, interactive, readOnly } = context;
+  return { value, loading, interactive, readOnly };
 };

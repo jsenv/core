@@ -814,10 +814,14 @@ const TextOverflow = ({ noWrap, spacing, capitalize, children, ...rest }) => {
     <Text
       block
       as="div"
-      pre={noWrap === undefined ? true : undefined}
+      // One line does not wrap, at a typed newline either: white-space: pre
+      // would keep every newline, and the text would be one line only while it
+      // has none. A white-space the caller says wins.
+      noWrap={
+        noWrap ?? (rest.as === "p" || saysWhiteSpace(rest) ? undefined : true)
+      }
       // For paragraph we prefer to keep lines and only hide unbreakable long sections
       preLine={rest.as === "p" ? true : undefined}
-      noWrap={noWrap}
       {...rest}
       maxLines={undefined}
       data-text-overflow=""

@@ -645,7 +645,7 @@ const ROLE_WITH_OWNERS = ROLE.withParams(
 
 Any write on a listed resource (`POST`, `PUT`, `PATCH`, `DELETE`) reruns the
 completed `GET` and `GET_MANY` of the resource that declared it, and invalidates
-its `GET_RANGE` readers when the verb is in its `rerunOn.GET_RANGE`. A
+its `GET_RANGE` readers: its own `rerunOn` is about its own writes. A
 dependency is a facade: `DATABASE` and `DATABASE.withParams(…)` are two of them,
 and only writes on the one listed count. Nothing goes the other way, and nothing
 is inferred — a relation that really is a sub-route of the parent is modelled

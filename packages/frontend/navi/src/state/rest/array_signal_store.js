@@ -29,6 +29,14 @@ export const arraySignalStore = (
     if (props === null || typeof props !== "object") {
       return props;
     }
+    if (props[idKey] === undefined) {
+      // Kept under `undefined`, every such item would be one and the same: a
+      // list drawing its last row as many times as it has rows, a creation
+      // rewriting all of them — and nothing saying why.
+      throw new Error(
+        `${name || "store"}: an item arrived without "${idKey}" (it has ${Object.keys(props).join(", ")}) — declare its key with idKey, or give a single item an id of its own ({ id: "me", … })`,
+      );
+    }
     const item = createItem(props);
     return item;
   };

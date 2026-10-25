@@ -588,8 +588,10 @@ const css = /* css */ `
          it would arrive as the control's pixels: a 14px label under an 18px
          picker's 23px line carries ~5px of leading above and below that no
          glyph occupies and nothing on screen explains. Same reason a popup
-         takes the number — see .navi_popup in popup.jsx. */
-      &[data-picker-facade] {
+         takes the number — see .navi_popup in popup.jsx. A "ui" given as a
+         string is no drawing: it is a label, written on the control line as a
+         Button writes its own. */
+      &[data-picker-facade="drawing"] {
         line-height: var(--navi-line-height);
       }
 
@@ -867,6 +869,16 @@ const css = /* css */ `
        opens nothing, read-only or not. */
     &[data-readonly-opens]:not([data-open-on]) {
       --x-picker-cursor: pointer;
+    }
+    /* Held by the network policy, a caller's drawing keeps its ink: what it
+       holds is not held with the picker (see faceReadOnly in PickerButton). */
+    &[data-readonly]:has(
+        > .navi_picker_box
+          > .navi_picker_input[data-readonly-reason="network-policy"]
+      )
+      > .navi_picker_box
+      > .navi_picker_value[data-picker-facade="drawing"] {
+      color: var(--picker-color);
     }
     /* Focus. The second selector is the state held by hand (pseudoState on
        the picker lands on this root, which is never focused for real): a demo
@@ -1158,6 +1170,14 @@ const PickerButton = (props) => {
     uiStateController,
     readOnly || readOnlyFromAbove,
   );
+  // What a caller draws on the face (its `ui`, its right slot) is read-only
+  // with the picker, and not held with it: the network policy holds what the
+  // picker would send, which its popup changes. A card used as the trigger
+  // keeps its links and buttons, each held for what it sends itself.
+  const faceReadOnly = readOnly || readOnlyFromAbove;
+  const faceReadOnlyMessage = faceReadOnly
+    ? (props.readOnlyMessage ?? uiStateController.readOnlyMessageFromAbove)
+    : undefined;
   // Read off the controller rather than worked out again: what makes a
   // read-only picker open is settled once, where the gate reads it (see
   // createControlInfo's readOnlyOpens). Needed here for the cursor.
@@ -1181,6 +1201,9 @@ const PickerButton = (props) => {
     maxLines,
     id: inputProps.id,
     interactive,
+    // Read-only, or held by the network policy — never busy: an action in
+    // flight is not a value nobody may change (see the ReadOnlyProvider below).
+    readOnly: Boolean(readOnlyResolved),
     loading,
     clearConfirm,
     requestValue,
@@ -1403,7 +1426,13 @@ const PickerButton = (props) => {
                 // Tells the caller's own drawing of the control from the value
                 // the picker draws itself, so each is written on its own line
                 // (see .navi_picker_value in the CSS above).
-                data-picker-facade={ui === undefined ? undefined : ""}
+                data-picker-facade={
+                  ui === undefined
+                    ? undefined
+                    : typeof ui === "string" || typeof ui === "number"
+                      ? "text"
+                      : "drawing"
+                }
                 // A placeholder is the picker saying "nothing here yet" about
                 // the value navi draws — the default rendering, or the one a
                 // typed picker installs for itself. A button's label is not
@@ -1421,7 +1450,10 @@ const PickerButton = (props) => {
                 }
                 maxLines={maxLines}
               >
-                <PickerOwnContent>
+                <PickerOwnContent
+                  readOnly={faceReadOnly}
+                  readOnlyMessage={faceReadOnlyMessage}
+                >
                   {/* For what the picker cannot clamp itself: a <BadgeList>
                     wraps flex rows, which line-clamp never sees. */}
                   <MaxLinesContext.Provider value={maxLines}>
@@ -1461,7 +1493,10 @@ const PickerButton = (props) => {
             )}
             {hasRightSlot ? (
               <span className="navi_picker_right_slot">
-                <PickerOwnContent>
+                <PickerOwnContent
+                  readOnly={faceReadOnly}
+                  readOnlyMessage={faceReadOnlyMessage}
+                >
                   {clearable && pickerHasSomethingToClear(pickerContext) ? (
                     <PickerClear size={rightSlotIconSize} />
                   ) : rightSlot === undefined ? (
@@ -1621,10 +1656,12 @@ const warnOnClearOutsidePicker = () => {
 // the one that unmounts first — the clear cross the moment the field it emptied
 // is empty, a chip the moment its value is taken out — takes the picker's own
 // entry with it, leaving the picker looking for a controller that is gone.
-const PickerOwnContent = ({ children }) => (
+const PickerOwnContent = ({ readOnly, readOnlyMessage, children }) => (
   <ControlIdContext.Provider value={undefined}>
     <ControlNameContext.Provider value={undefined}>
-      {children}
+      <ReadOnlyProvider readOnly={readOnly} readOnlyMessage={readOnlyMessage}>
+        {children}
+      </ReadOnlyProvider>
     </ControlNameContext.Provider>
   </ControlIdContext.Provider>
 );
@@ -2073,7 +2110,7 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   openOn?: "press" | "longpress" | "contextmenu" | string | string[],
  *   animation?: boolean | "auto" | "fading" | "scaling" | "sliding" | "lifting" | `slide-from-${string}` | { open: boolean | "auto" | "fading" | "scaling" | "sliding" | `slide-from-${string}`, close: "lifting" },
  *   lift?: "box" | "scene",
- *   liftAnchor?: Element | { current: Element } | string,
+ *   liftAnchor?: Element | { current: Element } | string | ((popupValue: any) => Element | { current: Element } | string),
  *   animationDuration?: string,
  *   calloutStatus?: "info" | "warning" | "error" | "success" | "none",
  *   calloutIcon?: boolean,
@@ -2148,7 +2185,9 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   follows the theme) — the trigger's own `backgroundColor` is not it, so a
  *   variant that paints the trigger transparent leaves the popup a real sheet.
  * @param {number|string} [popupBorderRadius] The popup's corners. Left out they
- *   echo the trigger's `borderRadius`.
+ *   echo the trigger's `borderRadius` when it is a length of corners; a shape
+ *   (a percentage, a pill's 999px) leaves the popup on the corners every popup
+ *   has.
  * @param {string} [popupBoxShadow] The popup's shadow, popover or dialog. Left
  *   out it is the one every navi popup casts. `"none"` for a popup that is
  *   not a sheet — a card lifted out of a page draws its own edges, and the
@@ -2520,11 +2559,12 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   that opens precisely to get bigger. It brings an opaque, blurred backdrop
  *   with it (`--navi-backdrop-lift-*`); `backdropVariant="discrete"` asks for
  *   the light wash back.
- * @param {Element|{current: Element}|string} [liftAnchor] Dialog mode,
+ * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [liftAnchor] Dialog mode,
  *   Dialog's own: where a lifting close lands when that is not the trigger
  *   (`animation="lifting"`, or `animation={{ open, close: "lifting" }}` for a
  *   popup that opens the plain way and only lands on close),
- *   read once the close is made (after `onClose`).
+ *   read once the close is made (after `onClose`). A function is called with
+ *   what the popup was open on (see `usePopupValue`).
  * @param {"box"|"scene"} [lift="box"] Dialog's own, under `animation="lifting"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
  *   `"scene"` for a thumbnail that is a band cut from the middle of the bigger

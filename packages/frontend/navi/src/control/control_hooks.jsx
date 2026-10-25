@@ -730,12 +730,18 @@ export const useControlProps = (
         };
       }
 
+      // A field with an action of its own has Enter answered already: the
+      // input effect (input_effect.js) commits it — through the change Enter
+      // fires, or on the keydown itself under actionDebounce — and an action
+      // run on every keystroke has nothing left to commit. --navi-send would
+      // run that same action a second time. Nothing answers it under
+      // actionEvent="custom", where the field's caller does.
+      const enterAnsweredByInputEffect =
+        Boolean(actionDebounce) ||
+        (props.action !== undefined && actionEvent !== "custom");
       const keyDownDefaultOnInput = (e) => {
         if (e.key === "Enter") {
-          if (actionDebounce) {
-            // The input has its own debounced action; Enter fires it directly
-            // (input_effect.js cancels the debounce and triggers the action via the change event).
-            // Don't propagate to --navi-send, which would cause a double action call.
+          if (enterAnsweredByInputEffect) {
             return null;
           }
           return enterToSend(e);

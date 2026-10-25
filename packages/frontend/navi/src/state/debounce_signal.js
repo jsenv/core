@@ -6,18 +6,18 @@ export const debounceSignal = (
   signalToDebounce,
   { delay = 300, deepCompare = true } = {},
 ) => {
+  const isSameValue = (a, b) =>
+    deepCompare ? compareTwoJsValues(a, b) : a === b;
   let timeoutId;
   let latestValue = signalToDebounce.peek();
-  const debouncedSignal = signal(latestValue);
-
-  effect(() => {
+  // Following the source subscribes to it, and through it to whatever it reads:
+  // an app-level signal it reads would keep it — and its timer — alive for
+  // good. So it is followed only while something reads the debounced value.
+  let stopFollowing = null;
+  const follow = () => {
     const value = signalToDebounce.value;
     const debouncedValue = debouncedSignal.peek();
-    if (
-      deepCompare
-        ? compareTwoJsValues(value, debouncedValue)
-        : value === debouncedValue
-    ) {
+    if (isSameValue(value, debouncedValue)) {
       // The signal came back to where the debounced one already is: whatever it
       // passed through on the way is not on its way any more. Leaving the timer
       // armed would publish that in-between value once the delay elapses, and
@@ -32,11 +32,37 @@ export const debounceSignal = (
     timeoutId = setTimeout(() => {
       debouncedSignal.value = latestValue;
     }, delay);
+  };
+  const catchUp = () => {
+    const value = signalToDebounce.peek();
+    if (!isSameValue(value, debouncedSignal.peek())) {
+      debouncedSignal.value = value;
+    }
+    latestValue = debouncedSignal.peek();
+  };
+  const debouncedSignal = signal(latestValue, {
+    watched: () => {
+      // Nobody was waiting on what the source said while nothing read it:
+      // that is taken at once, not after a delay.
+      catchUp();
+      stopFollowing = effect(follow);
+    },
+    unwatched: () => {
+      stopFollowing();
+      stopFollowing = null;
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+    },
   });
 
   debouncedSignal.flush = () => {
     clearTimeout(timeoutId);
-    debouncedSignal.value = latestValue;
+    timeoutId = undefined;
+    if (stopFollowing) {
+      debouncedSignal.value = latestValue;
+      return;
+    }
+    catchUp();
   };
   // Whoever reads the debounced value gets the previous one during the delay,
   // with nothing saying a newer one is on its way. This says it.

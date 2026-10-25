@@ -1,4 +1,5 @@
 import { Box } from "../box/box.jsx";
+import { stringifySpacingStyle } from "../box/box_style_util.js";
 
 const css = /* css */ `
   @layer navi {
@@ -63,7 +64,8 @@ const css = /* css */ `
  *   vertical one matches the line of text it sits on.
  * @param {string} [props.color] - The line's own colour — `--color`.
  * @param {string|number} [props.margin="0.5em"] - Room kept on both sides of
- *   the line — `--margin`.
+ *   the line — `--margin`. A spacing word (`"xs"`, `"s"`, `"m"`…), a length or
+ *   a number of px, like any margin prop.
  * @param {string|number} [props.marginStart] - Room on one side only —
  *   `--margin-start`, above a horizontal rule and left of a vertical one.
  * @param {string|number} [props.marginEnd] - …and the other, `--margin-end`.
@@ -95,9 +97,9 @@ export const Separator = ({
         ...cssVars({
           "--size": lengthValue(size),
           "--color": color,
-          "--margin": lengthValue(margin),
-          "--margin-start": lengthValue(marginStart),
-          "--margin-end": lengthValue(marginEnd),
+          "--margin": spacingValue(margin),
+          "--margin-start": spacingValue(marginStart),
+          "--margin-end": spacingValue(marginEnd),
         }),
         ...style,
       }}
@@ -121,3 +123,8 @@ const cssVars = (vars) => {
 
 const lengthValue = (value) =>
   typeof value === "number" ? `${value}px` : value;
+// A margin reads the spacing scale like every other margin prop ("s" →
+// var(--navi-s)): written raw, a word is a valid custom property and an invalid
+// margin, which computes to 0 without falling back to anything.
+const spacingValue = (value) =>
+  value === undefined ? undefined : stringifySpacingStyle(value, "margin");

@@ -372,6 +372,14 @@ PSEUDO_CLASSES[":active"] = {
 // focus_classes block below. At module scope so isMatchingFocusVisible (used
 // here and in control_hooks.jsx) can read it.
 let keyboardNavigationUsed = false;
+// The element a caller focused saying the ring must show (`focusVisible: true`
+// to moveFocusTo or autoFocus): it knows better than the modality — a screen
+// showing where Enter goes before any key was pressed. Until a pointer goes
+// down, which says the hand is elsewhere.
+let focusVisibleAskedElement = null;
+export const askFocusVisible = (element) => {
+  focusVisibleAskedElement = element;
+};
 
 // HOW FOCUS-VISIBLE IS DECIDED (the details behind isMatchingFocusVisible)
 //
@@ -401,7 +409,10 @@ let keyboardNavigationUsed = false;
 //
 //    `keyboardNavigationUsed` has no such blind spot — it is set by navigation
 //    keydowns and cleared by pointerdown, whatever anyone prevents afterwards
-//    — so it is the authority for everything rule 1 does not cover.
+//    — so it is the authority for everything rule 1 does not cover. Save for
+//    the element a caller explicitly focused with a ring (askFocusVisible):
+//    that is somebody knowing better than the last interaction, not a state
+//    left behind.
 //
 // Ring INHERITANCE (a controlled element ringing because its aria-controls
 // controller is focused) stays gated on the keyboard modality even for an
@@ -424,7 +435,7 @@ export const isMatchingFocusVisible = (el) => {
     return false;
   }
   if (!keyboardNavigationUsed) {
-    return false;
+    return el === focusVisibleAskedElement;
   }
   return true;
 };
@@ -545,6 +556,7 @@ focus_classes: {
     "pointerdown",
     () => {
       keyboardNavigationUsed = false;
+      focusVisibleAskedElement = null;
     },
     { capture: true },
   );

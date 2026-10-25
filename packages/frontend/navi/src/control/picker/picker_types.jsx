@@ -168,6 +168,13 @@ export const PickerArrayUI = /*#__PURE__*/ asPickerOwnUI(() => {
  *   when the chip does not sit inside it.
  */
 export const PickerChip = ({ value, commandFor, children, ...rest }) => {
+  // Its picker's own state, not the zone's: on the façade the network policy's
+  // hold is not handed down (see faceReadOnly in picker.jsx), and the cross is
+  // what changes the picker.
+  const pickerContext = usePickerContext();
+  if (commandFor === undefined && pickerContext?.readOnly) {
+    return <Badge {...rest}>{children}</Badge>;
+  }
   return (
     <Badge {...rest}>
       {children}

@@ -167,10 +167,14 @@ export const resolveInputProps = (props, { controlType = "input" } = {}) => {
         // signal wants a date field — but a boolean one maps to a checkbox, and
         // a picker made into a checkbox is not a picker with a different look:
         // it is another control, with no popup to open. A picker asked to hold
-        // a yes/no keeps its two rows and stays itself.
+        // a yes/no keeps its two rows and stays itself. Nor does a picker with
+        // a popup of its own become the field for that type: it is what its
+        // popup is — a frise one slides in is no number one types.
         const wouldChangeWhatTheControlIs =
           controlType === "picker" &&
-          (typeFromSignal === "checkbox" || typeFromSignal === "radio");
+          (props.children !== undefined ||
+            typeFromSignal === "checkbox" ||
+            typeFromSignal === "radio");
         if (typeFromSignal !== undefined && !wouldChangeWhatTheControlIs) {
           props.type = typeFromSignal;
         }

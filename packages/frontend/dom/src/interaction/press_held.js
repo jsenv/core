@@ -143,13 +143,17 @@ export const waitForPressHeld = (
      page (a drag backdrop, a popup), and both events are then aimed at that
      instead of at the element pressed. Which is also why the pressed element's
      own `user-select: none` does not cover the selection: the word selected is
-     the one under the finger when the system answers, in what the hold opened. */
+     the one under the finger when the system answers, in what the hold opened.
+     The drag of a link or an image is one more answer to the same held finger
+     (Chrome on Android starts it before a hold completes, and cancels the
+     pointer as it does), refused the same way. */
   if (pressEvent.pointerType === "touch") {
     const preventSystemAnswer = (event) => {
       event.preventDefault();
     };
     window.addEventListener("contextmenu", preventSystemAnswer, true);
     window.addEventListener("selectstart", preventSystemAnswer, true);
+    window.addEventListener("dragstart", preventSystemAnswer, true);
     /* The finger letting go, watched for the length of the press rather than for
        the length of the wait: the wait can be over long before the hand is.
        A pointerCANCEL is not the hand letting go, it is the browser saying it is
@@ -178,6 +182,7 @@ export const waitForPressHeld = (
       clearTimeout(menuGraceTimeout);
       window.removeEventListener("contextmenu", preventSystemAnswer, true);
       window.removeEventListener("selectstart", preventSystemAnswer, true);
+      window.removeEventListener("dragstart", preventSystemAnswer, true);
       window.removeEventListener("pointerup", onPressPointerEnd, true);
       window.removeEventListener("pointercancel", onPressPointerEnd, true);
     });

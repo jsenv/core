@@ -23,6 +23,7 @@ import {
   IDLE,
   RUNNING,
 } from "../../action/action_run_states.js";
+import { getActionPrivateProperties } from "../../action/action_private_properties.js";
 import { createAction } from "../../action/actions.js";
 import { peekNetworkPolicy } from "../../action/network_policy.js";
 import { prerunUnwatched, runUnwatched } from "../../action/run_unwatched.js";
@@ -245,6 +246,21 @@ const useActionAsyncData = (
   useOnLoad(action, onLoad);
   usePoll(action, poll);
 
+  // The instance the binding points at, remembered from one render to the
+  // next: a binding that comes back to params whose instance failed — a search
+  // typed again after a network blip — asks again, as typing them the first
+  // time did. Staying on the instance that just failed asks nothing (see
+  // runIsOwed), and neither does a mount, which never switched to anything.
+  // Read as it stands: getCurrentAction() would flush a debounced binding,
+  // publishing every keystroke the moment it renders.
+  const instance = action.isProxy
+    ? getActionPrivateProperties(action).currentAction
+    : action;
+  const instanceRef = useRef(instance);
+  const backOnFailure =
+    instanceRef.current !== instance &&
+    action.runningStateSignal.peek() === FAILED;
+  instanceRef.current = instance;
   // `run: true` — this component owns the request, so it is what starts it, and
   // it starts it from the render rather than from an effect: a component that
   // suspends has no effects, so a run written in one would be waiting for
@@ -252,7 +268,11 @@ const useActionAsyncData = (
   // no-op — which is what makes starting it while rendering sound. From there
   // the wait is the ordinary one: suspended into <Loading>, or drawn by the
   // component under `loading: true`, exactly as for data someone else ran.
-  if (run && action.paramsSignal.peek() !== undefined && runIsOwed(action)) {
+  if (
+    run &&
+    action.paramsSignal.peek() !== undefined &&
+    (runIsOwed(action) || backOnFailure)
+  ) {
     // Nothing waits on this run: the failure is held by the action, and this
     // hook is what reads it back.
     runUnwatched(() => action.run({ reason: "useAsyncData({ run: true })" }));

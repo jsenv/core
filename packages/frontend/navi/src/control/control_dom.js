@@ -148,6 +148,10 @@ const isPickerBoundaryFor = (candidate, el) => {
  */
 export const getParentControl = (el) => {
   const ownControlRoot = el.closest("[navi-control]");
+  if (!ownControlRoot) {
+    // In no control at all (a list's root, a plain element): none around it.
+    return null;
+  }
   const parentControlRoot = ownControlRoot.parentNode.closest("[navi-control]");
   return parentControlRoot;
 };

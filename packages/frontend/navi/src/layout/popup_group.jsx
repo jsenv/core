@@ -50,6 +50,7 @@ import { createContext } from "preact";
 import { useLayoutEffect, useMemo } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { isMatchingFocusVisible } from "../box/pseudo_styles.js";
 import {
   pushPopupThemeColor,
   readBackdropColor,
@@ -513,7 +514,12 @@ const engageGroup = (groupEl, group, { silent }) => {
     focusedBefore !== groupEl
       ? focusedBefore
       : null;
-  const ringBefore = Boolean(focusedBefore?.matches?.(":focus-visible"));
+  // The ring navi drew, not the browser's flag: the flag outlives a press
+  // whose mousedown was prevented, and given back as `focusVisible: true` it
+  // would draw a ring nobody saw before (see isMatchingFocusVisible).
+  const ringBefore = Boolean(
+    focusedBefore?.matches && isMatchingFocusVisible(focusedBefore),
+  );
   const { scrollTop, scrollLeft } = groupEl;
   // A gesture on a box fixed in the top layer goes to the viewport: only a
   // place that scrolls with the viewport moves under it.
@@ -698,7 +704,8 @@ const engageGroup = (groupEl, group, { silent }) => {
       // made no focus target for the call: inert — or, holding the focus
       // inside it, without its tabindex, inert taking the focus with it.
       const ringBeforeClose = Boolean(
-        focusedBeforeClose?.matches?.(":focus-visible"),
+        focusedBeforeClose?.matches &&
+        isMatchingFocusVisible(focusedBeforeClose),
       );
       const focusMovedInGroup =
         focusWasInGroup &&

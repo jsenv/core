@@ -128,6 +128,10 @@ export const buttonI18n = /*#__PURE__*/ defineNaviMessages({
     en: "Copied!",
     fr: "Copié !",
   },
+  "button.copy_refused": {
+    en: "Could not copy.",
+    fr: "Impossible de copier.",
+  },
 });
 
 // Spin messages — the ends of what one steps through when the control holding

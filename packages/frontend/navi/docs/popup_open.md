@@ -729,9 +729,13 @@ what varies while it is open (a tab inside it) is a param of its own, see
 The other way round — ONE sheet showing whichever card the address names — is
 the same signal with no `value`: anything but `false`, `null` and `undefined`
 reads as open, opening writes `true` only into a signal that reads closed, and
-closing writes `undefined` (`false` where it held `true`). The content reads the
-id from the signal and a card's press writes it — in `onOpen` when the popup is
-opened ON the card, which runs before the popup writes its own open. With the
+closing writes `undefined` (`false` where it held `true`). A card's press writes
+the id — in `onOpen` when the popup is opened ON the card, which runs before the
+popup writes its own open — and the content reads it with `usePopupValue()`,
+not from the signal: the signal reads closed as soon as the close starts, while
+an animated exit, and a lifting close flying back to the card, still draw what
+the content renders. `usePopupValue()` holds the id the popup is open on until
+the next opening, and `liftAnchor` takes a function of it. With the
 route's search-param `stateSignal` as the signal, that is how
 [a row of cards](./popup_lift.md#a-row-of-cards-one-popup-that-walks) survives
 leaving the page: the address names the card, and the sheet reopens on it.

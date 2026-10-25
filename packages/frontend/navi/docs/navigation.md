@@ -386,6 +386,11 @@ local state down through `elementProps`. Pages sharing a layout but no prefix
 (`/profile`, `/settings`) use a container `<Route element={AuthLayout}>`, which
 injects the active child as its children.
 
+A page names itself with its own `<Head><title>…</title></Head>`, rendered with
+the page: the last `<Head>` mounted holds the document title and the theme
+colour, and one that renders again keeps its place, so a layout's `<Head>` is a
+default under every page.
+
 ### Loading data
 
 A page reads its data from a route action through `useAsyncData` and says only

@@ -2,6 +2,7 @@
 
 import { getElementSignature } from "@jsenv/dom";
 
+import { askFocusVisible } from "../../box/pseudo_styles.js";
 import { useDebugFocus } from "../../navi_debug.jsx";
 import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
 import { claimUnplacedAutofocus } from "./focus_transfer.js";
@@ -144,6 +145,9 @@ export const useAutoFocus = (
         e,
         `[autofocus] "${ancestorType}" opened ${getElementSignature(ancestor)} -> ${focusDebugCall}`,
       );
+    }
+    if (focusVisible === true) {
+      askFocusVisible(focusableElement);
     }
     focusableElement.focus({ preventScroll, focusVisible });
     if (autoSelect) {

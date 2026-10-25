@@ -5,6 +5,7 @@ import {
   isPressDrivenClick,
   isTouchDrivenEvent,
 } from "@jsenv/dom";
+import { effect, signal as createSignal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
@@ -68,6 +69,14 @@ document.addEventListener(
  */
 export const openedDuringThisPress = (openController) =>
   openController.pressCountAtOpen === pressCount;
+
+/**
+ * Which press the events landing now belong to: the pointerdown, mousedown and
+ * click of one press read the same count, a tap's compatibility events
+ * included (see above). A click the keyboard makes brings no pointerdown, so it
+ * reads the count of the last press: tell it apart by `event.detail === 0`.
+ */
+export const readPressCount = () => pressCount;
 
 // How long a popup waits before handing the focus to a field, when giving it
 // is what raises the on-screen keyboard.
@@ -461,6 +470,14 @@ export const createOpenController = (
     // whole point: learning it afterwards means the content mounted on the
     // previous subject first.
     onOpen: null,
+    // What the popup is open ON, as its content reads it (usePopupValue in
+    // popup_value.js): written at the opening, right after `onOpen`, and left
+    // alone by the close, so the content keeps drawing it while it leaves.
+    popupValueSignal: createSignal(undefined),
+    // How the opening reads that value, set by whoever holds the open state
+    // (see useOpenPropsEffectOnOpenController); left unset, the value the
+    // opening carries (a --navi-open source's).
+    readPopupValue: null,
     // What an Escape means for this popup, whoever heard the key — its own
     // shortcut, its trigger's, the group it stands in, a bubble's: a cancel
     // (what it holds reverts), unless its owner says otherwise (a Picker's
@@ -595,6 +612,9 @@ export const createOpenController = (
           // openEffect, which shows it: what the popup opens ON has to be
           // known before either (see `onOpen` above).
           controller.onOpen?.(requestOpenEvent);
+          controller.popupValueSignal.value = controller.readPopupValue
+            ? controller.readPopupValue(requestOpenEvent)
+            : requestOpenEvent.detail.value;
           // After prepareFocusTransfer, which has to record what held the
           // focus before anything inside the popup can claim it, and before
           // openEffect, which measures the popup to place it.
@@ -974,6 +994,39 @@ export const useOpenPropsEffectOnOpenController = (
   if (signal && open) {
     openSignalValueRef.current = signal.value;
   }
+  // What the popup is open ON (see usePopupValue): the id the signal names
+  // when it holds more than "open", else the popup's own `value`, else what the
+  // opening carries. Read once `onOpen` has run, which may write the signal.
+  openController.readPopupValue = (requestOpenEvent) => {
+    if (signal) {
+      const signalValue = signal.peek();
+      if (signalValue !== true && readOpened(signalValue, value)) {
+        return signalValue;
+      }
+    }
+    if (value !== undefined) {
+      return value;
+    }
+    return requestOpenEvent.detail.value;
+  };
+  // The signal walked to another id while open (a sheet's "next"): the
+  // content follows it. Written closed, it is left alone — that is the close
+  // starting, and the content still has its exit to draw.
+  useLayoutEffect(() => {
+    if (!signal) {
+      return undefined;
+    }
+    return effect(() => {
+      const signalValue = signal.value;
+      if (
+        openController.opened &&
+        signalValue !== true &&
+        readOpened(signalValue, value)
+      ) {
+        openController.popupValueSignal.value = signalValue;
+      }
+    });
+  }, [signal, value]);
   // Assigned on every render, like openEffect, so it always closes over the
   // latest prop: a popup that opens or closes on its own (Escape, backdrop, a
   // --navi-close command) writes what happened where the caller keeps it, so

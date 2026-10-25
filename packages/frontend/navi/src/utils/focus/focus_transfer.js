@@ -1,6 +1,7 @@
 import { findEvent, findFocusable, getElementSignature } from "@jsenv/dom";
 
 import {
+  askFocusVisible,
   isEditableTarget,
   isKeyboardModality,
 } from "@jsenv/navi/src/box/pseudo_styles.js";
@@ -476,7 +477,8 @@ const retryWhenPlaceable = (
  * @param {object} [options]
  * @param {boolean} [options.focusVisible] Decides the ring instead of the
  *   modality — for a caller that knows better than the last interaction does
- *   (a transfer speaking for the gesture that opened a container, say).
+ *   (a transfer speaking for the gesture that opened a container, say). `true`
+ *   draws the ring even before any key was pressed, until a pointer goes down.
  * @param {boolean} [options.preventScroll=true] Pass false to let the browser
  *   scroll the element into view.
  */
@@ -484,6 +486,9 @@ export const moveFocusTo = (
   element,
   { focusVisible, preventScroll = true } = {},
 ) => {
+  if (focusVisible === true) {
+    askFocusVisible(element);
+  }
   element.focus({
     preventScroll,
     focusVisible:

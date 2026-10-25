@@ -110,6 +110,7 @@ import {
 } from "./popup_shared.js";
 import { PopupClose } from "./popup_close.jsx";
 import { PopupTitle, PopupTitleContext, usePopupName } from "./popup_title.jsx";
+import { PopupValueContext } from "./popup_value.js";
 import {
   closePopupGroupsInside,
   PopupGroupContext,
@@ -531,9 +532,11 @@ const css = /* css */ `
  *   big to bother anchoring to (`isAnchorTooBig`, always checked — see
  *   `pickPositionRelativeTo`'s own doc in visible_rect.js).
  * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
- *   between the popover and the edges of its container.
+ *   between the popover and the edges of its container: a number of px, a
+ *   spacing word (`"s"`, read at the page's font size), a viewport length
+ *   (`"3appw"`) or a container length (`"3cqw"`).
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
- *   between the popover and the edges of its anchor.
+ *   between the popover and the edges of its anchor, written the same way.
  * @param {boolean} [props.backdrop=true] - Whether anything is laid between
  *   the popover and the page at all — asked before what an outside press does
  *   and before how the backdrop is painted. `false` leaves the page
@@ -1003,9 +1006,11 @@ const usePopoverProps = (props) => {
     openerAriaLabelledBy,
   });
   const children = contentMounted ? (
-    <PopupTitleContext.Provider value={registerTitle}>
-      {childrenProp}
-    </PopupTitleContext.Provider>
+    <PopupValueContext.Provider value={openController.popupValueSignal}>
+      <PopupTitleContext.Provider value={registerTitle}>
+        {childrenProp}
+      </PopupTitleContext.Provider>
+    </PopupValueContext.Provider>
   ) : null;
   const isTopLayer = layer === "top";
   const ref = props.ref;
@@ -1350,8 +1355,14 @@ const usePopoverProps = (props) => {
           positionArea,
           positionAreaFixed,
           positionAreaWhenAnchorIsInvalid,
-          marginWithAnchor: resolveSpacingSize(marginWithAnchor),
-          marginWithContainer: resolveSpacingSize(marginWithContainer),
+          marginWithAnchor: resolveMarginInPixels(
+            marginWithAnchor,
+            "marginWithAnchor",
+          ),
+          marginWithContainer: resolveMarginInPixels(
+            marginWithContainer,
+            "marginWithContainer",
+          ),
           // Only meaningful for the custom renderer: popoverEl is always
           // position: absolute relative to its own positioned ancestor,
           // real anchor or not — this tells pickPositionRelativeTo to
@@ -1413,7 +1424,10 @@ const usePopoverProps = (props) => {
         const pickOptions = {
           positionArea,
           container: positionedAncestor,
-          marginWithContainer: resolveSpacingSize(marginWithContainer),
+          marginWithContainer: resolveMarginInPixels(
+            marginWithContainer,
+            "marginWithContainer",
+          ),
           event: positionEvent,
         };
         position = pickPositionRelativeTo(popoverEl, null, pickOptions);
@@ -2048,3 +2062,16 @@ const resolvePositionAreaAndAnimationKind = ({
 
 Popover.Close = PopupClose;
 Popover.Title = PopupTitle;
+
+// The placement needs pixels: a value only CSS could evaluate (a percentage, a
+// calc()…) would put the popover at NaN, which is the top of the page.
+const resolveMarginInPixels = (margin, name) => {
+  const pixels = resolveSpacingSize(margin);
+  if (typeof pixels === "number") {
+    return pixels;
+  }
+  console.warn(
+    `Popover: ${name}="${margin}" cannot be resolved to pixels. Use a number, a spacing word ("xs", "s", "m"…), a viewport length ("3appw", "3vvw") or a container length ("3cqw", "2cqh").`,
+  );
+  return 0;
+};

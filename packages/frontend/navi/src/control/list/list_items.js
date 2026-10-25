@@ -450,12 +450,24 @@ export const createListItems = () => {
     dropItemLocator: (ownerId) => {
       locatorByOwner.delete(ownerId);
     },
-    // Where the item named by that id sits, asked of whoever holds it.
+    // Where the item named by that id sits, asked of whoever holds it: a run
+    // knows its items, drawn or not; an item declared one by one is its own
+    // holder, and says its place when it draws.
     locateItem: (id) => {
       for (const locator of locatorByOwner.values()) {
         const index = locator.indexOf(id);
         if (index !== null) {
           return index;
+        }
+      }
+      for (const [entryId, entry] of entryById) {
+        if (
+          entry.ownerId === entryId &&
+          entry.item &&
+          entry.place !== undefined &&
+          entry.data.itemId === id
+        ) {
+          return entry.place;
         }
       }
       return null;

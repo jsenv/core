@@ -235,11 +235,12 @@ const css = /* css */ `
       );
     }
 
-    /* contentDisplay="contents": the frame has no box, so the button's own box
-       is the caller's drawing from edge to edge. Only the browser's button
-       look is taken away, and in the layer: the caller's own border, padding
-       or background on the button wins. */
-    .navi_button[data-content-display="contents"] {
+    /* The browser's own button look, taken away: navi draws the button in its
+       frame — or, under contentDisplay="contents", the button's own box is the
+       caller's drawing from edge to edge. In the layer, so a caller's border,
+       padding or background on the button wins at any weight, whichever sheet
+       came last. */
+    .navi_button {
       padding: 0;
       background: none;
       border: none;
@@ -296,13 +297,12 @@ const css = /* css */ `
     touch-action: manipulation;
     user-select: none;
 
-    /* The browser's own button look, taken away: navi draws the button in the
-       frame below. :where() keeps it at the weight of one class; the frameless
-       button (contentDisplay="contents") gets it from the layer above. */
-    &:where(:not([data-content-display="contents"])) {
-      padding: 0;
-      background: none;
-      border: none;
+    /* The space the frame writes between its children (see Text's spacing) is
+       a space on a line, and nothing in a flex or grid frame — the button's
+       flow is inherited, so Text cannot tell: as a box it would be one more
+       item, which the gap counts on both sides of. */
+    .navi_button_content > [data-navi-space] {
+      display: contents;
     }
 
     .navi_button_content {
@@ -652,6 +652,11 @@ export const ButtonUI = (props) => {
       onnavi_get_value={(e) => {
         e.detail.respondWith(props.value);
       }}
+      // Same for what a command is about, when it is not the button's value
+      // (see resolveCommandValue).
+      onnavi_get_command_value={(e) => {
+        e.detail.respondWith(props["command-value"]);
+      }}
       onContextMenu={(e) => {
         if (as === "a") {
           // For link we keep context menu to allow "open in new tab" and other browser features
@@ -691,7 +696,18 @@ export const ButtonUI = (props) => {
         color="var(--button-loader-color)"
       />
       <ControlChildrenWrapper {...controlChildrenWrapperProps}>
-        <ButtonContent spacing={spacing} contentDisplay={contentDisplay}>
+        <ButtonContent
+          spacing={spacing}
+          contentDisplay={contentDisplay}
+          // The frame lays the children out in the button's flow: told so, a
+          // `spacing` is its gap rather than a space one line tall. Not without
+          // a frame: the button's box lays them out then.
+          flex={
+            contentDisplay === "contents"
+              ? undefined
+              : (props.flex ?? (icon ? "x" : undefined))
+          }
+        >
           {children}
         </ButtonContent>
       </ControlChildrenWrapper>
@@ -702,12 +718,18 @@ export const ButtonUI = (props) => {
 // inline because it is the one thing about this element that must not be
 // guessed from a stylesheet: it follows the button's own, and the caller is the
 // only one who can say otherwise (contentDisplay, "contents" above all).
-const ButtonContent = ({ spacing, contentDisplay = "inherit", children }) => {
+const ButtonContent = ({
+  spacing,
+  contentDisplay = "inherit",
+  flex,
+  children,
+}) => {
   const boxForwardedProps = useContext(BoxForwardedPropsContext);
   return (
     <Text
       {...boxForwardedProps}
       display={contentDisplay}
+      flex={flex}
       spacing={spacing}
       className="navi_button_content"
     >

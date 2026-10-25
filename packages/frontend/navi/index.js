@@ -363,6 +363,7 @@ export { Popover } from "./src/layout/popover.jsx";
 export { Popup } from "./src/layout/popup.jsx";
 export { PopupGroup } from "./src/layout/popup_group.jsx";
 export { usePopupMode } from "./src/layout/popup_mode.jsx";
+export { usePopupValue } from "./src/layout/popup_value.js";
 export { SidePanel } from "./src/layout/side_panel.jsx";
 export { createSlot } from "./src/layout/slot.jsx";
 

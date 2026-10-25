@@ -1,6 +1,6 @@
 import { createIterableWeakSet } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
-import { batch, computed, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal, untracked } from "@preact/signals";
 
 import { getDebouncedSignal } from "../state/debounce_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
@@ -1797,10 +1797,46 @@ const createActionProxyFromSignal = (
   });
   actionWeakMap.set(actionProxy, actionProxy);
 
+  // Following the params subscribes to them, and through them to whatever
+  // they read: a component's computed params reading an app-level signal stay
+  // reachable from that signal for as long as anything listens to them. So a
+  // binding follows its params only while something reads what it says (a
+  // mounted component, a run's subscriber), and catches up when read again;
+  // unread, every method retargets first (see proxyMethod). A binding asked to
+  // act on their changes (runOnce, rerunOnChange, onChange: a route action,
+  // actionRunEffect) follows them for as long as it exists.
+  const followsParamsAlways = runOnce || rerunOnChange || Boolean(onChange);
+  let readerCount = 0;
+  let stopFollowingParams = null;
+  const readerWatchOptions = followsParamsAlways
+    ? undefined
+    : {
+        watched: () => {
+          readerCount++;
+          if (readerCount === 1) {
+            const stopMirroringParams = effect(() => {
+              proxyParamsSignal.value = paramsSignal.value;
+            });
+            const stopRetargeting = effect(retargetOnParamsChange);
+            stopFollowingParams = () => {
+              stopMirroringParams();
+              stopRetargeting();
+            };
+          }
+        },
+        unwatched: () => {
+          readerCount--;
+          if (readerCount === 0) {
+            stopFollowingParams();
+            stopFollowingParams = null;
+          }
+        },
+      };
+
   // Create our own signal for params that we control completely
   const proxyParamsSignal = signal(paramsSignal.value);
   const proxySignal = (signalPropertyName, propertyName) => {
-    const signalProxy = signal();
+    const signalProxy = signal(undefined, readerWatchOptions);
     let dispose;
     onActionTargetChange(() => {
       if (dispose) {
@@ -1927,20 +1963,34 @@ const createActionProxyFromSignal = (
   }
   // Watch for changes in the original paramsSignal and update ours
   // (original signal wins over any replaceParams calls)
-  weakEffect(
-    [paramsSignal, proxyParamsSignal],
-    (paramsSignalRef, proxyParamsSignalRef) => {
-      const newParams = paramsSignalRef.value;
-      proxyParamsSignalRef.value = newParams;
-    },
-  );
-  weakEffect([action], () => {
+  const retargetOnParamsChange = () => {
     // eslint-disable-next-line no-unused-expressions
     proxyParamsSignal.value;
     _updateTarget({
       changeCause: "params_signal_change",
     });
-  });
+  };
+  if (followsParamsAlways) {
+    weakEffect(
+      [paramsSignal, proxyParamsSignal],
+      (paramsSignalRef, proxyParamsSignalRef) => {
+        const newParams = paramsSignalRef.value;
+        proxyParamsSignalRef.value = newParams;
+      },
+    );
+    weakEffect([action], retargetOnParamsChange);
+  } else {
+    // The first target is resolved now, as following would resolve it: the
+    // subscribers wired above read what it says from the start (see
+    // onActionTargetChange above). Untracked, as inside the effect that
+    // resolves it otherwise: a binding is made during a render, which must
+    // not subscribe to what retargeting reads.
+    untracked(() => {
+      _updateTarget({
+        changeCause: "params_signal_change",
+      });
+    });
+  }
   actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;

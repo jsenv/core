@@ -600,6 +600,22 @@ const css = /* css */ `
     white-space: pre;
     overflow: clip;
   }
+  /* The track of a horizontal list that scrolls itself is as wide as its items
+     can be made, never narrower than its box: a scroll container lays its end
+     padding after its own content — the track — so a track kept at the box's
+     width puts that room in the middle of the items, and the last one touches
+     the edge. min-content and not max-content: items that can shrink still fit
+     the box as they did, down to their longest word. A grid of columns is
+     sized by its columns. */
+  .navi_list_container[data-horizontal]:not(
+      [data-scroller],
+      [data-overflow-visible]
+    )
+    > .navi_list_scroll_container
+    > .navi_list:not([navi-box-flow="grid"]) {
+    width: min-content;
+    min-width: 100%;
+  }
   .navi_list_container[data-horizontal] {
     --list-max-height: none;
 
@@ -839,6 +855,10 @@ const css = /* css */ `
       margin: 0;
       padding: 0;
       flex-direction: column;
+      /* The list's spacing reaches the items of a group as it reaches the
+         groups: a list spaced as a whole, its separators drawn inside groups
+         too, and the skeletons a run draws outside any group all say so. */
+      gap: var(--x-list-gap, 0px);
       list-style: none;
 
       > .navi_list_item {

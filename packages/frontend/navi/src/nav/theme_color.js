@@ -26,15 +26,27 @@ const popupLayers = [];
 const ownMetas = [];
 
 /**
- * @param {Array<{ content: string, media: string|null }>} themeColors
- * @returns {() => void} Takes them away.
+ * A Head's place in the stack, taken as it arrives and kept while what it asks
+ * for changes (see head.jsx).
+ *
+ * @returns {{
+ *   set: (themeColors: Array<{ content: string, media: string|null }>) => void,
+ *   remove: () => void,
+ * }}
  */
-export const pushHeadThemeColors = (themeColors) => {
+export const pushHeadThemeColors = () => {
+  const themeColors = [];
   headEntries.push(themeColors);
-  queueRender();
-  return () => {
-    headEntries.splice(headEntries.indexOf(themeColors), 1);
-    queueRender();
+  return {
+    set: (themeColorsNext) => {
+      themeColors.length = 0;
+      themeColors.push(...themeColorsNext);
+      queueRender();
+    },
+    remove: () => {
+      headEntries.splice(headEntries.indexOf(themeColors), 1);
+      queueRender();
+    },
   };
 };
 
@@ -132,8 +144,8 @@ export const readBackdropColor = (element) => {
 };
 
 let renderQueued = false;
-// Once per commit: a Head re-rendering leaves and arrives again in the same
-// commit, and the browser must not be handed the colour from in between.
+// Once per commit: a page leaving as another arrives, or several Heads
+// changing together, hand the browser one colour, never the one in between.
 const queueRender = () => {
   if (renderQueued) {
     return;

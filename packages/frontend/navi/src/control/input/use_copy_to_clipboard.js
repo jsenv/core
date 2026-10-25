@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
+import { buttonI18n } from "../../text/navi_i18n.js";
+
 /**
  * Copies a text to the clipboard, and says for a moment that it did — the
  * mechanics without a shape: whatever the screen draws (a Button, a link, a
@@ -10,9 +12,11 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
  * <Button action={copy}>{copied ? i18n("Copied") : i18n("Copy link")}</Button>
  * ```
  *
- * `copy` rejects when the browser refuses the write, so an `action` running it
- * says why on the control. A press while `copied` holds starts the moment
- * again.
+ * `copy` rejects when the browser refuses the write (permission blocked, page
+ * not in front, no clipboard outside a secure context), with navi's
+ * `"button.copy_refused"` sentence — the browser's own error as its `cause` —
+ * so an `action` running it says why on the control in the page's language. A
+ * press while `copied` holds starts the moment again.
  *
  * @param {string | (() => string | Promise<string>)} text What is copied. A
  *   function is called at the press: for a text only built then (a report, a
@@ -52,6 +56,14 @@ export const useCopyToClipboard = (text, { duration = 1500 } = {}) => {
 
 const writeToClipboard = async (text) => {
   const value = typeof text === "function" ? text() : text;
+  try {
+    await writeValueToClipboard(value);
+  } catch (error) {
+    // The browser's words are in its own language, and name its API.
+    throw new Error(buttonI18n("button.copy_refused"), { cause: error });
+  }
+};
+const writeValueToClipboard = async (value) => {
   if (typeof value === "string") {
     await window.navigator.clipboard.writeText(value);
     return;

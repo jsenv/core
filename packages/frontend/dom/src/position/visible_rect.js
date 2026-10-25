@@ -633,20 +633,12 @@ export const visibleRectEffect = (
           }
         });
       // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
-      onBeforeAutoCheck(() => {
-        resizeObserver.unobserve(element);
-        return () => {
-          // Not reobserved at all while an ancestor is closed (see
-          // pauseResizeWatching/resumeResizeWatching above) — resumeResizeWatching's
-          // own publish is what reobserves once it reopens instead.
-          if (!resizeWatchingPaused) {
-            // This triggers a new call to the resive observer that will be ignored thanks to
-            // the widthDiff/heightDiff early return
-            resizeObserver.observe(element);
-          }
-        };
+      const watchAfterCheck = createWatchAfterCheck(resizeObserver, element, {
+        isPaused: () => resizeWatchingPaused,
       });
+      onBeforeAutoCheck(watchAfterCheck);
       addTeardown(() => {
+        watchAfterCheck.cancel();
         unsubscribeResizeWatchingPausedChange();
         resizeObserver.disconnect();
       });
@@ -937,18 +929,14 @@ export const visibleRectEffect = (
         }
       },
     );
-    const cleanupAutoCheck = onBeforeAutoCheck(() => {
-      resizeObserver.unobserve(elementToObserve);
-      return () => {
-        // Not reobserved at all while an ancestor is closed (see
-        // pauseResizeWatching/resumeResizeWatching) — resumeResizeWatching's
-        // own publish is what reobserves once it reopens instead.
-        if (!resizeWatchingPaused) {
-          resizeObserver.observe(elementToObserve);
-        }
-      };
-    });
+    const watchAfterCheck = createWatchAfterCheck(
+      resizeObserver,
+      elementToObserve,
+      { isPaused: () => resizeWatchingPaused },
+    );
+    const cleanupAutoCheck = onBeforeAutoCheck(watchAfterCheck);
     addTeardown(() => {
+      watchAfterCheck.cancel();
       if (pendingFrame !== null) {
         cancelAnimationFrame(pendingFrame);
       }
@@ -957,6 +945,7 @@ export const visibleRectEffect = (
     });
     return () => {
       cleanupAutoCheck();
+      watchAfterCheck.cancel();
       unsubscribeResizeWatchingPausedChange();
       if (pendingFrame !== null) {
         cancelAnimationFrame(pendingFrame);
@@ -2064,4 +2053,38 @@ const parseTranslate = (translate) => {
     return null;
   }
   return { x: xNumber, y: yNumber };
+};
+
+// An observed element is left out of its ResizeObserver while a check runs
+// (what the check moves would otherwise call it again), and observed again
+// once the check is over — on the next frame, never in this one: a check runs
+// from inside the frame's ResizeObserver deliveries, and an element observed
+// anew there is delivered after the browser gathered them, which it reports
+// as "ResizeObserver loop completed with undelivered notifications". The first
+// notification of the new observation is compared with the last measure, so a
+// size change during that frame is still caught.
+// Not observed again at all while an ancestor is closed (see
+// pauseResizeWatching/resumeResizeWatching): resuming is what observes it then.
+const createWatchAfterCheck = (resizeObserver, element, { isPaused }) => {
+  let frame = null;
+  const cancel = () => {
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
+  };
+  const watchAfterCheck = () => {
+    cancel();
+    resizeObserver.unobserve(element);
+    return () => {
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        if (!isPaused()) {
+          resizeObserver.observe(element);
+        }
+      });
+    };
+  };
+  watchAfterCheck.cancel = cancel;
+  return watchAfterCheck;
 };

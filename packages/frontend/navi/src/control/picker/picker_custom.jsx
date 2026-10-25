@@ -14,6 +14,7 @@ import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_int
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import {
   openedDuringThisPress,
+  readPressCount,
   UNMOUNT_EVENT_TYPE,
   useOpenController,
   useOpenPropsEffectOnOpenController,
@@ -32,6 +33,7 @@ import {
 } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { PopupTitleContext } from "@jsenv/navi/src/layout/popup_title.jsx";
+import { PopupValueContext } from "@jsenv/navi/src/layout/popup_value.js";
 import {
   renderResolver,
   useNextResolver,
@@ -452,6 +454,9 @@ const PickerCustom = (props) => {
   // (a sheet turned into the next question) is heard by the close.
   const closePropsRef = useRef(null);
   closePropsRef.current = { canSendWhileUnchanged, onConfirm, onClose };
+  // The press the trigger's mousedown answered (see its reactions below): the
+  // click it ends with is that press, not a second question.
+  const pressAnsweredAtMouseDownRef = useRef(null);
   // aria-controls + id
   const popupId = `${props.id}_picker_popup`;
   id: {
@@ -1007,6 +1012,7 @@ const PickerCustom = (props) => {
               // Closing stays on the press even then: a gesture starting on an
               // open picker wants the popup out of the way, and there is no
               // choice being taken from anyone.
+              pressAnsweredAtMouseDownRef.current = readPressCount();
               return {
                 name: "mousedown to close picker",
                 intent: "read",
@@ -1028,6 +1034,7 @@ const PickerCustom = (props) => {
             ) {
               return null;
             }
+            pressAnsweredAtMouseDownRef.current = readPressCount();
             return {
               name: "mousedown to open picker",
               intent: "read",
@@ -1043,6 +1050,18 @@ const PickerCustom = (props) => {
           },
           click: (e) => {
             if (isWithinPickerContent(e.target)) {
+              return null;
+            }
+            // One press, one answer: the press its mousedown answered is only
+            // ending. Asked again, a refusal still on screen would read this
+            // click as "got it" and take its explanation down before a frame
+            // is drawn — under a finger the mousedown and the click arrive
+            // together, after touchend (see reportInteractivity).
+            if (
+              e.detail !== 0 &&
+              pressAnsweredAtMouseDownRef.current === readPressCount()
+            ) {
+              e.preventDefault();
               return null;
             }
             // Still open at the click of a later press: that press brought no
@@ -1155,21 +1174,42 @@ const getTriggerLabelIds = (pickerEl) => {
   return ids.length === 0 ? undefined : ids.join(" ");
 };
 // What the picker holds without the person having changed it: its `value` (or
-// signal) moving, a default moving under it — also when carried up from a
-// control in its popup — and what its popup's controls are placed on as they
-// mount.
+// signal) moving, a default moving under it, and what its popup's controls are
+// placed on as they mount. Read along the chain, never off the event alone: a
+// control in the popup carries its change up to the picker as an event of its
+// own (see the facade in ui_state_controller.js), chained to what caused it —
+// an app writing that control's bound signal included.
+const OUTSIDE_WRITE_TYPE_SET = new Set([
+  "state_prop_change",
+  "initial_state_push",
+  "facade_child_mount_sync",
+  "outside_value_follow",
+]);
 const isWrittenByTheOutside = (e) => {
   if (!e) {
     return false;
   }
-  if (
-    e.type === "state_prop_change" ||
-    e.type === "initial_state_push" ||
-    e.type === "facade_child_mount_sync"
-  ) {
+  return Boolean(
+    findEvent(e, (event) => OUTSIDE_WRITE_TYPE_SET.has(event.type)),
+  );
+};
+// The popup echoes the trigger's corners (see the CSS above), right for a
+// length and wrong for a shape: a round trigger's 50% read on a sheet of
+// another size is an ellipse, and a pill's 999px a stadium. A shape leaves the
+// popup on the corners every popup has.
+const PILL_RADIUS_MIN_PX = 100;
+const isBorderRadiusAShape = (borderRadius) => {
+  if (typeof borderRadius === "number") {
+    return borderRadius >= PILL_RADIUS_MIN_PX;
+  }
+  if (typeof borderRadius !== "string") {
+    return false;
+  }
+  const radius = borderRadius.trim();
+  if (radius.endsWith("%")) {
     return true;
   }
-  return Boolean(findEvent(e, "outside_value_follow"));
+  return radius.endsWith("px") && parseFloat(radius) >= PILL_RADIUS_MIN_PX;
 };
 const getPickerInputUIState = (pickerEl) => {
   const pickerInput = getPickerInput(pickerEl);
@@ -1349,7 +1389,12 @@ const PickerContentInsidePopup = (props) => {
           // popup below the picker.
           data-picker-popup=""
           backgroundColor={popupBackgroundColor}
-          borderRadius={popupBorderRadius}
+          borderRadius={
+            popupBorderRadius === undefined &&
+            isBorderRadiusAShape(props.borderRadius)
+              ? "var(--navi-popup-border-radius)"
+              : popupBorderRadius
+          }
           boxShadow={popupBoxShadow}
           borderWidth={isPopover ? undefined : dialogBorderWidth}
           minWidth={
@@ -1474,7 +1519,11 @@ const PickerCalloutPopup = ({
     mount,
     anchor,
   });
-  const children = contentMounted ? childrenProp : null;
+  const children = contentMounted ? (
+    <PopupValueContext.Provider value={openController.popupValueSignal}>
+      {childrenProp}
+    </PopupValueContext.Provider>
+  ) : null;
   // Inside a <PopupGroup> the wall is the group's (see popup_group.jsx): it
   // decides what a press outside the callout does, and the callout spends and
   // closes on none of its own.
@@ -1643,6 +1692,13 @@ const findFileChooser = (pickerEl) => {
   return pickerEl.querySelector(".navi_picker_file_chooser");
 };
 const showNativePicker = (pickerInput, event) => {
+  if (pickerInput.type === "file") {
+    // WebKit presents nothing for a file input's showPicker() and throws
+    // nothing, so the catch below never learns of it; a click, within the
+    // press, opens the chooser in every engine.
+    pickerInput.click();
+    return;
+  }
   if (findEvent(event, isTouchDrivenEvent)) {
     moveFocusTo(pickerInput, { focusVisible: false });
   }

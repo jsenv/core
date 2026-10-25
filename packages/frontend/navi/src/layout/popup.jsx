@@ -99,7 +99,7 @@ const css = /* css */ `
  *   `maxWidth` below.
  * @param {boolean} [props.sizeFromAnchor] - **Dialog-only**, same guard.
  * @param {"box"|"scene"} [props.lift] - **Dialog-only**, same guard.
- * @param {Element|{current: Element}|string} [props.liftAnchor] -
+ * @param {Element|{current: Element}|string|((popupValue: any) => Element|{current: Element}|string)} [props.liftAnchor] -
  *   **Dialog-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),

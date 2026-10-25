@@ -341,7 +341,7 @@ const resolveCommandValue = (source, event) => {
     return event.detail.value;
   }
   if (source.hasAttribute("command-value")) {
-    return source.getAttribute("command-value");
+    return readCommandValue(source);
   }
   if (source.type === "radio" || source.type === "checkbox") {
     // Use readControlValue so that radio/checkbox sources return their `value`
@@ -356,6 +356,20 @@ const resolveCommandValue = (source, event) => {
   // inside a picker would say the travel is about the entry that picker has
   // selected, and the screen it opens would prefill a new entry with it.
   return getUIStateFromElement(source, { own: true });
+};
+// The value as it was given: a <Button command-value={12}> holds the number, an
+// object, whatever the prop said, where its attribute can only say a string. A
+// plain element carrying the attribute says that string.
+const readCommandValue = (source) => {
+  let responded = false;
+  let value;
+  dispatchCustomEvent(source, "navi_get_command_value", {
+    respondWith: (jsValue) => {
+      responded = true;
+      value = jsValue;
+    },
+  });
+  return responded ? value : source.getAttribute("command-value");
 };
 
 export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
@@ -1124,7 +1138,11 @@ const executeNaviDefine = (source, event, target) => {
 // reads it (see List). "--navi-scroll:smooth" asks for the glide.
 const scrollCommand = (source, event, { argument, value }) => {
   const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+    resolveExplicitTarget(source) ||
+    // The list sending it about itself, as List's JSDoc writes a scroll asked
+    // by code: triggerNaviCommand(listEl, "--navi-scroll", event, { value }).
+    (source.matches(".navi_list_container") ? source : null) ||
+    resolveFirstParentControl(source);
   if (!target) {
     return undefined;
   }

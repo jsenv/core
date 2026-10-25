@@ -494,13 +494,12 @@ export const createResourceLifecycleManager = () => {
       if (!isSameResource && !isDependent) {
         continue;
       }
+      // A write of a resource this one depends on reaches its lists as it
+      // reruns its GET and GET_MANY: being heard is the whole condition (see
+      // findEffectOnActions). rerunOn is about this resource's own writes.
       if (
-        !shouldReadRerunAfter(
-          "GET_RANGE",
-          config,
-          triggeringAction,
-          isSameResource,
-        )
+        isSameResource &&
+        !shouldReadRerunAfter("GET_RANGE", config, triggeringAction, true)
       ) {
         continue;
       }
