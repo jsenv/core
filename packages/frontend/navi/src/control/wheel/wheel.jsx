@@ -660,8 +660,8 @@ const getNumericRange = (items) => {
 
 // Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
 // list of items regardless of how children are wrapped (providers, fragments…).
-// indexRef gives each item its position: WheelUI resets it to 0 every render and
-// each item reads-and-increments it as it renders, in document order.
+// The position comes after the commit, from the marker each item leaves where it
+// stands (see WheelUI).
 const WheelItemTrackerContext = createContext(null);
 
 // Lets a WheelGroup push shared presentation (glass, orientation) down to every
@@ -1312,12 +1312,21 @@ function WheelUI(props) {
   // (children may be wrapped). This ordered list is the source of truth for the
   // whole wheel — the rendered rows are a small recycled window over it.
   const tracker = useItemTracker();
-  const indexRef = useRef(0);
-  indexRef.current = 0;
-  const trackerContextRef = useRef(null);
-  if (!trackerContextRef.current) {
-    trackerContextRef.current = { tracker, indexRef };
-  }
+  // The order is read from the markers the items leave in the DOM, not from the
+  // order they render in: an item whose props did not change may skip a render
+  // (signals' shouldComponentUpdate), and a render count would then rank the
+  // ones that did render first.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const ids = [];
+    for (const marker of el.querySelectorAll("[data-navi-wheel-item]")) {
+      ids.push(marker.getAttribute("data-navi-wheel-item"));
+    }
+    tracker.setOrder(ids);
+  });
   const trackedItems = tracker.itemsSignal.value;
   const trackedItemsRef = useRef(trackedItems);
   trackedItemsRef.current = trackedItems;
@@ -2155,7 +2164,7 @@ function WheelUI(props) {
         {/* Wheel.Item children register their {value,label,itemProps} here and
             render nothing (see WheelItem). The visible rows are the recycled
             window below, filled from that tracked list. */}
-        <WheelItemTrackerContext.Provider value={trackerContextRef.current}>
+        <WheelItemTrackerContext.Provider value={tracker}>
           <ControlFacadeChildrenWrapper facadeController={facadeController}>
             {children}
           </ControlFacadeChildrenWrapper>
@@ -2281,9 +2290,10 @@ const WheelWindow = ({
  * Wheel.Item — a value in a Wheel. Must be used inside <Wheel>.
  *
  * Registration only: it records its {value, label, itemProps} with the wheel and
- * renders NOTHING. The wheel is virtualized — it renders a small recycled window
- * of rows and fills each from this tracked data — so the value list is the source
- * of truth, not a per-item DOM node. Selection lives on the wheel's value.
+ * renders no row, only a hidden marker the wheel reads its position from. The
+ * wheel is virtualized — it renders a small recycled window of rows and fills
+ * each from this tracked data — so the value list is the source of truth, not a
+ * per-item DOM node. Selection lives on the wheel's value.
  *
  * @type {import("preact").FunctionComponent<{
  *   value: any,
@@ -2295,16 +2305,14 @@ export const WheelItem = ({ value, id, children, ...rest }) => {
   const idDefault = useGeneratedId();
   const resolvedId = id || idDefault;
   // Wheel.Item must live inside a Wheel, so the context is always present.
-  const trackerContext = useContext(WheelItemTrackerContext);
-  const index = trackerContext.indexRef.current++;
-  trackerContext.tracker.useTrackItem({
+  const tracker = useContext(WheelItemTrackerContext);
+  tracker.useTrackItem({
     id: resolvedId,
-    index,
     value,
     label: children,
     itemProps: rest,
   });
-  return null;
+  return <span hidden data-navi-wheel-item={resolvedId} />;
 };
 Wheel.Item = WheelItem;
 

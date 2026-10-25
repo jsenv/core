@@ -53,11 +53,17 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   needed. `data.role === "presentation"` keeps it out entirely.
  *   Returns the visible rank (position among visible items), or -1 when hidden
  *   or filtered.
+ *   An item rendered without an index keeps the position it has, and a new one
+ *   goes last: for a host that cannot know the order at render and gives it
+ *   afterwards with setOrder.
  *   Signals and onChange are deferred to a microtask so multiple items updating
  *   in one commit cause only one notification.
  *
  *   getTrackedItemByIndex(index): synchronous O(1) lookup of a visible item by
  *   its visible rank. Returns undefined when index is out of range.
+ *
+ *   setOrder(ids): gives each tracked item its position from its rank in
+ *   `ids`.
  *
  *   peekItems(): the items as they stand right now, without waiting for the
  *   deferred notification — what a sibling rendering after the items must read
@@ -339,8 +345,14 @@ const createItemTracker = (onChange) => {
   // that determines this item's position among siblings.
   // Returns the item's visible rank among non-hidden items, or -1 when hidden.
   const useTrackItem = (data) => {
-    const { id, index } = data;
+    const { id } = data;
     const key = keyForId(id);
+    let { index } = data;
+    if (index === undefined) {
+      index = keyToExplicitOrder.has(key)
+        ? keyToExplicitOrder.get(key)
+        : Infinity;
+    }
 
     syncItem(key, index, data);
     notify();
@@ -356,6 +368,24 @@ const createItemTracker = (onChange) => {
       return -1;
     }
     return keyToOrderedIndex.get(key) ?? -1;
+  };
+
+  const setOrder = (ids) => {
+    let changed = false;
+    for (let i = 0; i < ids.length; i++) {
+      const key = idToKey.get(ids[i]);
+      if (key === undefined || !allRegistrations.has(key)) {
+        continue;
+      }
+      if (keyToExplicitOrder.get(key) === i) {
+        continue;
+      }
+      syncItem(key, i, allRegistrations.get(key));
+      changed = true;
+    }
+    if (changed) {
+      notify();
+    }
   };
 
   const getTrackedItemByIndex = (index) => {
@@ -391,6 +421,7 @@ const createItemTracker = (onChange) => {
   return {
     useTrackItem,
     getTrackedItemByIndex,
+    setOrder,
     peekItems,
     itemsSignal,
     visibleItemsSignal,

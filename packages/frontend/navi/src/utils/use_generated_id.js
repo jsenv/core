@@ -8,16 +8,21 @@
  * on screen. A registry keyed by id then holds the newcomer, and loses the
  * first control when the newcomer leaves. navi renders on the client only, so
  * a counter is all the uniqueness needs.
+ *
+ * Held in a ref, not in useState: @preact/signals' shouldComponentUpdate
+ * skips the render of a component holding hook state whose props did not
+ * change, so an id kept as state would change when its caller renders.
  */
 
-import { useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 let generatedIdCount = 0;
 
 export const useGeneratedId = () => {
-  const [id] = useState(() => {
+  const idRef = useRef(null);
+  if (idRef.current === null) {
     generatedIdCount++;
-    return `navi_${generatedIdCount}`;
-  });
-  return id;
+    idRef.current = `navi_${generatedIdCount}`;
+  }
+  return idRef.current;
 };
