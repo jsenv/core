@@ -4,15 +4,17 @@ import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 export const debounceSignal = (
   signalToDebounce,
-  { delay = 300, deepCompare = true } = {},
+  { delay = 300, deepCompare = true, followsOnlyWhileRead = false } = {},
 ) => {
   const isSameValue = (a, b) =>
     deepCompare ? compareTwoJsValues(a, b) : a === b;
   let timeoutId;
   let latestValue = signalToDebounce.peek();
   // Following the source subscribes to it, and through it to whatever it reads:
-  // an app-level signal it reads would keep it — and its timer — alive for
-  // good. So it is followed only while something reads the debounced value.
+  // an app-level signal it reads keeps it — and its timer — alive for as long
+  // as that signal lives. Fine for a debounced value read at any time; a
+  // binding's params (see getDebouncedSignal) are only read by the binding, and
+  // are followed only while it is read.
   let stopFollowing = null;
   const follow = () => {
     const value = signalToDebounce.value;
@@ -40,20 +42,28 @@ export const debounceSignal = (
     }
     latestValue = debouncedSignal.peek();
   };
-  const debouncedSignal = signal(latestValue, {
-    watched: () => {
-      // Nobody was waiting on what the source said while nothing read it:
-      // that is taken at once, not after a delay.
-      catchUp();
-      stopFollowing = effect(follow);
-    },
-    unwatched: () => {
-      stopFollowing();
-      stopFollowing = null;
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
-    },
-  });
+  const debouncedSignal = signal(
+    latestValue,
+    followsOnlyWhileRead
+      ? {
+          watched: () => {
+            // Nobody was waiting on what the source said while nothing read
+            // it: that is taken at once, not after a delay.
+            catchUp();
+            stopFollowing = effect(follow);
+          },
+          unwatched: () => {
+            stopFollowing();
+            stopFollowing = null;
+            clearTimeout(timeoutId);
+            timeoutId = undefined;
+          },
+        }
+      : undefined,
+  );
+  if (!followsOnlyWhileRead) {
+    stopFollowing = effect(follow);
+  }
 
   debouncedSignal.flush = () => {
     clearTimeout(timeoutId);
@@ -92,7 +102,13 @@ export const getDebouncedSignal = (signalToDebounce, delay) => {
   if (existing) {
     return existing;
   }
-  const debouncedSignal = debounceSignal(signalToDebounce, { delay });
+  // A binding's params, read by the binding alone: followed while it is read
+  // (see createActionProxyFromSignal), or a component's params reading an
+  // app-level signal would stay subscribed after the component is gone.
+  const debouncedSignal = debounceSignal(signalToDebounce, {
+    delay,
+    followsOnlyWhileRead: true,
+  });
   byDelay.set(delay, debouncedSignal);
   return debouncedSignal;
 };
