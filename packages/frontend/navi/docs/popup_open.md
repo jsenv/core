@@ -382,7 +382,10 @@ What the picker measures as "changed since open" is what its mirrored group
 holds. A piece of the answer living outside the controls — a seating rearranged
 by drag, kept in component state — has to be held by a control in the group too
 (a named control bound to that state), or a close over it reads as nothing
-changed and nothing runs.
+changed and nothing runs. The app writing that state is the person's change
+once they have pressed or typed in the popup (or in a sheet opened from it);
+before that it is the outside's — the record re-read as the sheet opens
+([create_and_edit.md](./create_and_edit.md#the-same-loop-in-a-dialog)).
 
 A card in a list opens on `openOn="longpress"`, so a tap on it stays a tap. Two
 pickers on one card — the score sheet inside the edit card — are one wait: the

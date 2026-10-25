@@ -435,9 +435,11 @@ only its mechanisms change.
 A list's copy of a record can be minutes old, so a sheet that saves the whole
 record reads it again as it opens, and that answer lands after the popup has
 taken what it holds at open. A `Picker` given the record as its `value` (or its
-signal) counts what the outside writes before the person changes anything as
-what was there at open: a look and a close send nothing, and a cancel goes back
-to the record as it arrived, not to the list's copy.
+signal) counts what the outside writes before the person presses or types in
+the popup as what was there at open: a look and a close send nothing, and a
+cancel goes back to the record as it arrived, not to the list's copy. A record
+landing after that press — a slow re-read, a sub-sheet opened only to look — is
+an edit, and a keeping close sends it.
 
 What does not change:
 

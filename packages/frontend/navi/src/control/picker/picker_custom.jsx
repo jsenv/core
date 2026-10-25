@@ -526,12 +526,24 @@ const PickerCustom = (props) => {
       // person's edit. Until they change something, what was there at open
       // follows it: a look and a close then send nothing, and a cancel goes
       // back to the record as it arrived.
+      // A write the app makes in answer to the person — a seat chosen in a
+      // sheet, a drag landed — arrives as the same event as that record, so
+      // the event alone cannot end the following: a press or a key in the
+      // picker does (its popup and the sheets opened from it stand in its
+      // root). The press that opened it ended before these listeners.
       let editedSinceOpen = false;
+      let actedSinceOpen = false;
+      const noteActed = () => {
+        actedSinceOpen = true;
+      };
+      const pickerRoot = ref.current;
+      pickerRoot.addEventListener("pointerdown", noteActed, { capture: true });
+      pickerRoot.addEventListener("keydown", noteActed, { capture: true });
       const followOutsideUntilEdited = (e) => {
         if (editedSinceOpen) {
           return;
         }
-        if (!isWrittenByTheOutside(e.detail.event)) {
+        if (actedSinceOpen || !isWrittenByTheOutside(e.detail.event)) {
           editedSinceOpen = true;
           return;
         }
@@ -609,6 +621,12 @@ const PickerCustom = (props) => {
             "navi_ui_state_change",
             followOutsideUntilEdited,
           );
+          pickerRoot.removeEventListener("pointerdown", noteActed, {
+            capture: true,
+          });
+          pickerRoot.removeEventListener("keydown", noteActed, {
+            capture: true,
+          });
           if (closeEvent.detail.isCancel) {
             const pickerEl = ref.current;
             const inputEl = getPickerInput(pickerEl);
@@ -1177,12 +1195,13 @@ const getTriggerLabelIds = (pickerEl) => {
   }
   return ids.length === 0 ? undefined : ids.join(" ");
 };
-// What the picker holds without the person having changed it: its `value` (or
-// signal) moving, a default moving under it, and what its popup's controls are
-// placed on as they mount. Read along the chain, never off the event alone: a
-// control in the popup carries its change up to the picker as an event of its
+// What reaches the picker without a gesture of one of its controls: its `value`
+// (or signal) moving, a default moving under it, and what its popup's controls
+// are placed on as they mount. Read along the chain, never off the event alone:
+// a control in the popup carries its change up to the picker as an event of its
 // own (see the facade in ui_state_controller.js), chained to what caused it —
-// an app writing that control's bound signal included.
+// an app writing that control's bound signal included. Whether that write
+// answers the person is not in the event (see actedSinceOpen).
 const OUTSIDE_WRITE_TYPE_SET = new Set([
   "state_prop_change",
   "initial_state_push",
