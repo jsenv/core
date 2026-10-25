@@ -30,13 +30,7 @@
 
 import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import {
@@ -77,6 +71,7 @@ import {
 } from "../rules/validation/standard_constraints.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { Picker } from "./picker.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   @layer navi {
@@ -645,7 +640,7 @@ export const Spin = ({
   } else {
     compareValues ??= compareValuesDefault;
   }
-  const id = useId();
+  const id = useGeneratedId();
   // What the group around it says, when there is one: how big the whole thing
   // is written is said once, on the group, and every spin in it follows.
   const group = useContext(SpinGroupContext);

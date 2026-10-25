@@ -1,6 +1,6 @@
 // TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
 
-import { useId, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
@@ -8,6 +8,7 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   .navi_checkbox_group {
@@ -62,7 +63,7 @@ const css = /* css */ `
 export const CheckboxGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const defaultName = useId();
+  const defaultName = useGeneratedId();
   props.name = props.name || `checkbox_group_${defaultName}`;
   const checkboxGroup = <CheckboxGroupInterface {...props} />;
 

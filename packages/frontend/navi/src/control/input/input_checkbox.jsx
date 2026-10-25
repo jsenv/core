@@ -1,10 +1,11 @@
-import { useId, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { SwitchCSSVars, SwitchUI } from "./switch_ui.jsx";
 import { useCheckableProps } from "./use_checkable_props.js";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   @layer navi {
@@ -481,7 +482,7 @@ const InputCheckboxFieldInterface = (props) => {
     children !== undefined &&
     children !== null &&
     children !== false;
-  const labelId = useId();
+  const labelId = useGeneratedId();
   const boxRef = useRef();
   useAccentColorAttributes(boxRef, accentColor, {
     elementSelector: ".navi_checkbox_accent_probe",

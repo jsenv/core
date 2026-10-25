@@ -61,13 +61,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import {
-  useContext,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useContext, useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "../control/commands.js";
 import {
@@ -131,6 +125,7 @@ import {
   readPressOutsideInPopupGroup,
   warnWallPropsInsidePopupGroup,
 } from "./popup_group.jsx";
+import { useGeneratedId } from "../utils/use_generated_id.js";
 
 // Custom renderer only (layer="local") — count of currently-open instances,
 // see --popover-stack-order's own CSS comment for why a plain "last shown"
@@ -1092,7 +1087,7 @@ const usePopoverProps = (props) => {
   // open, two separate invocations of openEffect that don't otherwise share
   // any scope, hence the ref.
   const disarmBackdropHideRef = useRef(null);
-  const defaultId = useId();
+  const defaultId = useGeneratedId();
   const id = rest.id || defaultId;
   const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();

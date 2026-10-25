@@ -566,7 +566,8 @@ out with an example in its JSDoc:
   parent the store does not hold yet is left alone: its array comes with its
   next read.
 - **`.scopedOne(propertyName, callbacks)`** — every callback returns
-  `[ownerId, props | null]`; the property is `null` until one does. An owner
+  `[ownerId, props | null]`; the property is `undefined` until the owner's row
+  or a callback speaks for it, `null` when that answer holds none. An owner
   the store does not hold yet is left alone: the answer is the action's value,
   and the owner's next read brings its child.
 - **`.scopedMany(propertyName, { idKey, … })`** — `[ownerId, props]`; `PUT` (an

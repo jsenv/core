@@ -18,7 +18,7 @@
  * `loadingOutline="custom"`.
  */
 
-import { useId, useRef, useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { isTypoProp } from "@jsenv/navi/src/box/box_style_util.js";
@@ -31,6 +31,7 @@ import { Group } from "../group.jsx";
 import { List } from "../list/list.jsx";
 import { Picker } from "../picker/picker.jsx";
 import { Button } from "./button.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   /* Around the pair rather than in it: the outline is drawn against this
@@ -256,7 +257,7 @@ export const SplitButton = (props) => {
     popupProps.positionArea = "bottom-end";
   }
 
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   const idResolved = id || idDefault;
   const menuId = `${idResolved}_menu`;
   const rootRef = useRef(null);

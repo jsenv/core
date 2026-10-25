@@ -5,7 +5,7 @@ import {
   isPressDisputedByDrag,
   isTouchDrivenEvent,
 } from "@jsenv/dom";
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { CalloutStatusIcon } from "../rules/callout/callout_status_icon.jsx";
@@ -66,6 +66,7 @@ import {
   readStatesAtOpen,
 } from "../ui_state_controller.js";
 import { getPickerHostLabelId, pickerUIIsNaviOwn } from "./picker_context.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   /* Popover and Dialog size, pad and scroll themselves. What is written here
@@ -378,10 +379,10 @@ const PickerCustom = (props) => {
   // before computing popupId below, so two Pickers without an explicit id never collide.
   // Captured before the fallback chain below overwrites props.id — needed to
   // know whether the id actually came from the caller (stable) or from
-  // useId()/ControlIdContext (a generated id names one mount: a reload, or a
+  // useGeneratedId()/ControlIdContext (a generated id names one mount: a reload, or a
   // return to this page, generates another), see pickerNavType below.
   const hasExplicitId = Boolean(props.id);
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
   // Given no value, the picker holds what the control in its popup holds (see
@@ -480,7 +481,7 @@ const PickerCustom = (props) => {
     const debugPopup = useDebugPopup();
     // In "dialog" mode with a stable, caller-provided id, enterExpanded()
     // pushes a history entry so the back button closes it. Every other case
-    // (popover mode, or a dialog whose id was auto-generated via useId()/
+    // (popover mode, or a dialog whose id was auto-generated via useGeneratedId()/
     // ControlIdContext) replaces the current history state instead — a
     // generated id names one mount, so pushing it would either leave an entry
     // nothing reads or, worse, collide with a different component's own

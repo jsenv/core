@@ -7,13 +7,7 @@ import {
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { cloneElement, createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 // Imported for its side effect: it is what writes navi-scrolling on whatever
 // scrolls, which the CSS below reads.
@@ -27,7 +21,7 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { stringifySpacingStyle } from "../../box/box_style_util.js";
-import { isLikelyPreactGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
+import { isGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
 import { RoutePageContext } from "../../nav/route_page_context.js";
 import {
   forgetScrollerUnlessPageLeft,
@@ -58,6 +52,7 @@ import {
   ListSelectableResolver,
 } from "./list_selectable.jsx";
 import { useSearchHighlight } from "./search_highlight.js";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 // Everything the list knows about its items — see list_items.js. Filled in by
 // the children as they render, read by everything that must reserve room for
@@ -1100,7 +1095,7 @@ const ListUI = (props) => {
   // Remembered by name, and a name made up at render (see ListFirstResolver)
   // names no list a later mount would recognize.
   const rememberScroll =
-    !scrollResetOnNavigation && !isLikelyPreactGeneratedId(rest.id);
+    !scrollResetOnNavigation && !isGeneratedId(rest.id);
   // Where the list was when its screen was left, when this is the way back
   // (see scroll_restoration.js). Read once: `defaultScrolled` is held by
   // reference, and a place read again each render would be a list moved each
@@ -1461,7 +1456,7 @@ const ListFirstResolver = (props) => {
   const Next = useNextResolver();
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   props.id = props.id || idDefault;
   const listItemsRef = useRef(null);
   if (!listItemsRef.current) {
@@ -5263,7 +5258,7 @@ const ListItemUI = (props) => {
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
     );
   }
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   props.id = props.id || idDefault;
   const listItems = useContext(ListItemsContext);
   const groupId = useContext(ListGroupContext);
@@ -6117,7 +6112,7 @@ const useRunItems = (
     renderError,
   },
 ) => {
-  const ownerId = useId();
+  const ownerId = useGeneratedId();
   // Dev only: the group `groupOfMissing` put an item not held in, by rank,
   // checked against `groupBy` once the item lands.
   const missingGroupCheckRef = useRef(null);
@@ -6740,7 +6735,7 @@ const SKELETON_ITEM_DATA = { skeleton: true };
 const ListRunSkeletonItem = ({ runItem, separator, children }) => {
   const listItems = useContext(ListItemsContext);
   const groupId = useContext(ListGroupContext);
-  const entryId = useId();
+  const entryId = useGeneratedId();
   listItems.draw(entryId, {
     ownerId: runItem.ownerId,
     place: runItem.index,
@@ -7523,7 +7518,7 @@ export const ListItemGroup = ({
   children,
   ...rest
 }) => {
-  const groupId = useId();
+  const groupId = useGeneratedId();
   const listItems = useContext(ListItemsContext);
   const group = listItems.group(groupId);
   useLayoutEffect(() => {

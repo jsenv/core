@@ -72,13 +72,13 @@ export const writePressWritesHere = (pressWrites) => {
   }
 };
 
-// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where the
-// mask is derived from render order within the nearest root/async boundary:
-// stable across re-renders of the same mount, but not across two mounts on the
-// same page, and not across two documents.
-const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
-export const isLikelyPreactGeneratedId = (id) => {
-  return PREACT_GENERATED_ID_REGEX.test(id);
+// An id made up at render names one mount: navi's own ("navi_<n>", see
+// useGeneratedId) counts mounts in the document, and preact's useId(), which
+// an app may hand a component, gives "P<mask0>-<mask1>" from the render order.
+// Neither names the same component in two mounts or two documents.
+const GENERATED_ID_REGEX = /^(?:navi_\d+|P\d+-\d+)/;
+export const isGeneratedId = (id) => {
+  return GENERATED_ID_REGEX.test(id);
 };
 
 /**
@@ -102,7 +102,7 @@ export const dropGeneratedIdKeys = (state) => {
   }
   let stateWithoutGeneratedIdKeys = state;
   for (const key of Object.keys(state)) {
-    if (!isLikelyPreactGeneratedId(key)) {
+    if (!isGeneratedId(key)) {
       continue;
     }
     if (stateWithoutGeneratedIdKeys === state) {

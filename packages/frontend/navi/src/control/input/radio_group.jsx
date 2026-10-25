@@ -1,4 +1,4 @@
-import { useId, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
@@ -6,6 +6,7 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   .navi_radio_group {
@@ -40,7 +41,7 @@ const css = /* css */ `
 export const RadioGroup = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
-  const defaultName = useId();
+  const defaultName = useGeneratedId();
   props.name = props.name || `radio_group_${defaultName}`;
   const radioGroup = <RadioGroupInterface {...props} />;
 

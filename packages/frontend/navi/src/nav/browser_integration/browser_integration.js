@@ -21,10 +21,7 @@ import {
   workingWhile,
 } from "./document_loading_signal.js";
 import { canNavBackSignal } from "./document_back_and_forward.js";
-import {
-  documentStateSignal,
-  isLikelyPreactGeneratedId,
-} from "./document_state_signal.js";
+import { documentStateSignal, isGeneratedId } from "./document_state_signal.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 import { NAV_STATE_ENTERED_VALUE } from "./link_open.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
@@ -297,7 +294,7 @@ Consider using unique IDs for each component instance.`,
   return useNavStateBasic(id, options);
 };
 
-// A generated id (preact's useId()) names one mount. State written under one
+// A generated id (see isGeneratedId) names one mount. State written under one
 // outlives that mount in the history entry — a page left with a popup open —
 // and the mount coming back to the entry generates another id: the state is
 // there, and nothing reads it. Reported when a component mounting on the entry
@@ -323,7 +320,7 @@ const warnAboutOrphanGeneratedKeys = () => {
   }
   for (const key of Object.keys(state)) {
     if (
-      !isLikelyPreactGeneratedId(key) ||
+      !isGeneratedId(key) ||
       idUsageMap.has(key) ||
       orphanKeysReported.has(key)
     ) {
@@ -331,7 +328,7 @@ const warnAboutOrphanGeneratedKeys = () => {
     }
     orphanKeysReported.add(key);
     console.warn(
-      `useNavState: this history entry holds "${key}", written by a component whose id was generated (preact's useId()) and that is not mounted anymore — a Picker without an id, a popup with navState and no id. A generated id names one mount, so nothing will read that state again: a popup open when this screen was left comes back closed. Give the component a stable id if it was meant to be found as it was.`,
+      `useNavState: this history entry holds "${key}", written by a component whose id was generated and that is not mounted anymore — a Picker without an id, a popup with navState and no id. A generated id names one mount, so nothing will read that state again: a popup open when this screen was left comes back closed. Give the component a stable id if it was meant to be found as it was.`,
     );
   }
 };
@@ -426,13 +423,13 @@ const useNavStateBasic = (
 
   let effectiveType = type;
   // A push bakes the key into a history entry of its own, and an id naming a
-  // render position (see isLikelyPreactGeneratedId) can be claimed by two
+  // render position (see isGeneratedId) can be claimed by two
   // mounts of this same page. A replace keeps the key on the entry the document
   // is already on, where the id at least names one render.
-  if (type === "push" && isLikelyPreactGeneratedId(id)) {
+  if (type === "push" && isGeneratedId(id)) {
     if (import.meta.dev) {
       console.warn(
-        `useNavState(${id}): this id looks auto-generated (e.g. preact's useId()) and type is "push" — falling back to "replace". A push history entry keyed by an unstable id won't survive a reload correctly, and could even collide with a different component's own auto-generated id. Pass a stable, explicit id to use type: "push".`,
+        `useNavState(${id}): this id looks auto-generated and type is "push" — falling back to "replace". A push history entry keyed by an unstable id won't survive a reload correctly, and could even collide with a different component's own auto-generated id. Pass a stable, explicit id to use type: "push".`,
       );
     }
     effectiveType = "replace";
@@ -550,7 +547,7 @@ const useNavStateBasic = (
  *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
  *   - "replace": updates the current history entry — no extra history entry is created.
  *   Silently downgraded to "replace" (with a dev-only console.warn) when `id`
- *   looks auto-generated (e.g. preact's own useId()) — an unstable id baked
+ *   looks auto-generated (navi's own, or preact's useId()) — an unstable id baked
  *   into a pushed history entry won't survive a reload correctly, and could
  *   even collide with a different component's own auto-generated id. Pass a
  *   stable, explicit id to actually get "push" behavior.

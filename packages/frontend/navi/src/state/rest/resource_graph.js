@@ -1114,7 +1114,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
    * - `DELETE: async ({ id }) => [id, null]`
    *
    * `ownerId` may also be `{ [uniqueKey]: value }` when the owner is known by an alternate key.
-   * The property is `null` until a callback provides data; setting it to `null` clears it.
+   * The property is `undefined` until an answer speaks for the owner (its row, or a
+   * callback), `null` when that answer holds none; setting it to `null` clears it.
    * Mutations apply directly to the owner's signal, so the parent GET is never rerun; an
    * owner the store does not hold yet is left alone, its child comes with its next read.
    *
@@ -1173,7 +1174,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       for (const childSetup of childSetupCallbackSet) {
         childSetup(childItem);
       }
-      const childSignal = signal(null);
+      // `undefined` until something answers for this owner, `null` once an
+      // answer says it holds none: a screen tells « not read yet » from
+      // « nothing » as it does with an action's data.
+      const childSignal = signal(undefined);
       // The child keeps its identity while its props change, so the owner's
       // getter also reads this version, bumped by each change in place:
       // whichever way the props came in — the owner's row, a write of this
@@ -1182,7 +1186,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       // Returns whether the child changed — what the store asks a relation
       // (see assign in array_signal_store.js).
       const applyProps = (props) => {
-        if (!props) {
+        if (props === undefined) {
+          return false;
+        }
+        if (props === null) {
           if (childSignal.peek() === null) {
             return false;
           }
@@ -1204,7 +1211,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           }
         }
         if (childSignal.peek() !== childItem) {
-          childSignal.value = childItem; // first activation: null → childItem
+          childSignal.value = childItem; // first activation
           return true;
         }
         if (changed) {

@@ -11,13 +11,12 @@
  * (see time_range_constraint.js).
  */
 
-import { useId } from "preact/hooks";
-
 import { timeI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { ControlGroup } from "../../control_group.jsx";
 import { formatTimeParts, parseTimeParts } from "../time_helpers.js";
 import { NumberSpin, SpinGroup } from "../picker_spin.jsx";
+import { useGeneratedId } from "../../../utils/use_generated_id.js";
 
 const HOUR_MAX = 23;
 const MINUTE_MAX = 59;
@@ -151,7 +150,7 @@ export const TimeRangeSpin = ({
   endTimeProps,
   ...rest
 }) => {
-  const startId = useId();
+  const startId = useGeneratedId();
   return (
     <ControlGroup flex alignY="center" spacing="s" size={size} {...rest}>
       {/* The words are written as big as the times they name: one span, one

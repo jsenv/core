@@ -82,13 +82,7 @@ import {
   stringifyStyle,
 } from "@jsenv/dom";
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { ActionRenderer } from "../../action/action_renderer.jsx";
 import { useAction } from "../../action/use_action.js";
@@ -106,6 +100,7 @@ import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { onNaviCommand } from "../commands.js";
 import { isPressOnControl } from "../control_dom.js";
 import { SummaryMarker } from "../details/summary_marker.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   .navi_expandable {
@@ -440,7 +435,7 @@ export const Expandable = (props) => {
   const rootRef = ref || defaultRef;
   const uiRef = useRef();
   const contentContainerRef = useRef();
-  const contentId = useId();
+  const contentId = useGeneratedId();
   const isColumn = layout === "column";
   const closedContentSized = isColumn && mount === "always";
   // Only the two directions the layout has room for: a column layout reveals

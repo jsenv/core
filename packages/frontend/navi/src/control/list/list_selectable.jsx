@@ -1,13 +1,7 @@
 import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
 import { useComputed } from "@preact/signals";
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import {
@@ -34,6 +28,7 @@ import { uiStateHoldsNothing } from "../ui_state_controller.js";
 import { Input } from "../input/input.jsx";
 import { useCheckableProps } from "../input/use_checkable_props.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   @layer navi {
@@ -321,7 +316,7 @@ const ListSelectable = (props) => {
   const Next = useNextResolver();
   import.meta.css = css;
   // we allow ourselves to auto-generate a name
-  const defaultName = useId();
+  const defaultName = useGeneratedId();
   props.name = props.name || `listbox_${defaultName}`;
   const {
     ref,
@@ -677,7 +672,7 @@ export const ListItemSelectableResolver = (props) => {
 };
 const ListItemSelectable = (props) => {
   const Next = useNextResolver();
-  const defaultId = useId();
+  const defaultId = useGeneratedId();
   // Whether the caller SAYS anything about this row's selection. Passing
   // `checked: undefined` is not the same as not passing it: a control with the
   // key present calls itself controlled, and a controlled row is one the list

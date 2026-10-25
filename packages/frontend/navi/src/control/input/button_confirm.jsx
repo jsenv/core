@@ -19,7 +19,7 @@
  * default — applies to the first press as much as to the second.
  */
 
-import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
@@ -28,6 +28,7 @@ import {
   moveFocusTo,
 } from "../../utils/focus/focus_transfer.js";
 import { ButtonUI } from "./button_ui.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   .navi_button_confirm {
@@ -66,7 +67,7 @@ const ButtonConfirm = ({
   // it is elsewhere by then, and pulling it back would take it from whatever
   // the person moved to.
   const restoreFocusRef = useRef(false);
-  const questionId = `${useId()}_question`;
+  const questionId = `${useGeneratedId()}_question`;
 
   const cancel = (restoreFocus) => {
     restoreFocusRef.current = restoreFocus;

@@ -36,7 +36,7 @@
  */
 
 import { toChildArray } from "preact";
-import { useId, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { Icon } from "../../text/text.jsx";
@@ -47,6 +47,7 @@ import {
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { warnSignalCollision } from "../control_value.js";
 import { Button } from "../input/button.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   .navi_control_swap {
@@ -240,7 +241,7 @@ export const ControlSwap = (props) => {
 
   const capRefs = [useRef(), useRef()];
   const slotRefs = [useRef(), useRef()];
-  const slotIdPrefix = useId();
+  const slotIdPrefix = useGeneratedId();
 
   const activeNameRef = useRef(floor.name);
   activeNameRef.current = activeSide.name;

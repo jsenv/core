@@ -25,7 +25,7 @@
 
 import { normalizeStyles } from "@jsenv/dom";
 import { createContext, isValidElement, toChildArray } from "preact";
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useCallback, useContext, useRef, useState } from "preact/hooks";
 
 import {
   resolveInteractions,
@@ -472,7 +472,15 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 export const Box = (props) => {
   const { ref, children, separator, interactions, mount, ...computeProps } =
     props;
-  const parentBoxFlow = useContext(BoxFlowContext);
+  // The flow of the nearest Box above in the component tree, which lays this
+  // box out unless a plain element sits between the two in the DOM: the box
+  // then reads that element's flow once mounted (see readDomParentFlow).
+  const contextBoxFlow = useContext(BoxFlowContext);
+  const [domParentFlow, setDomParentFlow] = useState(null);
+  const parentBoxFlow =
+    domParentFlow && domParentFlow.contextBoxFlow === contextBoxFlow
+      ? domParentFlow.flow
+      : contextBoxFlow;
   // Which interactions this box answers, and with what. Read here rather than
   // on the control, so a swipe or a hold can be declared on anything — a row, a
   // card, a block of text — and reach the control it belongs to (which is what
@@ -523,7 +531,22 @@ export const Box = (props) => {
     childForwardedProps,
     styleDeps,
   } = computed;
-  const syncBox = useCallback(computed.syncBox, styleDeps);
+  const verifyParentFlow =
+    parentBoxFlow === contextBoxFlow &&
+    FLOW_STYLING_ITS_CHILDREN_SET.has(contextBoxFlow) &&
+    readsParentFlow(computeProps);
+  const syncBox = useCallback(
+    verifyParentFlow
+      ? (boxEl) => {
+          const flow = readDomParentFlow(boxEl);
+          if (flow !== contextBoxFlow) {
+            setDomParentFlow({ contextBoxFlow, flow });
+          }
+          return computed.syncBox(boxEl);
+        }
+      : computed.syncBox,
+    styleDeps,
+  );
   const finalRef = useComposeElementRef(syncBox, ref);
   useInteractionsEffect(finalRef, interactionsRef);
 
@@ -865,6 +888,13 @@ const computeBox = (props, parentBoxFlow) => {
       );
       const cssVar = readCSSVarName(styleContext.styleCSSVars[name]);
       if (cssVar) {
+        if (name === "color" && value === "inherit") {
+          // A token set to `inherit` takes the token of the parent element
+          // (a list's white for its selected items), never the parent's color.
+          // `color: currentColor` IS `color: inherit`, and a token carries it.
+          addCSSVar("currentColor", cssVar, stylesTarget);
+          return true;
+        }
         addCSSVar(mergedValue, cssVar, stylesTarget);
         if (name === "borderRadius" && value === "inherit") {
           // "inherit" cannot be expressed via a CSS variable — a var() reference
@@ -1273,6 +1303,57 @@ const declaresSomething = (value) => {
     return false;
   }
   return true;
+};
+// The flows the styles of a child branch on (see expandX, selfAlignX… in
+// box_style_util.js): under any other the child writes the same styles
+// whatever its parent is.
+const FLOW_STYLING_ITS_CHILDREN_SET = new Set([
+  "flex-x",
+  "flex-y",
+  "inline-flex-x",
+  "inline-flex-y",
+  "grid",
+  "inline-grid",
+]);
+const PARENT_FLOW_PROP_NAMES = [
+  "expand",
+  "expandX",
+  "expandY",
+  "selfAlignX",
+  "selfAlignY",
+];
+const readsParentFlow = (props) => {
+  for (const name of PARENT_FLOW_PROP_NAMES) {
+    if (props[name]) {
+      return true;
+    }
+  }
+  return false;
+};
+// A Box parent says its flow on its element; a plain element is read from its
+// computed style, which only a box mounted under one pays for.
+const readDomParentFlow = (boxEl) => {
+  let parent = boxEl.parentElement;
+  while (parent) {
+    const flowAttribute = parent.getAttribute("navi-box-flow");
+    if (flowAttribute) {
+      return flowAttribute;
+    }
+    const { display, flexDirection } = window.getComputedStyle(parent);
+    if (display === "contents") {
+      parent = parent.parentElement;
+      continue;
+    }
+    if (display === "flex" || display === "inline-flex") {
+      const axis = flexDirection.startsWith("column") ? "y" : "x";
+      return `${display}-${axis}`;
+    }
+    if (display === "grid" || display === "inline-grid") {
+      return display;
+    }
+    return "block";
+  }
+  return undefined;
 };
 const isScrollingOverflow = (value) => value === "auto" || value === "scroll";
 const mayHoldComponent = (children) => {

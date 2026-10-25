@@ -24,7 +24,7 @@ return { profileBeforeGet, profileAfterGet, profileAfterPatch };
 
 ```js
 {
-  "profileBeforeGet": null,
+  "profileBeforeGet": undefined,
   "profileAfterGet": {
     "bio": "Hello world",
     "avatar": "alice.png"

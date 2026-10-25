@@ -17,7 +17,7 @@
  */
 
 import { createContext } from "preact";
-import { useContext, useId, useMemo, useRef } from "preact/hooks";
+import { useContext, useMemo, useRef } from "preact/hooks";
 
 import { timeI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Text } from "@jsenv/navi/src/text/text.jsx";
@@ -35,6 +35,7 @@ import {
 } from "../ui_state_dom.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { Wheel, WheelGroup } from "./wheel.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   /* The words around a span's wheels ("De", "à"): one line box, the height
@@ -333,7 +334,7 @@ export const TimeRangeWheel = ({
   ...rest
 }) => {
   import.meta.css = css;
-  const startId = useId();
+  const startId = useGeneratedId();
   const startRef = useRef(null);
   const endRef = useRef(null);
   const endHourList = useMemo(

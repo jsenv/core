@@ -52,7 +52,7 @@
 
 import { useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
-import { useContext, useId, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useFocusGroup } from "../../utils/focus/use_focus_group.js";
@@ -97,6 +97,7 @@ import "./sticky/table_sticky.jsx";
 import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import { installTableCss } from "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
   /*#__PURE__*/ createIsolatedItemTracker();
@@ -124,7 +125,7 @@ const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 export const Table = (props) => {
   installTableCss();
   const tableDefaultRef = useRef();
-  const tableDefaultId = `table-${useId()}`;
+  const tableDefaultId = `table-${useGeneratedId()}`;
   const {
     id = tableDefaultId,
     selection = [],

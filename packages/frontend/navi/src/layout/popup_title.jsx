@@ -12,16 +12,11 @@
  */
 
 import { createContext } from "preact";
-import {
-  useContext,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useState } from "preact/hooks";
 
 import { Title } from "../text/title.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { useGeneratedId } from "../utils/use_generated_id.js";
 
 const css = /* css */ `
   @layer navi {
@@ -59,7 +54,7 @@ export const PopupTitleContext = createContext(null);
 export const PopupTitle = (props) => {
   import.meta.css = css;
   const registerTitle = useContext(PopupTitleContext);
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   const id = props.id || `popup_title_${idDefault}`;
   useLayoutEffect(() => {
     if (!registerTitle) {

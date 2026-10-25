@@ -54,7 +54,7 @@
 
 import { signal, useSignal } from "@preact/signals";
 import { createContext } from "preact";
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import {
   claimWheelGesture,
   dispatchPublicCustomEvent,
@@ -80,6 +80,7 @@ import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
+import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
   .navi_wheel_container {
@@ -2291,7 +2292,7 @@ const WheelWindow = ({
  * }>}
  */
 export const WheelItem = ({ value, id, children, ...rest }) => {
-  const idDefault = useId();
+  const idDefault = useGeneratedId();
   const resolvedId = id || idDefault;
   // Wheel.Item must live inside a Wheel, so the context is always present.
   const trackerContext = useContext(WheelItemTrackerContext);

@@ -213,7 +213,7 @@ side holds is a vnode of yours that takes its own.
 Navi's own attributes are implementation, not a contract: `data-header`,
 `data-body`, `data-scrollable`, `data-variant`, `data-callout-*`,
 `navi-control*`, `.navi_*` class names, the ids navi generates when none is
-given (`useId`), and the ids it derives from yours (a picker's popup id is built
+given (`navi_<n>`), and the ids it derives from yours (a picker's popup id is built
 from the picker's, so the suffix is navi's even when the base is not). They
 change without notice and without a migration note. The exception is the state
 a guideline doc tells an app to read — `navi-refreshing`
