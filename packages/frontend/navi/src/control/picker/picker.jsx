@@ -2484,9 +2484,8 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   not sit in — an object on a map saying
  *   `triggerNaviCommand(pickerEl, "--navi-open", event, { anchor, value })` —
  *   therefore wants an element of its own to stretch into rather than the
- *   nearest positioned ancestor it happens to find. `"picker"` (or an explicit
- *   `variant={undefined}`) asks a confirm or callout picker for the field-like
- *   drawing every other picker has.
+ *   nearest positioned ancestor it happens to find. `"picker"` asks a confirm
+ *   or callout picker for the field-like drawing every other picker has.
  * @param {boolean} [cta] A call to action: filled with the accent, its border
  *   matching, as `cta` draws a Button — for a confirm picker that is a row's
  *   main action.

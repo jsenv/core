@@ -74,15 +74,15 @@ export const PickerConfirmResolver = (props) => {
     openWhileReadOnly = false,
   } = props;
   // A button, unless told otherwise: nothing is picked here, the popup is a
-  // question, and a question is asked by pressing something. "picker" — or an
-  // explicit `variant={undefined}` — is how a caller asks for the field-like
-  // drawing back; a destructuring default could not tell that from nothing
-  // being said.
-  const variant = Object.hasOwn(props, "variant")
-    ? props.variant === "picker"
-      ? undefined
-      : props.variant
-    : "button";
+  // question, and a question is asked by pressing something. "picker" is how a
+  // caller asks for the field-like drawing back — a word, not an undefined, so
+  // a wrapper forwarding `variant={variant}` keeps the button.
+  const variant =
+    props.variant === undefined
+      ? "button"
+      : props.variant === "picker"
+        ? undefined
+        : props.variant;
 
   // From the picker's own input, as its press would have been: the input is
   // what carries `command`/`commandFor` in the DOM, and what a form sending

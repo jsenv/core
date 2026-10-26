@@ -188,12 +188,14 @@ export const PickerCustomResolver = (props) => {
     return renderResolver(PickerNative, props);
   }
   if (props.mode === "callout") {
-    // A tooltip is an icon one presses, unless told otherwise. Own-property
-    // rather than undefined: an explicit variant={undefined} asks for the
-    // field-like drawing back. "circle" is the icon variant with the status
-    // icon drawn round — a word about the trigger, not a drawing of its own.
-    if (!Object.hasOwn(props, "variant")) {
+    // A tooltip is an icon one presses, unless told otherwise; "picker" asks
+    // for the field-like drawing back. "circle" is the icon variant with the
+    // status icon drawn round — a word about the trigger, not a drawing of its
+    // own.
+    if (props.variant === undefined) {
       props.variant = "icon";
+    } else if (props.variant === "picker") {
+      props.variant = undefined;
     }
     const circle = props.variant === "circle";
     if (circle) {
