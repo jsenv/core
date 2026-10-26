@@ -615,12 +615,12 @@ later.
 page has nothing to draw for: its code arriving on its own
 ([dynamic_import.md](./dynamic_import.md)), a read the previous document did not
 keep ([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) draws a kept one at once, and that one
-is not waited for), a read reset since the page was left. The position is put
-back once they have answered and the page has rendered. A back/forward also
-writes it at once into what the page shows meanwhile, as far as that goes: its
-route transition photographs the page as soon as it renders, and a position
-written after the movement is seen as a jump. When one of them fails, nothing
-more is written: the screen saying so is not the page the position was taken
+is not waited for), a read reset since the page was left. The position is
+written at once into what the page shows meanwhile, as far as that goes — left
+at the top until then, the page would be seen jumping, and a route transition
+photographs it as soon as it renders — and put back again once they have
+answered and the page has rendered. When one of them fails, nothing more is
+written: the screen saying so is not the page the position was taken
 on, and the position stays for the visit that brings it back. What it costs: a
 slow read that every page asks for delays the position of every page, since
 nothing tells navi which reads set the height.
@@ -653,7 +653,8 @@ drawn, and the action asking by then is waited for.
 **What navi cannot see, the page says**: a read it starts itself
 (`useAsyncData(…, { run: true })`), content whose height arrives late. While
 `useHoldScrollRestoration(held)` is given `true`, the position of a reload or of
-a back/forward waits; it is put back after the render that turns it `false`:
+a back/forward is written only as far as the page goes; it is put back again
+after the render that turns it `false`:
 
 ```jsx
 const [games] = useAsyncData(GAMES, { loading: true, run: true });

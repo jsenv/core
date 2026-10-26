@@ -45,15 +45,16 @@
  *
  * A page whose height depends on something still loading is not there at the
  * moment it is put back, and a position beyond what has arrived is clamped.
- * What navi knows a first render left out, it waits for: a `<Box
- * mount="after-paint">` is built before the offset that shows it is written
- * (see mount_after_paint.jsx), and a reload or a return waits for the route
- * actions the page has nothing to draw for — its code among them — including
- * one whose `when` lets it ask after the position is written (see
- * stayForLateAsks). Anything else only the page knows, and it says so
- * (useHoldScrollRestoration). A wait can be long, so the reader reaching for
- * the page during it cancels the position: moved afterwards, they would lose
- * whatever they had started on.
+ * So it is written into what is there, as far as that goes, and written again
+ * once the page is whole (see putBackMeanwhile). What navi knows a first render
+ * left out, it waits for: a `<Box mount="after-paint">` is built before the
+ * offset that shows it is written (see mount_after_paint.jsx), and a reload or
+ * a return waits for the route actions the page has nothing to draw for — its
+ * code among them — including one whose `when` lets it ask after the position
+ * is written (see stayForLateAsks). Anything else only the page knows, and it
+ * says so (useHoldScrollRestoration). A wait can be long, so the reader
+ * reaching for the page during it cancels the position: moved afterwards, they
+ * would lose whatever they had started on.
  *
  * WHEN a page is arrived at is not decided here either. A document navigation
  * lands where its kind says (see via_history.js), and one scrollport can be
@@ -210,8 +211,8 @@ export const suspendScrollRecording = () => {
 // the reader reaching for the page: where they are is theirs (see
 // installScrollRestoration).
 let pendingRestoration = null;
-const startRestoration = (position, { meanwhile = false } = {}) => {
-  const restoration = { position, due: false, meanwhile };
+const startRestoration = (position) => {
+  const restoration = { position, due: false };
   pendingRestoration = restoration;
   return restoration;
 };
@@ -271,15 +272,13 @@ const isDocumentHeld = () => {
   return false;
 };
 
-// A return is photographed by its route transition as soon as its page has
-// rendered, stand-ins and all, and a position waiting for the page to be whole
-// is written after the movement, seen as a jump. So it is also written into
-// what is there meanwhile, as far as that goes — the browser clamps the rest —
-// and again once the page is whole, when what it stands on has grown or shrunk.
+// A position waiting for the page to be whole is written after the reader has
+// seen the page at its top, and seen as a jump — after the movement, when a
+// route transition photographs the page as soon as it renders, stand-ins and
+// all. So it is also written into what is there meanwhile, as far as that goes
+// (the browser clamps the rest), and again once the page is whole, when what
+// it stands on has grown or shrunk.
 const putBackMeanwhile = (restoration) => {
-  if (!restoration.meanwhile) {
-    return;
-  }
   // Out of whatever commit or effect is asking: see scrollTo.
   queueMicrotask(() => {
     if (pendingRestoration !== restoration || isDocumentHeld()) {
@@ -316,11 +315,11 @@ const holdScrollRestoration = () => {
 };
 
 /**
- * Holds back the scroll position a reload or a back/forward gives the page,
- * while the page is not whole yet: written into what the page shows meanwhile,
- * it is clamped to that height and lost. Put back after the commit in which
- * `held` turns false — unless the reader has reached for the page in the
- * meantime (a finger, a click, a wheel, a key), or gone elsewhere.
+ * Says the page is not whole yet to the scroll position a reload or a
+ * back/forward gives it: written into what the page shows meanwhile, it is
+ * clamped to that height. Put back again after the commit in which `held`
+ * turns false — unless the reader has reached for the page in the meantime (a
+ * finger, a click, a wheel, a key), or gone elsewhere.
  *
  * The page's route actions are waited for without this — its code, a read
  * with no answer yet, one whose `when` holds later. This is for
@@ -570,7 +569,7 @@ export const restoreScrollPositionOnReturn = (url) => {
   if (!position) {
     return;
   }
-  const restoration = startRestoration(position, { meanwhile: true });
+  const restoration = startRestoration(position);
   whenPageRendered(() => {
     putBackOnceAnswered(restoration);
   });
