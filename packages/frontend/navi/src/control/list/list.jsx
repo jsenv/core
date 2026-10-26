@@ -1094,8 +1094,7 @@ const ListUI = (props) => {
   } = props;
   // Remembered by name, and a name made up at render (see ListFirstResolver)
   // names no list a later mount would recognize.
-  const rememberScroll =
-    !scrollResetOnNavigation && !isGeneratedId(rest.id);
+  const rememberScroll = !scrollResetOnNavigation && !isGeneratedId(rest.id);
   // Where the list was when its screen was left, when this is the way back
   // (see scroll_restoration.js). Read once: `defaultScrolled` is held by
   // reference, and a place read again each render would be a list moved each
@@ -2663,19 +2662,28 @@ const useListScrollSync = ({
     });
   }, []);
   // What to do when the list's own geometry moves under it, kept fresh for the
-  // observer below (which is installed once).
+  // observer below (which is installed once). A held list is placed inside the
+  // resize delivery, so the browser paints it where it lands; answers whether
+  // it was.
   const onGeometryChangeRef = useRef(null);
   onGeometryChangeRef.current = () => {
-    settleWindow();
-    if (heldSomewhere) {
-      placeWhereHeld();
-      return true;
+    if (!heldSomewhere) {
+      return false;
     }
-    // Items that came in at another size than what stood in for them (a
-    // skeleton becoming its item) leave the window short of the screen, or past
-    // it, and nothing scrolled to say so.
+    settleWindow();
+    placeWhereHeld();
+    return true;
+  };
+  // Items that came in at another size than what stood in for them (a
+  // skeleton becoming its item) leave the window short of the screen, or past
+  // it, and nothing scrolled to say so. Asked on the next frame, not inside
+  // the resize delivery: the window it frames is a render, which resizes what
+  // is observed once more, and the browser gives up on the loop
+  // ("ResizeObserver loop completed with undelivered notifications").
+  const onItemsResizedRef = useRef(null);
+  onItemsResizedRef.current = () => {
+    settleWindow();
     evaluateWindowRef.current("items resized");
-    return false;
   };
   // The box around a held list changing shape is the hold's to answer too: it
   // places the list again, the way it writes every scroll of its own (see
@@ -2824,10 +2832,20 @@ const useListScrollSync = ({
     // which this would undo. The SCROLLER resizing is the window around it
     // changing shape, and then the item that was at the top goes back where it
     // was.
+    let itemsResizedFrame;
     const putTopItemBack = (entries) => {
       const listResized = entries.some((entry) => entry.target === listEl);
-      if (listResized && onGeometryChangeRef.current()) {
-        return;
+      if (listResized) {
+        if (onGeometryChangeRef.current()) {
+          return;
+        }
+        cancelAnimationFrame(itemsResizedFrame);
+        itemsResizedFrame = requestAnimationFrame(() => {
+          if (pageLeftRef.current) {
+            return;
+          }
+          onItemsResizedRef.current();
+        });
       }
       if (!entries.some((entry) => entry.target === scrollerEl)) {
         return;
@@ -2886,6 +2904,7 @@ const useListScrollSync = ({
     observer.observe(listEl);
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(itemsResizedFrame);
     };
   }, [scrollerElResolved]);
 
@@ -3513,7 +3532,7 @@ const useStuckWindowWarning = ({
     // Scrolling nothing, the box keeps out of reach only the items past what
     // it shows. A list standing whole on the window's screen is one the window
     // covers at its next evaluation: an item added in this commit is drawn on
-    // the resize it causes (see onGeometryChangeRef), after this effect.
+    // the resize it causes (see onItemsResizedRef), after this effect.
     const listEl = getListEl();
     if (!listEl) {
       return;
