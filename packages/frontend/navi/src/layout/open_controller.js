@@ -13,6 +13,7 @@ import { canNavBackSignal } from "../nav/browser_integration/document_back_and_f
 import {
   navBack,
   useNavState,
+  whenBackLanded,
 } from "../nav/browser_integration/browser_integration.js";
 import { documentUrlSignal } from "../nav/browser_integration/document_url_signal.js";
 import { isRenderingPageChange } from "../nav/page_change.js";
@@ -904,7 +905,14 @@ const writeInSignal = (signal, value, { history }) => {
 // `discard` empties what belongs to the popup alone (its `ownSignals`): before
 // a keep-close reads the url it lands on, and once a back has landed — the
 // entry behind may hold them too, written by an `onOpen` before the push.
-const writeOpenedInSignal = (
+//
+// Read and written on the entry the document lands on: a close asked while
+// another popup's back is in flight (a popup closed with the one under it)
+// would otherwise read the url that back is leaving, and write onto it.
+const writeOpenedInSignal = (...args) => {
+  whenBackLanded(() => writeOpenedInLandedSignal(...args));
+};
+const writeOpenedInLandedSignal = (
   signal,
   opened,
   event,

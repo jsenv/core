@@ -248,6 +248,10 @@ export const reload = browserIntegration.reload;
  *   current entry's place.
  */
 export const navBack = browserIntegration.navBack;
+// Runs `callback` once the back navBack started has landed, at once when there
+// is none: until then the document reads the entry that back is leaving, and
+// a write made there is gone with it.
+export const whenBackLanded = browserIntegration.whenBackLanded;
 export const navForward = browserIntegration.navForward;
 export const isVisited = browserIntegration.isVisited;
 export const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
@@ -505,7 +509,14 @@ const useNavStateBasic = (
     }
     leaveEntry({ isBack, discard });
   };
+  // Read and written on the entry the document lands on: a leave asked while
+  // another one's back is in flight (a popup closed with the one under it)
+  // would otherwise carry that entry's url and state — the other key
+  // included — onto the wrong one.
   const leaveEntry = ({ isBack, discard }) => {
+    whenBackLanded(() => leaveLandedEntry({ isBack, discard }));
+  };
+  const leaveLandedEntry = ({ isBack, discard }) => {
     if (!Object.hasOwn(browserIntegration.getDocumentState() || {}, id)) {
       return;
     }

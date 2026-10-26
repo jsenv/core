@@ -844,7 +844,21 @@ export const setupBrowserIntegrationViaNavigation = ({
   // What the traversal a back asked for writes over the entry it lands on
   // (see navBack's `landOn`), read by the navigate handler of that traversal.
   let landOnPending = null;
-  const navBack = ({ fallback, landOn } = {}) => {
+  // The back navBack asked for, until its traversal committed or was
+  // aborted. Meanwhile the document still reads the entry being left (see
+  // whenBackLanded).
+  let backInFlight = null;
+  const whenBackLanded = (callback) => {
+    if (backInFlight) {
+      return backInFlight.then(callback);
+    }
+    return callback();
+  };
+  // A second back asked before the first one landed (two popups closed in the
+  // same handler) waits for it: the landing has one slot, and its `landOn` was
+  // read on the entry the first back leaves.
+  const navBack = (options) => whenBackLanded(() => navBackNow(options));
+  const navBackNow = ({ fallback, landOn } = {}) => {
     // canGoBack says there is an entry behind; what an app's back arrow
     // promises is that the entry behind is one of ITS screens (see
     // document_back_and_forward.js). navigation.back() throws with nowhere to
@@ -857,10 +871,18 @@ export const setupBrowserIntegrationViaNavigation = ({
       // back (another navigation preempting it) lands nowhere — said with
       // `false`, so a caller waiting to write onto the landed entry knows
       // not to.
-      return committed.then(
-        () => true,
-        () => false,
+      const landedPromise = committed.then(
+        () => {
+          backInFlight = null;
+          return true;
+        },
+        () => {
+          backInFlight = null;
+          return false;
+        },
       );
+      backInFlight = landedPromise;
+      return landedPromise;
     }
     if (fallback === undefined) {
       return undefined;
@@ -902,6 +924,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     stop,
     reload,
     navBack,
+    whenBackLanded,
     navForward,
     getDocumentState,
     carryByLinkNavigation,

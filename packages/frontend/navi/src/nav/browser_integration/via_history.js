@@ -647,7 +647,21 @@ export const setupBrowserIntegrationViaHistory = ({
   // asked for it (see navBack's `landOn`). Read by the popstate listener,
   // which is the one place the landing is applied.
   let landOnPending = null;
-  const navBack = ({ fallback, landOn } = {}) => {
+  // The back navBack asked for, from history.back() to the "popstate" that
+  // answers it. Meanwhile the document still reads the entry being left (see
+  // whenBackLanded).
+  let backInFlight = null;
+  const whenBackLanded = (callback) => {
+    if (backInFlight) {
+      return backInFlight.then(callback);
+    }
+    return callback();
+  };
+  // A second back asked before the first one landed (two popups closed in the
+  // same handler) waits for it: the browser would queue both, but the landing
+  // has one slot, and its `landOn` was read on the entry the first back leaves.
+  const navBack = (options) => whenBackLanded(() => navBackNow(options));
+  const navBackNow = ({ fallback, landOn } = {}) => {
     if (canNavBackSignal.peek()) {
       // Resolved once the back has landed: the "popstate" it is answered with
       // reaches the routing listener first (registered at setup, before this
@@ -659,10 +673,12 @@ export const setupBrowserIntegrationViaHistory = ({
             return;
           }
           window.removeEventListener("popstate", onPopstate);
+          backInFlight = null;
           resolve(true);
         };
         window.addEventListener("popstate", onPopstate);
       });
+      backInFlight = landedPromise;
       landOnPending = landOn || null;
       window.history.back();
       return landedPromise;
@@ -706,6 +722,7 @@ export const setupBrowserIntegrationViaHistory = ({
     stop,
     reload,
     navBack,
+    whenBackLanded,
     navForward,
     getDocumentState,
     carryByLinkNavigation,
