@@ -210,8 +210,8 @@ export const suspendScrollRecording = () => {
 // the reader reaching for the page: where they are is theirs (see
 // installScrollRestoration).
 let pendingRestoration = null;
-const startRestoration = (position) => {
-  const restoration = { position, due: false };
+const startRestoration = (position, { meanwhile = false } = {}) => {
+  const restoration = { position, due: false, meanwhile };
   pendingRestoration = restoration;
   return restoration;
 };
@@ -224,6 +224,7 @@ const putBack = (restoration) => {
   restoration.due = true;
   if (restorationHoldCount) {
     // The page is not whole yet: the last release puts it back.
+    putBackMeanwhile(restoration);
     return;
   }
   if (isDocumentHeld()) {
@@ -268,6 +269,24 @@ const isDocumentHeld = () => {
     }
   }
   return false;
+};
+
+// A return is photographed by its route transition as soon as its page has
+// rendered, stand-ins and all, and a position waiting for the page to be whole
+// is written after the movement, seen as a jump. So it is also written into
+// what is there meanwhile, as far as that goes — the browser clamps the rest —
+// and again once the page is whole, when what it stands on has grown or shrunk.
+const putBackMeanwhile = (restoration) => {
+  if (!restoration.meanwhile) {
+    return;
+  }
+  // Out of whatever commit or effect is asking: see scrollTo.
+  queueMicrotask(() => {
+    if (pendingRestoration !== restoration || isDocumentHeld()) {
+      return;
+    }
+    scrollTo(restoration.position);
+  });
 };
 
 // What a page holds instead: not the place, which stays the url's, but the
@@ -413,6 +432,7 @@ const putBackOnceAnswered = (restoration) => {
     });
     return;
   }
+  putBackMeanwhile(restoration);
   // A reader drawing its own wait subscribes in an effect, after the first
   // paint (see afterPaint): an answer that came before is drawn only then.
   let waitCount = 2;
@@ -536,11 +556,12 @@ const restoreScrollPosition = (url) => {
 };
 
 // A traversal back to `url`. The offset is written once the page returned to is
-// rendered and answered (see putBackOnceAnswered): written sooner, the document
-// still holds the page being left, or a stand-in for the one arriving, and
-// clamps it to that height. It is read at once all the same — a page left
-// taller than the one arriving is clamped by the render itself, and that clamp
-// is a scroll recorded under the url already returned to.
+// rendered (see whenPageRendered): written sooner, the document still holds the
+// page being left and clamps it to that height. Again once it has answered (see
+// putBackOnceAnswered), when it rendered stand-ins (see putBackMeanwhile). It
+// is read at once all the same — a page left taller than the one arriving is
+// clamped by the render itself, and that clamp is a scroll recorded under the
+// url already returned to.
 export const restoreScrollPositionOnReturn = (url) => {
   pendingRestoration = null;
   const href = new URL(url, window.location.href).href;
@@ -549,7 +570,7 @@ export const restoreScrollPositionOnReturn = (url) => {
   if (!position) {
     return;
   }
-  const restoration = startRestoration(position);
+  const restoration = startRestoration(position, { meanwhile: true });
   whenPageRendered(() => {
     putBackOnceAnswered(restoration);
   });

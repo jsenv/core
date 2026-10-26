@@ -616,8 +616,11 @@ page has nothing to draw for: its code arriving on its own
 ([dynamic_import.md](./dynamic_import.md)), a read the previous document did not
 keep ([`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) draws a kept one at once, and that one
 is not waited for), a read reset since the page was left. The position is put
-back once they have answered and the page has rendered. When one of them fails,
-nothing is written: the screen saying so is not the page the position was taken
+back once they have answered and the page has rendered. A back/forward also
+writes it at once into what the page shows meanwhile, as far as that goes: its
+route transition photographs the page as soon as it renders, and a position
+written after the movement is seen as a jump. When one of them fails, nothing
+more is written: the screen saying so is not the page the position was taken
 on, and the position stays for the visit that brings it back. What it costs: a
 slow read that every page asks for delays the position of every page, since
 nothing tells navi which reads set the height.
