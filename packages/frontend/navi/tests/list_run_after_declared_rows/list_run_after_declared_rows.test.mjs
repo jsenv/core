@@ -48,12 +48,13 @@ const readLists = async () => {
   page.on("pageerror", (error) => errors.push(error.message));
   try {
     // The run's budget ("jsenv:allocate") is the limit: under a full test run
-    // the first load, which cooks all of navi, outlasts Playwright's 30s.
+    // the first load, which cooks all of navi, outlasts Playwright's 30s —
+    // and so does the first render that follows it.
     await page.goto(
       `${devServer.origin}/tests/list_run_after_declared_rows/client/main.html`,
       { timeout: 0 },
     );
-    await page.waitForSelector("#alone li");
+    await page.waitForSelector("#alone li", { timeout: 0 });
     // A second ask, when there is one, goes out on the render that follows the
     // first answer: long enough after it that "not yet" and "never" cannot be
     // read as the same thing.
