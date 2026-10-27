@@ -4,7 +4,7 @@
  */
 
 import { createPubSub } from "@jsenv/dom";
-import { batch, computed, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal, untracked } from "@preact/signals";
 
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
@@ -508,11 +508,7 @@ export const route = (pattern, options = {}) => {
         );
       }
       // eslint-disable-next-line no-loop-func
-      const cleanupSignalUrlEffect = effect(() => {
-        const value = paramSignal.value;
-        // Use peek() to avoid subscribing to URL-derived signals.
-        // This effect should only re-run when the param signal changes,
-        // not when the URL changes (which would create a cycle: signal→URL→signal).
+      const writeValueInUrl = (value) => {
         const rawParams = route.rawParamsSignal.peek();
         const urlParamValue = rawParams[paramName];
         const matching = route.matchingSignal.peek();
@@ -587,6 +583,14 @@ export const route = (pattern, options = {}) => {
             debounceUrl,
           },
         );
+      };
+      const cleanupSignalUrlEffect = effect(() => {
+        const value = paramSignal.value;
+        // Only the param signal re-runs this effect. Writing the url reads
+        // more (the route's other params, to build it): subscribed to those,
+        // the write is made again whenever one of them changes — a second
+        // entry when the write pushes.
+        untracked(() => writeValueInUrl(value));
       });
       cleanupSignalUrlEffectSet.add(cleanupSignalUrlEffect);
     }
