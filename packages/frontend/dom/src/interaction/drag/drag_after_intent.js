@@ -55,7 +55,11 @@
  * finger whose first pixels go across, clearly, is given back at the threshold
  * instead of starting the drag — read before the browser's own slop, with the
  * lean a thumb's arc gets on a box that travels one axis (AXIS_CROSS_DOMINANCE).
- * A source walking both axes has none to leave, and keeps the whole finger.
+ * A source walking both axes has none to leave, and keeps the whole finger —
+ * unless it is TAKEN along one: a card pulled up out of a strip that scrolls
+ * sideways, carried anywhere once taken. Its mark says the axis that takes it,
+ * and it is read exactly like a source walking that one axis; where the copy
+ * walks afterwards is the drag's own business, not the press's.
  */
 
 import { waitForPressHeld } from "../press_held.js";
@@ -124,7 +128,7 @@ const css = /* css */ `
     user-select: none;
     -webkit-user-select: none;
   }
-  /* …except across a source that walks one axis: the page may scroll that way,
+  /* …except across a source taken along one axis: the page may scroll that way,
      and a finger scrolling it often lands on the source (see the top of this
      file, and dragAfterDistance, which gives such a finger back). */
   [data-drag-on-contact] [data-drag-source="x"],
@@ -215,8 +219,8 @@ export const keepTouchRefusable = () => {
 };
 
 /**
- * Says an element is something a drag can start from, and which way that drag
- * goes.
+ * Says an element is something a drag can start from, and along which axes a
+ * press takes it.
  *
  * The axes are written in the DOM rather than kept here because they are what
  * someone ELSE reads: a box above this one that travels under the same finger
@@ -227,8 +231,10 @@ export const keepTouchRefusable = () => {
  *
  * @param {Element} element
  * @param {"x"|"y"|"xy"} [axes="xy"]
- *   Which way the drag walks. A list reordered along its own line says `"y"`;
- *   something carried across a board, or thrown, goes both ways.
+ *   Which way a press takes it — usually the way the drag walks. A list
+ *   reordered along its own line says `"y"`; something carried across a board,
+ *   or thrown, goes both ways; a card pulled up out of a strip scrolling
+ *   sideways says `"y"` and walks both ways once taken.
  * @returns {function} Takes the mark back off.
  */
 export const markDragSource = (element, axes = "xy") => {
@@ -428,8 +434,8 @@ const dragAfterDistance = (
 };
 
 // The axis a finger may still scroll the page along, from a source taken on
-// contact that walks the other one (see the top of this file) — null for a
-// mouse, which scrolls with its wheel, and for a source walking both axes.
+// contact along the other one (see the top of this file) — null for a mouse,
+// which scrolls with its wheel, and for a source taken along both axes.
 const readAxisLeftToThePage = (grabEvent) => {
   if (grabEvent.pointerType === "mouse") {
     return null;

@@ -152,6 +152,7 @@ screen has not asked for it to swap places with whatever it flew over.
 | Attribute                                                | Meaning                                |
 | -------------------------------------------------------- | -------------------------------------- |
 | `data-drag-axis="x"\|"y"\|"xy"`                          | which axes the drag walks              |
+| `data-drag-intent-axis="x"\|"y"`                         | which axis a press takes it by         |
 | `data-reorder-flow="column"\|"row"\|"wrap"`              | how the items of a list are laid out   |
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
@@ -284,7 +285,10 @@ whose first pixels go clearly up or down is the page's scroll that landed on the
 handle — it is given back before the browser decides, and the page scrolls. A
 thumb pulling sideways arcs, and leans that way at first: across has to win by
 far to be the scroll's. A source walking both axes has nothing to leave, and
-takes the whole finger.
+takes the whole finger — unless it says which axis takes it: a card pulled up
+out of a strip that scrolls sideways (`data-drag-intent-axis="y"`, on the card
+or on the strip) is given back to the strip by a finger going clearly sideways,
+and once taken its copy still walks both ways.
 
 ### Landing on a place: `land`
 

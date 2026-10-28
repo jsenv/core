@@ -419,6 +419,10 @@ const DROP_CONTAINER_ATTRIBUTE = "data-drop-container";
 // every outcome — a list runs one way, and something being put somewhere goes
 // wherever it is put.
 const AXIS_ATTRIBUTE = "data-drag-axis";
+// Which of those axes a press takes it by, when not all of them: a card pulled
+// up out of a strip that scrolls sideways, then carried both ways. Said nothing,
+// it is every axis the drag walks.
+const INTENT_AXIS_ATTRIBUTE = "data-drag-intent-axis";
 // How the items of a reordered list are laid out: "column", "row", or "wrap" for
 // side by side over several lines. Said nothing, it is read from where the
 // items stand.
@@ -570,6 +574,10 @@ defineInteractionDetector({
             ? "xy"
             : "y"
         : "xy");
+    const intentAxis =
+      element
+        .closest(`[${INTENT_AXIS_ATTRIBUTE}]`)
+        ?.getAttribute(INTENT_AXIS_ATTRIBUTE) || axes;
     // Where the places are, read at setup for the same reason as the axes: they
     // are what the gesture is about, and it is what holds the two sides of it
     // that says them.
@@ -589,11 +597,13 @@ defineInteractionDetector({
     if (canReorder) {
       element.setAttribute(REORDERABLE_ATTRIBUTE, "");
     }
-    // What @jsenv/dom puts on a drag source: the axes written in the DOM for
-    // whoever else answers this press (a sheet pushed down to close it, a row of
-    // slides), no iOS callout, the touch left to the scroll until the press
-    // becomes a grab, and the listener that lets the grab take it back.
-    const unmarkDragSource = markDragSource(element, axes);
+    // What @jsenv/dom puts on a drag source: the axes a press takes it by,
+    // written in the DOM for whoever else answers this press (a sheet pushed
+    // down to close it, a row of slides, a finger given back to the scroll), no
+    // iOS callout, the touch left to the scroll until the press becomes a grab,
+    // and the listener that lets the grab take it back. Once taken, the copy
+    // walks `axes`.
+    const unmarkDragSource = markDragSource(element, intentAxis);
 
     // What a release can mean, which is not all of what was declared: "grab",
     // "release" and "refuse" are moments, not outcomes, and "moving" is the carry
