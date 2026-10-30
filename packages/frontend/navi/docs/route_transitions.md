@@ -62,7 +62,14 @@ defineRouteTransition(null, SETTINGS_PAGE, "cover-top");
 Arriving there plays forward from wherever, leaving plays back to wherever. It is
 tried last — a pair naming the same destination still owns its crossing — and it
 is not `defineRouteDefaultTransition`, which is about every navigation nothing
-was said about. Write it only for a door that really is furniture: a page reached from a
+was said about.
+
+Leaving means ANY navigation out of it towards a page no relation names, not
+only the way back: leaving is taken to be closing it. A link from it to a page
+below it (a profile's list of games, from the profile) then plays back, as if
+the reader were going up. That is right for a door in the furniture, and wrong
+for a page in a stack — a default that reads the history knows the difference
+(see [below](#a-default-transition--when)). Write it only for a door that really is furniture: a page reached from a
 screen has that screen to be paired with, and the pair says more.
 
 A page with no door at all is from anywhere too: reached by its address from
@@ -121,15 +128,47 @@ Two recommendations that matter more than the individual choices:
 `defineRouteDefaultTransition("cross-fade")` plays on every navigation no relation
 was written for. Two situations, two answers:
 
-- **App-shaped UI** (bars, tabs, pages one goes into): don't. The silence between
-  sibling tabs is part of the grammar, and a default erases it.
+- **App-shaped UI** (bars, tabs, pages one goes into): not a directionless one.
+  The silence between sibling tabs is part of the grammar, and such a default
+  erases it. An app that is a navigation stack has one of its own (below).
 - **Content-shaped site** (documents, articles, browsing): a global cross-fade can
-  be right — every navigation is a soft change of subject. This is the case the
-  export exists for.
+  be right — every navigation is a soft change of subject.
 
 A default has no direction (nothing says which of two arbitrary pages is
 "before" the other), so navi's `slide-*` and `cover-*`, written on the direction,
 play nothing there. Written relations, and `"none"`, always win over it.
+
+One thing does order two arbitrary pages: the history. An app built as a
+**navigation stack** — every link goes one level deeper, every back one level
+up, and the level is the depth in the history rather than a rank per page —
+says so on its default:
+
+```js
+defineRouteDefaultTransition({ type: "slide-x", direction: "history" });
+```
+
+- a push plays forward;
+- a traversal retraces its crossing (see
+  [below](#a-traversal-retraces-its-crossing)), or with none remembered plays
+  back when it lands lower in the history and forward when it lands higher;
+- a replace stays on its level and plays nothing;
+- a navigation that keeps the page plays nothing either: a push opening a
+  [layer](./navigation.md#a-layer-over-the-screen-what-its-address-may-say) moves
+  the layer.
+
+The relations still answer first, so they only say what is NOT one level deeper:
+a sheet that flips to be edited, a composer covering from the bottom, a link
+going up on purpose (a pair read in reverse). A page written from anywhere then
+answers for its way out only on a back — a link out of it is a push like any
+other. Destinations that replace each other without movement (the tabs of a
+bottom bar) are each written from anywhere with `"none"`: arriving there plays
+nothing, by the bar or by any link.
+
+```js
+for (const destination of [MY_GAMES_PAGE, ALERTS_PAGE, PLAYERS_PAGE]) {
+  defineRouteTransition(null, destination, "none");
+}
+```
 
 ## When one navigation knows better
 

@@ -36,6 +36,11 @@
  * defineRouteDefaultTransition: a default is about every navigation nothing
  * was said about, this is about ONE destination.
  *
+ * A default may read its way round from the history — a push one level
+ * deeper, a back one level up — which is the grammar of a navigation stack.
+ * Leaving a page written from anywhere is then KNOWN to be closing it or not,
+ * where without it leaving is assumed to be closing (see findRelation).
+ *
  * The relation says WHEN something plays and which way; the transition says
  * WHAT plays — a movement navi ships, or a name the application defines in its
  * own CSS (see the JSDoc below). Said without one, the relation plays the
@@ -109,9 +114,10 @@ import { NAV_DEPTH_STATE_KEY } from "./browser_integration/document_back_and_for
 import { documentStateSignal } from "./browser_integration/document_state_signal.js";
 import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
-import { notePageChange } from "./page_change.js";
+import { isRenderingPageChange, notePageChange } from "./page_change.js";
 import { keepLeavingPages, observeRouteRender } from "./route.jsx";
 import { pageIsCurrent } from "./route_page.js";
+import { readRouteTransitionRequest } from "./route_transition_request.js";
 import {
   holdRenderingForRouting,
   releaseRoutingRenderingHold,
@@ -178,10 +184,6 @@ const TRANSITION_COVERED_ATTRIBUTE = "data-navi-route-transition-covered";
 // right for a page that IS the whole viewport.
 const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
 const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
-// What ONE navigation asks for, over whatever the relations say: worn by the
-// link being pressed (see <Link routeTransition>), or handed to navTo(). It answers
-// for that navigation and for no other — the next one is back to the relations.
-const TRANSITION_REQUEST_ATTRIBUTE = "data-navi-route-transition-request";
 // What a history entry remembers of the crossing that created it, in the
 // entry's own state: `{ from, type, direction, duration }` (see recordCrossing).
 const CROSSING_STATE_KEY = "jsenv_route_transition";
@@ -1074,13 +1076,33 @@ export const defineRouteTransition = (from, to, transition) => {
  * "before" the other — so give it a movement that does not need one:
  * `"cross-fade"`, or a custom type whose CSS is keyed on the type alone.
  *
- * @param {string|{type?: string, duration?: number|string}} transition - same
- *   forms as defineRouteTransition's. `"none"` (or removing the default) puts
- *   the silence back.
+ * Unless the history says it: `{ type: "slide-x", direction: "history" }` is
+ * the grammar of a navigation stack, where every link goes one level deeper
+ * and every back one level up. A push plays forward, a traversal retraces its
+ * crossing or, with none remembered, plays back when it lands lower in the
+ * history and forward when it lands higher, and a replace — the same level —
+ * plays nothing. It plays only when the page changes: a push that opens a
+ * layer over the page keeps the page. The relations written still answer
+ * first, and a page written from anywhere then answers for its way out only
+ * on a back — a link out of it is a push like any other (see findRelation).
+ *
+ * @param {string|{type?: string, duration?: number|string, direction?: "history"}} transition -
+ *   same forms as defineRouteTransition's. `"none"` (or removing the default)
+ *   puts the silence back.
  * @returns {() => void} remove this default.
  */
 export const defineRouteDefaultTransition = (transition) => {
-  const value = normalizeTransition(transition);
+  const { direction } =
+    typeof transition === "object" && transition !== null ? transition : {};
+  if (direction !== undefined && direction !== "history") {
+    throw new TypeError(
+      `defineRouteDefaultTransition takes direction: "history" or no direction, not ${JSON.stringify(direction)}: a default is about pages no relation orders, and "history" is the one thing that orders them — the depth of the entries the navigation goes between.`,
+    );
+  }
+  const value = {
+    ...normalizeTransition(transition),
+    readsHistory: direction === "history",
+  };
   defaultTransition = value;
   installRouteTransitionCss();
   return () => {
@@ -1123,31 +1145,8 @@ const readNavigationRequest = ({ routeTransition, element }) => {
     return normalizeRequest(routeTransition);
   }
   if (element && element.getAttribute) {
-    const asked = element.getAttribute(TRANSITION_REQUEST_ATTRIBUTE);
-    if (asked === null) {
-      return null;
-    }
-    const value = asked.trim();
-    if (value === "") {
-      return null;
-    }
-    // A type is a name, and a name is all most links have to say. Anything
-    // more — a way round, a pace — is the same object the API takes
-    // everywhere else, written as JSON so that it travels on an attribute
-    // (and so that a plain <a> can say it too).
-    if (value[0] === "{") {
-      let parsed;
-      try {
-        parsed = JSON.parse(value);
-      } catch {
-        console.warn(
-          `${TRANSITION_REQUEST_ATTRIBUTE} is neither a type name nor JSON: ${value}`,
-        );
-        return null;
-      }
-      return normalizeRequest(parsed);
-    }
-    return normalizeRequest(value);
+    const asked = readRouteTransitionRequest(element);
+    return asked === undefined ? null : normalizeRequest(asked);
   }
   return null;
 };
@@ -1223,6 +1222,28 @@ const crossingRecordedOn = (state) => {
     return null;
   }
   return crossing;
+};
+
+/**
+ * Which way the history says a navigation goes, for a default that reads it
+ * (see defineRouteDefaultTransition): a push is one level deeper, a traversal
+ * goes where the depth of the entry it lands on puts it — back when that is
+ * not known, as in readTraversalReplay —, and anything else (a replace) stays
+ * on its level: null.
+ */
+const readHistoryDirection = (navigationType, { state, fromState }) => {
+  if (navigationType === "push") {
+    return "forward";
+  }
+  if (navigationType !== "traverse") {
+    return null;
+  }
+  const depthIn = navDepthOf(state);
+  const depthOut = navDepthOf(fromState);
+  if (depthIn !== undefined && depthOut !== undefined && depthIn > depthOut) {
+    return "forward";
+  }
+  return "back";
 };
 
 const navDepthOf = (state) => {
@@ -1393,6 +1414,10 @@ let navigationAnimated = false;
 // "push", "replace", "traverse", … — a push is the one navigation that creates
 // the entry a crossing is recorded on.
 let navigationType = null;
+// Which way the history says this navigation goes — "forward", "back", or null
+// for a replace — when the default reads it (see readHistoryDirection), and
+// undefined when nothing does.
+let navigationHistoryDirection;
 // What was decided for the navigation now landing — a movement, or "none" —
 // which is what its entry remembers (see recordCrossing). Null while nothing
 // has been decided, and for a navigation nothing was said about.
@@ -1410,17 +1435,25 @@ observeBeforeRouting((details) => {
   navigationType = details.navigationType;
   navigationUrl = details.url;
   navigationFromUrl = documentUrlSignal.peek();
-  // A traversal has no element and no call to ask anything: what it asks is
-  // the crossing it retraces — reversed for a back, as it was for a forward.
   // Read before the document state moves, so the state peeked is the entry
   // being left.
+  const fromState = documentStateSignal.peek();
+  // A traversal has no element and no call to ask anything: what it asks is
+  // the crossing it retraces — reversed for a back, as it was for a forward.
   navigationRequest =
     navigationType === "traverse"
       ? readTraversalReplay(details, {
           fromUrl: navigationFromUrl,
-          fromState: documentStateSignal.peek(),
+          fromState,
         })
       : readNavigationRequest(details);
+  navigationHistoryDirection =
+    defaultTransition && defaultTransition.readsHistory
+      ? readHistoryDirection(navigationType, {
+          state: details.state,
+          fromState,
+        })
+      : undefined;
   if (relations.length === 0 && !defaultTransition && !navigationRequest) {
     return;
   }
@@ -1438,14 +1471,26 @@ observeAfterRouting(() => {
   const url = navigationUrl;
   const fromUrl = navigationFromUrl;
   const type = navigationType;
+  const historyDirection = navigationHistoryDirection;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
   navigationUrl = null;
   navigationFromUrl = null;
   navigationType = null;
-  if (!navigationAnimated && (request || defaultTransition)) {
-    const { type, duration } = resolveTransition(request, defaultTransition);
+  navigationHistoryDirection = undefined;
+  // A default reading the history plays between two pages a level apart: not
+  // on a replace, and not on a navigation that keeps the page — a push
+  // opening a layer over it moves the layer, not the page (see
+  // page_change.js).
+  const base =
+    defaultTransition &&
+    (!defaultTransition.readsHistory ||
+      (historyDirection !== null && isRenderingPageChange()))
+      ? defaultTransition
+      : null;
+  if (!navigationAnimated && (request || base)) {
+    const { type, duration } = resolveTransition(request, base);
     if (type === "none") {
       navigationDecision = { type: "none" };
     } else {
@@ -1456,16 +1501,19 @@ observeAfterRouting(() => {
         // A default has no direction: nothing says which of two arbitrary
         // pages is before the other, and the attribute is then worn empty —
         // present for whoever keys on "one of ours is playing", silent on the
-        // way. A request is the other case: a navigation IS a way round, so a
-        // press that names the movement means forward unless it says
-        // otherwise — and a movement of navi's is written on the direction,
-        // so left empty it would play nothing at all.
+        // way — unless it reads the history. A request is the other case: a
+        // navigation IS a way round, so a press that names the movement means
+        // forward unless it says otherwise — and a movement of navi's is
+        // written on the direction, so left empty it would play nothing at
+        // all.
         direction:
           request && request.direction !== undefined
             ? request.direction
             : request && request.typeSaid
               ? "forward"
-              : "",
+              : base && base.readsHistory
+                ? historyDirection
+                : "",
         type,
         duration,
       });
@@ -1557,6 +1605,15 @@ const findRelation = (fromPage, toPage) => {
     if (samePage(relation.to, toPage)) {
       return { direction: "forward", relation };
     }
+  }
+  // Leaving such a page plays back because leaving it is assumed to be
+  // closing it. With the default reading the history, that is known instead:
+  // a link out of it is a push, one level deeper, and the default answers.
+  if (
+    navigationHistoryDirection !== undefined &&
+    navigationHistoryDirection !== "back"
+  ) {
+    return null;
   }
   for (const relation of relations) {
     if (relation.from) {

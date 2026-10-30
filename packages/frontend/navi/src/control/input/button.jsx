@@ -132,6 +132,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   replace?: boolean,
  *   asReturn?: boolean,
  *   open?: string | { id: string, type?: "push" | "replace" },
+ *   routeTransition?: string | { type?: string, duration?: number | string, direction?: "forward" | "back" },
  *   document?: boolean,
  *   actionStandalone?: boolean,
  *   actionAbortable?: boolean,
@@ -180,6 +181,11 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  * @param {string|{id: string, type?: "push"|"replace"}} [open] Lands with one
  *   of the destination's popups open, named the way its `navState` names it:
  *   what `<Link open>` says, for a press drawn as a button.
+ * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [routeTransition]
+ *   What the press asks of a route transition, for that one navigation — a
+ *   type name, or an object to also say the pace or which way it plays, over
+ *   what the pair's relation says: what `<Link routeTransition>` says, read
+ *   off an `href`, a `route` or a `--navi-nav-to` command.
  * @param {boolean} [document] The `href` is ANOTHER DOCUMENT of this origin —
  *   an admin panel, a status page, anything built as its own entry point — so
  *   the press is left to the browser and loads that page, instead of being

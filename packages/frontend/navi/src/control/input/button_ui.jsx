@@ -12,6 +12,7 @@ import { LINK_OPEN_ATTRIBUTE } from "../../nav/browser_integration/link_open.js"
 import { LINK_REPLACE_ATTRIBUTE } from "../../nav/browser_integration/link_replace.js";
 import { LINK_RETURN_ATTRIBUTE } from "../../nav/browser_integration/link_return.js";
 import { PRESSABLE_ATTRIBUTE } from "../../nav/transition_press.js";
+import { writeRouteTransitionRequest } from "../../nav/route_transition_request.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
@@ -569,6 +570,7 @@ export const ButtonUI = (props) => {
     asReturn,
     open,
     document: isDocument,
+    routeTransition,
     pressableDuringRouteTransition,
     prefetch = true,
 
@@ -623,6 +625,11 @@ export const ButtonUI = (props) => {
   // And this one says the address is another document of this origin, so the
   // press is the browser's (see link_document.js).
   const documentRequest = isDocument ? { [LINK_DOCUMENT_ATTRIBUTE]: "" } : null;
+
+  // What this press asks of a route transition (see
+  // route_transition_request.js): read off the anchor by the navigation, off
+  // the source by --navi-nav-to.
+  const routeTransitionRequest = writeRouteTransitionRequest(routeTransition);
 
   // Worn as an attribute too, and read at the document by whoever catches the
   // press a movement would have swallowed (see transition_press.js).
@@ -682,6 +689,8 @@ export const ButtonUI = (props) => {
       {...openRequest}
       document={undefined}
       {...documentRequest}
+      routeTransition={undefined}
+      {...routeTransitionRequest}
       pressableDuringRouteTransition={undefined}
       {...pressableRequest}
       prefetch={undefined}

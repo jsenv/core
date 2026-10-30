@@ -29,6 +29,7 @@ import { LINK_OPEN_ATTRIBUTE } from "../browser_integration/link_open.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
 import { LINK_RETURN_ATTRIBUTE } from "../browser_integration/link_return.js";
 import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
+import { writeRouteTransitionRequest } from "../route_transition_request.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
 import { BinderItemContext } from "../binder/binder_context.js";
 import { NavContext } from "./nav_context.js";
@@ -854,15 +855,8 @@ const LinkPlain = (props) => {
 
   // What this link asks of a route transition, worn as an attribute so that
   // the navigation reads it off the element being pressed (see
-  // route_transition.jsx, which owns the name and does the reading). A type is
-  // a name; anything more travels as JSON, which is also how a plain <a>
-  // writes it by hand.
-  const routeTransitionRequest =
-    routeTransition === undefined || routeTransition === null
-      ? undefined
-      : typeof routeTransition === "string"
-        ? routeTransition
-        : JSON.stringify(routeTransition);
+  // route_transition_request.js, which owns the name and does the reading).
+  const routeTransitionRequest = writeRouteTransitionRequest(routeTransition);
 
   // Which way this link goes to the place it aims at, worn as an attribute so
   // that whoever answers the press reads it off the anchor (see
@@ -955,7 +949,7 @@ const LinkPlain = (props) => {
       open={undefined}
       document={undefined}
       prefetch={undefined}
-      data-navi-route-transition-request={routeTransitionRequest}
+      {...routeTransitionRequest}
       {...(pressableDuringRouteTransition
         ? { [PRESSABLE_ATTRIBUTE]: "" }
         : null)}

@@ -8,6 +8,7 @@ import { afterPopupLift } from "../layout/popup_lift.js";
 import { linkAsksToOpen } from "../nav/browser_integration/link_open.js";
 import { linkAsksForReplace } from "../nav/browser_integration/link_replace.js";
 import { linkAsksForReturn } from "../nav/browser_integration/link_return.js";
+import { readRouteTransitionRequest } from "../nav/route_transition_request.js";
 import {
   findClosestControlWithAction,
   findControlHost,
@@ -957,13 +958,15 @@ const navToCommand = (source, event, { argument }) => {
   return {
     target,
     // Which way there is worn by the source, as a link wears it (see
-    // link_replace.js, link_return.js, link_open.js):
+    // link_replace.js, link_return.js, link_open.js,
+    // route_transition_request.js):
     // `<Button command="--navi-nav-to:/done" replace>`.
     implementation: () =>
       navTo(argument, {
         replace: linkAsksForReplace(source),
         asReturn: linkAsksForReturn(source),
         open: linkAsksToOpen(source),
+        routeTransition: readRouteTransitionRequest(source),
       }),
   };
 };
