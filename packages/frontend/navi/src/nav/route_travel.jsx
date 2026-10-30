@@ -623,7 +623,11 @@ export const RouteTravel = ({
   // a travel is between two of them, and by the time anything renders the first
   // one is already gone. Written after each render (below), so a subscriber
   // reading it — they all run before Preact flushes — reads the one being left.
-  const currentIndexRef = useRef(currentIndex);
+  // The page and not its place in the row: a row given again around the page
+  // on screen (a window over a list, read anew around it) puts that page at
+  // another index without anything having moved.
+  const currentPage = currentIndex === -1 ? null : pages[currentIndex];
+  const currentPageRef = useRef(currentPage);
 
   // Where a page is asked for, whoever asks: a page is a route AND the params
   // that say which of its tabs, and a caller told only the route would send the
@@ -811,11 +815,13 @@ export const RouteTravel = ({
       if (index === -1) {
         return;
       }
-      if (index === currentIndexRef.current) {
-        // Where the row already was — the first reading of all, and any move
-        // this box has already taken note of (a render writes it too). What it
-        // was still waiting for is here nonetheless, so the wait is called off.
-        if (samePage(pageAskedForRef.current, pages[index])) {
+      const page = pages[index];
+      if (samePage(page, currentPageRef.current)) {
+        // Where the row already was — the first reading of all, a row given
+        // again around the page on screen, and any move this box has already
+        // taken note of (a render writes it too). What it was still waiting
+        // for is here nonetheless, so the wait is called off.
+        if (samePage(pageAskedForRef.current, page)) {
           pageAskedForRef.current = null;
         }
         return;
@@ -824,13 +830,12 @@ export const RouteTravel = ({
       // between two of them is a page change the path does not show (see
       // page_change.js).
       notePageChange();
-      const page = pages[index];
       // A page this box asked for itself — a travel's own navigation, or one
       // it had given up waiting on: what arrives here is the answer to a
       // question already answered, not somebody going somewhere.
       if (samePage(pageAskedForRef.current, page)) {
         pageAskedForRef.current = null;
-        currentIndexRef.current = index;
+        currentPageRef.current = page;
         return;
       }
       // Somewhere else arrived first: whatever this box was still waiting for
@@ -842,15 +847,15 @@ export const RouteTravel = ({
       // flight is the answer, aimed somewhere else. Starting a second one on
       // top would leave this one's pictures to be dropped mid-slide.
       if (travelRef.current) {
-        currentIndexRef.current = index;
+        currentPageRef.current = page;
         retargetTravel(travelRef.current, page);
         return;
       }
-      const fromIndex = currentIndexRef.current;
-      currentIndexRef.current = index;
-      if (fromIndex === -1 || fromIndex === index) {
-        // Arriving from outside this row (or not moving at all): there is no
-        // pair of pages to show, so there is nothing to travel between.
+      const fromIndex = pageIndexOf(pages, currentPageRef.current);
+      currentPageRef.current = page;
+      if (fromIndex === -1) {
+        // Arriving from outside this row: there is no pair of pages to show,
+        // so there is nothing to travel between.
         return;
       }
       beginTravel({
@@ -885,8 +890,8 @@ export const RouteTravel = ({
   // What the next announcement will compare itself against: written after the
   // render that shows it, so it is always the page one is looking at.
   useLayoutEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
 
   // Let go of far enough: the movement carries on from under the finger, at its
   // own pace, to the end.

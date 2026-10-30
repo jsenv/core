@@ -619,6 +619,14 @@ const collectBranches = (children, path = "") => {
         : true;
       if (!matchingBranch && matching && paramsMatching) {
         matchingBranch = branch;
+        if (!routeParams) {
+          // The params are part of the page this branch shows: /games/a and
+          // /games/b are two pages on one branch, and the container renders
+          // between them so the second is announced like any other (see
+          // publishRouteRender) — a movement between the two waits on it.
+          // eslint-disable-next-line no-unused-expressions
+          route.paramsSignal.value;
+        }
       }
     }
   };
