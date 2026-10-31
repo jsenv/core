@@ -1,4 +1,4 @@
-import { tn, u, H, A } from "../jsenv_core_node_modules.js";
+import { K, a, Z, M } from "../jsenv_core_node_modules.js";
 
 const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
@@ -30,15 +30,15 @@ const updateDirectoryContentItems = value => {
   }
 };
 const DirectoryListing = () => {
-  const directoryItems = H(callback => {
+  const directoryItems = Z(callback => {
     directoryItemsChangeCallbackSet.add(callback);
   }, () => {
     return directoryContentItems;
   });
-  return u(A, {
-    children: [enoentDetails ? u(ErrorMessage, {}) : null, u(Breadcrumb, {
+  return a(M, {
+    children: [enoentDetails ? a(ErrorMessage, {}) : null, a(Breadcrumb, {
       items: breadcrumb
-    }), u(DirectoryContent, {
+    }), a(DirectoryContent, {
       items: directoryItems
     })]
   });
@@ -53,54 +53,54 @@ const ErrorMessage = () => {
   let errorSuggestion;
   let spaExplanation = null;
   if (spaFallbackFilePaths) {
-    spaExplanation = u(A, {
-      children: [u("strong", {
+    spaExplanation = a(M, {
+      children: [a("strong", {
         children: "SPA mode:"
-      }), " a url without extension is a route, served with the closest html file. None of these exists:", u("ul", {
+      }), " a url without extension is a route, served with the closest html file. None of these exists:", a("ul", {
         className: "spa_fallback_list",
         style: "margin: 6px 0 0; padding-left: 20px;",
-        children: spaFallbackFilePaths.map(filePath => u("li", {
-          children: [u("code", {
+        children: spaFallbackFilePaths.map(filePath => a("li", {
+          children: [a("code", {
             children: filePath
           }), filePath === `/${mainFilePath}` ? " (main file)" : ""]
         }, filePath))
       })]
     });
   }
-  errorText = u(A, {
-    children: [u("strong", {
+  errorText = a(M, {
+    children: [a("strong", {
       children: "File not found:"
-    }), "\xA0", u(Overflow, {
-      children: [u("code", {
-        children: [u("span", {
+    }), "\xA0", a(Overflow, {
+      children: [a("code", {
+        children: [a("span", {
           className: "file_path_good",
           children: filePathExisting
-        }), u("span", {
+        }), a("span", {
           className: "file_path_bad",
           children: filePathNotFound
         })]
       }), " ", "does not exist on the server."]
     })]
   });
-  errorSuggestion = u(A, {
-    children: [u("span", {
+  errorSuggestion = a(M, {
+    children: [a("span", {
       className: "icon",
       children: "🔍"
-    }), " Check available routes in", " ", u("a", {
+    }), " Check available routes in", " ", a("a", {
       href: "/.internal/route_inspector",
       children: "route inspector"
     })]
   });
-  return u("div", {
+  return a("div", {
     className: "error_message",
-    children: [u("p", {
+    children: [a("p", {
       className: "error_text",
       children: errorText
-    }), spaExplanation ? u("p", {
+    }), spaExplanation ? a("p", {
       className: "error_spa",
       style: "margin-top: 10px;",
       children: spaExplanation
-    }) : null, u("p", {
+    }) : null, a("p", {
       className: "error_suggestion",
       style: "font-size: 0.8em; margin-top: 10px;",
       children: errorSuggestion
@@ -111,11 +111,11 @@ const Overflow = ({
   children,
   afterContent
 }) => {
-  return u("div", {
+  return a("div", {
     style: "display: flex; flex-wrap: wrap; overflow: hidden; width: 100%; box-sizing: border-box; white-space: nowrap; text-overflow: ellipsis;",
-    children: u("div", {
+    children: a("div", {
       style: "display: flex; flex-grow: 1; width: 0;",
-      children: [u("div", {
+      children: [a("div", {
         style: "overflow: hidden; max-width: 100%; text-overflow: ellipsis;",
         children: children
       }), afterContent]
@@ -125,7 +125,7 @@ const Overflow = ({
 const Breadcrumb = ({
   items
 }) => {
-  return u("h1", {
+  return a("h1", {
     className: "nav",
     children: items.map(navItem => {
       const {
@@ -136,14 +136,14 @@ const Breadcrumb = ({
         isServerRootDirectory
       } = navItem;
       const isDirectory = new URL(url).pathname.endsWith("/");
-      return u(A, {
-        children: [u(BreadcrumbItem, {
+      return a(M, {
+        children: [a(BreadcrumbItem, {
           url: urlRelativeToServer,
           isCurrent: isCurrent,
           iconImageUrl: isServerRootDirectory ? homeIconUrl : "",
           iconLinkUrl: isServerRootDirectory ? `/${mainFilePath}` : "",
           children: name
-        }, url), isDirectory ? u("span", {
+        }, url), isDirectory ? a("span", {
           className: "directory_separator",
           children: "/"
         }) : null]
@@ -158,28 +158,28 @@ const BreadcrumbItem = ({
   isCurrent,
   children
 }) => {
-  return u("span", {
+  return a("span", {
     className: "nav_item",
     "data-current": isCurrent ? "" : undefined,
-    children: [iconLinkUrl ? u("a", {
+    children: [iconLinkUrl ? a("a", {
       className: "nav_item_icon"
       // eslint-disable-next-line react/no-unknown-property
       ,
       "hot-decline": true,
       href: iconLinkUrl,
-      children: u(Icon, {
+      children: a(Icon, {
         url: iconImageUrl
       })
-    }) : iconImageUrl ? u("span", {
+    }) : iconImageUrl ? a("span", {
       className: "nav_item_icon",
-      children: u(Icon, {
+      children: a(Icon, {
         url: iconImageUrl
       })
-    }) : null, url ? u("a", {
+    }) : null, url ? a("a", {
       className: "nav_item_text",
       href: url,
       children: children
-    }) : u("span", {
+    }) : a("span", {
       className: "nav_item_text",
       children: children
     })]
@@ -189,15 +189,15 @@ const DirectoryContent = ({
   items
 }) => {
   if (items.length === 0) {
-    return u("p", {
+    return a("p", {
       className: "directory_empty_message",
       children: "Directory is empty"
     });
   }
-  return u("ul", {
+  return a("ul", {
     className: "directory_content",
     children: items.map(directoryItem => {
-      return u(DirectoryContentItem, {
+      return a(DirectoryContentItem, {
         url: directoryItem.urlRelativeToServer,
         isDirectory: directoryItem.url.endsWith("/"),
         isMainFile: directoryItem.isMainFile,
@@ -212,31 +212,31 @@ const DirectoryContentItem = ({
   isMainFile,
   children
 }) => {
-  return u("li", {
+  return a("li", {
     className: "directory_content_item",
     "data-directory": isDirectory ? "" : undefined,
     "data-file": isDirectory ? undefined : "",
-    children: u("a", {
+    children: a("a", {
       className: "directory_content_item_link",
       href: url
       // eslint-disable-next-line react/no-unknown-property
       ,
       "hot-decline": isMainFile ? true : undefined,
-      children: [u("span", {
+      children: [a("span", {
         className: "directory_content_item_icon",
-        children: u(Icon, {
+        children: a(Icon, {
           url: isMainFile ? homeIconUrl : isDirectory ? directoryIconUrl : fileIconUrl
         })
-      }), u("span", {
+      }), a("span", {
         className: "directory_content_item_text",
-        children: [u(Overflow, {
+        children: [a(Overflow, {
           children: children
-        }), isDirectory ? u(A, {
-          children: [u("span", {
+        }), isDirectory ? a(M, {
+          children: [a("span", {
             style: "flex:1"
-          }), u("span", {
+          }), a("span", {
             className: "directory_content_item_arrow",
-            children: u(RightArrowSvg, {})
+            children: a(RightArrowSvg, {})
           })]
         }) : null]
       })]
@@ -244,10 +244,10 @@ const DirectoryContentItem = ({
   });
 };
 const RightArrowSvg = () => {
-  return u("svg", {
+  return a("svg", {
     fill: "currentColor",
     viewBox: "0 0 330 330",
-    children: u("path", {
+    children: a("path", {
       stroke: "currentColor",
       d: "M250.606,154.389l-150-149.996c-5.857-5.858-15.355-5.858-21.213,0.001 c-5.857,5.858-5.857,15.355,0.001,21.213l139.393,139.39L79.393,304.394c-5.857,5.858-5.857,15.355,0.001,21.213 C82.322,328.536,86.161,330,90,330s7.678-1.464,10.607-4.394l149.999-150.004c2.814-2.813,4.394-6.628,4.394-10.606 C255,161.018,253.42,157.202,250.606,154.389z"
     })
@@ -257,13 +257,13 @@ const Icon = ({
   url
 }) => {
   if (urlToFilename(url).endsWith(".svg")) {
-    return u("svg", {
-      children: u("use", {
+    return a("svg", {
+      children: a("use", {
         href: url
       })
     });
   }
-  return u("img", {
+  return a("img", {
     src: url
   });
 };
@@ -296,4 +296,4 @@ if (autoreload) {
     }
   };
 }
-tn(u(DirectoryListing, {}), document.querySelector("#root"));
+K(a(DirectoryListing, {}), document.querySelector("#root"));

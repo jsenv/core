@@ -1,7 +1,7 @@
 import { createFileSystemFetch, startServer, serverPluginCORS, jsenvAccessControlAllowedHeaders, serverPluginErrorHandler } from "@jsenv/server";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 import { readFileSync } from "node:fs";
-import { createLogger, Abort, raceProcessTeardownEvents, createTaskLog } from "./jsenv_core_packages.js";
+import { createLogger, Abort, createTaskLog, raceProcessTeardownEvents } from "./jsenv_core_packages.js";
 import "./jsenv_core_node_modules.js";
 import "node:process";
 import "node:os";
