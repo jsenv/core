@@ -55,17 +55,17 @@
     }
     return result;
   }
-  function _slicedToArray(r, e) {
-    return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+  function _slicedToArray(e, i) {
+    return _iterableToArrayLimit(e, i) || _unsupportedIterableToArray(e, i) || _nonIterableRest();
   }
   function _nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
-  function _unsupportedIterableToArray(r, a) {
-    if (r) {
-      if ("string" == typeof r) return _arrayLikeToArray(r, a);
-      var t = {}.toString.call(r).slice(8, -1);
-      return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+  function _unsupportedIterableToArray(t, e) {
+    if (t) {
+      if ("string" == typeof t) return _arrayLikeToArray(t, e);
+      var o = {}.toString.call(t).slice(8, -1);
+      return "Object" === o && t.constructor && (o = t.constructor.name), "Map" === o || "Set" === o ? Array.from(t) : "Arguments" === o || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(o) ? _arrayLikeToArray(t, e) : void 0;
     }
   }
   function _arrayLikeToArray(r, a) {
@@ -73,32 +73,30 @@
     for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
     return n;
   }
-  function _iterableToArrayLimit(r, l) {
-    var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
-    if (null != t) {
-      var e,
+  function _iterableToArrayLimit(r, t) {
+    var e = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+    if (Array.isArray(r) && (null == e || e === ("undefined" != typeof Symbol && [][Symbol.iterator]) || e === []["@@iterator"])) return r;
+    if (null != e) {
+      var l,
         n,
         i,
-        u,
-        a = [],
-        f = true,
-        o = false;
+        a,
+        u = [],
+        o = true,
+        f = false;
       try {
-        if (i = (t = t.call(r)).next, 0 === l) ;else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+        if (i = (e = e.call(r)).next, 0 === t) ;else for (; !(o = (l = i.call(e)).done) && (u.push(l.value), u.length !== t); o = !0);
       } catch (r) {
-        o = true, n = r;
+        f = true, n = r;
       } finally {
         try {
-          if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+          if (!o && null != e.return && (a = e.return(), Object(a) !== a)) return;
         } finally {
-          if (o) throw n;
+          if (f) throw n;
         }
       }
-      return a;
+      return u;
     }
-  }
-  function _arrayWithHoles(r) {
-    if (Array.isArray(r)) return r;
   }
   function _typeof(o) {
     "@babel/helpers - typeof";

@@ -1,7 +1,7 @@
 import cluster from "node:cluster";
 import { extname } from "node:path";
 import { parse } from "node:querystring";
-import http, { STATUS_CODES } from "node:http";
+import require$$0, { STATUS_CODES } from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import net, { Socket, createServer, isIP } from "node:net";
 import { Stream, Writable, Readable } from "node:stream";
@@ -2100,7 +2100,7 @@ const writeHead = (
 };
 
 const statusTextFromStatus = (status) =>
-  http.STATUS_CODES[status] || "not specified";
+  require$$0.STATUS_CODES[status] || "not specified";
 
 const headersToNodeHeaders = (headers, { ignoreConnectionHeader }) => {
   const nodeHeaders = {};
@@ -2895,7 +2895,7 @@ const createPolyglotServer = async ({
   certificate,
   privateKey,
 }) => {
-  const httpServer = http.createServer();
+  const httpServer = require$$0.createServer();
   const tlsServer = await createSecureServer({
     certificate,
     privateKey,

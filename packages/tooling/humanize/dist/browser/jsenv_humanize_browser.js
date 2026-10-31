@@ -1216,10 +1216,10 @@ const inspectBytes = (
   }
   const exponent = Math.min(
     Math.floor(Math.log10(number) / 3),
-    BYTE_UNITS.length - 1,
+    BYTE_UNITS$1.length - 1,
   );
   const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
+  const unitName = BYTE_UNITS$1[exponent];
   if (decimals === undefined) {
     if (unitNumber < 100) {
       decimals = 1;
@@ -1240,7 +1240,7 @@ const inspectBytes = (
   return `${value} ${unitName}`;
 };
 
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+const BYTE_UNITS$1 = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
 // The JSX half of interpolation (VNode detection, fragment assembly) is
 // installed by the frontend using it (@jsenv/navi's interpolate.jsx) rather
@@ -1253,6 +1253,8 @@ let jsx = null;
 const installInterpolateJsx = (runtime) => {
   jsx = runtime;
 };
+// formatList joins elements through the same runtime.
+const getInstalledJsx = () => jsx;
 
 /**
  * Interpolates a template string, replacing `[key]` placeholders with values.
@@ -1352,6 +1354,34 @@ const resolveValue = (replacements, key, fallback) => {
   return fallback;
 };
 
+// Constructing an Intl formatter dominates the cost of a call (~19µs vs
+// ~0.4µs to format with a kept instance, node 26 on an M-series Mac) and
+// these formatters run in render loops — a card easily writes half a dozen
+// per render — so every instance is memoized by (constructor, lang,
+// options). lang and each option value come from small closed sets, so the
+// cache stays bounded.
+const intlCache = new Map();
+const memoIntl = (constructorName, lang, options) => {
+  let key = `${constructorName}|${Array.isArray(lang) ? lang.join() : lang}`;
+  if (options) {
+    for (const optionName of Object.keys(options)) {
+      const optionValue = options[optionName];
+      // Intl reads an undefined option as absent: one formatter for both.
+      if (optionValue === undefined) {
+        continue;
+      }
+      key += `|${optionName}:${optionValue}`;
+    }
+  }
+  const cached = intlCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  const formatter = new Intl[constructorName](lang, options);
+  intlCache.set(key, formatter);
+  return formatter;
+};
+
 /**
  * The language every formatter/i18n call falls back to when it is given no
  * `lang` — an injectable source, deliberately free of any import.
@@ -1380,6 +1410,49 @@ const getRuntimeLang = () => runtimeLangSource();
  */
 const setRuntimeLangSource = (source) => {
   runtimeLangSource = source;
+};
+
+/**
+ * Which plural form a number takes in a language — `"one"`, `"other"`, and in
+ * the languages that have them `"zero"`, `"two"`, `"few"`, `"many"` — as
+ * `Intl.PluralRules` answers it. The rule is the language's, never `> 1`:
+ * French says "0 place", English "0 seats", and Polish has three forms where
+ * English has two.
+ *
+ * @param {number} count
+ * @param {{ lang?: string | string[] }} [options]
+ * @returns {"zero"|"one"|"two"|"few"|"many"|"other"}
+ *
+ * @example
+ * pluralCategory(1, { lang: "en" })   // "one"
+ * pluralCategory(0, { lang: "en" })   // "other"
+ * pluralCategory(0, { lang: "fr" })   // "one"
+ * pluralCategory(1.5, { lang: "fr" }) // "one"
+ */
+const pluralCategory = (count, { lang = getRuntimeLang() } = {}) => {
+  return memoIntl("PluralRules", lang).select(count);
+};
+
+// The form of `forms` a count reads: an exact number written as a key ({ 0:
+// "Full" }) first, then the language's category, then `other`, which every
+// set of forms has — it is also what the forms are registered under (see
+// createI18n).
+const selectPluralForm = (forms, count, lang) => {
+  const n = typeof count === "number" ? count : Number(count);
+  if (count === undefined || count === null || !Number.isFinite(n)) {
+    return forms.other;
+  }
+  const exact = forms[String(n)];
+  if (exact !== undefined) {
+    return exact;
+  }
+  const category = pluralCategory(n, { lang });
+  const form = forms[category];
+  return form === undefined ? forms.other : form;
+};
+
+const isPluralForms = (value) => {
+  return value !== null && typeof value === "object" && "other" in value;
 };
 
 /**
@@ -1478,6 +1551,38 @@ const setRuntimeLangSource = (source) => {
  * one of the languages above, i.e. how to tell "no translation" apart from
  * "translation equal to the key".
  *
+ * ---
+ *
+ * ## A sentence that depends on a number
+ *
+ * A translation may be a set of plural forms rather than one string: the
+ * form is chosen by `values.count`, an exact number written as a key first
+ * (`0: "Full"`), then the category `Intl.PluralRules` gives that number in
+ * the language the forms are written in (`one`, `other`, and `zero`, `two`,
+ * `few`, `many` where the language has them), then `other`. The rule is the
+ * language's, never `> 1`: "0 place libre" in French, "0 free seats" in
+ * English.
+ *
+ * With `keyLang`, the forms are written at the call site, and their `other`
+ * string is the key other languages register their own forms under:
+ * ```js
+ * const i18n = createI18n({ keyLang: "en" });
+ * i18n.add("[count] free seats", {
+ *   fr: { 0: "Complet", one: "[count] place libre", other: "[count] places libres" },
+ * });
+ * const seats = { 0: "Full", one: "[count] free seat", other: "[count] free seats" };
+ * i18n(seats, { count: 1 }, { lang: "en" }); // "1 free seat"
+ * i18n(seats, { count: 0 }, { lang: "fr" }); // "Complet"
+ * ```
+ * With opaque keys, each language registers its forms under the key:
+ * ```js
+ * i18n.add("seats.free", {
+ *   en: { one: "[count] free seat", other: "[count] free seats" },
+ *   fr: { one: "[count] place libre", other: "[count] places libres" },
+ * });
+ * i18n("seats.free", { count: 3 }); // "3 free seats"
+ * ```
+ *
  * @returns {Function & { add, addAll, addLangKeys, has, format, languageMap }}
  */
 const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
@@ -1563,23 +1668,37 @@ const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
     }
   };
 
-  const getTemplate = (key, lang) => {
+  // [template, the language it is written in]: the language decides which of
+  // a set of plural forms a count reads.
+  const getTemplate = (keyOrForms, lang) => {
+    const callSiteForms = isPluralForms(keyOrForms) ? keyOrForms : null;
+    const key = callSiteForms ? callSiteForms.other : keyOrForms;
     for (const resolvedLang of resolveLangChain(lang)) {
+      if (callSiteForms && resolvedLang === keyLang) {
+        // The forms written at the call site are keyLang's own: the registry
+        // only holds the key itself for it.
+        return [callSiteForms, keyLang];
+      }
       const translated = languageMap.get(resolvedLang)[key];
       if (translated !== undefined) {
-        return translated;
+        return [translated, resolvedLang];
       }
     }
-    // No translation found — return key as-is (opaque fallback)
-    return key;
+    // No translation found — the key as-is (opaque fallback), or the forms
+    // written at the call site.
+    return [callSiteForms || key, keyLang || toLangList(lang)[0]];
   };
 
   const format = (key, values, { lang = getDefaultLang() } = {}) => {
-    const template = getTemplate(key, lang);
-    return interpolateText(template, values);
+    const [template, templateLang] = getTemplate(key, lang);
+    const text = isPluralForms(template)
+      ? selectPluralForm(template, values?.count, templateLang)
+      : template;
+    return interpolateText(text, values);
   };
 
-  const has = (key, { lang = getDefaultLang() } = {}) => {
+  const has = (keyOrForms, { lang = getDefaultLang() } = {}) => {
+    const key = isPluralForms(keyOrForms) ? keyOrForms.other : keyOrForms;
     for (const resolvedLang of resolveLangChain(lang)) {
       if (key in languageMap.get(resolvedLang)) {
         return true;
@@ -1707,6 +1826,12 @@ humanizeI18n.addAll({
   // of its own, and how the swap keeps the rest of the sentence in this
   // language's grammar. A language with no entry here keeps its literal
   // "0 heure(s)" wording rather than this key.
+  // The first of a month when the month is spelled out (formatDay): an
+  // ordinal where the language writes one. English writes "January 1".
+  "time.first_day_of_month": {
+    en: "1",
+    fr: "1er",
+  },
   "time.midnight": {
     en: "midnight",
     fr: "minuit",
@@ -1885,8 +2010,151 @@ humanizeI18n.addAll({
   },
 });
 
-const formatNumber = (value, { lang = getRuntimeLang() } = {}) => {
-  return new Intl.NumberFormat(lang).format(value);
+/**
+ * Joins items the way the reader's language does — its word for "and" or
+ * "or", and its commas: "8h–10h, 12h et 18h–20h", never items glued with a
+ * hand-written " et ".
+ *
+ * @param {Array<string|number|import("preact").VNode>} items
+ *   An element (a `<TimeRange>`) is put back at its place between the
+ *   language's words, as `<Interpolate>` does with a placeholder; it keeps
+ *   the `key` it was given. Elements need @jsenv/navi, which installs the JSX
+ *   runtime.
+ * @param {{ lang?: string, type?: "conjunction"|"disjunction"|"unit", style?: "long"|"short"|"narrow" }} [options]
+ * @param {"conjunction"|"disjunction"|"unit"} [options.type="conjunction"] -
+ *   "and", "or", or a plain list of measures ("3 h, 20 min").
+ * @returns {string|import("preact").VNode}
+ *   A string when every item is one, a Preact fragment when an item is an
+ *   element.
+ *
+ * @example
+ * formatList(["8h–10h", "12h", "18h–20h"], { lang: "fr" }) // "8h–10h, 12h et 18h–20h"
+ * formatList(["tennis", "padel"], { lang: "en", type: "disjunction" }) // "tennis or padel"
+ * formatList(ranges.map((range) => <TimeRange key={range.from} {...range} />))
+ */
+const formatList = (
+  items,
+  { lang = getRuntimeLang(), type = "conjunction", style = "long" } = {},
+) => {
+  const formatter = memoIntl("ListFormat", lang, { type, style });
+  const jsx = getInstalledJsx();
+  if (!jsx || !items.some((item) => jsx.isValidElement(item))) {
+    // Intl.ListFormat takes strings only, and throws on anything else.
+    return formatter.format(items.map(String));
+  }
+  // The language's words come from parts written around stand-in strings;
+  // each "element" part is the next item, in order.
+  let itemIndex = 0;
+  const resolved = formatter
+    .formatToParts(items.map((item, index) => `\u0000${index}`))
+    .map((part) => {
+      if (part.type !== "element") {
+        return part.value;
+      }
+      const item = items[itemIndex];
+      itemIndex++;
+      return jsx.isValidElement(item) ? item : String(item);
+    });
+  return jsx.createFragment(resolved);
+};
+
+/**
+ * Writes a size in bytes for the reader of an app, in their language: its
+ * unit's name or symbol and its decimal separator — "39,6 ko", "4,2 Mo" in
+ * French, "39.6 kB" in English. Its neighbour humanizeFileSize writes the
+ * terminal's English whatever the language.
+ *
+ * The unit is the largest power of 1000 the size reaches (kilobyte, megabyte…,
+ * up to the petabyte, the last unit Intl names), with one decimal under 100
+ * and none above, as humanizeFileSize picks it.
+ *
+ * @param {number} bytes
+ * @param {{ lang?: string, unitDisplay?: "short"|"long"|"narrow", decimals?: number }} [options]
+ * @param {"short"|"long"|"narrow"} [options.unitDisplay="short"]
+ *   `"short"` writes the symbol ("39,6 ko"), `"long"` the word ("39,6
+ *   kilooctets").
+ * @param {number} [options.decimals]
+ *   How many decimals the size keeps at most, rounded; a whole value is never
+ *   padded.
+ *
+ * @example
+ * formatByteSize(39600, { lang: "fr" })                      // "39,6 ko"
+ * formatByteSize(4200000, { lang: "fr", unitDisplay: "long" }) // "4,2 mégaoctets"
+ * formatByteSize(39600, { lang: "en" })                      // "39.6 kB"
+ */
+const formatByteSize = (
+  bytes,
+  { lang = getRuntimeLang(), unitDisplay = "short", decimals } = {},
+) => {
+  if (!Number.isFinite(bytes)) {
+    return String(bytes);
+  }
+  // The unit is picked on the magnitude; Intl writes the sign.
+  const magnitude = bytes < 0 ? -bytes : bytes;
+  let exponent = 0;
+  while (
+    exponent < BYTE_UNITS.length - 1 &&
+    magnitude >= 1000 ** (exponent + 1)
+  ) {
+    exponent++;
+  }
+  let maximumFractionDigits =
+    decimals === undefined
+      ? magnitude / 1000 ** exponent < 100
+        ? 1
+        : 0
+      : decimals;
+  // 999 960 bytes rounds to 1000 kB: written in the next unit, "1 MB".
+  if (
+    exponent < BYTE_UNITS.length - 1 &&
+    roundTo(magnitude / 1000 ** exponent, maximumFractionDigits) >= 1000
+  ) {
+    exponent++;
+    maximumFractionDigits = decimals === undefined ? 1 : decimals;
+  }
+  return memoIntl("NumberFormat", lang, {
+    style: "unit",
+    unit: BYTE_UNITS[exponent],
+    unitDisplay,
+    maximumFractionDigits,
+  }).format(bytes / 1000 ** exponent);
+};
+
+// The byte units Intl.NumberFormat sanctions.
+const BYTE_UNITS = [
+  "byte",
+  "kilobyte",
+  "megabyte",
+  "gigabyte",
+  "terabyte",
+  "petabyte",
+];
+
+const roundTo = (value, decimals) => {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+};
+
+/**
+ * Writes a number the way the reader's language does: its digit grouping and
+ * its decimal separator ("1 234,5" in French, "1,234.5" in English).
+ *
+ * @param {number} value
+ * @param {{ lang?: string } & Intl.NumberFormatOptions} [options]
+ *   Every other option is `Intl.NumberFormat`'s, in the reader's language: a
+ *   fixed precision (`minimumFractionDigits`/`maximumFractionDigits`), a sign
+ *   (`signDisplay: "exceptZero"`), a percent (`style: "percent"`).
+ *
+ * @example
+ * formatNumber(1234.5, { lang: "fr" }) // "1 234,5"
+ * formatNumber(1, { lang: "fr", minimumFractionDigits: 1, maximumFractionDigits: 1 }) // "1,0"
+ * formatNumber(12, { lang: "fr", signDisplay: "exceptZero" }) // "+12"
+ */
+const formatNumber = (
+  value,
+  { lang = getRuntimeLang(), ...intlOptions } = {},
+) => {
+  return memoIntl("NumberFormat", lang, intlOptions).format(value);
 };
 
 /**
@@ -1911,29 +2179,6 @@ const formatNumber = (value, { lang = getRuntimeLang() } = {}) => {
  * All functions accept an optional `{ now }` parameter for testability.
  */
 
-
-// Constructing an Intl formatter dominates the cost of a call (~19µs vs
-// ~0.4µs to format with a kept instance, node 26 on an M-series Mac) and
-// these formatters run in render loops — a card easily writes half a dozen
-// per render — so every instance is memoized by (constructor, lang,
-// options). lang and each option value come from small closed sets, so the
-// cache stays bounded.
-const intlCache = new Map();
-const memoIntl = (constructorName, lang, options) => {
-  let key = `${constructorName}|${Array.isArray(lang) ? lang.join() : lang}`;
-  if (options) {
-    for (const optionName of Object.keys(options)) {
-      key += `|${optionName}:${options[optionName]}`;
-    }
-  }
-  const cached = intlCache.get(key);
-  if (cached) {
-    return cached;
-  }
-  const formatter = new Intl[constructorName](lang, options);
-  intlCache.set(key, formatter);
-  return formatter;
-};
 
 // Our own compact/custom duration notation interpolates raw numbers
 // directly (unlike Intl.DurationFormat, which groups thousands on its own,
@@ -1999,7 +2244,7 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  * @param {boolean|"auto"} [options.year]
  *   Whether the year is written. `"auto"` writes it only when the date is not
  *   in the current year (`now`'s year), the way a calendar does: "lundi 11
- *   mai", but "samedi 1 janvier 2050". `false` drops it ("30/07", the
+ *   mai", but "samedi 1er janvier 2050". `false` drops it ("30/07", the
  *   day/month order still following the locale). Defaults to `"auto"` for the
  *   spelled formats and to `true` for `"numeric"`. The year qualifies a month,
  *   so a spelling without one (`{ month: false }`) never writes it.
@@ -2016,7 +2261,7 @@ const resolveFormat = (format, { fnName, reads, as }) => {
  * formatDay(new Date(), { lang: "fr", format: "narrow" }) // "lu. 11 mai"
  * formatDay(new Date(), { lang: "fr", format: "numeric" }) // "11/05/2026"
  * formatDay(new Date(), { lang: "fr", format: "numeric", year: false }) // "11/05"
- * formatDay(new Date(2050, 0, 1), { lang: "fr" })          // "samedi 1 janvier 2050"
+ * formatDay(new Date(2050, 0, 1), { lang: "fr" })          // "samedi 1er janvier 2050"
  * formatDay(new Date(), { lang: "fr", year: true })       // "lundi 11 mai 2026"
  * formatDay(new Date(), { lang: "fr", format: { weekday: "long", month: "short" } }) // "mercredi 2 sept."
  * formatDay(new Date(), { lang: "fr", format: { day: false, month: false } }) // "mercredi"
@@ -2065,13 +2310,34 @@ const formatDay = (
     month !== false &&
     isYearWritten(year === undefined ? "auto" : year, { date, now, timeZone });
   // a `false` part is omitted, not passed: Intl rejects false as a value
-  return memoIntl("DateTimeFormat", lang, {
+  const formatter = memoIntl("DateTimeFormat", lang, {
     ...(weekday === false ? {} : { weekday }),
     ...(day === false ? {} : { day: "numeric" }),
     ...(month === false ? {} : { month }),
     ...(yearWritten ? { year: "numeric" } : {}),
     timeZone,
-  }).format(date);
+  });
+  if (day === false || month === false || month === "numeric") {
+    return formatter.format(date);
+  }
+  return formatWithSpelledMonth(formatter, date, { lang, timeZone });
+};
+
+// The first of a month spelled out is an ordinal in some languages
+// ("samedi 1er janvier"), which Intl does not write. Read off the parts only
+// when the day can be the first: every other day keeps format().
+const formatWithSpelledMonth = (formatter, date, { lang, timeZone }) => {
+  if (timeZone === undefined && new Date(date).getDate() !== 1) {
+    return formatter.format(date);
+  }
+  return formatter
+    .formatToParts(date)
+    .map((part) =>
+      part.type === "day" && Number(part.value) === 1
+        ? humanizeI18n("time.first_day_of_month", undefined, { lang })
+        : part.value,
+    )
+    .join("");
 };
 
 /**
@@ -2235,6 +2501,20 @@ const formatDayRelative = (offset, { lang = getRuntimeLang() } = {}) => {
   }).format(offset, "day");
 };
 
+/**
+ * Writes a month and its year.
+ *
+ * @param {Date} date
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"numeric"|"compact", timeZone?: string }} [options]
+ *   `"short"`/`"narrow"` abbreviate the month, `"numeric"` (which `"compact"`
+ *   is a name for) writes it in digits. `timeZone` words the instant in that
+ *   IANA zone instead of the runtime's own.
+ *
+ * @example
+ * formatMonth(date, { lang: "fr" })                     // "septembre 2026" (long, default)
+ * formatMonth(date, { lang: "fr", format: "short" })   // "sept. 2026"
+ * formatMonth(date, { lang: "fr", format: "numeric" }) // "09/2026"
+ */
 const formatMonth = (
   date,
   { lang = getRuntimeLang(), format = "long", timeZone } = {},
@@ -2254,10 +2534,17 @@ const formatMonth = (
  * Formats a date as "lun. 11 mai, 14:30" (long), "11 mai, 14:30" (short),
  * "11/05, 14:30" (narrow, which `"compact"` is a name for).
  * `timeZone` words the instant in that IANA zone instead of the runtime's own.
+ * `precision: "second"` writes the seconds after the minutes ("11/05,
+ * 14:30:07"): a log line, two events within one minute.
  */
 const formatDatetime = (
   date,
-  { lang = getRuntimeLang(), format = "long", timeZone } = {},
+  {
+    lang = getRuntimeLang(),
+    format = "long",
+    precision = "minute",
+    timeZone,
+  } = {},
 ) => {
   format = resolveFormat(format, {
     fnName: "formatDatetime",
@@ -2265,48 +2552,54 @@ const formatDatetime = (
     // The narrow datetime is already all digits ("17/09 14:30").
     as: { compact: "narrow" },
   });
+  const clockOptions = resolveClockOptions(precision);
   if (format === "long") {
-    return memoIntl("DateTimeFormat", lang, {
+    const formatter = memoIntl("DateTimeFormat", lang, {
       weekday: "short",
       day: "numeric",
       month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
+      ...clockOptions,
       timeZone,
-    }).format(date);
+    });
+    return formatWithSpelledMonth(formatter, date, { lang, timeZone });
   }
   if (format === "narrow") {
     return memoIntl("DateTimeFormat", lang, {
       day: "2-digit",
       month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      ...clockOptions,
       timeZone,
     }).format(date);
   }
   // "short": no weekday
-  return memoIntl("DateTimeFormat", lang, {
+  const formatter = memoIntl("DateTimeFormat", lang, {
     day: "numeric",
     month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
+    ...clockOptions,
     timeZone,
-  }).format(date);
+  });
+  return formatWithSpelledMonth(formatter, date, { lang, timeZone });
 };
 
 /**
- * Formats a date as "14:30".
+ * Formats a date as "14:30", or "14:30:07" with `precision: "second"`.
  * `timeZone` words the instant in that IANA zone instead of the runtime's own.
  */
 const formatTime = (
   date,
-  { lang = getRuntimeLang(), timeZone } = {},
+  { lang = getRuntimeLang(), precision = "minute", timeZone } = {},
 ) => {
   return memoIntl("DateTimeFormat", lang, {
-    hour: "2-digit",
-    minute: "2-digit",
+    ...resolveClockOptions(precision),
     timeZone,
   }).format(date);
+};
+
+const resolveClockOptions = (precision) => {
+  if (precision === "second") {
+    return { hour: "2-digit", minute: "2-digit", second: "2-digit" };
+  }
+  return { hour: "2-digit", minute: "2-digit" };
 };
 
 /**
@@ -2318,11 +2611,15 @@ const formatTime = (
  *   A Date, a ms timestamp, or an "HH:MM"/"HH:MM:SS" string. Only the clock
  *   time is read. A nullish value renders the "--:--" placeholder; an
  *   unparseable one is returned as-is, stringified.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", timeZone?: string }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute"|"second", timeZone?: string }} [options]
  *   The options `<Time type="time">` takes: `"timestring"` is the clock
  *   "14:30"; the other formats write the time as a duration-shaped phrase —
  *   see {@link formatMinuteDuration}'s `clockStyle` for what `pad` and
  *   `precision` shape in `format="compact"`.
+ * @param {"hour"|"minute"|"second"} [options.precision]
+ *   `"second"` writes the seconds in every format: "14:30:07", "14h30min07s",
+ *   "14 heures, 30 minutes et 7 secondes". `"hour"` and `"minute"` only
+ *   shape `format="compact"`.
  * @param {string} [options.timeZone]
  *   IANA zone the instant's clock is read in ("Europe/Paris"); defaults to
  *   the runtime's own zone. Only applies to a Date/timestamp — an
@@ -2361,7 +2658,10 @@ const formatTimeOfDay = (
     reads: ["long", "short", "narrow", "compact", "timestring"],
   });
   if (format === "timestring") {
-    return formatTime(date, { lang, timeZone: zone });
+    return formatTime(date, { lang, precision, timeZone: zone });
+  }
+  if (precision === "second") {
+    return formatTimeOfDayToTheSecond(date, { lang, format, pad, zone });
   }
   const { hours, minutes } = readClock(date, zone);
   const totalMinutes = hours * 60 + minutes;
@@ -2409,13 +2709,18 @@ const formatTimeOfDay = (
   // (the conjunction, the minutes part) exactly as Intl would produce
   // for this locale — formatToParts tags each token with the unit it
   // belongs to, so the swap doesn't need to know the locale's own
-  // grammar/word order. Only ever one hour-tagged group per call
-  // (hours is always 0 or absent here), but guarded anyway in case a
-  // future Intl implementation ever splits it into more parts.
+  // grammar/word order.
   const parts = memoIntl("DurationFormat", lang, {
     style: "long",
     hoursDisplay: "always",
   }).formatToParts({ hours: 0, minutes });
+  return replaceHourGroup(parts, midnightWord);
+};
+
+// Only ever one hour-tagged group per call (hours is always 0 where this is
+// called), but guarded anyway in case a future Intl implementation ever
+// splits it into more parts.
+const replaceHourGroup = (parts, word) => {
   let hourGroupReplaced = false;
   return parts
     .map((part) => {
@@ -2426,9 +2731,38 @@ const formatTimeOfDay = (
         return "";
       }
       hourGroupReplaced = true;
-      return midnightWord;
+      return word;
     })
     .join("");
+};
+
+// A clock read to the second, in the same shapes as at the minute: Intl's
+// duration words with the hour kept at zero (midnight said in "long"), or
+// formatSecondDuration's compact symbols padded like a clock ("14h30min07s").
+const formatTimeOfDayToTheSecond = (date, { lang, format, pad, zone }) => {
+  const { hours, minutes, seconds } = readClock(date, zone);
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    const formatter = memoIntl("DurationFormat", lang, {
+      style: format,
+      hoursDisplay: "always",
+    });
+    const duration = { hours, minutes, seconds };
+    if (hours !== 0 || format !== "long") {
+      return formatter.format(duration);
+    }
+    const midnightWord = humanizeI18n("time.midnight", undefined, { lang });
+    if (midnightWord === "time.midnight") {
+      return formatter.format(duration);
+    }
+    return replaceHourGroup(formatter.formatToParts(duration), midnightWord);
+  }
+  const hSym = humanizeI18n("time.duration.hour_symbol", undefined, { lang });
+  const mSym = humanizeI18n("time.duration.minute_symbol", undefined, { lang });
+  const sSym = humanizeI18n("time.duration.second_symbol", undefined, { lang });
+  const hStr = pad ? String(hours).padStart(2, "0") : String(hours);
+  const mStr = String(minutes).padStart(2, "0");
+  const sStr = String(seconds).padStart(2, "0");
+  return `${hStr}${hSym}${mStr}${mSym}${sStr}${sSym}`;
 };
 
 /**
@@ -2443,7 +2777,7 @@ const formatTimeOfDay = (
  * @param {Date|number|string} to
  *   Each bound accepts what {@link formatTimeOfDay} accepts; a nullish bound
  *   renders its "--:--" placeholder.
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute", separator?: string, timeZone?: string }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact"|"timestring", pad?: boolean, precision?: "hour"|"minute"|"second", separator?: string, timeZone?: string }} [options]
  *   `precision` writes both bounds at this precision instead of the one the
  *   pair calls for. `separator` defaults to the `"time.range_separator"`
  *   registered text (an en dash), tightened against both bounds in
@@ -2745,12 +3079,19 @@ const formatSecondDuration = (
     reads: ["long", "short", "narrow", "compact"],
   });
   seconds = roundSeconds(seconds, decimals);
-  if (seconds < 0) {
+  // The millisecond is the finest unit written (see carryFraction): the zero
+  // and the sign are read at that precision, so 0.0004 is the "0 seconde" it
+  // rounds to, not a duration with nothing in it, and -0.0004 has no sign.
+  const milliseconds = Math.round(seconds * 1000);
+  if (milliseconds === 0) {
+    return formatSingleUnit(0, "second", { lang, format });
+  }
+  if (milliseconds < 0) {
     // the d/h/m/s split below only holds for a positive value; formatting the
     // magnitude and putting the sign back is the only reading that works
     return `-${formatSecondDuration(-seconds, { lang, format, forceUnit, decimals })}`;
   }
-  if (forceUnit || seconds === 0) {
+  if (forceUnit) {
     return formatSingleUnit(seconds, "second", { lang, format });
   }
   const [totalSeconds, ms] = carryFraction(seconds, 1000);
@@ -3270,30 +3611,38 @@ const toTimeOfDay = (value) => {
   });
 };
 
-// Reads the wall-clock hour/minute of an instant — in the runtime's own zone
-// by default, in `timeZone` when given. A Date only carries local getters, so
-// another zone's clock has to come out of Intl parts (hourCycle h23 so
-// midnight reads hour 0, never 24).
+// Reads the wall-clock hour/minute/second of an instant — in the runtime's own
+// zone by default, in `timeZone` when given. A Date only carries local
+// getters, so another zone's clock has to come out of Intl parts (hourCycle
+// h23 so midnight reads hour 0, never 24).
 const readClock = (date, timeZone) => {
   if (!timeZone) {
-    return { hours: date.getHours(), minutes: date.getMinutes() };
+    return {
+      hours: date.getHours(),
+      minutes: date.getMinutes(),
+      seconds: date.getSeconds(),
+    };
   }
   const parts = memoIntl("DateTimeFormat", "en", {
     timeZone,
     hour: "numeric",
     minute: "numeric",
+    second: "numeric",
     hourCycle: "h23",
   }).formatToParts(date);
   let hours = 0;
   let minutes = 0;
+  let seconds = 0;
   for (const part of parts) {
     if (part.type === "hour") {
       hours = Number(part.value);
     } else if (part.type === "minute") {
       minutes = Number(part.value);
+    } else if (part.type === "second") {
+      seconds = Number(part.value);
     }
   }
-  return { hours, minutes };
+  return { hours, minutes, seconds };
 };
 
 const isYearWritten = (year, { date, now, timeZone }) => {
@@ -3604,5 +3953,5 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 
-export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createI18n, distributePercentages, errorToHTML, errorToMarkdown, formatDatePlaceholder, formatDatetime, formatDatetimePlaceholder, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatMinuteDuration, formatMonth, formatMonthPlaceholder, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, formatWeekPlaceholder, generateContentFrame, getRelativeDay, getRuntimeLang, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeI18n, humanizeMemory, humanizeMethodSymbol, installInterpolateJsx, interpolateText, preNewLineAndIndentation, prefixFirstAndIndentRemainingLines, resolveTimeRangePrecision, setRuntimeLangSource, toDate, toTimeOfDay, wrapNewLineAndIndentation };
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createI18n, distributePercentages, errorToHTML, errorToMarkdown, formatByteSize, formatDatePlaceholder, formatDatetime, formatDatetimePlaceholder, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatList, formatMinuteDuration, formatMonth, formatMonthPlaceholder, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, formatWeekPlaceholder, generateContentFrame, getRelativeDay, getRuntimeLang, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeI18n, humanizeMemory, humanizeMethodSymbol, installInterpolateJsx, interpolateText, pluralCategory, preNewLineAndIndentation, prefixFirstAndIndentRemainingLines, resolveTimeRangePrecision, setRuntimeLangSource, toDate, toTimeOfDay, wrapNewLineAndIndentation };
 //# sourceMappingURL=jsenv_humanize_browser.js.map

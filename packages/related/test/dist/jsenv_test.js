@@ -5731,6 +5731,11 @@ const isV8Coverage = (coverage) => Boolean(coverage.result);
  *
  * Only the start order is affected: executions keep the index they got from the
  * filesystem, so they are still reported in that order.
+ *
+ * The duration of the whole run is remembered too, so the logs can tell how
+ * long the wait will likely be. It is kept per run name (what the run was
+ * narrowed to): the duration of every test in the repository says nothing about
+ * the duration of the tests of one package.
  */
 
 
@@ -5739,10 +5744,24 @@ const MS_IN_A_DAY = 24 * 60 * 60 * 1000;
 const ENTRY_MAX_AGE_MS = 30 * MS_IN_A_DAY;
 
 const createExecutionTimings = ({ fileUrl }) => {
-  const previousEntryMap = readEntries(fileUrl);
+  const { previousEntryMap, previousRunEntryMap } = readMemory(fileUrl);
   const entryMap = new Map();
+  const runEntryMap = new Map();
 
   return {
+    getRunDurationMs: (runName) => {
+      const previousRunEntry = previousRunEntryMap.get(runName);
+      if (!previousRunEntry) {
+        return null;
+      }
+      return previousRunEntry.durationMs;
+    },
+    recordRun: (runName, durationMs) => {
+      runEntryMap.set(runName, {
+        durationMs,
+        updatedAt: Date.now(),
+      });
+    },
     getAllocatedMsRequested: (executionName) => {
       const previousEntry = previousEntryMap.get(executionName);
       if (!previousEntry) {
@@ -5803,47 +5822,69 @@ const createExecutionTimings = ({ fileUrl }) => {
     },
     write: () => {
       const nowMs = Date.now();
-      const executions = {};
-      // executions not part of this run keep what was known about them
-      for (const [executionName, entry] of previousEntryMap) {
-        if (nowMs - entry.updatedAt < ENTRY_MAX_AGE_MS) {
-          executions[executionName] = entry;
-        }
-      }
-      for (const [executionName, entry] of entryMap) {
-        executions[executionName] = entry;
-      }
-      writeFileSync(fileUrl, JSON.stringify({ executions }, null, "  "));
+      writeFileSync(
+        fileUrl,
+        JSON.stringify(
+          {
+            // what is not part of this run keeps what was known about it
+            executions: mergeEntries(previousEntryMap, entryMap, nowMs),
+            runs: mergeEntries(previousRunEntryMap, runEntryMap, nowMs),
+          },
+          null,
+          "  ",
+        ),
+      );
     },
   };
 };
 
-const readEntries = (fileUrl) => {
-  const entryMap = new Map();
+const mergeEntries = (previousEntryMap, entryMap, nowMs) => {
+  const entries = {};
+  for (const [name, entry] of previousEntryMap) {
+    if (nowMs - entry.updatedAt < ENTRY_MAX_AGE_MS) {
+      entries[name] = entry;
+    }
+  }
+  for (const [name, entry] of entryMap) {
+    entries[name] = entry;
+  }
+  return entries;
+};
+
+const readMemory = (fileUrl) => {
+  const previousEntryMap = new Map();
+  const previousRunEntryMap = new Map();
+  const memory = { previousEntryMap, previousRunEntryMap };
   let fileContent;
   try {
     fileContent = readFileSync(new URL(fileUrl), "utf8");
   } catch {
     // no memory of a previous run: every execution is an unknown
-    return entryMap;
+    return memory;
   }
   let executions;
+  let runs;
   try {
-    ({ executions } = JSON.parse(fileContent));
+    ({ executions, runs } = JSON.parse(fileContent));
   } catch {
     // file was truncated by a run killed while writing it
-    return entryMap;
+    return memory;
   }
-  if (!executions) {
-    return entryMap;
+  fillEntryMap(previousEntryMap, executions);
+  fillEntryMap(previousRunEntryMap, runs);
+  return memory;
+};
+
+const fillEntryMap = (entryMap, entries) => {
+  if (!entries) {
+    return;
   }
-  for (const executionName of Object.keys(executions)) {
-    const entry = executions[executionName];
+  for (const name of Object.keys(entries)) {
+    const entry = entries[name];
     if (typeof entry.durationMs === "number") {
-      entryMap.set(executionName, entry);
+      entryMap.set(name, entry);
     }
   }
-  return entryMap;
 };
 
 const githubAnnotationFromError = (
@@ -6486,11 +6527,19 @@ const reporterList = ({
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
-          const duration = humanizeDuration(msEllapsed, {
+          let duration = humanizeDuration(msEllapsed, {
             short: true,
             decimals: 0,
             rounded: false,
           });
+          const { previousRunEnd } = testPlanResult.timings;
+          if (previousRunEnd !== null) {
+            duration += ` of ~${humanizeDuration(previousRunEnd, {
+              short: true,
+              decimals: 0,
+              rounded: false,
+            })}`;
+          }
           infos.push(ANSI.color(duration, ANSI.GREY));
           let memoryUsageColor = ANSI.GREY;
           const memoryHeapUsed = memoryUsage().heapUsed;
@@ -6678,6 +6727,16 @@ const renderIntro = (testPlanResult, logOptions) => {
   if (testPlanResult.fragment) {
     lines.push(
       `fragment: ${testPlanResult.fragment}, executing only ${testPlanResult.fragmentStart}:${testPlanResult.fragmentEnd}`,
+    );
+  }
+  const { previousRunEnd } = testPlanResult.timings;
+  if (previousRunEnd !== null) {
+    lines.push(
+      `previous run: ${
+        logOptions.mockFluctuatingValues
+          ? "<mock>s"
+          : humanizeDuration(previousRunEnd, { short: true })
+      }`,
     );
   }
   if (logOptions.platformInfo) {
@@ -7866,7 +7925,7 @@ const ensureWebServerIsStarted = async (
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
- * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took; on the next run "parallel.maxAhead" uses it to start the longest ones ahead of their turn
+ * @param {Object|false} [testPlanParameters.executionTimings=false] Remembers how long executions took; on the next run "parallel.maxAhead" uses it to start the longest ones ahead of their turn, and the logs show how long the previous run took
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
@@ -8047,6 +8106,8 @@ const executeTestPlan = async ({
       teardownEnd: null,
       coverageTeardownEnd: null,
       end: null,
+      // "end" of the previous run with the same name (see "executionTimings")
+      previousRunEnd: null,
     },
     rootDirectoryUrl: String(rootDirectoryUrl),
     patterns: Object.keys(testPlan),
@@ -8126,6 +8187,7 @@ const executeTestPlan = async ({
   const afterAllCallbackSet = new Set();
   let finalizeCoverage;
   let timingsMemory;
+  let runName;
 
   try {
     let logger;
@@ -8570,6 +8632,13 @@ To fix this warning:
           onlyWithinUrl = new URL(onlyWithin, rootDirectoryUrl);
         }
       }
+      // what the run is narrowed to decides how long it takes
+      runName = onlyWithinUrl
+        ? urlToRelativeUrl(onlyWithinUrl, rootDirectoryUrl) || "./"
+        : "./";
+      if (fragment) {
+        runName += `?fragment=${fragment}`;
+      }
 
       let index = 0;
       let lastExecution;
@@ -8770,6 +8839,9 @@ To fix this warning:
       countersInOrder.remaining =
       countersInOrder.waiting =
         executionPlanifiedArray.length;
+    if (timingsMemory) {
+      timings.previousRunEnd = timingsMemory.getRunDurationMs(runName);
+    }
     if (githubCheck) {
       const githubCheckRun = await startGithubCheckRun({
         logLevel: githubCheck.logLevel,
@@ -9186,15 +9258,20 @@ To fix this warning:
     }
     timings.teardownEnd = takeTiming();
 
-    if (timingsMemory) {
-      timingsMemory.write();
-    }
-
     if (finalizeCoverage) {
       await finalizeCoverage();
     }
     timings.coverageTeardownEnd = takeTiming();
     timings.end = takeTiming();
+
+    if (timingsMemory) {
+      // a run stopped before its end (aborted, failFast, an error) says nothing
+      // about how long the next one takes
+      if (timings.executionEnd !== null && !testPlanResult.aborted) {
+        timingsMemory.recordRun(runName, timings.end);
+      }
+      timingsMemory.write();
+    }
 
     osMemoryUsageMonitoring.end();
     processMemoryUsageMonitoring.end();

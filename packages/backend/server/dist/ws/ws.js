@@ -1,13 +1,13 @@
-import require$$0$3 from "node:events";
+import require$$0$4 from "node:events";
 import require$$1$1 from "node:https";
-import http from "node:http";
+import require$$0 from "node:http";
 import net from "node:net";
 import require$$4 from "node:tls";
 import require$$1 from "node:crypto";
-import require$$0$2 from "node:stream";
+import require$$0$3 from "node:stream";
 import require$$7 from "node:url";
-import require$$0 from "node:zlib";
-import require$$0$1 from "node:buffer";
+import require$$0$1 from "node:zlib";
+import require$$0$2 from "node:buffer";
 import require$$2 from "node:util";
 
 function getDefaultExportFromCjs (x) {
@@ -48,6 +48,8 @@ var hasRequiredBufferUtil;
 function requireBufferUtil () {
 	if (hasRequiredBufferUtil) return bufferUtil.exports;
 	hasRequiredBufferUtil = 1;
+
+	const { websocketMask, websocketUnmask } = require$$0;
 
 	const { EMPTY_BUFFER } = requireConstants();
 
@@ -160,8 +162,17 @@ function requireBufferUtil () {
 	  unmask: _unmask
 	};
 
-	/* istanbul ignore else  */
-	if (!process.env.WS_NO_BUFFER_UTIL) {
+	if (websocketMask) {
+	  bufferUtil.exports.mask = function (source, mask, output, offset, length) {
+	    if (length < 24) _mask(source, mask, output, offset, length);
+	    else websocketMask(source, mask, output, offset, length);
+	  };
+
+	  bufferUtil.exports.unmask = function (buffer, mask) {
+	    if (buffer.length < 24) _unmask(buffer, mask);
+	    else websocketUnmask(buffer, mask);
+	  };
+	} /* istanbul ignore else  */ else if (!process.env.WS_NO_BUFFER_UTIL) {
 	  try {
 	    const bufferUtil$1 = require('bufferutil');
 
@@ -251,7 +262,7 @@ function requirePermessageDeflate () {
 	if (hasRequiredPermessageDeflate) return permessageDeflate$1;
 	hasRequiredPermessageDeflate = 1;
 
-	const zlib = require$$0;
+	const zlib = require$$0$1;
 
 	const bufferUtil = requireBufferUtil();
 	const Limiter = requireLimiter();
@@ -790,7 +801,7 @@ function requireValidation () {
 	if (hasRequiredValidation) return validation.exports;
 	hasRequiredValidation = 1;
 
-	const { isUtf8 } = require$$0$1;
+	const { isUtf8 } = require$$0$2;
 
 	const { hasBlob } = requireConstants();
 
@@ -950,7 +961,7 @@ function requireReceiver () {
 	if (hasRequiredReceiver) return receiver$1;
 	hasRequiredReceiver = 1;
 
-	const { Writable } = require$$0$2;
+	const { Writable } = require$$0$3;
 
 	const PerMessageDeflate = requirePermessageDeflate();
 	const {
@@ -1703,7 +1714,7 @@ function requireSender () {
 	if (hasRequiredSender) return sender$1;
 	hasRequiredSender = 1;
 
-	const { Duplex } = require$$0$2;
+	const { Duplex } = require$$0$3;
 	const { randomFillSync } = require$$1;
 	const {
 	  types: { isUint8Array }
@@ -1854,7 +1865,9 @@ function requireSender () {
 	      target.writeUIntBE(dataLength, 4, 6);
 	    }
 
-	    if (!options.mask) return [target, data];
+	    if (!options.mask) {
+	      return dataLength ? [target, data] : [target];
+	    }
 
 	    target[1] |= 0x80;
 	    target[offset - 4] = mask[0];
@@ -1862,6 +1875,7 @@ function requireSender () {
 	    target[offset - 2] = mask[2];
 	    target[offset - 1] = mask[3];
 
+	    if (!dataLength) return [target];
 	    if (skipMasking) return [target, data];
 
 	    if (merge) {
@@ -2829,13 +2843,13 @@ function requireWebsocket () {
 	if (hasRequiredWebsocket) return websocket;
 	hasRequiredWebsocket = 1;
 
-	const EventEmitter = require$$0$3;
+	const EventEmitter = require$$0$4;
 	const https = require$$1$1;
-	const http$1 = http;
+	const http = require$$0;
 	const net$1 = net;
 	const tls = require$$4;
 	const { randomBytes, createHash } = require$$1;
-	const { Duplex, Readable } = require$$0$2;
+	const { Duplex, Readable } = require$$0$3;
 	const { URL } = require$$7;
 
 	const PerMessageDeflate = requirePermessageDeflate();
@@ -3586,7 +3600,7 @@ function requireWebsocket () {
 
 	  const defaultPort = isSecure ? 443 : 80;
 	  const key = randomBytes(16).toString('base64');
-	  const request = isSecure ? https.request : http$1.request;
+	  const request = isSecure ? https.request : http.request;
 	  const protocolSet = new Set();
 	  let perMessageDeflate;
 
@@ -3646,10 +3660,15 @@ function requireWebsocket () {
 	  }
 
 	  if (isIpcUrl) {
-	    const parts = opts.path.split(':');
+	    const i = opts.path.indexOf(':');
 
-	    opts.socketPath = parts[0];
-	    opts.path = parts[1];
+	    if (i === -1) {
+	      opts.socketPath = opts.path;
+	      opts.path = '';
+	    } else {
+	      opts.socketPath = opts.path.slice(0, i);
+	      opts.path = opts.path.slice(i + 1);
+	    }
 	  }
 
 	  let req;
@@ -4259,7 +4278,7 @@ function requireStream () {
 	hasRequiredStream = 1;
 
 	requireWebsocket();
-	const { Duplex } = require$$0$2;
+	const { Duplex } = require$$0$3;
 
 	/**
 	 * Emits the `'close'` event on a stream.
@@ -4512,9 +4531,9 @@ function requireWebsocketServer () {
 	if (hasRequiredWebsocketServer) return websocketServer$1;
 	hasRequiredWebsocketServer = 1;
 
-	const EventEmitter = require$$0$3;
-	const http$1 = http;
-	const { Duplex } = require$$0$2;
+	const EventEmitter = require$$0$4;
+	const http = require$$0;
+	const { Duplex } = require$$0$3;
 	const { createHash } = require$$1;
 
 	const extension = requireExtension();
@@ -4610,8 +4629,8 @@ function requireWebsocketServer () {
 	    }
 
 	    if (options.port != null) {
-	      this._server = http$1.createServer((req, res) => {
-	        const body = http$1.STATUS_CODES[426];
+	      this._server = http.createServer((req, res) => {
+	        const body = http.STATUS_CODES[426];
 
 	        res.writeHead(426, {
 	          'Content-Length': body.length,
@@ -5021,7 +5040,7 @@ function requireWebsocketServer () {
 	  // call to `socket.end()` below, which triggers an `'error'` event that in
 	  // turn causes the socket to be destroyed.
 	  //
-	  message = message || http$1.STATUS_CODES[code];
+	  message = message || http.STATUS_CODES[code];
 	  headers = {
 	    Connection: 'close',
 	    'Content-Type': 'text/html',
@@ -5032,7 +5051,7 @@ function requireWebsocketServer () {
 	  socket.once('finish', socket.destroy);
 
 	  socket.end(
-	    `HTTP/1.1 ${code} ${http$1.STATUS_CODES[code]}\r\n` +
+	    `HTTP/1.1 ${code} ${http.STATUS_CODES[code]}\r\n` +
 	      Object.keys(headers)
 	        .map((h) => `${h}: ${headers[h]}`)
 	        .join('\r\n') +

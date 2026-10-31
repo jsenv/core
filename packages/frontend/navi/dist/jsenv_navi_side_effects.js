@@ -470,6 +470,7 @@ const css = /* css */ `@layer navi {
     --navi-color-primary: var(--navi-surface-text-color);
     --navi-placeholder-color: var(--navi-color-discrete);
     --navi-placeholder-font-style: normal;
+    --navi-placeholder-font-size: 1em;
   }
 
   .navi_popover, .navi_dialog, .navi_callout {
