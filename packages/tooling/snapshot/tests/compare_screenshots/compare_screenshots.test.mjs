@@ -37,7 +37,7 @@ test(() => {
       expect:
         new FileContentAssertionError(`snapshot comparison failed for "file.png"
 --- reason ---
-6889 pixels have changed (3.818%)
+7616 pixels have changed (4.220%)
 --- file ---
 ${snapshotFileUrl.href}`),
     });
