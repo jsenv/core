@@ -23,10 +23,8 @@ return values;
 
 ```console
 TypeError: state is not iterable
-  at E.<anonymous> (base/sigi.test.mjs:39:26)
+  at m.<anonymous> (base/sigi.test.mjs:39:26)
   at base/sigi.test.mjs:37:5
-  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:203:33)
   at async base/sigi.test.mjs:5:1
 ```
 
