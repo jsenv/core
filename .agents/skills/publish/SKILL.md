@@ -46,6 +46,16 @@ done
 
 If the set is broader than expected (a `@jsenv/core` or `@jsenv/server` bump drags in `cli`/`fetch`/`snapshot`/`terminal-recorder`), that's normal — confirm it's intended before continuing.
 
+Then **make `node_modules` follow the sync**. Every `@jsenv/*` a workspace depends on must resolve to the workspace itself (npm's symlink in the root `node_modules`). A copy downloaded from npm runs the published code instead of the sources, and resolves its own dependencies against whatever happens to be hoisted. Such copies appear when `npm install` runs between a bump and the sync: dependents still pin the old version, so npm downloads it and nests it under `<workspace>/node_modules/@jsenv/`. With no lockfile, a later `npm install` keeps them even once the pins match — `npm ls` lists them as `invalid` — so they must be deleted. Deleting is always safe: npm reinstalls any nested copy still wanted.
+
+```sh
+npm ls 2>&1 | grep invalid   # any @jsenv/* listed is a stale copy
+npm query .workspace | node -e 'for (const { location } of JSON.parse(require("fs").readFileSync(0))) require("fs").rmSync(`${location}/node_modules/@jsenv`, { recursive: true, force: true })'
+npm install
+```
+
+Only workspace directories are cleaned: `tests/**/node_modules/` hold fixtures on purpose. Reference: a stale `@jsenv/sourcemap@1.4.18` once resolved the root's `magic-string@0.30` and failed with `does not provide an export named 'MagicString'`.
+
 ### 3. Build + test
 
 **Default (recommended): affected packages only** — much faster. For a change scoped to e.g. `@jsenv/navi`:

@@ -4,7 +4,7 @@
 run(undefined)
 ```
 
-# 1/2 write 2 files into "./git_ignored/build/"
+# 1/2 write 3 files into "./git_ignored/build/"
 
 see [./git_ignored/build/](./git_ignored/build/)
 

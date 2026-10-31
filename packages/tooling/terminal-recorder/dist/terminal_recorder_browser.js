@@ -1,4 +1,4 @@
-import { eastAsianWidth, stripAnsi, ansiRegex, __jsenv_default_import__ } from "./jsenv_terminal_recorder_node_modules.js";
+import { eastAsianWidth, stripAnsi, ansiRegex, encode } from "./jsenv_terminal_recorder_node_modules.js";
 
 // Whole-cluster zero-width: Default_Ignorable, Control, Format, Mark, Surrogate
 const zeroWidthClusterRegex =
@@ -552,7 +552,7 @@ const decorators = {
 };
 
 const encodeTextContent = (content) => {
-  return __jsenv_default_import__.encode(content, {
+  return encode(content, {
     decimal: false,
   });
 };

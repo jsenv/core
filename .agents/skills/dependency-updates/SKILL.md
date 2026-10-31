@@ -12,7 +12,11 @@ description: How npm dependencies are updated in this monorepo, and how a depend
    dependency (not devDependency) changed — see "Bumping a package's own
    version" below.
 3. Run `npm install` to refresh `node_modules` against the updated
-   `package.json` files.
+   `package.json` files. The step 2 bumps are not synced yet, so dependents
+   that pin a bumped package get its published copy, not the workspace:
+   nothing tested at this point exercises those sources. The sync and the
+   cleanup it then needs are in
+   [the publish skill, step 2](../publish/SKILL.md#2-sync-versions).
 4. **Stop here and hand off to the human.** Don't run builds or the test suite
    yourself at this point — say the updates are applied and ask them to review
    the diff and verify things still work (builds, some or all tests) before

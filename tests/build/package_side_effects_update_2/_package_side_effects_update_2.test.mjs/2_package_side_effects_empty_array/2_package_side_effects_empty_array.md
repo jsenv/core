@@ -4,7 +4,7 @@
 run([])
 ```
 
-# 1/2 write 3 files into "./git_ignored/"
+# 1/2 write 4 files into "./git_ignored/"
 
 see [./git_ignored/](./git_ignored/)
 

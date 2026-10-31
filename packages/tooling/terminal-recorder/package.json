@@ -50,7 +50,6 @@
     "@jsenv/core": "../../../",
     "@jsenv/filesystem": "../filesystem",
     "@jsenv/https-local": "../https-local",
-    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-recorder": "./",
     "@xterm/addon-fit": "0.11.0",

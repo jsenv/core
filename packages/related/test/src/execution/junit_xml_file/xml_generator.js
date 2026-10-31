@@ -1,4 +1,4 @@
-import he from "he";
+import { encode } from "he";
 
 export const createXmlGenerator = ({
   rootNodeName,
@@ -73,7 +73,7 @@ export const createXmlGenerator = ({
 
           let innerHTML = "";
           if (node.content) {
-            const contentEncoded = he.encode(node.content, { decimal: false });
+            const contentEncoded = encode(node.content, { decimal: false });
             innerHTML += contentEncoded;
           }
           write_children: {

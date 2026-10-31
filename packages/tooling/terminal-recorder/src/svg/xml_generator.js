@@ -1,7 +1,7 @@
-import he from "he";
+import { encode } from "he";
 
 export const encodeTextContent = (content) => {
-  return he.encode(content, {
+  return encode(content, {
     decimal: false,
   });
 };
