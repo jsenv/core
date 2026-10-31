@@ -1,13 +1,13 @@
 System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_export, _context) {
   "use strict";
 
-  var useSelector, useDispatch, A, u, increment, decrement, counterValueSelector, App;
+  var useSelector, useDispatch, A, a, increment, decrement, counterValueSelector, App;
   return {
     setters: [function (_buildJsenv_plugin_preact_node_modulesJs) {
       useSelector = _buildJsenv_plugin_preact_node_modulesJs.useSelector;
       useDispatch = _buildJsenv_plugin_preact_node_modulesJs.useDispatch;
       A = _buildJsenv_plugin_preact_node_modulesJs.A;
-      u = _buildJsenv_plugin_preact_node_modulesJs.u;
+      a = _buildJsenv_plugin_preact_node_modulesJs.a;
     }],
     execute: function () {
       increment = () => {
@@ -31,20 +31,20 @@ System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_expo
         A(() => {
           onRender();
         }, []);
-        return u("p", {
-          children: [u("button", {
+        return a("p", {
+          children: [a("button", {
             id: "increment",
             onClick: () => {
               dispatch(increment());
             },
             children: "+1"
-          }), u("button", {
+          }), a("button", {
             id: "decrement",
             onClick: () => {
               dispatch(decrement());
             },
             children: "-1"
-          }), u("span", {
+          }), a("span", {
             id: "counter_value",
             children: counterValue
           })]

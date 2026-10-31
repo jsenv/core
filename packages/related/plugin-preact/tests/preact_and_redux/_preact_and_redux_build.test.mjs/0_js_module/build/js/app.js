@@ -1,4 +1,4 @@
-import { useSelector, useDispatch, A, u } from "/vendors.js";
+import { useSelector, useDispatch, A, a } from "/vendors.js";
 
 const increment = () => {
   return {
@@ -24,20 +24,20 @@ const App = ({
   A(() => {
     onRender();
   }, []);
-  return u("p", {
-    children: [u("button", {
+  return a("p", {
+    children: [a("button", {
       id: "increment",
       onClick: () => {
         dispatch(increment());
       },
       children: "+1"
-    }), u("button", {
+    }), a("button", {
       id: "decrement",
       onClick: () => {
         dispatch(decrement());
       },
       children: "-1"
-    }), u("span", {
+    }), a("span", {
       id: "counter_value",
       children: counterValue
     })]

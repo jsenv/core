@@ -1,7 +1,7 @@
 System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context) {
   "use strict";
 
-  var n, t, r, u, i, o, f, c, e, a, v, l, m, s, h, p, k;
+  var n, t, r, u, i, o, f, c, e, a, v, l, m, h, s, p, k;
   function y(n, t) {
     a.__h && a.__h(r, n, f || t), f = 0;
     var u = r.__H || (r.__H = {
@@ -47,7 +47,7 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
     !a.__s && E(i.__H, u) && (i.__P = !1, i.__ = n, i.u = u, r.__h.push(i));
   }
   function T(n) {
-    return f = 5, b(function () {
+    return f = 5, w(function () {
       return {
         current: n
       };
@@ -66,16 +66,16 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
       };
     }, null == r ? r : r.concat(n));
   }
-  function b(n, r) {
+  function w(n, r) {
     var u = y(t++, 7);
     return E(u.__H, r) && (u.__ = n(), u.__H = r), u.__;
   }
-  function j(n, t) {
-    return f = 8, b(function () {
+  function b(n, t) {
+    return f = 8, w(function () {
       return n;
     }, t);
   }
-  function w(n) {
+  function j(n) {
     var u = r.context[n.__c],
       i = y(t++, 9);
     return i.c = n, u ? (null == i.__ && (i.__ = !0, u.sub(r)), u.props.value) : n.__;
@@ -150,15 +150,15 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
     return "function" == typeof t ? t(n) : t;
   }
   _export({
-    useCallback: j,
-    useContext: w,
+    useCallback: b,
+    useContext: j,
     useDebugValue: x,
     useEffect: A,
     useErrorBoundary: O,
     useId: P,
     useImperativeHandle: q,
     useLayoutEffect: F,
-    useMemo: b,
+    useMemo: w,
     useReducer: _,
     useRef: T,
     useState: d
@@ -168,7 +168,7 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
       n = _distPreactMjs.options;
     }],
     execute: function () {
-      o = Object.is, f = 0, c = [], e = [], a = n, v = a.__b, l = a.__r, m = a.diffed, s = a.__c, h = a.unmount, p = a.__;
+      o = Object.is, f = 0, c = [], e = [], a = n, v = a.__b, l = a.__r, m = a.diffed, h = a.__c, s = a.unmount, p = a.__;
       a.__b = function (n) {
         r = null, v && v(n);
       }, a.__ = function (n, t) {
@@ -191,14 +191,14 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
             n.__h.some(C), n.__h = n.__h.filter(function (n) {
               return !n.__ || D(n);
             });
-          } catch (r) {
-            t.some(function (n) {
-              n.__h && (n.__h = []);
-            }), t = [], a.__e(r, n.__v);
+          } catch (t) {
+            n.__h = [function () {
+              throw t;
+            }];
           }
-        }), s && s(n, t);
+        }), h && h(n, t);
       }, a.unmount = function (n) {
-        h && h(n);
+        s && s(n);
         var t,
           r,
           u = n.__c;

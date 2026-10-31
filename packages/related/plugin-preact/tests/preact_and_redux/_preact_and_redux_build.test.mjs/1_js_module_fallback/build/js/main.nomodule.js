@@ -22,15 +22,15 @@ function _await(value, then, direct) {
 System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_export, _context) {
   "use strict";
 
-  var compose, createStore, combineReducers, tn, u, Provider_default, counterReducer, composeEnhancers, initialState, store, App, resolveRenderPromise, renderPromise, spanContentAfterIncrement, spanContentAfterDecrement;
+  var compose, createStore, combineReducers, K, a, Provider, counterReducer, composeEnhancers, initialState, store, App, resolveRenderPromise, renderPromise, spanContentAfterIncrement, spanContentAfterDecrement;
   return {
     setters: [function (_buildJsenv_plugin_preact_node_modulesJs) {
       compose = _buildJsenv_plugin_preact_node_modulesJs.compose;
       createStore = _buildJsenv_plugin_preact_node_modulesJs.createStore;
       combineReducers = _buildJsenv_plugin_preact_node_modulesJs.combineReducers;
-      tn = _buildJsenv_plugin_preact_node_modulesJs.tn;
-      u = _buildJsenv_plugin_preact_node_modulesJs.u;
-      Provider_default = _buildJsenv_plugin_preact_node_modulesJs.Provider_default;
+      K = _buildJsenv_plugin_preact_node_modulesJs.K;
+      a = _buildJsenv_plugin_preact_node_modulesJs.a;
+      Provider = _buildJsenv_plugin_preact_node_modulesJs.Provider;
     }],
     execute: async function () {
       counterReducer = (state = {
@@ -68,9 +68,9 @@ System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_expo
         renderPromise = new Promise(resolve => {
           resolveRenderPromise = resolve;
         });
-        tn(u(Provider_default, {
+        K(a(Provider, {
           store: store,
-          children: u(App, {
+          children: a(App, {
             onRender: resolveRenderPromise
           })
         }), document.querySelector("#app"));

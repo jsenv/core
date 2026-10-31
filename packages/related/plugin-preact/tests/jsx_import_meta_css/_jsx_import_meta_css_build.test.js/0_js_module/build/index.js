@@ -1,4 +1,4 @@
-import { u } from "/jsenv_plugin_preact_node_modules.js?v=38bcaec7";
+import { a } from "/jsenv_plugin_preact_node_modules.js?v=d633deec";
 
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
@@ -56,7 +56,7 @@ import.meta.css =          [`body {
 }
 `, "@jsenv/plugin-preact/tests/jsx_import_meta_css/client/foo.jsx"];
 const Foo = () => {
-  return u("div", {
+  return a("div", {
     children: "foo"
   });
 };

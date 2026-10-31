@@ -1,93 +1,93 @@
 System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context) {
   "use strict";
 
-  var r, t, e, o, f, a, c;
+  var r, t, e, f, o, u, c, l;
   function n(r) {
     if (!r.length || !e.test(r)) return r;
-    for (var t = 0, n = 0, o = "", f = ""; n < r.length; n++) {
+    for (var t = 0, n = 0, f = "", o = ""; n < r.length; n++) {
       switch (r.charCodeAt(n)) {
         case 34:
-          f = "&quot;";
+          o = "&quot;";
           break;
         case 38:
-          f = "&amp;";
+          o = "&amp;";
           break;
         case 60:
-          f = "&lt;";
+          o = "&lt;";
           break;
         default:
           continue;
       }
-      n != t && (o += r.slice(t, n)), o += f, t = n + 1;
+      n != t && (f += r.slice(t, n)), f += o, t = n + 1;
     }
-    return n != t && (o += r.slice(t, n)), o;
+    return n != t && (f += r.slice(t, n)), f;
   }
-  function u(t, e, n, f, u, i) {
+  function a(t, e, n, u, a, i) {
     e || (e = {});
-    var a,
-      c,
-      l = e;
-    if ("ref" in l && "function" != typeof t) for (c in l = {}, e) "ref" == c ? a = e[c] : l[c] = e[c];
-    var p = {
+    var c,
+      l,
+      p = e;
+    if ("ref" in p && "function" != typeof t) for (l in p = {}, e) "ref" == l ? c = e[l] : p[l] = e[l];
+    var s = {
       type: t,
-      props: l,
+      props: p,
       key: n,
-      ref: a,
+      ref: c,
       __k: null,
       __: null,
       __b: 0,
       __e: null,
       __c: null,
-      constructor: void 0,
+      constructor: f,
       __v: --o,
       __i: -1,
       __u: 0
     };
-    return (u || i) && (p.__source = u, p.__self = i), r.vnode && r.vnode(p), p;
+    return (a || i) && (s.__source = a, s.__self = i), r.vnode && r.vnode(s), s;
   }
   function i(r) {
-    var e = u(t, {
+    var e = a(t, {
       tpl: r,
       exprs: [].slice.call(arguments, 1)
     });
     return e.key = e.__v, e;
   }
-  function l(t, e) {
+  function p(t, e) {
     if (r.attr) {
-      var o = r.attr(t, e);
-      if ("string" == typeof o) return o;
+      var f = r.attr(t, e);
+      if ("string" == typeof f) return f;
     }
     if (e = function (r) {
       return null != r && "object" == typeof r && "function" == typeof r.valueOf ? r.valueOf() : r;
     }(e), "ref" == t || "key" == t) return "";
     if ("style" == t && "object" == typeof e) {
-      var f = "";
+      var o = "";
       for (var u in e) {
-        var i = e[u];
-        null != i && "" !== i && (f = f + ("-" == u[0] ? u : a[u] || (a[u] = u.replace(c, "-$&").toLowerCase())) + ":" + i + ";");
+        var a = e[u];
+        null != a && "" !== a && (o = o + ("-" == u[0] ? u : c[u] || (c[u] = u.replace(l, "-$&").toLowerCase())) + ":" + a + ";");
       }
-      return t + '="' + n(f) + '"';
+      return t + '="' + n(o) + '"';
     }
     return null == e || !1 === e || "function" == typeof e || "object" == typeof e ? "" : !0 === e ? t : t + '="' + n("" + e) + '"';
   }
-  function p(r) {
+  function s(r) {
     if (null == r || "boolean" == typeof r || "function" == typeof r) return null;
     if ("object" == typeof r) {
-      if (void 0 === r.constructor) return r;
-      if (f(r)) {
-        for (var t = 0; t < r.length; t++) r[t] = p(r[t]);
+      if (r.constructor === f) return r;
+      if (u(r)) {
+        for (var t = 0; t < r.length; t++) r[t] = s(r[t]);
         return r;
       }
     }
     return n("" + r);
   }
   _export({
-    jsx: u,
-    jsxAttr: l,
-    jsxDEV: u,
-    jsxEscape: p,
+    jsx: a,
+    jsxAttr: p,
+    jsxDEV: a,
+    jsxEscape: s,
     jsxTemplate: i,
-    jsxs: u
+    jsxs: a
   });
   return {
     setters: [function (_distPreactMjs) {
@@ -97,8 +97,8 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
     }],
     execute: function () {
       e = /["&<]/;
-      o = 0, f = Array.isArray;
-      a = {}, c = /[A-Z]/g;
+      f = Symbol.for("pv"), o = 0, u = Array.isArray;
+      c = {}, l = /[A-Z]/g;
     }
   };
 });
