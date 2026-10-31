@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "version": "1.6.72",
+  "version": "1.6.73",
   "type": "module",
   "repository": {
     "type": "git",
@@ -18,8 +18,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/js-module-fallback": "1.6.19",
-    "@jsenv/plugin-bundling": "2.10.37",
+    "@jsenv/js-module-fallback": "1.6.20",
+    "@jsenv/plugin-bundling": "2.10.38",
     "@jsenv/urls": "2.9.22"
   },
   "devDependencies": {
@@ -29,7 +29,7 @@
     "@jsenv/plugin-as-js-classic": "./",
     "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/snapshot": "../../tooling/snapshot",
-    "playwright": "1.63.0"
+    "playwright": "1.64.1"
   },
   "publishConfig": {
     "access": "public"

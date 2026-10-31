@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sourcemap",
-  "version": "1.4.18",
+  "version": "1.4.19",
   "type": "module",
   "repository": {
     "type": "git",
@@ -17,8 +17,8 @@
     "@jridgewell/sourcemap-codec": "1.6.0",
     "@jridgewell/trace-mapping": "0.3.31",
     "@jsenv/urls": "2.9.22",
-    "magic-string": "1.2.3",
-    "source-map-js": "1.2.1"
+    "magic-string": "1.4.5",
+    "source-map-js": "1.2.2"
   },
   "publishConfig": {
     "access": "public"

@@ -35,8 +35,8 @@
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
-    "@preact/signals": "2.11.2",
-    "playwright": "1.63.0"
+    "@preact/signals": "2.11.4",
+    "playwright": "1.64.1"
   },
   "publishConfig": {
     "access": "public"

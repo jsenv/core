@@ -29,12 +29,12 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/database": "0.0.29",
+    "@jsenv/database": "0.0.30",
     "@jsenv/server": "17.7.2",
     "@jsenv/urls": "2.9.22",
-    "@tanstack/table-core": "8.21.3",
+    "@tanstack/table-core": "9.3.1",
     "jsonwebtoken": "9.0.3",
-    "postgres": "3.4.9"
+    "postgres": "4.0.0"
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
@@ -42,8 +42,8 @@
     "@jsenv/navi": "../../frontend/navi",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/server": "../server",
-    "@preact/signals": "2.11.2",
-    "preact": "11.0.0-rc.2"
+    "@preact/signals": "2.11.4",
+    "preact": "11.1.1"
   },
   "publishConfig": {
     "access": "public"

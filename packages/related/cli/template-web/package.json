@@ -15,15 +15,15 @@
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.5.48",
-    "@jsenv/eslint-config-relax": "2.0.14",
-    "@jsenv/plugin-bundling": "2.10.37",
-    "@jsenv/plugin-minification": "1.7.32",
-    "@jsenv/test": "3.7.58",
+    "@jsenv/core": "41.5.49",
+    "@jsenv/eslint-config-relax": "2.0.15",
+    "@jsenv/plugin-bundling": "2.10.38",
+    "@jsenv/plugin-minification": "1.7.33",
+    "@jsenv/test": "3.7.59",
     "eslint": "10.10.0",
-    "open": "11.0.2",
-    "@playwright/browser-chromium": "1.63.0",
-    "prettier": "3.9.6",
-    "playwright": "1.63.0"
+    "open": "11.0.4",
+    "@playwright/browser-chromium": "1.64.1",
+    "prettier": "3.9.10",
+    "playwright": "1.64.1"
   }
 }

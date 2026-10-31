@@ -2,8 +2,8 @@
   "name": "canvas-editor",
   "private": true,
   "dependencies": {
-    "@preact/signals": "2.11.2",
-    "preact": "11.0.0-rc.2"
+    "@preact/signals": "2.11.4",
+    "preact": "11.1.1"
   },
   "devDependencies": {
     "hooks": "../hooks"

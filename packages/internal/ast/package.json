@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.10.15",
+  "version": "6.10.16",
   "type": "module",
   "description": "Parse and transform HTML, CSS and JS",
   "repository": {
@@ -32,11 +32,11 @@
     "@jsenv/humanize": "1.8.11",
     "@jsenv/urls": "2.9.22",
     "@jsenv/utils": "2.3.1",
-    "acorn": "8.18.0",
+    "acorn": "8.19.0",
     "acorn-import-attributes": "1.9.5",
     "acorn-walk": "8.3.5",
     "parse5": "8.0.1",
-    "postcss": "8.5.28",
+    "postcss": "8.5.32",
     "postcss-value-parser": "4.2.0"
   },
   "devDependencies": {

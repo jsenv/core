@@ -55,11 +55,11 @@
     "@jsenv/url-pattern": "../../tooling/url-pattern",
     "@jsenv/urls": "../../tooling/urls",
     "@jsenv/utils": "../../tooling/utils",
-    "eventsource": "5.1.2",
+    "eventsource": "5.1.4",
     "formidable": "3.5.4",
-    "playwright": "1.63.0",
-    "undici": "8.11.2",
-    "ws": "8.22.0"
+    "playwright": "1.64.1",
+    "undici": "8.12.3",
+    "ws": "8.22.1"
   },
   "publishConfig": {
     "access": "public"
