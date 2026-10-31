@@ -379,18 +379,18 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
       }
       entry.hidden = true;
       entry.page.leavingSignal.value = true;
-      hideNodesBetween(start, end);
       // The page renders on its own while kept (a component reading a signal
       // the address moved), never through this container: a top node it
-      // replaces lands between the markers unmarked. Its mutation is heard
-      // before the next frame.
+      // replaces lands between the markers unmarked, a text it writes shows
+      // again. Both are heard before the next frame.
       const observer = new MutationObserver(() => {
         if (entry.hold.released) {
           observer.disconnect();
           return;
         }
-        hideNodesBetween(start, end);
+        hideNodesBetween(start, end, observer);
       });
+      hideNodesBetween(start, end, observer);
       observer.observe(start.parentNode, { childList: true });
       entry.observer = observer;
     }
@@ -425,21 +425,26 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
   return { content: children, page };
 };
 const countRenders = (count) => count + 1;
-const hideNodesBetween = (start, end) => {
+const hideNodesBetween = (start, end, observer) => {
   const focusedElement = document.activeElement;
   let node = start.nextSibling;
   while (node && node !== end) {
-    if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      !node.hasAttribute(LEAVING_ATTRIBUTE)
-    ) {
-      node.setAttribute(LEAVING_ATTRIBUTE, "");
-      // What the keyboard held in it goes where the page's removal would
-      // have sent it: a hidden element keeps the focus, and would go on
-      // receiving the keys pressed during the movement.
-      if (node.contains(focusedElement)) {
-        focusedElement.blur();
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (!node.hasAttribute(LEAVING_ATTRIBUTE)) {
+        node.setAttribute(LEAVING_ATTRIBUTE, "");
+        // What the keyboard held in it goes where the page's removal would
+        // have sent it: a hidden element keeps the focus, and would go on
+        // receiving the keys pressed during the movement.
+        if (node.contains(focusedElement)) {
+          focusedElement.blur();
+        }
       }
+    } else if (node.nodeType === Node.TEXT_NODE && node.data !== "") {
+      // No CSS reaches a text node, and it stays where it is: Preact inserts
+      // next to it. Emptied for good, since the page is taken down without
+      // being shown again, and Preact only writes it when its text changes.
+      node.data = "";
+      observer.observe(node, { characterData: true });
     }
     node = node.nextSibling;
   }
