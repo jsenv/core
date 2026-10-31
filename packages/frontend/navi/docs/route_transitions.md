@@ -509,7 +509,8 @@ What that means for a page and for the application around it:
 
 - **It is still mounted for the length of the movement.** Its effects keep
   running, and a component reading the URL, a route or a signal directly
-  re-renders in it too, hidden. What it reads through `useAsyncData` does not:
+  re-renders in it too, and what it renders stays hidden, a top node it swaps
+  for another included. What it reads through `useAsyncData` does not:
   navi leaves a page alone as soon as its container would no longer show it.
   Its `navState` keeps the entry it was shown on: a section or a popup open
   there stays open until the page is taken down, rather than being closed by

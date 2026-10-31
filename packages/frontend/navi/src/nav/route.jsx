@@ -346,6 +346,7 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
       startRef: createRef(),
       endRef: createRef(),
       hidden: false,
+      observer: null,
     });
     leavingPagesHold.containers.add(rerender);
     // Keyed apart from the page it takes the place of, which is still there.
@@ -378,20 +379,20 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
       }
       entry.hidden = true;
       entry.page.leavingSignal.value = true;
-      const focusedElement = document.activeElement;
-      let node = start.nextSibling;
-      while (node && node !== end) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          node.setAttribute(LEAVING_ATTRIBUTE, "");
-          // What the keyboard held in it goes where the page's removal would
-          // have sent it: a hidden element keeps the focus, and would go on
-          // receiving the keys pressed during the movement.
-          if (node.contains(focusedElement)) {
-            focusedElement.blur();
-          }
+      hideNodesBetween(start, end);
+      // The page renders on its own while kept (a component reading a signal
+      // the address moved), never through this container: a top node it
+      // replaces lands between the markers unmarked. Its mutation is heard
+      // before the next frame.
+      const observer = new MutationObserver(() => {
+        if (entry.hold.released) {
+          observer.disconnect();
+          return;
         }
-        node = node.nextSibling;
-      }
+        hideNodesBetween(start, end);
+      });
+      observer.observe(start.parentNode, { childList: true });
+      entry.observer = observer;
     }
   });
   // Also run when a Suspense boundary above parks this container — a page
@@ -403,6 +404,7 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
     return () => {
       for (const entry of leavingRef.current) {
         entry.hold.containers.delete(rerender);
+        entry.observer?.disconnect();
       }
       leavingRef.current = [];
     };
@@ -423,6 +425,25 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
   return { content: children, page };
 };
 const countRenders = (count) => count + 1;
+const hideNodesBetween = (start, end) => {
+  const focusedElement = document.activeElement;
+  let node = start.nextSibling;
+  while (node && node !== end) {
+    if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      !node.hasAttribute(LEAVING_ATTRIBUTE)
+    ) {
+      node.setAttribute(LEAVING_ATTRIBUTE, "");
+      // What the keyboard held in it goes where the page's removal would
+      // have sent it: a hidden element keeps the focus, and would go on
+      // receiving the keys pressed during the movement.
+      if (node.contains(focusedElement)) {
+        focusedElement.blur();
+      }
+    }
+    node = node.nextSibling;
+  }
+};
 // The page a container renders, as RoutePageContext hands it over (see
 // route_page_context.js). Shown while the container would pick its branch, or
 // a branch rendering the same element (it is then carried over), and while the
