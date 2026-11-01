@@ -216,8 +216,11 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   says, for the other half of a toggle. Only for a control that does not
  *   travel with the pages.
  * @param {Function} [action] What the press runs: a button holds no value, so
- *   every press is one call. The button is busy while it runs, refuses a second
- *   press and draws the error on itself. On a button with an `href` or a
+ *   every press is one call. Inside a `<Form>` or a group it carries the value
+ *   around it, merged over the action's bound params — a value that is not an
+ *   object replaces them; in a picker's popup it carries nothing
+ *   (docs/actions.md#the-instance-a-control-runs). The button is busy while it
+ *   runs, refuses a second press and draws the error on itself. On a button with an `href` or a
  *   `route`, the same order as a Link's: it runs on the press, before the
  *   navigation, and the navigation does not wait for it (see Link's `action`).
  * @param {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} [actionVerb] What a plain

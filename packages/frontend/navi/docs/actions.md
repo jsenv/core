@@ -308,7 +308,12 @@ instance runs depends on the value the control carries:
   click, the run, the data.
 - a **button inside a `<Form>` or another group**, with no `value` of its own,
   carries the value around it — a submit carries its form's — and runs the
-  child instance bound to that value, as the controls below do.
+  child instance bound to that value, as the controls below do: merged over
+  the params it was handed, and **replaced** by a value that is not an object.
+  A button in a **picker's popup** is not in this case: the picker's value is
+  what its list picks, and a button beside the list (a "refresh" next to a
+  sort order) carries nothing — it runs the instance it was handed, as outside
+  any group.
 - a control that **carries a value** — an input, a form — runs the child
   instance bound to that value: the value merged over the params the caller
   bound, and a value that is not an object **replaces them outright**. A

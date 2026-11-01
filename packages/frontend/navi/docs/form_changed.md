@@ -230,6 +230,9 @@ Every control takes the prop, groups included — `<Form standalone>`, or a
 `<List standalone>` sitting beside the one that IS the answer in a picker's
 popup (see
 [control_object.md](./control_object.md#a-picker-whose-value-is-an-object)).
+A button in that popup needs nothing: the picker hands its value to no button,
+so a "refresh" beside a sort list runs with the params it was bound with (see
+[actions.md](./actions.md#the-instance-a-control-runs)).
 
 ## See also
 

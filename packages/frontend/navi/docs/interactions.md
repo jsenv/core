@@ -429,6 +429,7 @@ They come apart, which is why they are separate props:
 | ------------------------------------------------ | ------------------------------------------------------ |
 | a chip's cross                                   | `selfInteractions` — it never carried a value          |
 | a door opening a sheet that writes into the form | `standalone` — but a read-only form must still shut it |
+| a button beside the list in a picker's popup     | nothing — the picker hands its value to no button      |
 | the diskette above                               | all three: own press, block not about it, own value    |
 
 ### The fourth question: whose wait is it?
