@@ -20,7 +20,8 @@ import { useLayoutEffect } from "preact/hooks";
  * The `highlight` argument of `useSearchHighlight` (a row's `matchInfo.matchRanges`) can be:
  *   - an array of [start, end] pairs — applied to all text nodes under the root element
  *   - an object { [domSelector]: [[start, end], …] } — applied to each sub-element
- *     matched by the selector (the format produced by createSearch)
+ *     matched by the selector (the format produced by createSearch); a selector
+ *     matching nothing under the root element marks nothing
  */
 
 // Module-level shared Highlight instance — created lazily once.
@@ -66,10 +67,12 @@ const applySearchHighlight = (el, highlight) => {
     ? highlight.length === 0
       ? []
       : [{ root: el, ranges: highlight }]
-    : Object.entries(highlight).map(([selector, ranges]) => ({
-        root: el.querySelector(selector) ?? el,
-        ranges,
-      }));
+    : Object.entries(highlight).flatMap(([selector, ranges]) => {
+        // The ranges are offsets into the selected element's text: an item
+        // that doesn't render it has nothing to mark.
+        const root = el.querySelector(selector);
+        return root ? [{ root, ranges }] : [];
+      });
 
   if (entries.length === 0) {
     return undefined;
