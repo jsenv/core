@@ -92,12 +92,17 @@
         oneOf: ["a", "b", "c"],
         history: "push",
       });
+      const cupSignal = stateSignal("P250:0", {
+        id: "cup",
+        weak: true,
+      });
 
       const CREATE_ROUTE = route("/", {
         searchParams: {
           step: stepSignal,
           locked_step: lockedStepSignal,
           photo: photoSignal,
+          cup: cupSignal,
         },
       });
       const EDIT_ROUTE = route("/edit", {
@@ -324,6 +329,102 @@
         </div>
       );
 
+      const LEVELS = [
+        { level: "P250", count: 1, color: "#6d4c41" },
+        { level: "P100", count: 4, color: "#3949ab" },
+        { level: "P50", count: 2, color: "#00897b" },
+      ];
+
+      const NestedDemo = () => (
+        <div className="demo-section">
+          <h2 id="imbriques">
+            <a href="#imbriques">#</a> Une adresse pour deux conteneurs
+          </h2>
+          <p className="caption">
+            Une colonne de niveaux, une rangée de titres dans chacun, de
+            longueurs différentes. Les deux conteneurs ont le même{" "}
+            <code>signal={"{cupSignal}"}</code>.
+          </p>
+          <Box flex="y" spacing="s">
+            <DemoAddress />
+            <Box flex spacing="s">
+              <Button
+                command="--navi-up"
+                commandFor="cup_levels"
+                data-testid="cup_up"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                ▲
+              </Button>
+              <Button
+                command="--navi-down"
+                commandFor="cup_levels"
+                data-testid="cup_down"
+                paddingY="xxs"
+                paddingX="s"
+              >
+                ▼
+              </Button>
+            </Box>
+            <SlideContainer
+              id="cup_levels"
+              className="slides"
+              layout="column"
+              signal={cupSignal}
+              data-testid="cup_levels"
+              height="210px"
+            >
+              {LEVELS.map(({ level, count, color }) => {
+                const rowId = `cup_row_${level}`;
+                return (
+                  <Slide key={level} area={level}>
+                    <Box flex alignY="center" spacing="s" padding="s">
+                      <strong>{level}</strong>
+                      <Button
+                        command="--navi-left"
+                        commandFor={rowId}
+                        data-testid={`${rowId}_previous`}
+                        paddingY="xxs"
+                        paddingX="s"
+                      >
+                        ◀
+                      </Button>
+                      <Button
+                        command="--navi-right"
+                        commandFor={rowId}
+                        data-testid={`${rowId}_next`}
+                        paddingY="xxs"
+                        paddingX="s"
+                      >
+                        ▶
+                      </Button>
+                    </Box>
+                    <SlideContainer
+                      id={rowId}
+                      signal={cupSignal}
+                      data-testid={rowId}
+                    >
+                      {Array.from({ length: count }, (_, index) => {
+                        const key = `${level}:${index}`;
+                        return (
+                          <Slide key={key} area={key}>
+                            <div
+                              className="photo"
+                              style={{ background: color }}
+                            >{`${level} · ${index + 1} / ${count}`}</div>
+                          </Slide>
+                        );
+                      })}
+                    </SlideContainer>
+                  </Slide>
+                );
+              })}
+            </SlideContainer>
+          </Box>
+        </div>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader title="SlideContainer & url" />
@@ -334,6 +435,7 @@
                 stepSignal.value = undefined;
                 lockedStepSignal.value = undefined;
                 photoSignal.value = undefined;
+                cupSignal.value = undefined;
               }}
               data-testid="reset_all"
               paddingY="xxs"
@@ -346,6 +448,7 @@
           <LockedDemo />
           <PerRouteDefaultDemo />
           <PushDemo />
+          <NestedDemo />
         </Box>
       );
 

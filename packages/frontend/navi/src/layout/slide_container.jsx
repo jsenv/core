@@ -14,6 +14,16 @@
  * grid. A word is the map one would have drawn for a line, so it is drawn here
  * and everything below only ever knows about maps.
  *
+ * Rows of different lengths are not a map, and there is no "rows" layout for
+ * them on purpose. A column of rows (levels, and the titles of each) is a
+ * container in each slide of a column, all bound to one signal: what a row
+ * holds besides its slides — its header — stays still while the row travels
+ * and leaves with it when the column does, which one map cannot draw, and the
+ * short rows of a map are holes. The containers share the state through the
+ * DOM (data-slide-shares-state): the holder reads which of its slides holds
+ * the area the state names, and where the container inside the slide it
+ * arrives at stands.
+ *
  * A travel is ONE BOX long, whatever the distance between the two slides on the
  * map: the slide arriving is placed next to the one being left for the duration
  * and put back where the map says afterwards, so a tab bar jumping from the
@@ -485,6 +495,62 @@ const CAUSES_WRITTEN_BY_REPLACEMENT = ["drag", "refusal", "state"];
 const readArea = (slideElement) =>
   slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
+const slidesOf = (containerElement) =>
+  Array.from(
+    containerElement.querySelectorAll(
+      ":scope > [data-slide-track] > [data-slide]",
+    ),
+  );
+
+// Who is drawing something about a box from outside it: a tab bar saying where
+// one is, a row of dots. They name the box they follow by its id, the way
+// everything else that talks to it across the document does (commandfor).
+const readFollowerElements = (containerElement) => {
+  const { id } = containerElement;
+  if (!id) {
+    return [];
+  }
+  return Array.from(
+    document.querySelectorAll(
+      `[data-slide-container-follows="${CSS.escape(id)}"]`,
+    ),
+  );
+};
+
+// The containers inside a slide bound to the same state as the slide's own
+// container (see `signal`) — the ones directly under it, a container sharing
+// with one of those is that one's business.
+const sharingContainersIn = (slideElement) => {
+  const holderElement = slideElement.closest("[data-slide-container]");
+  return Array.from(
+    slideElement.querySelectorAll("[data-slide-shares-state]"),
+  ).filter(
+    (innerElement) =>
+      innerElement.parentElement.closest("[data-slide-container]") ===
+      holderElement,
+  );
+};
+
+// Whether the state holding `area` is on screen when this slide is: it is the
+// slide's own area, or a slide of a container sharing the state inside it.
+const slideShows = (slideElement, area) =>
+  readArea(slideElement) === area ||
+  sharingContainersIn(slideElement).some((innerElement) =>
+    slidesOf(innerElement).some((innerSlide) => slideShows(innerSlide, area)),
+  );
+
+// What the state holds while this slide is on screen: the area a container
+// sharing the state inside it stands on, its own area when there is none.
+const areaHeldOn = (slideElement) => {
+  const [innerElement] = sharingContainersIn(slideElement);
+  const innerCurrent =
+    innerElement &&
+    slidesOf(innerElement).find((innerSlide) =>
+      innerSlide.hasAttribute("data-current"),
+    );
+  return innerCurrent ? areaHeldOn(innerCurrent) : readArea(slideElement);
+};
+
 /**
  * The slide shown can be driven from outside (a `signal`, or `current` +
  * `onCurrentChange`) or left to the container, which then answers the
@@ -518,6 +584,10 @@ const readArea = (slideElement) =>
  *   "create"]`. Spelled like grid-template-areas ("." is a hole, a name
  *   repeated spans), except that a row needs no trailing hole: what is not
  *   written is simply not there.
+ *   A map is read as a map: a step landing on a hole is not offered. So rows
+ *   of different lengths, each walked on its own and changed as a whole (a
+ *   column of levels, a row of titles in each), are not a map but a container
+ *   in each slide of a column, all bound to one signal — see `signal`.
  * @param {string} [props.current] - area (or id) of the slide being shown; omit
  *   to keep it here and drive it by command. An area named from outside is a
  *   REQUEST rather than a placement — see `signal` for what that means.
@@ -558,6 +628,47 @@ const readArea = (slideElement) =>
  *   by links built to that route. Written by replacement unless the state says
  *   `history: "push"`, and even then a slide reached by DRAGGING replaces — see
  *   docs/navigation.md.
+ *   ONE STATE FOR CONTAINERS INSIDE ONE ANOTHER: a container in a slide,
+ *   bound to the SAME signal as the container holding it, shares that state.
+ *   For screens where one place is said at two levels — a column of
+ *   tournament levels with a row of titles in each, the address saying which
+ *   title (`?cup=P100:2`): the level is not a second state, it is read from
+ *   the title.
+ *   ```jsx
+ *   const cupSignal = stateSignal(undefined, { id: "cup" });
+ *
+ *   <SlideContainer layout="column" signal={cupSignal}>
+ *     {levels.map((level) => (
+ *       <Slide area={level.name}>
+ *         <LevelHeader level={level} />
+ *         <SlideContainer signal={cupSignal} defaultCurrent={level.entryKey}>
+ *           {level.titles.map((title) => (
+ *             <Slide area={title.key}>…</Slide>
+ *           ))}
+ *         </SlideContainer>
+ *       </Slide>
+ *     ))}
+ *   </SlideContainer>
+ *   ```
+ *   - The state holds an area of an INNER container. The outer one shows the
+ *     slide holding it, the inner ones that do not have it stay where they
+ *     are.
+ *   - A travel of the outer one writes the area the inner one stands on in the
+ *     slide it arrives at: a row left keeps its place for when one comes back,
+ *     and a row not seen yet opens on its `defaultCurrent`.
+ *   - A value written from outside (an address, a traversal) is walked to by
+ *     both, each on its own axis.
+ *   - The arrows of the inner one on screen are heard on the outer box and on
+ *     what follows it (`data-slide-container-follows`), so a surface follows
+ *     the OUTER one and all four arrows walk it.
+ *   - `onCurrentChange` still tells each one its own area: the level to the
+ *     outer one, the title to the inner one.
+ *   What an outer slide holds is read in the DOM: one whose content is not
+ *   built (`mount="near"`) holds nothing the state can name.
+ *   Neither `current` + `onCurrentChange` on each, ignoring `cause: "state"`
+ *   and remembering by hand where each row was left — that is a second copy of
+ *   the state (see docs/state_binding.md) — nor one map with rows of different
+ *   lengths (see `layout`).
  * @param {string} [props.defaultCurrent] - which slide to open on, for a
  *   container that owns its position. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
@@ -567,7 +678,8 @@ const readArea = (slideElement) =>
  *   opens is that state's own default (`stateSignal`'s first argument) rather
  *   than this: one place says where the area starts, and it is the place a
  *   reset goes back to. This still answers for a signal holding nothing at
- *   all.
+ *   all. And for a container sharing the state of the one holding it (see
+ *   `signal`), it is where it opens while the state names a place elsewhere.
  * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code"|"state", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
  *   - the slide being shown has changed. `cause` says what asked for it, which
  *   is what tells a place browsed past from a place aimed at — a slide dragged
@@ -687,6 +799,11 @@ export const SlideContainer = ({
   // The box itself: it is what takes the keyboard when what is on screen holds
   // nothing that can (see handOverFocus).
   const containerRef = useRef();
+  // Bound to the state of the container holding this one: its slides are
+  // places inside one of that container's slides (see `signal`).
+  const holder = useContext(SlideContainerContext);
+  const sharesState =
+    Boolean(currentSignal) && holder?.signal === currentSignal;
   // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
   // This is where the container's own answer lives, and it is the only one the
@@ -697,8 +814,13 @@ export const SlideContainer = ({
   // walking past every lock in exactly the case the locks are there for.
   // So the picture starts where the state itself would open (a stateSignal's
   // own default), or on `defaultCurrent`, and the walk goes from there.
-  const [currentAreaState, setCurrentAreaState] = useState(
-    () => currentSignal?.options?.getDefaultValue?.() ?? defaultCurrent,
+  // A container sharing its holder's state starts on `defaultCurrent`: the
+  // state's default is a place in ONE of the containers sharing it, and the
+  // one holding it is walked there like any other.
+  const [currentAreaState, setCurrentAreaState] = useState(() =>
+    sharesState
+      ? defaultCurrent
+      : (currentSignal?.options?.getDefaultValue?.() ?? defaultCurrent),
   );
   // The slide this container is travelling to while its controller has not been
   // told yet (commit="rest"): for the length of that travel the container is
@@ -787,6 +909,25 @@ export const SlideContainer = ({
   }
   const currentFromCaller = currentSignal ? currentSignal.value : currentProp;
   const current = rollingArea ?? provisionalArea ?? currentAreaState;
+  // The area of this box a value held outside is shown on: the slide of that
+  // name, or the one holding a container that shares the state and has it.
+  // Read off the last commit, so a render before the first sees it as it is.
+  const ownAreaOf = (value) => {
+    const track = trackRef.current;
+    if (value === undefined || !track) {
+      return value;
+    }
+    const slideElements = Array.from(track.children);
+    if (
+      slideElements.some((slideElement) => readArea(slideElement) === value)
+    ) {
+      return value;
+    }
+    const holding = slideElements.find((slideElement) =>
+      slideShows(slideElement, value),
+    );
+    return holding ? readArea(holding) : value;
+  };
   // The last area this container knows the caller holds, whether it wrote it
   // there or read it from there. What makes a two-way binding stop turning: an
   // area held outside is an INSTRUCTION only when it changed by itself (a load,
@@ -807,7 +948,9 @@ export const SlideContainer = ({
   // it is painted, the first request included — and the container's own answer
   // otherwise. What a slide waiting for a travel reads to have its content in
   // the very render that shows it (see Slide's `mount`).
-  const areaShownNext = requestIsNews() ? currentFromCaller : current;
+  const areaShownNext = requestIsNews()
+    ? ownAreaOf(currentFromCaller)
+    : current;
   // Where the container stands, said where the caller holds it.
   //
   // Whether a slide is a place one came from is the STATE's own business (see
@@ -822,15 +965,31 @@ export const SlideContainer = ({
   // - the state itself asking (`cause: "state"`), because reading a value back
   //   and answering it is not somewhere one went.
   const writeAreaAsked = (area, { cause } = {}) => {
-    areaAskedSeenRef.current = area;
     if (!currentSignal) {
+      areaAskedSeenRef.current = area;
       return;
     }
+    const value = valueOfArea(area);
+    areaAskedSeenRef.current = value;
     if (CAUSES_WRITTEN_BY_REPLACEMENT.includes(cause) && currentSignal.set) {
-      currentSignal.set(area, { history: "replace" });
+      currentSignal.set(value, { history: "replace" });
       return;
     }
-    currentSignal.value = area;
+    currentSignal.value = value;
+  };
+  // What the state holds for one of this box's areas: the place a container
+  // sharing it stands on inside that slide (see areaHeldOn). A state already
+  // naming a place in that slide is kept as it is — a container in there may
+  // have written it in this very commit, before its DOM says so.
+  const valueOfArea = (area) => {
+    const held = currentSignal.peek();
+    if (held !== area && ownAreaOf(held) === area) {
+      return held;
+    }
+    const slideElement = readMap().slideElements.find(
+      (slideElement) => readArea(slideElement) === area,
+    );
+    return slideElement ? areaHeldOn(slideElement) : area;
   };
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
@@ -885,7 +1044,7 @@ export const SlideContainer = ({
     if (provisionalArea === null) {
       return;
     }
-    const heldOutside = currentFromCaller ?? currentAreaState;
+    const heldOutside = ownAreaOf(currentFromCaller) ?? currentAreaState;
     if (heldOutside === provisionalArea) {
       setProvisionalArea(null);
     }
@@ -978,22 +1137,6 @@ export const SlideContainer = ({
         ? lineAreas(slideElements, layout)
         : parseAreas(layout);
     return { slideElements, ...map };
-  };
-
-  // Who is drawing something about this box from outside it: a tab bar saying
-  // where one is, a row of dots. They name the box they follow by its id, the
-  // way everything else that talks to it across the document does (commandfor).
-  const readFollowerElements = () => {
-    const containerEl = containerRef.current;
-    const { id } = containerEl;
-    if (!id) {
-      return [];
-    }
-    return Array.from(
-      document.querySelectorAll(
-        `[data-slide-container-follows="${CSS.escape(id)}"]`,
-      ),
-    );
   };
 
   // Which slide is on screen, said in the DOM: it is what anything outside the
@@ -1128,7 +1271,7 @@ export const SlideContainer = ({
     // Read on every render rather than subscribed to: a follower says who it
     // follows in the DOM, and the render that mounted one is the render this
     // runs after.
-    followerElementsRef.current = readFollowerElements();
+    followerElementsRef.current = readFollowerElements(containerRef.current);
     const { slideElements, placeOf } = readMap();
     if (slideElements.length === 0) {
       return;
@@ -1449,7 +1592,8 @@ export const SlideContainer = ({
     // walked away from would be built for nothing. The neighbours only at
     // rest, see renderNear.
     const settlingArea =
-      (requestIsNews() && reachableTowards(currentArea, currentFromCaller)) ||
+      (requestIsNews() &&
+        reachableTowards(currentArea, ownAreaOf(currentFromCaller))) ||
       currentArea;
     renderNear(settlingArea, { alongside: !stageRef.current });
     // Said last, and after data-current has been written: what a travel would do
@@ -1676,10 +1820,13 @@ export const SlideContainer = ({
     // content arrives a request later. Not a refusal: nothing is remembered and
     // nothing is written, and the render that brings the slide asks again. A
     // name that will never be a slide is the state's to refuse (`oneOf`), not
-    // the container's: from here, "later" and "never" look the same.
+    // the container's: from here, "later" and "never" look the same. Nor is a
+    // place shown by another container sharing the state — a row of a column
+    // of rows stays where it was while the state names a place in another one.
+    const areaAsked = ownAreaOf(currentFromCaller);
     if (
       !readMap().slideElements.some(
-        (slideElement) => readArea(slideElement) === currentFromCaller,
+        (slideElement) => readArea(slideElement) === areaAsked,
       )
     ) {
       return;
@@ -1691,10 +1838,10 @@ export const SlideContainer = ({
     const areaOnScreen = containerRef.current.getAttribute(
       SLIDE_CURRENT_ATTRIBUTE,
     );
-    if (currentFromCaller === areaOnScreen) {
+    if (areaAsked === areaOnScreen) {
       return;
     }
-    const reached = reachableTowards(areaOnScreen, currentFromCaller);
+    const reached = reachableTowards(areaOnScreen, areaAsked);
     if (reached && reached !== areaOnScreen) {
       // Told rather than asked: the walk above has already put every lock on
       // the way the question goToArea would have put the first one, and this
@@ -2113,7 +2260,7 @@ export const SlideContainer = ({
     // Read again at the start of every travel, not only at every render: a
     // follower appearing does not make this box render, and the travel it must
     // draw is the one about to start.
-    followerElementsRef.current = readFollowerElements();
+    followerElementsRef.current = readFollowerElements(containerRef.current);
     cancelTravelProgressAnimation();
     paintTravelProgress(0);
     const painters = travelPainters();
@@ -2409,7 +2556,9 @@ export const SlideContainer = ({
         trackAnimationRef.current?.cancel();
         trackAnimationRef.current = null;
         cancelTravelProgressAnimation();
-        followerElementsRef.current = readFollowerElements();
+        followerElementsRef.current = readFollowerElements(
+          containerRef.current,
+        );
         drag.axis = axis;
         drag.areaBack = areaBack;
         drag.areaOn = areaOn;
@@ -2781,6 +2930,43 @@ export const SlideContainer = ({
       }
     };
   });
+  // A container sharing the state of the one holding it is part of that one's
+  // surface: the arrows it walks are heard on the holder's box and on what
+  // follows it, while its slide is the one on screen — a row of a column of
+  // rows walks sideways with the keyboard on the column, or on a chevron of
+  // the column. A press something already travelled on is left alone (it is
+  // marked, see applyKeyboardShortcuts), and so is one pressed inside this box,
+  // which heard it first.
+  useLayoutEffect(() => {
+    const holderElement = sharesState && holder.containerRef.current;
+    if (!holderElement) {
+      return undefined;
+    }
+    const surfaceElements = [
+      holderElement,
+      ...readFollowerElements(holderElement),
+    ];
+    const onSurfaceKeyDown = (keyDownEvent) => {
+      const containerEl = containerRef.current;
+      if (
+        keyDownEvent.defaultPrevented ||
+        !containerEl ||
+        containerEl.contains(keyDownEvent.target) ||
+        !containerEl.closest("[data-slide]")?.hasAttribute("data-current")
+      ) {
+        return;
+      }
+      onKeyDownShortcuts(keyDownEvent);
+    };
+    for (const surfaceElement of surfaceElements) {
+      surfaceElement.addEventListener("keydown", onSurfaceKeyDown);
+    }
+    return () => {
+      for (const surfaceElement of surfaceElements) {
+        surfaceElement.removeEventListener("keydown", onSurfaceKeyDown);
+      }
+    };
+  });
 
   return (
     // Box rather than a plain div: it is how every navi component takes the
@@ -2791,6 +2977,9 @@ export const SlideContainer = ({
       ref={containerRef}
       baseClassName="navi_slide_container"
       data-slide-container=""
+      // What the holder reads to show the slide holding the place the state
+      // names, and to write the place this box stands on (see `signal`).
+      data-slide-shares-state={sharesState ? "" : undefined}
       // Which axes a touch may travel on, said in the DOM: what the browser
       // does with a finger is decided by CSS (touch-action) before any of this
       // has seen the gesture — and it is also what a box HOLDING this one reads
@@ -2903,6 +3092,9 @@ export const SlideContainer = ({
             areaShownNext,
             nearAreas,
             claimOpening: areaShownNext === undefined ? claimOpening : null,
+            // What a container nested in a slide compares its own with, to
+            // know it shares this state (see `signal`).
+            signal: currentSignal,
             // The box itself, for what is written INSIDE it to read the same
             // facts what is written outside reads by id (useSlideContainer):
             // a way out is a way out on either side of the box.

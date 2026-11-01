@@ -184,6 +184,34 @@ went on is still chosen when it goes off: nothing cleared it). A control binds
 the state whose values it can show; a state holding more than that is more than
 one question.
 
+The opposite case is ONE answer drawn by two controls nested in each other: a
+column of tournament levels with a row of titles in each, the address saying
+which title (`?cup=P100:2`). The level is not a second question — nothing ever
+chooses a level without landing on one of its titles, so it is read from the
+title. Both containers bind the SAME signal, and nothing is wired between them:
+
+```jsx
+const cupSignal = stateSignal(undefined, { id: "cup" });
+
+<SlideContainer layout="column" signal={cupSignal}>
+  {levels.map((level) => (
+    <Slide area={level.name}>
+      <SlideContainer signal={cupSignal} defaultCurrent={level.entryKey}>
+        {level.titles.map((title) => (
+          <Slide area={title.key}>…</Slide>
+        ))}
+      </SlideContainer>
+    </Slide>
+  ))}
+</SlideContainer>;
+```
+
+The column shows the level holding the title the state names, a row off screen
+keeps the title it was left on, and changing level writes that title. Not
+`current` + `onCurrentChange` on each, ignoring `cause: "state"` and keeping a
+map of where each row was left: that is the state held a second time, by hand.
+What each part does is in `SlideContainer`'s JSDoc (`signal`).
+
 ## When there is no binding
 
 Sometimes the state being wired by hand has no prop for it. That is not a

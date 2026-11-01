@@ -122,6 +122,10 @@ So an inner box sitting on its last slide does not hand the gesture over
 mid-drag: it leans on its wall, the way it does when it is alone. Travelling the
 box around it means starting the gesture outside it.
 
+When the boxes say ONE place between them — a row of titles in each slide of a
+column of levels, the address naming a title — they bind one state: see
+[state_binding.md](./state_binding.md#a-control-that-shows-part-of-a-bigger-answer).
+
 ### Something being carried inside a box
 
 A drag (`interactions={{ move, reorder, land, toss, leave }}`, see
