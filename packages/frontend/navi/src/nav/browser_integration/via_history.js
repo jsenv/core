@@ -177,11 +177,15 @@ export const setupBrowserIntegrationViaHistory = ({
     // browser answers — a before/after cycle here would be about a navigation
     // that never happens. A push with something of its own for its entry — a
     // state, what the press handed over (see carryByLinkNavigation) — is a
-    // new entry, never one standing there already.
+    // new entry, never one standing there already. So is a push a signal write
+    // makes: the writes after it in the same move (a layer, then what is open
+    // inside it) build on its address at once, and a traversal would only land
+    // after they went to the entry being left.
     if (
       options.navigationType === "push" &&
       options.state === undefined &&
       !options.pressWrites &&
+      !options.fromSignal &&
       url !== readAddress()
     ) {
       const delta = adjacentEntryDelta(url);
@@ -604,12 +608,23 @@ export const setupBrowserIntegrationViaHistory = ({
 
   const navTo = async (
     url,
-    { replace, state, routeTransition, debounce, asReturn, open } = {},
+    {
+      replace,
+      state,
+      routeTransition,
+      debounce,
+      asReturn,
+      open,
+      fromSignal,
+    } = {},
   ) => {
     const routingOptions = {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
+      // Made by a signal written into the url (see route.js writeValueInUrl):
+      // such a push is never turned into a traversal (see handleRoutingTask).
+      fromSignal,
       // A push that lands where its address was last left (see
       // link_return.js).
       asReturn,

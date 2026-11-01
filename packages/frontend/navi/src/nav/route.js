@@ -298,7 +298,7 @@ export const route = (pattern, options = {}) => {
     };
     route.redirectTo = (
       params,
-      { callReason, history = "replace", debounceUrl } = {},
+      { callReason, history = "replace", debounceUrl, isSignalChange } = {},
     ) => {
       if (!integration) {
         if (import.meta.dev) {
@@ -318,6 +318,7 @@ export const route = (pattern, options = {}) => {
         replace: history !== "push",
         debounce: debounceUrl,
         callReason,
+        fromSignal: isSignalChange,
       });
     };
     route.replaceParams = (
@@ -332,31 +333,12 @@ export const route = (pattern, options = {}) => {
         return null;
       }
 
-      // Find all matching routes and update their actions, then delegate to most specific (deeper = more specific)
-      let mostSpecificRoute = route;
-      const routePrivateProperties = getRoutePrivateProperties(route);
-      let maxDepth = routePrivateProperties.routePattern.depth;
-      for (const routeCandidate of routeSet) {
-        if (routeCandidate === route) {
-          continue;
-        }
-        if (!routeCandidate.matching) {
-          continue;
-        }
-        const matchingRoute = routeCandidate;
-        const matchingRoutePrivateProperties =
-          getRoutePrivateProperties(matchingRoute);
-        const depth = matchingRoutePrivateProperties.routePattern.depth;
-        if (depth > maxDepth) {
-          maxDepth = depth;
-          mostSpecificRoute = matchingRoute;
-        }
-      }
+      const mostSpecificRoute = findMostSpecificMatchingRoute(route, routeSet);
       const isMostSpecificRoute = mostSpecificRoute === route;
 
       if (DEBUG) {
         console.debug(
-          `[${route}] Most specific route selected: ${mostSpecificRoute} (depth: ${maxDepth})`,
+          `[${route}] Most specific route selected: ${mostSpecificRoute}`,
         );
         console.debug(
           `[${route}] Building URL with params:`,
@@ -365,26 +347,10 @@ export const route = (pattern, options = {}) => {
         );
       }
 
-      // If we found a more specific route, delegate to it; otherwise handle it ourselves
+      // If we found a more specific route, delegate to it; otherwise handle it ourselves.
+      // A signal change reaches this only when the more specific route does not
+      // carry the param (see writeValueInUrl): left to it, the change would be dropped.
       if (!isMostSpecificRoute) {
-        // For signal-originated calls, only skip delegation if the more specific route
-        // has its own signal connection for the same params — meaning its own effect will
-        // fire and handle the redirect. If it doesn't have the connection, the signal
-        // change would be silently dropped, so we must delegate anyway.
-        if (isSignalChange) {
-          const mostSpecificRoutePrivateProperties =
-            getRoutePrivateProperties(mostSpecificRoute);
-          const { pathConnectionMap, queryConnectionMap } =
-            mostSpecificRoutePrivateProperties.routePattern;
-          const willHandleItself = Object.keys(newParams).every(
-            (paramName) =>
-              pathConnectionMap.has(paramName) ||
-              queryConnectionMap.has(paramName),
-          );
-          if (willHandleItself) {
-            return null;
-          }
-        }
         if (DEBUG) {
           console.debug(
             `${route} delegating redirect to more specific route ${mostSpecificRoute}`,
@@ -394,6 +360,7 @@ export const route = (pattern, options = {}) => {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
           history,
           debounceUrl,
+          isSignalChange,
         });
       }
 
@@ -422,6 +389,7 @@ export const route = (pattern, options = {}) => {
         replace: history !== "push",
         debounce: debounceUrl,
         callReason,
+        fromSignal: isSignalChange,
       });
     };
     route.matchesParams = (providedParams) => {
@@ -484,7 +452,7 @@ export const route = (pattern, options = {}) => {
   });
   // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
   // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
-  registerSetup(() => {
+  registerSetup(({ routeSet }) => {
     const cleanupSignalUrlEffectSet = new Set();
     // important: read connections at setup time so it includes query connections
     // inherited from ancestor patterns
@@ -522,6 +490,24 @@ export const route = (pattern, options = {}) => {
         if (!matching) {
           // Route not matching, no URL sync needed
           return;
+        }
+        // A param declared on an ancestor is carried by every route below it,
+        // each with its own connection: all of them hear the write, the most
+        // specific one makes it. The others step aside before the history is
+        // read — a stateSignalGroup's push goes to the first write reading it.
+        const mostSpecificRoute = findMostSpecificMatchingRoute(
+          route,
+          routeSet,
+        );
+        if (mostSpecificRoute !== route) {
+          const { pathConnectionMap, queryConnectionMap } =
+            getRoutePrivateProperties(mostSpecificRoute).routePattern;
+          if (
+            pathConnectionMap.has(paramName) ||
+            queryConnectionMap.has(paramName)
+          ) {
+            return;
+          }
         }
         if (urlParamValue === undefined) {
           // No URL parameter exists - check if signal has meaningful value to add
@@ -1325,4 +1311,25 @@ export const getParamsCacheKey = (params) => {
 const urlWithoutSearchAndHash = (url) => {
   const urlObject = new URL(url);
   return `${urlObject.origin}${urlObject.pathname}`;
+};
+
+// Deeper is more specific: among the routes matching the address, the one a
+// params write lands on.
+const findMostSpecificMatchingRoute = (route, routeSet) => {
+  let mostSpecificRoute = route;
+  let maxDepth = getRoutePrivateProperties(route).routePattern.depth;
+  for (const routeCandidate of routeSet) {
+    if (routeCandidate === route) {
+      continue;
+    }
+    if (!routeCandidate.matching) {
+      continue;
+    }
+    const depth = getRoutePrivateProperties(routeCandidate).routePattern.depth;
+    if (depth > maxDepth) {
+      maxDepth = depth;
+      mostSpecificRoute = routeCandidate;
+    }
+  }
+  return mostSpecificRoute;
 };

@@ -593,11 +593,15 @@ export const setupBrowserIntegrationViaNavigation = ({
     // they left it. Decided before anything commits — preventDefault is only
     // legal here because a same-document push is cancelable. A push with
     // something of its own for its entry — a state, what the press handed
-    // over (see carryByLinkNavigation) — is a new entry.
+    // over (see carryByLinkNavigation) — is a new entry. So is a push a signal
+    // write makes: the writes after it in the same move build on its address
+    // at once, and a traversal would only land after they went to the entry
+    // being left.
     if (
       navigationType === "push" &&
       event.destination.getState() === undefined &&
       !linkPressWritesMap.has(pressElement) &&
+      !event.info?.fromSignal &&
       url !== readAddress()
     ) {
       const key = adjacentEntryKey(url);
@@ -758,7 +762,15 @@ export const setupBrowserIntegrationViaNavigation = ({
 
   const navTo = async (
     url,
-    { replace, state, routeTransition, debounce, asReturn, open } = {},
+    {
+      replace,
+      state,
+      routeTransition,
+      debounce,
+      asReturn,
+      open,
+      fromSignal,
+    } = {},
   ) => {
     if (replace && debounce && state === undefined) {
       replaceAddressWhenSettled(url, debounce);
@@ -768,14 +780,14 @@ export const setupBrowserIntegrationViaNavigation = ({
       // The entry being stacked on must carry the address the document is at.
       flushPendingReplace();
     }
-    // Not state: what is asked of a transition, and whether a push is a
-    // return (see link_return.js), are about the navigation, not about the
-    // entry it leaves behind. `info` is exactly that — handed to the
-    // navigate event and forgotten afterwards.
+    // Not state: what is asked of a transition, whether a push is a return
+    // (see link_return.js), and whether a signal write made it, are about the
+    // navigation, not about the entry it leaves behind. `info` is exactly
+    // that — handed to the navigate event and forgotten afterwards.
     const info =
-      routeTransition === undefined && !asReturn
+      routeTransition === undefined && !asReturn && !fromSignal
         ? undefined
-        : { routeTransition, asReturn };
+        : { routeTransition, asReturn, fromSignal };
     if (open) {
       await navToWithPopupOpen(url, { replace, state, info }, open);
       return;

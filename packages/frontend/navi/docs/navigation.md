@@ -586,12 +586,15 @@ Five cases, and they are not a policy to configure but five different facts:
 - **A reload** lands where one was, as it would have without navi, once the
   page is there ([below](#a-page-that-is-not-whole-yet)).
 
-Where the browser exposes its stack (the Navigation API), **a `<Link>` whose
-destination is the entry right next to the current one becomes a real
-traversal**: a "back" link to the page one just came from behaves as a back — no
-A, B, A, B… growth, and the scroll comes back — and one step forward too. Only
-towards entries of this document, and never when the push carries explicit
-state. An arrow that must ALWAYS behave as a back is `navBack()`.
+Where the browser exposes its stack (the Navigation API), **a `<Link>` or a
+`navTo()` whose destination is the entry right next to the current one becomes a
+real traversal**: a "back" link to the page one just came from behaves as a back
+— no A, B, A, B… growth, and the scroll comes back — and one step forward too.
+Only towards entries of this document, and never when the push carries explicit
+state. A traversal lands when the browser answers, after the call has returned;
+so a state written with `history: "push"` always stacks its entry, since what is
+written right after it (a layer, then what is open inside it) belongs on that
+entry. An arrow that must ALWAYS behave as a back is `navBack()`.
 
 Further back, a push is an arrival even when it means a return: a bar entry
 leading back to a thread whose address names the item one was reading
