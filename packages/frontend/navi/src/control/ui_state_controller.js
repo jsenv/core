@@ -68,7 +68,7 @@ const useRenderScope = (init, update) => {
  * interface UIStateController {
  *   id: string;
  *   controlType: string;          // Used for debug logging
- *   uiStateSignal: Signal;        // Accessed by button children to inherit parent value
+ *   uiStateSignal: Signal | null; // What a button child with no value of its own inherits (null: nothing)
  *   registerChild(child): void;   // Called on child mount
  *   onChildUIAction(child, e, { stateChanged: boolean }): void; // Called when a child fires a UI action
  *   unregisterChild(child): void; // Called on child unmount
@@ -2475,7 +2475,12 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         props,
         pushStateDownToChild,
         ref: realUIStateController.ref,
-        uiStateSignal: realUIStateController.uiStateSignal,
+        // Nothing for a button in the popup to inherit. The picker's value is
+        // what its one child holds, and a button is refused as that child
+        // (canRegisterAsFacadeChild): it answers for itself. Handed the value,
+        // its action would run with the picker's selection over the params it
+        // was bound with — a "refresh" in a sort picker sending the sort order.
+        uiStateSignal: null,
         controlHostProps: realUIStateController.controlHostProps,
         readOnlyWithoutRun: realUIStateController.readOnlyWithoutRun,
         registerChild: (child) => {
@@ -2606,7 +2611,6 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
     (s) => {
       s.controller.props = props;
       s.controller.ref = realUIStateController.ref;
-      s.controller.uiStateSignal = realUIStateController.uiStateSignal;
       s.controller.controlHostProps = realUIStateController.controlHostProps;
       s.controller.readOnlyWithoutRun =
         realUIStateController.readOnlyWithoutRun;

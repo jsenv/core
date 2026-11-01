@@ -689,17 +689,74 @@ const TextShrinkWrap = (props) => {
     <Text {...props} ref={ref} data-shrinkwrap="" shrinkWrap={undefined} />
   );
 };
-// Whether the text is cut is read on the axis navi cuts it on: one line ends
-// in an ellipsis on the inline axis, n lines are clamped on the block one. The
-// 1px is the rounding of a box that exactly fits.
+// Whether the text is cut is read from its line boxes against the content box,
+// on the axis navi cuts it on: one line ends in an ellipsis on the inline axis,
+// n lines are clamped on the block one. Not from scrollWidth/scrollHeight: the
+// scroll extent holds the padding, so a text cut inside its end padding would
+// read as fitting.
 const isTextTruncated = (element, maxLines) => {
   if (maxLines === 1 || maxLines === "1") {
-    return element.scrollWidth - element.clientWidth > 1;
+    const content = getContentEdges(element);
+    // The ellipsis is painted over a line laid out at its full width. The
+    // 0.5px absorbs the rounding of a box that exactly fits.
+    return getLineRects(element).some(
+      (rect) =>
+        rect.right - content.right > 0.5 || content.left - rect.left > 0.5,
+    );
   }
   if (maxLines > 1) {
-    return element.scrollHeight - element.clientHeight > 1;
+    const content = getContentEdges(element);
+    // A clamped line is still laid out, under the content box. Its middle is
+    // read, not its top: under a line-height of 1 or less the glyphs of the
+    // next line start above the bottom of the one before.
+    return getLineRects(element).some(
+      (rect) => rect.top + rect.height / 2 > content.bottom,
+    );
   }
   return false;
+};
+// Read from the in-flow children: an overlay positioned over the box (a loading
+// skeleton) fills the padding and is not part of a line.
+const getLineRects = (element) => {
+  const range = document.createRange();
+  const rects = [];
+  for (const child of element.childNodes) {
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      const { position } = window.getComputedStyle(child);
+      if (position === "absolute" || position === "fixed") {
+        continue;
+      }
+    }
+    range.selectNode(child);
+    rects.push(...range.getClientRects());
+  }
+  return rects;
+};
+// In the coordinates of the line rects: a transformed ancestor (a pressed
+// button's scale) shrinks the rects and the box, not the computed paddings.
+const getContentEdges = (element) => {
+  const style = window.getComputedStyle(element);
+  const box = element.getBoundingClientRect();
+  const scaleX = scaleOf(box.width, element.offsetWidth);
+  const scaleY = scaleOf(box.height, element.offsetHeight);
+  const startX =
+    parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+  const endX =
+    parseFloat(style.borderRightWidth) + parseFloat(style.paddingRight);
+  const endY =
+    parseFloat(style.borderBottomWidth) + parseFloat(style.paddingBottom);
+  return {
+    left: box.left + startX * scaleX,
+    right: box.right - endX * scaleX,
+    bottom: box.bottom - endY * scaleY,
+  };
+};
+const scaleOf = (screenSize, layoutSize) => {
+  // A box with no size has no padding or border to scale either.
+  if (layoutSize === 0) {
+    return 1;
+  }
+  return screenSize / layoutSize;
 };
 const TextReportingTruncation = ({ onTruncatedChange, ...props }) => {
   const defaultRef = useRef();
