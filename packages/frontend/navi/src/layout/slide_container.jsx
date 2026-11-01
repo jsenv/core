@@ -1369,7 +1369,7 @@ export const SlideContainer = ({
     // A transfer waiting for a travel that never happened — a controlled
     // `current` the caller chose not to move: dropped, the focus has no
     // business going anywhere. The one for a travel that DID happen stays,
-    // and lands when the slide it is for says it is settled (see settleFocus).
+    // and lands once the slide it is for is final (see landFocusHandOver).
     if (
       focusHandOverRef.current &&
       focusHandOverRef.current.area !== readArea(currentElement)
@@ -1550,6 +1550,11 @@ export const SlideContainer = ({
         requestAnimationFrame(rollBack);
       }
     }
+    // The slide a transfer waits for is current (any other one was dropped
+    // above): it lands once the renders this commit sets off are over.
+    if (focusHandOverRef.current) {
+      landFocusHandOver();
+    }
     // The keyboard is on a slide about to go out of reach and nobody has moved
     // it: inert would drop it on the floor (document.body), so it is handed to
     // the slide on screen instead. No event to read — this travel was asked for
@@ -1575,9 +1580,10 @@ export const SlideContainer = ({
     // Out of reach LAST, once the keyboard has already moved on: a browser
     // takes the focus off an element the moment it becomes inert, and on its
     // own schedule — doing this first would let that undo the landing above and
-    // leave the focus on nothing.
-    for (const slideElement of slideElements) {
-      slideElement.toggleAttribute("inert", slideElement !== currentElement);
+    // leave the focus on nothing. A transfer still on its way does it itself,
+    // once landed.
+    if (!focusHandOverRef.current) {
+      markOutOfReach(currentElement);
     }
     // What is on screen now, for the travel after this one to depart from.
     // While a travel is playing the stage is the one that knows (it holds the
@@ -1893,14 +1899,7 @@ export const SlideContainer = ({
   // dialog is OPEN, not when it was asked to open). `prepareFocusTransfer` has
   // to read the interaction — which element a mousedown landed on, whether the
   // modality is the keyboard — while the event is still being dispatched. The
-  // landing waits for the slide to say its DOM is settled (settleFocus below),
-  // which is later than one would think: a travel hands the slide a value
-  // (useSlideValue) and that value reaches it through context, so Preact
-  // re-renders the slide in a flush of its own — the container's own layout
-  // effect runs BEFORE its children have seen the value. A screen keyed by it,
-  // a form whose uncontrolled fields must start again from a new prefill,
-  // replaces its whole subtree there. Landing before that took the focus to a
-  // node about to be thrown away, and the focus went to document.body with it.
+  // landing waits for the slide's DOM to be final (see landFocusHandOver).
   const handOverFocus = (slideElement, focusTransfer, event) => {
     focusTransfer.transferFocus(event, slideElement);
     // Asked of the SLIDE, not of this box: the box contains itself, so asking
@@ -1925,27 +1924,52 @@ export const SlideContainer = ({
     }
   };
 
-  // A slide reporting that its DOM is settled (its own layout effect, see
-  // Slide) — the moment the transfer prepared in goToArea can land. Every
-  // slide reports on every commit; only the one a transfer is waiting for,
-  // and only while it is the current one, takes it.
-  const settleFocus = (slideArea) => {
+  // The transfer prepared in goToArea lands once the slide it is for is the
+  // current one AND everything the travel set off has rendered — which is
+  // later than this box's own commit. A travel hands the slide a value
+  // (useSlideValue), and what reads it below a component that skipped its own
+  // render is re-rendered by Preact in a commit of its own, after this one. A
+  // screen keyed by it, a form whose uncontrolled fields must start again from
+  // a new prefill, replaces its whole subtree there: a focus landed before it
+  // goes to document.body with the node. Nor can the slide say when it is done
+  // from its own layout effect: rendered in the same pass as this box, its
+  // effects run before this box has made it current.
+  // Preact drains its render queue in one go, the renders it cascades into
+  // included, so a microtask queued from this commit runs after all of them.
+  // Until then the slide being left stays within reach (see markOutOfReach):
+  // inert would take the keyboard off it first, and drop it on document.body.
+  const landFocusHandOver = () => {
     const focusHandOver = focusHandOverRef.current;
-    if (!focusHandOver || focusHandOver.area !== slideArea) {
-      return;
+    queueMicrotask(() => {
+      // Already landed by an earlier commit of this cascade, given up on, or
+      // replaced by the transfer of a newer travel.
+      if (focusHandOverRef.current !== focusHandOver || !trackRef.current) {
+        return;
+      }
+      focusHandOverRef.current = null;
+      const currentElement = readMap().slideElements.find((slideElement) =>
+        slideElement.hasAttribute("data-current"),
+      );
+      if (!currentElement) {
+        return;
+      }
+      if (readArea(currentElement) === focusHandOver.area) {
+        handOverFocus(
+          currentElement,
+          focusHandOver.focusTransfer,
+          focusHandOver.event,
+        );
+      }
+      markOutOfReach(currentElement);
+    });
+  };
+
+  // Every slide but the one on screen out of reach — of the keyboard and of
+  // assistive technology alike.
+  const markOutOfReach = (currentElement) => {
+    for (const slideElement of readMap().slideElements) {
+      slideElement.toggleAttribute("inert", slideElement !== currentElement);
     }
-    const slideElement = readMap().slideElements.find(
-      (slideElement) => readArea(slideElement) === slideArea,
-    );
-    if (!slideElement || !slideElement.hasAttribute("data-current")) {
-      return;
-    }
-    focusHandOverRef.current = null;
-    handOverFocus(
-      slideElement,
-      focusHandOver.focusTransfer,
-      focusHandOver.event,
-    );
   };
 
   /**
@@ -3085,7 +3109,6 @@ export const SlideContainer = ({
             answeredAreas,
             done,
             valueByArea,
-            settleFocus,
             // What a slide reads to know whether its content is rendered yet
             // (see Slide's `mount`).
             mount,
@@ -3200,15 +3223,6 @@ export const Slide = ({
   );
   // What the travel into this slide carried, if anything (see useSlideValue).
   const slideValue = container?.valueByArea?.[slideArea];
-  // This slide's DOM is settled — said after EVERY commit, no dependency
-  // array, because it is a fact about the render that just happened, not a
-  // reaction to a particular prop. The container is the one holding a focus
-  // transfer waiting for it (see settleFocus): a travel's value reaches this
-  // slide through context one flush after the container moved, and what it
-  // shows (a form keyed by a prefill) is only final here.
-  useLayoutEffect(() => {
-    container?.settleFocus?.(slideArea);
-  });
   return (
     <SlideContext.Provider value={locks}>
       <SlideValueContext.Provider value={slideValue}>

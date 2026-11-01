@@ -97,6 +97,11 @@ const css = /* css */ `
       --link-color: unset;
       --link-text-decoration: none;
     }
+    /* Its color is the one of its surroundings, not one of its own to darken
+       once visited: white on a photo would turn grey. */
+    .navi_link[data-color-inherit] {
+      --link-color-visited: var(--navi-link-color-visited, var(--link-color));
+    }
   }
 
   .navi_link {
@@ -1017,6 +1022,7 @@ const LinkPlain = (props) => {
       attachLastChild={Boolean(endIconEl)}
       // Visual
       data-variant={variant}
+      data-color-inherit={props.color === "inherit" ? "" : undefined}
       data-current-effect-bold={currentEffectBoldTechnique}
       data-current-effect-shadow={currentEffectShadow ? "" : undefined}
       data-current-indicator-position={currentIndicatorPosition}
