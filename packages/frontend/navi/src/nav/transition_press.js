@@ -20,9 +20,11 @@
  * inside its rectangle — which is where the hand thinks it pressed. The same
  * move route_travel.jsx makes for the box a finger reaches for mid-flight.
  *
- * A `RouteTravel` holds this too. It leaves the bars live, so a control there
- * gets its click on its own; what this serves is a control in the part of a bar
- * photographed for the travel (`data-navi-fixed-bar-overhang`, fixed_bar.jsx).
+ * A `RouteTravel` holds this too, for the bars it leaves live. A control there
+ * gets its click on its own except in the first frames of the travel, when a
+ * press falls to the document root like any other; the part of a bar photographed
+ * for the travel (`data-navi-fixed-bar-overhang`, fixed_bar.jsx) is deaf
+ * throughout.
  *
  * ASKED FOR, never derived, and that is the whole safety of it: only the
  * application knows the control does not move. One that travels with the pages

@@ -320,8 +320,9 @@ finger is on the box — and leaves the bars live, so its pictures cover what a 
 paints outside its box, except two things photographed on their own, which stand
 over the pages: the bar's `shadow`, and a child wearing
 `data-navi-fixed-bar-overhang` (a raised button, the notch around it). That child
-is deaf for the length of the travel; `pressableDuringRouteTransition` on a control
-inside it keeps that control answering.
+is deaf for the length of the travel, and the rest of the bar for its first frames,
+when a press falls to the document whatever it was aimed at;
+`pressableDuringRouteTransition` on a control keeps it answering in both cases.
 
 A **modal `Dialog` open on a page** is furniture of the same kind: it travels with
 its page, or holds if both states have it. One the navigation itself opens or

@@ -385,7 +385,11 @@ An element captured in a view transition is not painted where it stands, so
 nothing hit-tests to it: a press, and a wheel, fall through to the nearest
 ancestor still painted, whatever the pseudo-elements say about `pointer-events`.
 Both readings catch the event at the document and hand it to the box when it
-fell inside its rectangle, where the hand thinks it is. A wheel costs more:
+fell inside its rectangle, where the hand thinks it is. A press must also fall
+where a page is seen: the pictures are cut at the furniture's bands, so a box
+running under a bar has no claim on a press aimed at the bar. That is read from
+the position, never the target, since in the first frames of a travel a press on
+a live bar falls to the root like any other. A wheel costs more:
 heard on the box alone, a gesture that sets a travel off loses every event after
 the first — a page nudged, quiet, put back, scrolling behind the travel with
 everything not taken.

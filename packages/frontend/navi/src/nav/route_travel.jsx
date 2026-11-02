@@ -64,6 +64,7 @@ import {
 } from "./transition_press.js";
 import {
   holdTransitionWindow,
+  isPointInTransitionBand,
   measureTransitionWindowState,
   placeTransitionWindow,
   releaseTransitionWindow,
@@ -1405,11 +1406,16 @@ export const RouteTravel = ({
     gestureRef.current = gesture;
   };
 
-  // A press that lands ON the box while a travel is playing does not reach it:
-  // the browser's transition covers the page and the press is delivered to the
-  // document root instead, whatever the pictures are told about pointer events.
-  // So while a travel plays, the press is caught at the document and handed to
-  // the box when it fell inside it — which is where the hand thinks it pressed.
+  // A press aimed at a page while a travel is playing does not always reach the
+  // box: the browser's transition covers the page and the press can be delivered
+  // to the document root instead, whatever the pictures are told about pointer
+  // events. So while a travel plays, the press is caught at the document and
+  // handed to the box when it fell where a page is SEEN, which is where the hand
+  // thinks it pressed.
+  //
+  // Decided by the position and never by the target: in the first frames of a
+  // travel a press on a live bar falls to the root like any other, and what lies
+  // under a picture is not what the hand is aiming at.
   pointerDownRef.current = onPointerDown;
   useLayoutEffect(() => {
     const onDocumentPointerDown = (pointerDownEvent) => {
@@ -1429,6 +1435,11 @@ export const RouteTravel = ({
         clientY < top ||
         clientY > bottom
       ) {
+        return;
+      }
+      // A box scrolled under a bar still has the press in its rectangle, but
+      // the pictures are cut at that bar: the press is aimed at the bar.
+      if (isPointInTransitionBand(clientX, clientY)) {
         return;
       }
       pointerDownRef.current(pointerDownEvent);

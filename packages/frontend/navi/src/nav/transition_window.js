@@ -305,6 +305,21 @@ export const placeTransitionWindow = (owner, groupName) => {
   document.documentElement.setAttribute(WINDOW_PLACED_ATTRIBUTE, "");
 };
 
+/**
+ * Whether a point of the window lies in a band the furniture keeps: the pictures
+ * are cut at those bands, so what is seen there is never a page, however far the
+ * box runs under it.
+ */
+export const isPointInTransitionBand = (clientX, clientY) => {
+  const band = readBand();
+  return (
+    clientX < band.left ||
+    clientX > window.innerWidth - band.right ||
+    clientY < band.top ||
+    clientY > window.innerHeight - band.bottom
+  );
+};
+
 // The live layout takes the box back. A discontinuity by construction — the
 // window stands at the held height, the box is at its own — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
