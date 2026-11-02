@@ -126,7 +126,11 @@
         const title = MODIFIER.matchingSignal.value ? "Modifier" : "Liste";
         return (
           <>
-            <FixedBar area="top" height={48}>
+            <FixedBar
+              area="top"
+              height={48}
+              shadow="0 1px 2px rgb(12 23 44 / 20%), 0 3px 8px rgb(12 23 44 / 18%)"
+            >
               <Box flex alignX="center" alignY="center" expandX>
                 <Text size="16">{title}</Text>
               </Box>
@@ -146,7 +150,12 @@
                 <Route fallback element={TabIndex} />
               </Route>
             </RouteTravel>
-            <FixedBar as="nav" area="bottom" height={54}>
+            <FixedBar
+              as="nav"
+              area="bottom"
+              height={54}
+              shadow="0 -1px 2px rgb(12 23 44 / 20%), 0 -3px 8px rgb(12 23 44 / 18%)"
+            >
               <Nav expand alignY="center" spacing="0">
                 <Link
                   variant="tab"

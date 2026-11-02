@@ -653,6 +653,10 @@ export const RouteTravel = ({
       // nothing to stop, only nowhere to put them yet.
       animations: null,
       ended: false,
+      // The box as it set off, kept rather than read from the ref: the
+      // navigation a travel asks for can take the box down (see the update
+      // callback), and the name it wears is still given back to it.
+      element: elementRef.current,
     };
     travelRef.current = travel;
     // A press landing on a playing travel lands on the document root: the box
@@ -668,7 +672,7 @@ export const RouteTravel = ({
     });
     // Whether the document's offset is this row's business at all (see
     // pagesScrollTheDocument), asked once and before anything is swapped.
-    travel.scrollsDocument = pagesScrollTheDocument(elementRef.current);
+    travel.scrollsDocument = pagesScrollTheDocument(travel.element);
     if (travel.scrollsDocument) {
       // One of the tabs is about to be swapped out from under that scrollport,
       // and whatever the browser does with the offset meanwhile — clamping it
@@ -685,7 +689,7 @@ export const RouteTravel = ({
     // at the same moment and for the same reason: whoever names something for
     // a movement between two pages decides on it now (see
     // transition_destination.js).
-    nameForTravel(elementRef.current);
+    nameForTravel(travel.element);
     holdTransitionDestination(travel, page.route.buildUrl(page.params));
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
     document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
@@ -697,7 +701,7 @@ export const RouteTravel = ({
     // The box as it stands before anything moves, and the band the furniture
     // around it leaves free: rendering is held, so both are still the page
     // being left (see transition_window.js).
-    const stateBefore = measureTransitionWindowState(elementRef.current);
+    const stateBefore = measureTransitionWindowState(travel.element);
     // The hold a navigation already took, if this travel is the answer to one:
     // taking another would be taking a hold on a page that is holding still.
     const releaseRendering = takeoverRoutingRenderingHold();
@@ -736,6 +740,19 @@ export const RouteTravel = ({
         const { route, params } = travel.page;
         arriveAtScrollPosition(route.buildUrl(params));
       }
+      // The box itself may be gone: rendered inside one of the pages of its
+      // row rather than around them, it went down with the page being left,
+      // and there is no box left for the page arriving to be photographed in.
+      // The navigation stands — it is what was asked for — and the movement
+      // is dropped.
+      if (!travel.element.isConnected) {
+        if (import.meta.dev) {
+          warnBoxTakenDown(travel.page);
+        }
+        travel.viewTransition.skipTransition();
+        endTravel(travel);
+        return;
+      }
       // The page arriving is in the DOM and the transition has not started
       // playing: the one moment both boxes can be known. After the scroll,
       // which is what the box is measured through: the two states are at the
@@ -743,7 +760,7 @@ export const RouteTravel = ({
       // (see transition_window.js).
       // The bars stay live under the pictures for a travel: only the box is
       // photographed (see the TRAVEL_ATTRIBUTE css).
-      holdTransitionWindow(travel, elementRef.current, stateBefore, {
+      holdTransitionWindow(travel, travel.element, stateBefore, {
         furnitureLive: true,
       });
     });
@@ -1096,7 +1113,7 @@ export const RouteTravel = ({
       // Given back, so another box may wear it: kept, two of them on a page
       // would both answer to it and the browser refuses the whole transition
       // rather than pick.
-      unnameAfterTravel(elementRef.current);
+      unnameAfterTravel(travel.element);
       document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
       document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
       document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
@@ -1665,6 +1682,19 @@ const currentPageIndex = (pages) => {
 
 // A transition skipped by another one starting is an outcome, not a failure.
 const ignoreSkipped = () => {};
+
+// Said once, whatever the number of swipes: a box in the wrong place is one
+// fact about the application, and repeating it every time would bury it.
+let boxTakenDownWarned = false;
+const warnBoxTakenDown = (page) => {
+  if (boxTakenDownWarned) {
+    return;
+  }
+  boxTakenDownWarned = true;
+  console.warn(
+    `[navi] RouteTravel: the page ${page.route.buildUrl(page.params)} is not rendered under this box — the navigation took the box down with the page it was in, so the travel is dropped. The box must outlive every page of its row: around those <Route>s (a layout route), or around one <Route> whose params are the tabs, never inside one of the pages.`,
+  );
+};
 
 // The name is lent to the box that is travelling and taken back afterwards.
 // There is one transition in a document at a time, so one box wears it at a

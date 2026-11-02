@@ -34,6 +34,13 @@
  *    under, and a line a page transition paints over. It is a real border,
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
+ * 5. **Its shadow is an element of its own.** A shadow is meant to lie over the
+ *    content, and during a route travel the bar stays live while the pages are
+ *    pictures drawn above everything the document paints — they cover what the
+ *    bar paints outside its box. A `box-shadow` or a `filter` on the bar cannot
+ *    be photographed apart from the bar, and photographing the bar would make
+ *    it deaf for the length of every travel; a child painting only the shadow
+ *    can be, and has no press or hover to lose.
  */
 
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -55,6 +62,7 @@ const css = /* css */ `
          sharing the whole strip is as common as a toolbar wanting air at its
          ends, and only the second can ask. */
       --navi-fixed-bar-padding: 0px;
+      --navi-fixed-bar-shadow: none;
     }
   }
 
@@ -144,6 +152,57 @@ const css = /* css */ `
         var(--navi-fixed-bar-border-color);
     }
   }
+
+  /* The bar's whole box, hairline included, so the shadow falls from where the
+     bar ends. Cut at that box on every side but the content's: it says the bar
+     lies over the page, and beside a bar narrower than the window its blur
+     would otherwise spill into the margins of the screen. */
+  .navi_fixed_bar_shadow {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--navi-fixed-bar-shadow);
+    pointer-events: none;
+  }
+  .navi_fixed_bar[data-area="top"] > .navi_fixed_bar_shadow {
+    bottom: calc(-1 * var(--navi-fixed-bar-border-width));
+    clip-path: inset(0 0 -100vh 0);
+  }
+  .navi_fixed_bar[data-area="bottom"] > .navi_fixed_bar_shadow {
+    top: calc(-1 * var(--navi-fixed-bar-border-width));
+    clip-path: inset(-100vh 0 0 0);
+  }
+  .navi_fixed_bar[data-area="left"] > .navi_fixed_bar_shadow {
+    right: calc(-1 * var(--navi-fixed-bar-border-width));
+    clip-path: inset(0 -100vw 0 0);
+  }
+  .navi_fixed_bar[data-area="right"] > .navi_fixed_bar_shadow {
+    left: calc(-1 * var(--navi-fixed-bar-border-width));
+    clip-path: inset(0 0 0 -100vw);
+  }
+
+  /* A picture of its own while a route travel plays (see 5. above): painted
+     inside the bar, it comes after the pages in paint order, so its group
+     stands over theirs. Worn from the moment the travel's attribute is on,
+     which is before the first picture is taken (nav/route_travel.jsx). An
+     identity of its own, never a shared name: two bars can share an edge. A
+     browser with no match-element takes no name, and the pictures cover the
+     shadow. */
+  @supports (view-transition-name: match-element) {
+    :root[data-navi-route-travel] .navi_fixed_bar_shadow {
+      view-transition-name: match-element;
+      view-transition-class: navi_fixed_bar_shadow;
+    }
+  }
+  /* A travel that turned around drops every picture but the pages' — they were
+     measured against a destination nobody is going to anymore. The shadow
+     stands where its bar stands wherever the travel goes, and the element is
+     still captured: dropped, it would be painted nowhere. */
+  :root[data-navi-route-travel-turned]::view-transition-group(
+      .navi_fixed_bar_shadow
+    ) {
+    display: block;
+  }
 `;
 
 const FixedBarStyleCSSVars = {
@@ -157,6 +216,7 @@ const FixedBarStyleCSSVars = {
   background: "--navi-fixed-bar-background",
   borderWidth: "--navi-fixed-bar-border-width",
   borderColor: "--navi-fixed-bar-border-color",
+  shadow: ["--navi-fixed-bar-shadow", "boxShadow"],
 };
 
 /**
@@ -170,6 +230,7 @@ const FixedBarStyleCSSVars = {
  *   border?: boolean,
  *   borderWidth?: string|number,
  *   borderColor?: string,
+ *   shadow?: string,
  * }>}
  * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
  *   the window it is pinned to. One bar per edge: a second one does not stack
@@ -192,6 +253,11 @@ const FixedBarStyleCSSVars = {
  * @param {string|number} [props.padding=0] - Along the bar only: left/right on
  *   a top or bottom bar, top/bottom on a side one. Across it, the size is
  *   `height`/`width`.
+ * @param {string} [props.shadow] - What the bar casts over the content, in
+ *   `box-shadow` syntax, cut at the bar's box on every side but the content's.
+ *   Takes no room. Prefer it to a `boxShadow` or a `filter` on the bar: those
+ *   are covered by the pages while a `RouteTravel` plays, this one stays over
+ *   them.
  */
 export const FixedBar = ({
   children,
@@ -261,6 +327,8 @@ export const FixedBar = ({
       styleCSSVars={FixedBarStyleCSSVars}
     >
       {children}
+      {/* Always there, so a shadow given by the token alone is painted too. */}
+      <span className="navi_fixed_bar_shadow" />
     </Box>
   );
 };
