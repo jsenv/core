@@ -163,6 +163,37 @@ again a frame later. `:smooth` glides, and is instant under
 `scroll-behavior`: a `scroll-behavior: smooth` on the box glides every
 placement of the list, the one it opens on included.
 
+The `id` is on the list's outer box, which is not the box that scrolls: which one
+does depends on `scroller` and on what can be measured (see
+[above](#list-and-its-scroller)). So a list is moved through these, never through
+`scrollTo` on an element of its DOM, and a "back to top" button is
+`command="--navi-scroll" value="start"`.
+
+### Another order, another filter: back to the start
+
+A list showing something else is read from its start. `scrollResetKey` says what
+that depends on:
+
+```jsx
+<List id="players_list" scrollResetKey={[listKey, order]}>
+  …
+</List>
+```
+
+When the value changes after mount (compared by value, so an array can be written
+at every render), the list goes back to its start in the box `scroller` names,
+before the paint, and stays there while answers land, until the user reaches for
+it. Its window moves in the same render: nothing is drawn or fetched at the place
+it leaves. Mounting is not a change, so the list still comes back where it was
+left.
+
+- **Its start is what is brought back, never sent forward.** A list further down a
+  box or a page that also shows what stands above it does not move when its start
+  is in view: the picker above it stays on screen.
+- **The position kept under its `id`** is dropped for the address shown, so a
+  return finds the list at its start. A key that is also a search param changes
+  the address: the address left keeps its position, for a return to it.
+
 ### A list that comes back: one `id`, one list
 
 The position a list comes back to is kept under its `id` and the page's url, so

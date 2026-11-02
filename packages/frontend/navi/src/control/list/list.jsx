@@ -24,6 +24,7 @@ import { stringifySpacingStyle } from "../../box/box_style_util.js";
 import { isGeneratedId } from "../../nav/browser_integration/document_state_signal.js";
 import { RoutePageContext } from "../../nav/route_page_context.js";
 import {
+  forgetScrollerPosition,
   forgetScrollerUnlessPageLeft,
   holdDocumentScroll,
   recallScrollerPosition,
@@ -1074,6 +1075,7 @@ const ListUI = (props) => {
     scroller = "self",
     hoverWhileScrolling = false,
     scrollResetOnNavigation = false,
+    scrollResetKey,
     lockSize,
     columns,
     itemColumns,
@@ -1208,6 +1210,7 @@ const ListUI = (props) => {
     scrolled,
     defaultScrolled,
     onScrolledChange,
+    scrollResetKey,
     rememberScroll,
     listId: rest.id,
     scroller,
@@ -1625,6 +1628,7 @@ const useListScrollSync = ({
   scrolled,
   defaultScrolled,
   onScrolledChange,
+  scrollResetKey,
   rememberScroll,
   listId,
   scroller,
@@ -1633,6 +1637,8 @@ const useListScrollSync = ({
   columns,
 }) => {
   const debugScroll = useDebugScroll();
+  // The offset a search gives back once emptied (see below).
+  const savedScrollRef = useRef(null);
   // Where the list must be: what the caller holds it at (`scrolled`), or where
   // it opens and then lets go (`defaultScrolled`). A `scrolled` that changes is
   // the caller moving the list, so the hold is armed again — that is what makes
@@ -1641,7 +1647,9 @@ const useListScrollSync = ({
   // one kept from the previous visit): followed for as long as nobody has
   // moved the list, and compared by value, since it is said at every render.
   // Nothing to hold it at (a position not saved yet) is not a position: the
-  // list opens where it opens.
+  // list opens where it opens. A `scrollResetKey` that changes sends it back to
+  // its start ("back_to_start", see placeBackAtStart), unless a `scrolled`
+  // changing in the same render says where it goes.
   const startPlaceRef = useRef(null);
   if (startPlaceRef.current === null) {
     startPlaceRef.current = {
@@ -1649,6 +1657,7 @@ const useListScrollSync = ({
       wanted: scrolled ?? defaultScrolled,
       scrolled,
       defaultScrolled,
+      scrollResetKey,
       way: null,
       arrived: false,
       // Whether the hold's writes glide (--navi-scroll:smooth).
@@ -1656,6 +1665,20 @@ const useListScrollSync = ({
     };
   } else {
     const place = startPlaceRef.current;
+    if (!compareTwoJsValues(place.scrollResetKey, scrollResetKey)) {
+      place.scrollResetKey = scrollResetKey;
+      place.wanted = "back_to_start";
+      place.userTookOver = false;
+      place.way = null;
+      place.arrived = false;
+      place.smooth = false;
+      // What the list said it was reading, and what a search would give back,
+      // are places in what it no longer shows.
+      savedScrollRef.current = null;
+      if (rememberScroll) {
+        forgetScrollerPosition(listId);
+      }
+    }
     if (place.scrolled !== scrolled) {
       place.scrolled = scrolled;
       place.defaultScrolled = defaultScrolled;
@@ -1667,7 +1690,7 @@ const useListScrollSync = ({
       !compareTwoJsValues(place.defaultScrolled, defaultScrolled)
     ) {
       place.defaultScrolled = defaultScrolled;
-      if (!place.userTookOver) {
+      if (!place.userTookOver && place.wanted !== "back_to_start") {
         place.wanted = defaultScrolled;
         // Placed again from where it stands: the way to the previous place
         // says nothing about whose the next scrolls are.
@@ -2036,6 +2059,8 @@ const useListScrollSync = ({
       wantedStart = total - windowSize;
     } else if (typeof scrolledWanted === "number") {
       heldItem = scrolledWanted;
+    } else if (scrolledWanted === "back_to_start") {
+      heldItem = 0;
     } else if (scrolledWanted && scrolledWanted.id !== undefined) {
       const itemIndex = listItems.locateItem(scrolledWanted.id);
       if (itemIndex !== null) {
@@ -2288,7 +2313,6 @@ const useListScrollSync = ({
   // Lorsqu'on selectionne quelque chose pendant une recherche, alors ensuite meme si on clear
   // on veut pas revenir a la position scroll précédente car on veut garde l'item qu'on a selectionné visible
   // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
-  const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   const restoreScrollRafRef = useRef(null);
   useLayoutEffect(() => {
@@ -2406,6 +2430,10 @@ const useListScrollSync = ({
       startPlaceRef.current.userTookOver ||
       !ref.current
     ) {
+      return;
+    }
+    if (scrolledWanted === "back_to_start") {
+      placeBackAtStart();
       return;
     }
     if (
@@ -2528,6 +2556,28 @@ const useListScrollSync = ({
       return;
     }
     sendHeldScroll(scrollNow + delta);
+  };
+  // The start of the list, what comes before its first item included, not an
+  // item: a box of its own goes to 0. A box the list is further down of also
+  // shows what stands above it, the control that asked for this among others, so
+  // the list is brought back to the box's start and never sent forward to it.
+  const placeBackAtStart = () => {
+    const scrollerEl = getScroller();
+    if (ref.current.contains(scrollerEl)) {
+      sendHeldScroll(0);
+      return;
+    }
+    const scale = readScrollerScale(scrollerEl, horizontal);
+    const viewportRect = getScrollerViewportRect(scrollerEl);
+    const listRect = ref.current.getBoundingClientRect();
+    const offsetNow =
+      (horizontal
+        ? listRect.left - viewportRect.left
+        : listRect.top - viewportRect.top) / scale;
+    const delta =
+      offsetNow - getItemScrollInset(scrollerEl, ref.current, horizontal);
+    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    sendHeldScroll(delta < 0 ? scrollNow + delta : scrollNow);
   };
   // Every placement goes through here, the ones that find the list in place
   // too: it keeps the way from where the scroller was to where it is sent,
@@ -7667,6 +7717,7 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
  *   hoverWhileScrolling?: boolean,
  *   scrollResetOnNavigation?: boolean,
+ *   scrollResetKey?: any,
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
@@ -7911,6 +7962,15 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   overwrite each other (see docs/scroll.md). A fresh arrival at the page
  *   opens at `defaultScrolled` either way, and so does a list the caller holds
  *   through `scrolled`.
+ * @param {any} [props.scrollResetKey]
+ *   What the list shows, said as a value: another order, another filter. When
+ *   it changes after mount (compared by value: `[order, filter]` can be written
+ *   at every render) the list goes back to its start before the paint, in
+ *   whichever box `scroller` names, and is held there until the user reaches
+ *   for it. A list whose start is in view in a box that also shows what stands
+ *   above it does not move. A `scrolled` changing in the same render wins. The
+ *   position remembered under the `id` for the address shown is dropped; see
+ *   docs/scroll.md.
  * @param {boolean} [props.deselectable]
  *   A single-select list allowed to hold nothing: the selected item, pressed
  *   again, lets go. Without it the list is a radio group — a choice, once

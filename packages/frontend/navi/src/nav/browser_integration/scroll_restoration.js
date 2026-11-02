@@ -743,6 +743,19 @@ export const recallScrollerPosition = (name) => {
   return positionByName.get(name);
 };
 
+// Said by a scroller sent back to its start while it stays mounted: where it
+// was is a place in what it no longer shows, so nothing is carried and nothing
+// is come back to under this address until it says where it is again. What it
+// said under another address stays, for the way back to that address.
+export const forgetScrollerPosition = (name) => {
+  loadStore();
+  saidByScrollerName.delete(name);
+  const positionByName = scrollerPositionsByUrl.get(readShownUrl());
+  if (positionByName) {
+    positionByName.delete(name);
+  }
+};
+
 // Said by a scroller as it unmounts. Its page is being left when the url is
 // already another one — the history is written before the page it names is
 // taken down — and then its position is kept for the way back. The url still
