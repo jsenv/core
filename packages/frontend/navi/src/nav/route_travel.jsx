@@ -59,6 +59,10 @@ import {
   releaseTransitionDestination,
 } from "./transition_destination.js";
 import {
+  holdTransitionPress,
+  releaseTransitionPress,
+} from "./transition_press.js";
+import {
   holdTransitionWindow,
   measureTransitionWindowState,
   placeTransitionWindow,
@@ -574,7 +578,8 @@ const css = /* css */ `
  * root's name is dropped for that time (`view-transition-name: none`), so what
  * stands around the box — a tab row beside it — stays live and answers a press
  * mid-travel. The application's own rule for the root applies again the moment
- * the travel is over.
+ * the travel is over. What stands out of a `FixedBar` is the exception, when it
+ * asks to stay over the pages (see `data-navi-fixed-bar-overhang` there).
  */
 export const RouteTravel = ({
   routes: routesProp,
@@ -691,6 +696,10 @@ export const RouteTravel = ({
     // transition_destination.js).
     nameForTravel(travel.element);
     holdTransitionDestination(travel, page.route.buildUrl(page.params));
+    // The bars stay live, except what one of them has photographed on its own
+    // (see fixed_bar.jsx), which is deaf like any picture and may have asked to
+    // keep answering.
+    holdTransitionPress(travel, travel.element);
     document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
     document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
     if (scrub) {
@@ -1120,6 +1129,7 @@ export const RouteTravel = ({
       document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
       releaseTransitionWindow(travel);
       releaseTransitionDestination(travel);
+      releaseTransitionPress(travel);
     }
   };
 

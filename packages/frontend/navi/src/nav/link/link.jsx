@@ -584,7 +584,8 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   press on it is aimed at what the reader can see. Say it there, and only
  *   there: a control that TRAVELS with the pages has a rectangle where it will
  *   be, not where it is seen, and a press handed to it fires something nobody
- *   aimed at.
+ *   aimed at. A `RouteTravel` honours it as well, for a control in the part of
+ *   a `FixedBar` it photographs (`data-navi-fixed-bar-overhang`).
  * @param {boolean} [props.replace] - Go to the destination by TAKING THE PLACE
  *   of the current history entry instead of stacking onto it: the link stays a
  *   link (an address, a middle click, the keyboard, `aria-current`), only the

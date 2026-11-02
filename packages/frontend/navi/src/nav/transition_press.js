@@ -20,6 +20,10 @@
  * inside its rectangle — which is where the hand thinks it pressed. The same
  * move route_travel.jsx makes for the box a finger reaches for mid-flight.
  *
+ * A `RouteTravel` holds this too. It leaves the bars live, so a control there
+ * gets its click on its own; what this serves is a control in the part of a bar
+ * photographed for the travel (`data-navi-fixed-bar-overhang`, fixed_bar.jsx).
+ *
  * ASKED FOR, never derived, and that is the whole safety of it: only the
  * application knows the control does not move. One that travels with the pages
  * has a rectangle where it WILL be, not where it is seen, and a press handed to
@@ -125,7 +129,7 @@ const warnAboutPressablesThatMove = (areaElement) => {
     }
     warnOnce(
       "inside-area",
-      `A control asking to stay pressable during a route transition stands inside the pages (the element marked ${AREA_ATTRIBUTE}), and the pages are what moves: its rectangle says where it will BE, not where it is drawn, so a press aimed at what is on screen would be handed to whatever ends up under the finger. Only the furniture around the pages stands still for the length of a movement.`,
+      `A control asking to stay pressable during a route transition stands inside the pages (the element marked ${AREA_ATTRIBUTE}, or the box of a RouteTravel), and the pages are what moves: its rectangle says where it will BE, not where it is drawn, so a press aimed at what is on screen would be handed to whatever ends up under the finger. Only the furniture around the pages stands still for the length of a movement.`,
     );
     return;
   }

@@ -214,7 +214,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   button in a bar the two states share, standing exactly where its picture is
  *   drawn — must still close it. What `<Link pressableDuringRouteTransition>`
  *   says, for the other half of a toggle. Only for a control that does not
- *   travel with the pages.
+ *   travel with the pages. A `RouteTravel` honours it as well, for a control in
+ *   the part of a `FixedBar` it photographs (`data-navi-fixed-bar-overhang`).
  * @param {Function} [action] What the press runs: a button holds no value, so
  *   every press is one call. Inside a `<Form>` or a group it carries the value
  *   around it, merged over the action's bound params — a value that is not an

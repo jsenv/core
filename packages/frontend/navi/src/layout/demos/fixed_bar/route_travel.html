@@ -39,6 +39,10 @@
       .travel_row[data-page="modifier"] {
         background: #fdf0e8;
       }
+      .raised_button {
+        position: relative;
+        top: -14px;
+      }
     </style>
   </head>
   <body>
@@ -114,6 +118,26 @@
         </div>
       );
 
+      const RaisedButton = () => {
+        const [pressCount, setPressCount] = useState(0);
+        return (
+          <Box data-navi-fixed-bar-overhang flex alignX="center" width="72">
+            <Button
+              className="raised_button"
+              pressableDuringRouteTransition
+              circle
+              width="48"
+              height="48"
+              backgroundColor="#1a73e8"
+              color="white"
+              onClick={() => setPressCount(pressCount + 1)}
+            >
+              {pressCount}
+            </Button>
+          </Box>
+        );
+      };
+
       // The page has no tab of its own: it opens on the first one.
       const TabIndex = () => {
         useLayoutEffect(() => {
@@ -176,6 +200,7 @@
                   Modifier
                 </Link>
               </Nav>
+              <RaisedButton />
             </FixedBar>
           </>
         );

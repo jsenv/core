@@ -316,7 +316,12 @@ inside its rectangle, and a navigation that is the exact way back of the movemen
 playing turns that movement round. Only on furniture that stands still: a control
 travelling with the pages has a rectangle where it will be, not where it is seen
 (navi warns about one inside the area). `RouteTravel` is the opposite case — a
-finger is on the box — and leaves the bars live.
+finger is on the box — and leaves the bars live, so its pictures cover what a bar
+paints outside its box, except two things photographed on their own, which stand
+over the pages: the bar's `shadow`, and a child wearing
+`data-navi-fixed-bar-overhang` (a raised button, the notch around it). That child
+is deaf for the length of the travel; `pressableDuringRouteTransition` on a control
+inside it keeps that control answering.
 
 A **modal `Dialog` open on a page** is furniture of the same kind: it travels with
 its page, or holds if both states have it. One the navigation itself opens or
