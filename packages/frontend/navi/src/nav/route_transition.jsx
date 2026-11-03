@@ -225,13 +225,6 @@ const css = /* css */ `
     syntax: "*";
     inherits: false;
   }
-  /* Registered to be animated, and inherited from a shared bar's image pair by
-     its two pictures. */
-  @property --navi-furniture-fade {
-    syntax: "<number>";
-    inherits: true;
-    initial-value: 1;
-  }
   :root::view-transition,
   :root::view-transition-group(*),
   :root::view-transition-image-pair(*),
@@ -463,26 +456,25 @@ const css = /* css */ `
         animation-duration: var(--navi-route-transition-duration, 300ms);
       }
 
-      /* A shared bar's two pictures read one value, so their opacities add up
-         to one on every frame. The browser's two fades can be sampled apart
-         (Chrome on Android, around a long frame): the bar then lets the live
-         document through, or plus-lighter burns it. Fading only the new picture
-         over an opaque old one would stack shadows and keep what a transparent
-         bar paints until the last frame. */
-      &::view-transition-image-pair(.navi_furniture_shared) {
-        animation: navi-furniture-fade
-          var(--navi-route-transition-duration, 300ms) ease both;
+      /* A shared bar's two pictures must add up to one on every frame, or the
+         bar lets the live document through, or plus-lighter burns it. The
+         browser's own fades leave one end of their keyframes to the base style,
+         and Chrome then restarts them on the compositor at each main frame: on
+         a busy page (Android, around a long frame) the two restarts can land a
+         frame apart. With both ends written (see the keyframes) they start
+         together, once, and the fade carries on while the main thread is
+         blocked, where one custom property read by both pictures would freeze
+         with it. Still the browser's cross-fade, plus-lighter said here since
+         naming the fades replaces the animation that sets it: fading only the
+         new picture over an opaque old one would stack shadows and keep what a
+         transparent bar paints until the last frame. */
+      &::view-transition-old(.navi_furniture_shared) {
+        mix-blend-mode: plus-lighter;
+        animation-name: navi-route-transition-fade-out;
       }
-      &::view-transition-old(.navi_furniture_shared),
       &::view-transition-new(.navi_furniture_shared) {
         mix-blend-mode: plus-lighter;
-        animation-name: none;
-      }
-      &::view-transition-old(.navi_furniture_shared) {
-        opacity: calc(1 - var(--navi-furniture-fade));
-      }
-      &::view-transition-new(.navi_furniture_shared) {
-        opacity: var(--navi-furniture-fade);
+        animation-name: navi-route-transition-fade-in;
       }
     }
 
@@ -965,8 +957,11 @@ const css = /* css */ `
   }
   /* The browser's own fade, written out: a movement says both of its halves,
      so that whoever else plays it (transition_furniture.js) can be given the
-     same one. */
+     same one. Both ends of each, unlike the browser's: see the shared bars. */
   @keyframes navi-route-transition-fade-out {
+    from {
+      opacity: 1;
+    }
     to {
       opacity: 0;
     }
@@ -975,13 +970,8 @@ const css = /* css */ `
     from {
       opacity: 0;
     }
-  }
-  @keyframes navi-furniture-fade {
-    from {
-      --navi-furniture-fade: 0;
-    }
     to {
-      --navi-furniture-fade: 1;
+      opacity: 1;
     }
   }
 `;
