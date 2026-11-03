@@ -1865,15 +1865,15 @@ const useInteractiveProps = (
     // — a diskette saving a row into the reader's own address book stays
     // pressable on a game nobody may edit. Its own props still hold; only what
     // came from above is dropped (see self_interactions.js for the three modes).
-    const zoneStateApplies = !selfInteractionsIgnoreBlock(props);
     // A press that only leaves the popup it sits in writes nothing to the zone
-    // around it either, so that zone being disabled or read-only — or holding a
-    // write the network policy keeps — does not hold it: the popup answers the
-    // close itself. A read-only picker's popup then closes from its own button
-    // as it does from a press outside, and refuses both alike when it holds a
-    // change it cannot send.
-    const zoneBlockApplies =
-      zoneStateApplies && !pressOnlyLeaves(controlInfo.controlType, props);
+    // around it either, so that zone being disabled, read-only or busy — or
+    // holding a write the network policy keeps — does not hold it: the popup
+    // answers the close itself. A read-only picker's popup then closes from its
+    // own button as it does from a press outside, and refuses both alike when it
+    // holds a change it cannot send or a run it cannot give up on.
+    const zoneStateApplies =
+      !selfInteractionsIgnoreBlock(props) &&
+      !pressOnlyLeaves(controlInfo.controlType, props);
     // A press feeding nothing to the write around it — a travel, a page, a
     // uiAction, a function of its own — has nothing for the network policy to
     // keep: only its own verb holds it, as anywhere else. What the zone holds
@@ -1883,9 +1883,9 @@ const useInteractiveProps = (
       props,
       boundAction,
     );
-    const controlDisabled = zoneBlockApplies && controlDisabledFromAbove;
+    const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
     const controlReadOnly =
-      zoneBlockApplies &&
+      zoneStateApplies &&
       !(
         asksNothingOfTheWrite && controlReadOnlyFromAbove === "network-policy"
       ) &&
@@ -1920,7 +1920,7 @@ const useInteractiveProps = (
       networkPolicyReason !== null &&
       (isWriteAction(boundAction) ||
         Boolean(
-          zoneBlockApplies &&
+          zoneStateApplies &&
           !asksNothingOfTheWrite &&
           parentAction &&
           isWriteAction(parentAction),

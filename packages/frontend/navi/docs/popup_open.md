@@ -661,23 +661,10 @@ The text of the row is the popup's title, and so its name (see
 to.** A read-only `Picker` still opens, to be read, and hands its popup that same
 read-only, yet closing writes nothing to the picker. So a button or a link saying
 `--navi-close` or `--navi-cancel`, with no `action` of its own, stays pressable
-in a read-only or disabled zone, written by hand or not. The picker agrees: one
-that turns read-only or disabled while its popup is open still lets it close,
-`openWhileReadOnly={false}` included, since that prop is about opening.
-
-**A form busy sending is the one difference with `<Dialog.Close />`.** A
-hand-written button wears the wait of the form around it and refuses the press
-itself, where `<Dialog.Close />` (`whenSelfInteractionsBlocked="ignore"`, see
-[interactions.md](./interactions.md#where-the-zone-blocks-does-it-write-to-the-control-it-sits-in))
-hands the press to the popup. That matters for a form whose run does not hold
-the popup (`actionStandalone`) or may be called off (`actionAbortable`). A cross
-that has to be hand-written there carries the claim itself:
-
-```jsx
-<Button command="--navi-close" icon whenSelfInteractionsBlocked="ignore">
-  …
-</Button>
-```
+in a read-only, disabled or busy zone, written by hand or not, the same as
+`<Dialog.Close />`. The picker agrees: one that turns read-only, disabled or busy
+while its popup is open still lets it close, `openWhileReadOnly={false}` included,
+since that prop is about opening.
 
 ### It asks, it does not force
 

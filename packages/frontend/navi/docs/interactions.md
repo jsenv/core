@@ -409,10 +409,9 @@ this element's to block.
 A greyed cross that still removes is worse than no cross — hence the default.
 `"ignore"` is the other extreme and the caller owns it: answering "read-only" to
 a gesture that was never going to write says nothing true, so use it only when
-that is really the case. navi's `<Dialog.Close />` is one — leaving what a
-read-only picker opened writes nothing to it. A button saying `--navi-close` or
-`--navi-cancel` with no action needs no claim for a disabled or read-only zone
-(see [popup_open.md](./popup_open.md#the-close-cross)).
+that is really the case. A way out needs no claim: a button saying `--navi-close`
+or `--navi-cancel` with no action is not reached by the zone at all (see
+[popup_open.md](./popup_open.md#the-close-cross)).
 
 Busy is not on the list because busy does not block: it is the read-only a
 running action sets on its way that does.
