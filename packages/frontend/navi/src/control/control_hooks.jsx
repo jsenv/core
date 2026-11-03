@@ -1867,12 +1867,13 @@ const useInteractiveProps = (
     // came from above is dropped (see self_interactions.js for the three modes).
     const zoneStateApplies = !selfInteractionsIgnoreBlock(props);
     // A press that only leaves the popup it sits in writes nothing to the zone
-    // around it either, so that zone being read-only — or holding a write the
-    // network policy keeps — does not hold it: the popup answers the close
-    // itself. A read-only picker's popup then closes from its own button as
-    // it does from a press outside, and refuses both alike when it holds a
+    // around it either, so that zone being disabled or read-only — or holding a
+    // write the network policy keeps — does not hold it: the popup answers the
+    // close itself. A read-only picker's popup then closes from its own button
+    // as it does from a press outside, and refuses both alike when it holds a
     // change it cannot send.
-    const zoneReadOnlyApplies = zoneStateApplies && !pressOnlyLeaves(props);
+    const zoneBlockApplies =
+      zoneStateApplies && !pressOnlyLeaves(controlInfo.controlType, props);
     // A press feeding nothing to the write around it — a travel, a page, a
     // uiAction, a function of its own — has nothing for the network policy to
     // keep: only its own verb holds it, as anywhere else. What the zone holds
@@ -1882,9 +1883,9 @@ const useInteractiveProps = (
       props,
       boundAction,
     );
-    const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
+    const controlDisabled = zoneBlockApplies && controlDisabledFromAbove;
     const controlReadOnly =
-      zoneReadOnlyApplies &&
+      zoneBlockApplies &&
       !(
         asksNothingOfTheWrite && controlReadOnlyFromAbove === "network-policy"
       ) &&
@@ -1919,7 +1920,7 @@ const useInteractiveProps = (
       networkPolicyReason !== null &&
       (isWriteAction(boundAction) ||
         Boolean(
-          zoneReadOnlyApplies &&
+          zoneBlockApplies &&
           !asksNothingOfTheWrite &&
           parentAction &&
           isWriteAction(parentAction),
@@ -2537,11 +2538,14 @@ const splitControlProps = (
   return [controlRootProps, controlHostProps];
 };
 // What a press leaving a popup asks for: closing it, or cancelling it. Only on
-// a control running nothing of its own — one with an action writes, wherever
-// it then leads.
+// a button or a link running nothing of its own — one with an action writes,
+// wherever it then leads, and on a field or a form `command` is what follows
+// the value it writes.
 const LEAVING_COMMAND_SET = new Set(["--navi-close", "--navi-cancel"]);
-const pressOnlyLeaves = (props) =>
-  LEAVING_COMMAND_SET.has(props.command) && !props.action;
+const pressOnlyLeaves = (controlType, props) =>
+  (controlType === "button" || controlType === "link") &&
+  LEAVING_COMMAND_SET.has(props.command) &&
+  !props.action;
 // What these commands move reads only the person's place: the slide shown,
 // the item pointed at, the scroll, the page (see commands.js).
 const COMMANDS_ASKING_NOTHING_OF_THE_WRITE = new Set([

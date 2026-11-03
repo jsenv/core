@@ -9,12 +9,13 @@ import { buttonI18n } from "../text/navi_i18n.js";
  * `--navi-close`, which the nearest popup above it answers; the caller only
  * decides where it goes (the right end of a header, most of the time).
  *
- * It is the way out of a popup, so it is the one affordance in there that the
- * surrounding control's read-only and disabled do not reach: a read-only picker
- * still opens (reading changes nothing) and hands its popup that read-only, and
- * a cross wearing it would trap the user in a popup they were invited to read.
- * A close button written by hand inherits it and refuses the press — which is
- * the reason to use this one rather than a `<Button command="--navi-close" />`.
+ * It is the way out of a popup, so the surrounding control's read-only and
+ * disabled do not reach it: a read-only picker still opens (reading changes
+ * nothing) and hands its popup that read-only, and a cross wearing it would trap
+ * the user in a popup they were invited to read. A `<Button
+ * command="--navi-close" />` with no action is exempt from those two as well;
+ * this one does not wear the wait of a form around it either, so its press
+ * always reaches the popup.
  *
  * Exempt from the state around it, never from the popup's own answer: the cross
  * ASKS, and the popup decides — a dialog holding a form mid-send keeps the

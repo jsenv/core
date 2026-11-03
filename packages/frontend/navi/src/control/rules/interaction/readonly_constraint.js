@@ -14,6 +14,14 @@ export const READONLY_CONSTRAINT = {
       return null;
     }
 
+    // Leaving a popup already open is never the control's to refuse, whatever
+    // it would refuse on the way in: closing writes nothing, and what may hold
+    // a popup is the popup's own question (see popup_busy.js and the picker's
+    // onRequestClose).
+    if (intent === "close") {
+      return null;
+    }
+
     // Read-only, and what it opens still opens: a picker's answer often lives
     // in a shape only its popup draws — a plan with one tile ringed, a wheel
     // stopped on a time — and refusing to open leaves that shape unreadable.

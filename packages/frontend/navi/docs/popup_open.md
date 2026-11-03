@@ -657,16 +657,21 @@ The text of the row is the popup's title, and so its name (see
 
 ### It is the way out, so the state around it does not reach it
 
-**A close button written by hand refuses the press inside a read-only control.**
-A read-only `Picker` still opens, to be read, and hands its popup that same
-read-only. Closing writes nothing to the picker, and `<Dialog.Close />` says so
-(`whenSelfInteractionsBlocked="ignore"`, see
-[interactions.md](./interactions.md#where-the-zone-blocks-does-it-write-to-the-control-it-sits-in));
-a `<Button command="--navi-close" />` does not, wears the read-only it was
-handed, and answers a press aimed at the way out with "this action is not
-available right now". The same holds for a disabled zone and for a form busy
-sending: the way out of a popup is never held by the state of what the popup
-belongs to. A cross that really has to be hand-written carries the claim itself:
+**The way out of a popup is never held by the state of what the popup belongs
+to.** A read-only `Picker` still opens, to be read, and hands its popup that same
+read-only, yet closing writes nothing to the picker. So a button or a link saying
+`--navi-close` or `--navi-cancel`, with no `action` of its own, stays pressable
+in a read-only or disabled zone, written by hand or not. The picker agrees: one
+that turns read-only or disabled while its popup is open still lets it close,
+`openWhileReadOnly={false}` included, since that prop is about opening.
+
+**A form busy sending is the one difference with `<Dialog.Close />`.** A
+hand-written button wears the wait of the form around it and refuses the press
+itself, where `<Dialog.Close />` (`whenSelfInteractionsBlocked="ignore"`, see
+[interactions.md](./interactions.md#where-the-zone-blocks-does-it-write-to-the-control-it-sits-in))
+hands the press to the popup. That matters for a form whose run does not hold
+the popup (`actionStandalone`) or may be called off (`actionAbortable`). A cross
+that has to be hand-written there carries the claim itself:
 
 ```jsx
 <Button command="--navi-close" icon whenSelfInteractionsBlocked="ignore">

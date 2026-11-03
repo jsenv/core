@@ -521,11 +521,8 @@ const clearCommand = (source, event) => {
       return;
     }
     // Only what is open: the clear cross of a picker sits on the closed
-    // trigger, and asking that trigger to close is asking it to do nothing —
-    // except that the ask goes through the interaction gate, which turns it
-    // down while the clear it just sent is still running and says so out loud
-    // ("this element is busy"). A clear pressed INSIDE an open popup is the
-    // one this is for: it answers the popup, so the popup goes away.
+    // trigger, with nothing to close. A clear pressed INSIDE an open popup is
+    // the one this is for: it answers the popup, so the popup goes away.
     const expandable = resolveClosestExpandable(source);
     if (expandable?.getAttribute("aria-expanded") !== "true") {
       return;

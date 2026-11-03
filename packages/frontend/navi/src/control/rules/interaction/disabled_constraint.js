@@ -4,9 +4,14 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const DISABLED_CONSTRAINT = {
   name: "disabled",
   messageAttribute: "data-disabled-message",
-  check: (field) => {
+  check: (field, { intent } = {}) => {
     const disabled = field.controlHostProps.disabled;
     if (!disabled) {
+      return null;
+    }
+
+    // Same as READONLY_CONSTRAINT: a popup still open leaves like any other.
+    if (intent === "close") {
       return null;
     }
 

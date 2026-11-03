@@ -855,11 +855,11 @@ const PickerCustom = (props) => {
           event: e,
           name: "navi_request_open_event",
           // Showing what the picker already holds, in the shape only the popup
-          // draws it in — nothing of the value is written on the way in, nor on
-          // the way out. Every interaction below says the same, which is what
-          // lets a read-only picker be opened and read while everything that
-          // would write it (paste, cut, the clear cross) stays refused. See
-          // READONLY_CONSTRAINT.
+          // draws it in — nothing of the value is written on the way in. Every
+          // way of opening below says the same, which is what lets a read-only
+          // picker be opened and read while everything that would write it
+          // (paste, cut, the clear cross) stays refused. Every way of closing
+          // says "close". See READONLY_CONSTRAINT.
           intent: "read",
           allowed: () => {
             // What the open said travels with it: a picker opened from
@@ -884,7 +884,7 @@ const PickerCustom = (props) => {
       onnavi_request_close: (e) => {
         requestInteraction({
           event: e,
-          intent: "read",
+          intent: "close",
           allowed: () => {
             const closing = requestClose(e, {
               isCancel: e.detail.isCancel,
@@ -993,7 +993,7 @@ const PickerCustom = (props) => {
           }
           return {
             name: "escape_to_cancel",
-            intent: "read",
+            intent: "close",
             allowed: () => {
               // Read with escapeEffect by the controller (see above).
               requestClose(e, { isCancel: true });
@@ -1070,7 +1070,7 @@ const PickerCustom = (props) => {
               pressAnsweredAtMouseDownRef.current = readPressCount();
               return {
                 name: "mousedown to close picker",
-                intent: "read",
+                intent: "close",
                 allowed: () => requestClose(e, { isCancel: true }),
               };
             }
@@ -1130,7 +1130,7 @@ const PickerCustom = (props) => {
             ) {
               return {
                 name: "click to close picker",
-                intent: "read",
+                intent: "close",
                 prevented: () => {
                   e.preventDefault();
                 },

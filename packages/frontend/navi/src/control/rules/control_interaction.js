@@ -16,7 +16,8 @@
  *   → onRequestInteraction
  *       → check disabled / read-only / busy (via controller.rules.interaction)
  *         against the interaction's `intent` ("write" by default, "read" for one
- *         that only shows what is already there — see READONLY_CONSTRAINT)
+ *         that only shows what is already there, "close" for one leaving a popup
+ *         — see READONLY_CONSTRAINT)
  *       → if blocked  → prevented()
  *       → if allowed  → allowed()
  *         → (in allowed callback) setUIState(value)
@@ -313,9 +314,10 @@ export const onRequestInteraction = (
     name,
     // What this interaction would do to the control: write it, or only read it.
     // Everything writes unless it says otherwise — an interaction that merely
-    // shows what is already there (opening a picker's popup, closing it again)
-    // says "read", and that is what a control held read-only can still let
-    // through (see READONLY_CONSTRAINT).
+    // shows what is already there (opening a picker's popup) says "read", and
+    // that is what a control held read-only can still let through. Closing that
+    // popup says "close", which no state of the control refuses (see
+    // READONLY_CONSTRAINT).
     intent = "write",
     bypassInteractivity = false,
     // navi continuing a gesture on its own rather than a user asking for

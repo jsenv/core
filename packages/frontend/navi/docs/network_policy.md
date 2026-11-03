@@ -139,8 +139,8 @@ stays pressable — a travel between slides or a step back in a wizard
 "Cancel", `ButtonCopyToClipboard`) — and so is a way out (`--navi-close`,
 `--navi-cancel`). The same goes for what a held control holds: a `Link` in the
 popup of a held `Picker` still leads to its page. The form's own read-only and
-busy state hold them all the same; `whenSelfInteractionsBlocked="ignore"` is what
-takes a button out of those too.
+busy state hold them all the same, except that read-only does not hold a way out;
+`whenSelfInteractionsBlocked="ignore"` is what takes a button out of those too.
 
 ## Holding writes while reads go out
 

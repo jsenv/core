@@ -23,6 +23,11 @@ export const BUSY_CONSTRAINT = {
       return null;
     }
 
+    // Same as READONLY_CONSTRAINT: a run inside the popup holds it from there.
+    if (intent === "close") {
+      return null;
+    }
+
     // Busy, and what it opens still opens: a picker's answer lives in a shape
     // only its popup draws, and refusing to open leaves it unreadable for as
     // long as the wait lasts. Opening reads and nothing more — the same
