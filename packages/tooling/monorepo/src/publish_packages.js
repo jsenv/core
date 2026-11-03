@@ -1,6 +1,10 @@
 import { createLogger, UNICODE } from "@jsenv/humanize";
 import { publish } from "@jsenv/package-publish/src/internal/publish.js";
 import { collectUnpublishedPackages } from "./internal/collect_unpublished_packages.js";
+import {
+  buildDependencyGraph,
+  orderByDependencies,
+} from "./internal/dependency_graph.js";
 import { syncPackagesVersions } from "./sync_packages_versions.js";
 
 const REGISTRY_URL = "https://registry.npmjs.org";
@@ -24,11 +28,34 @@ export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
     console.log(`${UNICODE.OK} packages are published on registry`);
     return;
   }
+  // A package pins the versions of its dependencies, npm cannot install it until
+  // they exist. So dependencies go first, and a package whose dependency did not
+  // make it stays unpublished: the latest version on the registry stays installable.
+  const dependencyGraph = buildDependencyGraph(workspacePackages);
+  const publishOrder = orderByDependencies(dependencyGraph);
+  packagesToPublish.sort(
+    (a, b) =>
+      publishOrder.indexOf(a.packageName) - publishOrder.indexOf(b.packageName),
+  );
   console.log(`${UNICODE.INFO} ${packagesToPublish.length} packages to publish
   - ${packagesToPublish.map(({ packageSlug }) => packageSlug).join(`
   - `)}`);
 
-  for (const { packageSlug, rootDirectoryUrl } of packagesToPublish) {
+  const notPublished = new Map();
+  for (const {
+    packageName,
+    packageSlug,
+    rootDirectoryUrl,
+  } of packagesToPublish) {
+    const missingDependencyName = dependencyGraph[
+      packageName
+    ].dependencies.find((dependencyName) => notPublished.has(dependencyName));
+    if (missingDependencyName) {
+      const message = `${packageSlug} skipped, it depends on ${missingDependencyName}`;
+      console.warn(`${UNICODE.WARNING} ${message}`);
+      notPublished.set(packageName, message);
+      continue;
+    }
     const { success } = await publish({
       logger: createLogger({ logLevel: "info" }),
       packageSlug,
@@ -37,8 +64,13 @@ export const publishPackages = async ({ directoryUrl, packagesRelations }) => {
       token,
     });
     if (!success) {
-      throw new Error(`failed to publish ${packageSlug}`);
+      notPublished.set(packageName, `${packageSlug} failed to publish`);
     }
+  }
+  if (notPublished.size > 0) {
+    throw new Error(`${notPublished.size} packages not published
+  - ${[...notPublished.values()].join(`
+  - `)}`);
   }
 };
 
