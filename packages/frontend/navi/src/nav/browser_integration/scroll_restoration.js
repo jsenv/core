@@ -609,6 +609,12 @@ export const startAtTop = (url, { from } = {}) => {
   // position to come back to — the return would keep the offset of the page
   // being left.
   positionByUrl.set(href, { x: 0, y: 0 });
+  // A list holding the document on the page arriving has placed it already: a
+  // navigation holding the rendering gets here after that render, and nothing
+  // owes the list another commit to put it back (see holdDocumentScroll).
+  if (isDocumentHeld()) {
+    return;
+  }
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 // Also what decides whether a push carries the state of the page it keeps

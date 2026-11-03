@@ -16,9 +16,9 @@ import { RoutePageContext } from "../nav/route_page_context.js";
  * mount, or the first to render into an empty slot; later renders of a
  * `SlotFill` that is not the filler leave the slot alone. A `SlotFill`
  * unmounting empties the slot only while it is still that one, and so does one
- * in a page a route transition keeps while leaving (see keepLeavingPages in
- * nav/route.jsx): still mounted, hidden, it must neither stay in the slot nor
- * take it back from the page arriving.
+ * in or below a page a route transition keeps while leaving (see
+ * keepLeavingPages in nav/route.jsx): still mounted, hidden, it must neither
+ * stay in the slot nor take it back from the page arriving.
  *
  * **One `SlotFill`, rendered where the choice is made.** `isFilled` follows
  * the fills as they mount and unmount, in the order the tree walks them. A
@@ -82,8 +82,10 @@ export const createSlot = (SlotRenderer = Box) => {
     }, []);
     // In a page kept while leaving: out of the slot as if unmounted, since
     // the page arriving is what the slot must show — or nothing, when it
-    // fills none.
-    if (routePage && routePage.leavingSignal.value) {
+    // fills none. The signal brings the render that steps out; hasLeft() refuses
+    // a fill built in a kept page (a wrapper changing shape rebuilds what it
+    // holds), which renders before that signal is set.
+    if (routePage && (routePage.leavingSignal.value || routePage.hasLeft())) {
       if (filler === fillerRef) {
         filler = null;
         slotPropsSignal.value = null;

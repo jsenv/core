@@ -2807,25 +2807,37 @@ const useListScrollSync = ({
   // landing or resizing — and said again when it reads differently (`ifChanged`):
   // the same scroll, the screen said right.
   const announcedRef = useRef(null);
+  // A scroll landing past everything drawn (a key sending the list to its end,
+  // a hand on the scrollbar) has no item to read a position from: it is said by
+  // that re-read, even when it is the first thing the list has to say.
+  const reportOwedRef = useRef(false);
   const reportPosition = ({ ifChanged } = {}) => {
     if (!ref.current) {
       return;
     }
-    if (ifChanged && !announcedRef.current) {
+    if (ifChanged && !announcedRef.current && !reportOwedRef.current) {
       return;
     }
     const remember = rememberScrollRef.current;
     const onScrolledChange = onScrolledChangeRef.current;
     const position = captureListAnchor(remember || Boolean(onScrolledChange));
     if (!position) {
+      if (!ifChanged) {
+        reportOwedRef.current = true;
+      }
       return;
     }
+    reportOwedRef.current = false;
     positionRef.current = position;
     if (!remember && !onScrolledChange) {
       return;
     }
     const scrolledNow = toScrolledPosition(position);
-    if (ifChanged && isSamePosition(scrolledNow, announcedRef.current)) {
+    if (
+      ifChanged &&
+      announcedRef.current &&
+      isSamePosition(scrolledNow, announcedRef.current)
+    ) {
       return;
     }
     announcedRef.current = scrolledNow;
@@ -3410,10 +3422,9 @@ const useListScrollSync = ({
     // ends the hold like a wheel does — the ones that come with no input event
     // at all: the status bar tap on iOS, find in page, a script.
     // Only once the list has stood where it holds itself, though. Until then
-    // the page is still settling around it, and some of that is written after
-    // the list placed itself: a navigation holding the rendering for its
-    // transition takes the arriving page to its top once the page rendered
-    // (whenRenderingResumes), and the hold puts it back at its next commit.
+    // the page is still settling around it, and what that moves (a document
+    // still too short for the offset clamps it) the hold puts back at its next
+    // commit.
     const letGoUnlessHeldScroll = () => {
       const place = startPlaceRef.current;
       const way = place.way;

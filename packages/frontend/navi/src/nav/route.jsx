@@ -67,7 +67,7 @@
  * ```
  */
 
-import { signal, untracked } from "@preact/signals";
+import { computed, signal, untracked } from "@preact/signals";
 import { cloneElement, createRef, h } from "preact";
 import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
@@ -378,7 +378,7 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
         continue;
       }
       entry.hidden = true;
-      entry.page.leavingSignal.value = true;
+      entry.page.ownLeavingSignal.value = true;
       // The page renders on its own while kept (a component reading a signal
       // the address moved), never through this container: a top node it
       // replaces lands between the markers unmarked, a text it writes shows
@@ -455,11 +455,23 @@ const hideNodesBetween = (start, end, observer) => {
 // page it sits in is shown itself. Never again once kept while leaving: coming
 // back to its route mounts the page anew.
 const createRoutePage = (readShownBranch, parentPage) => {
+  const ownLeavingSignal = signal(false);
   const page = {
     branchId: null,
     element: undefined,
     left: false,
-    leavingSignal: signal(false),
+    ownLeavingSignal,
+    // A page nested in one that left is hidden with it, even while its own
+    // container goes on picking it (a route matching on both sides).
+    leavingSignal: parentPage
+      ? computed(() => ownLeavingSignal.value || parentPage.leavingSignal.value)
+      : ownLeavingSignal,
+    hasLeft: () => {
+      if (page.left) {
+        return true;
+      }
+      return parentPage ? parentPage.hasLeft() : false;
+    },
     isShown: () => {
       if (page.left) {
         return false;

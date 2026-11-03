@@ -14,9 +14,16 @@ import { createContext } from "preact";
  *   outside any render — by a subscription deciding whether to re-render, by
  *   the scroll restoration when a position is due — and it reads the routes
  *   untracked, so asking subscribes nobody to them.
- * - `leavingSignal` — true once the page is hidden and kept while its movement
- *   plays: still mounted, so what it fills or moves outside its own nodes (a
- *   slot in a bar, the document a list scrolls) steps out rather than showing
- *   with, or moving, the page arriving. Every box of it measures 0×0 by then.
+ * - `hasLeft()` — whether the page, or a page it sits in, is kept while leaving.
+ *   Written by the container's render, before anything below it renders, and
+ *   final. `isShown()` can answer false for a page that stays on screen (the
+ *   address coming back, a container first rendered while the routes are
+ *   frozen), so what cannot be undone asks this one.
+ * - `leavingSignal` — true once the page, or a page it sits in, is hidden and
+ *   kept while the movement plays: still mounted, so what it fills or moves
+ *   outside its own nodes (a slot in a bar, the document a list scrolls) steps
+ *   out rather than showing with, or moving, the page arriving. Every box of it
+ *   measures 0×0 by then. Set after the render keeping the page, so that render
+ *   and what it builds can only ask `hasLeft()`.
  */
 export const RoutePageContext = createContext(null);

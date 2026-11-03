@@ -71,32 +71,33 @@ export const MountAfterPaint = ({ boxRef, children }) => {
 /**
  * Builds, now, every box still waiting whose top is above `bottom` (in the
  * document's coordinates): what the document will show once scrolled so that
- * `bottom` is the bottom of the screen. Boxes built push those below them
- * further down, so the ones measured above `bottom` are all the ones that can
- * be shown there, and a few more at worst.
+ * `bottom` is the bottom of the screen.
+ *
+ * Each box is read once those before it have their height. A box has no height
+ * until it is built, so read together they would all stand at the end of what
+ * is built, above `bottom` as soon as the offset is worth a screen: a page of
+ * sections would be built whole before its first frame. A box found below
+ * `bottom` waits: a build only pushes it further down, and where it stands
+ * already makes the document tall enough for the offset.
+ *
+ * The walk follows the set live, in mount order: a box mounted by a build is
+ * read too. One standing higher than boxes built before it (mounted later) can
+ * leave a few built that the offset does not show, never one missing that it
+ * does.
  *
  * Renders synchronously, so it must be called outside a Preact commit: a render
  * flushed from a layout effect runs inside the commit still walking the tree.
  */
 export const buildDeferredBoxesAbove = (bottom) => {
-  if (deferredBoxes.size === 0) {
-    return;
-  }
-  const toBuild = [];
   for (const deferredBox of deferredBoxes) {
     const top = readTopInWindow(deferredBox.getElement());
-    if (top !== null && top + window.scrollY < bottom) {
-      toBuild.push(deferredBox);
+    if (top === null || top + window.scrollY >= bottom) {
+      continue;
     }
-  }
-  if (toBuild.length === 0) {
-    return;
-  }
-  flushSyncRendering(() => {
-    for (const deferredBox of toBuild) {
+    flushSyncRendering(() => {
       deferredBox.build();
-    }
-  });
+    });
+  }
 };
 
 // null for a box nothing draws (a closed popup, a hidden tab): no frame shows
