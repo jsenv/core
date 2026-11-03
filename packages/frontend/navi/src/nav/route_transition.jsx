@@ -225,6 +225,13 @@ const css = /* css */ `
     syntax: "*";
     inherits: false;
   }
+  /* Registered to be animated, and inherited from a shared bar's image pair by
+     its two pictures. */
+  @property --navi-furniture-fade {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 1;
+  }
   :root::view-transition,
   :root::view-transition-group(*),
   :root::view-transition-image-pair(*),
@@ -454,6 +461,28 @@ const css = /* css */ `
       &::view-transition-old(*),
       &::view-transition-new(*) {
         animation-duration: var(--navi-route-transition-duration, 300ms);
+      }
+
+      /* A shared bar's two pictures read one value, so their opacities add up
+         to one on every frame. The browser's two fades can be sampled apart
+         (Chrome on Android, around a long frame): the bar then lets the live
+         document through, or plus-lighter burns it. Fading only the new picture
+         over an opaque old one would stack shadows and keep what a transparent
+         bar paints until the last frame. */
+      &::view-transition-image-pair(.navi_furniture_shared) {
+        animation: navi-furniture-fade
+          var(--navi-route-transition-duration, 300ms) ease both;
+      }
+      &::view-transition-old(.navi_furniture_shared),
+      &::view-transition-new(.navi_furniture_shared) {
+        mix-blend-mode: plus-lighter;
+        animation-name: none;
+      }
+      &::view-transition-old(.navi_furniture_shared) {
+        opacity: calc(1 - var(--navi-furniture-fade));
+      }
+      &::view-transition-new(.navi_furniture_shared) {
+        opacity: var(--navi-furniture-fade);
       }
     }
 
@@ -945,6 +974,14 @@ const css = /* css */ `
   @keyframes navi-route-transition-fade-in {
     from {
       opacity: 0;
+    }
+  }
+  @keyframes navi-furniture-fade {
+    from {
+      --navi-furniture-fade: 0;
+    }
+    to {
+      --navi-furniture-fade: 1;
     }
   }
 `;

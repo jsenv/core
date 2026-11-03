@@ -171,7 +171,7 @@ const TRANSITION_FURNITURE_CSS = /* css */ `
     /* Over the whole window, for what no picture covers; the holes are cut
        by paintRestWalls. Live DOM rather than a picture, so it fades by
        itself, on the pictures' clock and curve (the bars' own cross-fade is
-       the browser's ease). */
+       ease). */
     &[data-navi-transition-wall="rest"] {
       position: fixed;
       inset: 0;
