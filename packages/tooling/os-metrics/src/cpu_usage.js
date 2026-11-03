@@ -31,6 +31,13 @@ export const startMeasuringTotalCpuUsage = () => {
     let cpuArray = cpus();
     const ms = Date.now();
     const ellapsedMs = ms - previousMs;
+    // When the OS takes the thread for longer than the interval, the overdue
+    // timer fires again within the same ms: no time elapsed, so no ratio exists
+    // (0/0 would turn every average of this batch into NaN).
+    // The previous values are kept so the next sample covers this period.
+    if (ellapsedMs === 0) {
+      return;
+    }
     const cpuUsageSampleArray = [];
     let overallSystemMs = 0;
     let overallUserMs = 0;

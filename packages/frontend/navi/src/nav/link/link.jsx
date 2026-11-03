@@ -305,9 +305,13 @@ const css = /* css */ `
        positioned ancestor, so the link itself is static — in every state. A
        state rule positioning the link would shrink the hit area back to the
        label for the length of a press: pointerdown on the row, pointerup on
-       the label's box, and nothing navigates. */
+       the label's box, and nothing navigates.
+       No z-index in any state either: it applies to a flex or grid item
+       whatever its position, and a focused link would lift the area above the
+       controls written after it. */
     &[data-stretch] {
       position: static;
+      z-index: auto;
 
       &::after {
         position: absolute;
