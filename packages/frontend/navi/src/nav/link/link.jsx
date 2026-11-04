@@ -308,15 +308,26 @@ const css = /* css */ `
        the label's box, and nothing navigates.
        No z-index in any state either: it applies to a flex or grid item
        whatever its position, and a focused link would lift the area above the
-       controls written after it. */
+       controls written after it.
+       The ring goes around what Enter opens, so it is drawn on that area and
+       not on the link's box, which is 0 × 0 without children. Inside the area:
+       as large as its ancestor, a ring outside it is cut by the ancestor's
+       overflow or clip-path. */
     &[data-stretch] {
       position: static;
       z-index: auto;
+      outline-width: 0;
 
       &::after {
         position: absolute;
         inset: 0;
         content: "";
+      }
+
+      &[data-focus-visible]::after {
+        border-radius: var(--link-border-radius);
+        outline: var(--link-outline-width) solid var(--link-outline-color);
+        outline-offset: calc(-1 * var(--link-outline-width));
       }
     }
     /* Readonly */
@@ -568,7 +579,10 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   positioned; navi's `Text` is not. A control in the row that keeps its own
  *   press sits above the area when it is positioned and comes after the link
  *   (navi's `Button` is positioned); one written before the link is raised
- *   with a `z-index`. The link is never positioned itself, in any state.
+ *   with a `z-index`. The link is never positioned itself, in any state. The
+ *   focus ring is drawn inside the press area and cannot read the ancestor's
+ *   radius: a rounded ancestor repeats it on the link
+ *   (`<Link stretch borderRadius="m">`).
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
  * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.routeTransition] -
