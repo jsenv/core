@@ -29,8 +29,10 @@ the pointer inside a box that travels.
   a diagonal would ask for two travels at once when only one screen can arrive.
   The reading leans towards the box's own axis — a thumb swiping sideways moves
   along an arc, and its first pixels lean off-axis far more than the swipe does
-  — so the cross axis takes the press only when it clearly dominates, and a
-  scroll, near-pure on its axis from the first pixel, still leaves whole. A
+  — so the cross axis takes the press only when it clearly dominates. Where
+  something under the finger scrolls on that axis, the page included, the
+  reading is even, the way the browser's is: a scroll that wobbles stays a
+  scroll, and a swipe whose first pixels are steeper than 45° scrolls too. A
   finger's 6px is a deadline rather than a feel: the browser commits a touch to
   its own pan about 8px in, and whatever is read after that is read about a
   pointer it has already cancelled (see

@@ -68,6 +68,33 @@ export const overflowGoesToViewport = (element) => {
   return rootStyle.overflowX === "visible" && rootStyle.overflowY === "visible";
 };
 
+// The viewport is the scroll container nothing declares: `overflow` computes to
+// `visible` on the document element even while the page scrolls, so it is read
+// from the size it has to go through — and from what a page locks itself with
+// while something is open in front of it.
+export const pageScrolls = (document, axis) => {
+  const { documentElement, body, defaultView } = document;
+  if (!documentElement || !defaultView) {
+    return false;
+  }
+  for (const node of [documentElement, body]) {
+    if (!node) {
+      continue;
+    }
+    const style = defaultView.getComputedStyle(node);
+    const overflow = axis === "x" ? style.overflowX : style.overflowY;
+    if (overflow === "hidden" || overflow === "clip") {
+      return false;
+    }
+  }
+  const scroller = getScrollingElement(document) || documentElement;
+  const scrollSize =
+    axis === "x" ? scroller.scrollWidth : scroller.scrollHeight;
+  const clientSize =
+    axis === "x" ? scroller.clientWidth : scroller.clientHeight;
+  return scrollSize - clientSize > 1;
+};
+
 const canHaveVerticalScroll = (element, { includeHidden }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {

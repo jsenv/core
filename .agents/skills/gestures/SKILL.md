@@ -56,10 +56,26 @@ first pixels lean off-axis far more than the swipe does; read even, the lean
 hands the press to an axis nobody meant, and a press given up is given up WHOLE:
 the hand's remaining hundred pixels are read by no one. So on a box that travels
 one axis, the cross axis takes the press only when it dominates the first report
-twice over (`AXIS_CROSS_DOMINANCE`); a scroll, near-pure from its first pixel
-(4-6×), still leaves whole, at once. A box travelling both axes reads even. A
+twice over (`AXIS_CROSS_DOMINANCE`). A box travelling both axes reads even. A
 drag source taken on contact along one axis reads its press the same way, with
 the same number (`dragAfterDistance`): the same two hands.
+
+**The bias is for where nothing else wants the cross axis.** Where something
+under a finger or a pen scrolls on it, the page included, somebody does mean that
+axis, and the first report is read even, exactly as the browser reads it. Twice
+over would hand a scroll to the travel for 2.7px of sideways wobble out of 6px,
+while the pad of a thumb is still settling. Which way the finger goes and how
+much room is left are not asked, or a thumb flicking towards the end of a list
+leaves the page. The price is a swipe whose first pixels are steeper than 45°
+over something that scrolls: it scrolls. **Nothing softer than even**: past 45°
+over `pan-y` Chrome has dropped its pan for the whole touch, so a press given up
+there scrolls nothing and travels nowhere.
+
+**The browser's reading is taken on the browser's pixels.** A press reading as
+that pan at 6px is not given up there: a thumb's arc can bend flat before 8px,
+and given up early, it is then refused by the browser too. It goes on being
+measured, with nothing refused, and both read the same report. A press reading
+as a travel takes the touch at 6px: it needs the margin under the deadline.
 
 **Deferring the decision is not available** — physics, not caution. Past the
 browser's 8px a frame spent gathering evidence is a lost gesture: waiting for

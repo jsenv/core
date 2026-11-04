@@ -290,11 +290,11 @@ export const DRAG_INTENT_THRESHOLD = 5;
 
 // How much the cross axis must dominate the axis a box travels or a source
 // walks, over the first reported pixels, to take the press away from it (see
-// the axis decision of drag_to_travel.js, and crossAxisWins below). Sized
-// against the two hands it separates: a thumb's arc leans up to about twice as
-// far off-axis as along it at the start of a sideways swipe, while a scroll is
-// four or five times purer than that on its own axis. Kept here, below both
-// readers, so a hand learns one number.
+// the axis decision of drag_to_travel.js, which asks less over something that
+// scrolls on the cross axis, and crossAxisWins below). Sized against a thumb's
+// arc, which leans up to about twice as far off-axis as along it at the start
+// of a sideways swipe. Kept here, below both readers, so a hand learns one
+// number.
 export const AXIS_CROSS_DOMINANCE = 2;
 
 /**
@@ -303,9 +303,9 @@ export const AXIS_CROSS_DOMINANCE = 2;
  * @param {PointerEvent} grabEvent
  *   The `pointerdown` event that may become a drag.
  * @param {function} dragGestureInitializer
- *   Called once the intent is established; must create and return the real drag
- *   gesture (typically via `grabViaPointer(grabEvent)`). Returning a falsy value
- *   aborts the gesture.
+ *   Called once the intent is established, with the move that established it
+ *   when one did; must create and return the real drag gesture (typically via
+ *   `grabViaPointer(grabEvent)`). Returning a falsy value aborts the gesture.
  * @param {object} [options]
  * @param {number} [options.threshold=5]
  *   Distance (px) the pointer must travel to start a drag, when the trigger is
@@ -384,7 +384,7 @@ export const dragAfterIntent = (
 };
 
 const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
-  const dragGesture = dragGestureInitializer();
+  const dragGesture = dragGestureInitializer(catchUpEvent);
   if (!dragGesture) {
     return null;
   }

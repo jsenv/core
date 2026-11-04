@@ -79,7 +79,7 @@
 
 import { suppressClickAfterGesture } from "../click_suppression.js";
 import { takePress, waitForPressHeld } from "../press_held.js";
-import { canScroll, getScrollingElement } from "../scroll/is_scrollable.js";
+import { canScroll, pageScrolls } from "../scroll/is_scrollable.js";
 import {
   claimWheelGesture,
   wheelGestureIsTakenFrom,
@@ -151,29 +151,7 @@ const wheelWouldScrollAround = (element) => {
     }
     node = node.parentElement;
   }
-  return pageScrolls(element.ownerDocument);
-};
-
-// The viewport is the scroll container nothing declares: `overflow` computes to
-// `visible` on the document element even while the page scrolls, so it is read
-// from the size it has to go through — and from what a page locks itself with
-// while something is open in front of it.
-const pageScrolls = (document) => {
-  const { documentElement, body, defaultView } = document;
-  if (!documentElement || !defaultView) {
-    return false;
-  }
-  for (const node of [documentElement, body]) {
-    if (!node) {
-      continue;
-    }
-    const { overflowY } = defaultView.getComputedStyle(node);
-    if (overflowY === "hidden" || overflowY === "clip") {
-      return false;
-    }
-  }
-  const scroller = getScrollingElement(document) || documentElement;
-  return scroller.scrollHeight - scroller.clientHeight > 1;
+  return pageScrolls(element.ownerDocument, "y");
 };
 
 // What a press on the surface is NOT for it: what answers the pointer on its own

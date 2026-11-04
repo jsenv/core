@@ -56,8 +56,10 @@ axis: the browser measures its slop as a distance, and a per-axis threshold is
 up to 1.4 times later on a diagonal. Waiting for more evidence is not
 available, because whatever is read after the browser's moment is read about
 a pointer that has already been cancelled. It is why a travel reads a finger at
-6px, leaning towards its own axis before the browser reads the same pixels
-evenly (see [drag_to_travel.md](./drag_to_travel.md#what-the-rules-are)).
+6px, before the browser reads the same pixels evenly: leaning towards its own
+axis where nothing scrolls on the other one, evenly where something does, and
+waiting for the browser's own pixels when that reading says the pan is the
+browser's (see [drag_to_travel.md](./drag_to_travel.md#what-the-rules-are)).
 
 Whether a `touchmove` can be refused at all is settled even earlier, when the
 finger lands: the non-passive listener that will refuse must already be on the

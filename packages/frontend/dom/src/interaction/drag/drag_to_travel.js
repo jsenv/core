@@ -46,6 +46,7 @@ import {
   dragAfterIntent,
   dragSourceThatStoodDown,
 } from "./drag_after_intent.js";
+import { canScroll, pageScrolls } from "../scroll/is_scrollable.js";
 import {
   claimWheelGesture,
   releaseWheelGesture,
@@ -189,6 +190,8 @@ const DRAG_START_THRESHOLD = 10;
 // went nowhere, and its click is lost (Chrome would click it up to 8px, Safari
 // never once a touchmove is refused).
 const DRAG_START_THRESHOLD_TOUCH = 6;
+// Where the browser reads that same hand for itself, once and for good.
+const BROWSER_PAN_READ_DISTANCE = 8;
 // How much of a box has to be pulled for letting go to carry on rather than put
 // things back, when the caller does not say. Under half, because a gesture that
 // has clearly begun is an intention: asking for the box to be dragged all the
@@ -449,6 +452,24 @@ export const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
   return false;
 };
 
+// Whether something under the pointer scrolls on this axis, the page included.
+// Room left is not asked: a thumb still flicking towards the end of a list is
+// scrolling it, the same as anywhere else on that list.
+const somethingScrollsOn = (fromElement, axis) => {
+  let element = fromElement;
+  while (element && element.nodeType === 1) {
+    if (canScroll(element, axis)) {
+      return true;
+    }
+    if (isTopLayer(element)) {
+      // What scrolls behind a surface painted over it is not under the finger.
+      return false;
+    }
+    element = element.parentElement;
+  }
+  return pageScrolls(fromElement.ownerDocument, axis);
+};
+
 // A gesture is over: does it carry on, or does everything go back? The distance
 // pulled says it, and the speed says it too — a short flick means "away" as
 // clearly as half a box does.
@@ -669,6 +690,18 @@ export const startDragToTravel = (
     pointerDownEvent.pointerType === "mouse"
       ? DRAG_START_THRESHOLD
       : DRAG_START_THRESHOLD_TOUCH;
+  const crossAxis = axesLeft === "x" ? "y" : axesLeft === "y" ? "x" : null;
+  // Whether this hand is the browser's: read as it reads it, onto something
+  // that scrolls that way. A mouse scrolls with its wheel, so nothing disputes
+  // its drag.
+  const browserPansAcross = (reachX, reachY) => {
+    const axisForTheBrowser = reachY >= reachX ? "y" : "x";
+    return (
+      axisForTheBrowser === crossAxis &&
+      pointerDownEvent.pointerType !== "mouse" &&
+      somethingScrollsOn(target, crossAxis)
+    );
+  };
 
   // The travel in hand: null until the finger has picked an axis and the caller
   // has accepted it.
@@ -780,20 +813,25 @@ export const startDragToTravel = (
         // far more than the gesture does. Read even, that lean hands the
         // whole gesture to an axis nobody meant (the press is given up, and
         // the hand's remaining hundred pixels are read by no one). So the
-        // cross axis has to win CLEARLY to take the press — and a gesture
-        // that is really the page's own (a scroll is near-pure on its axis
-        // from the first pixel) still is, at once, whole.
+        // cross axis has to win CLEARLY to take the press.
+        //
+        // Unless a finger is on something that scrolls on that axis: somebody
+        // does mean it there, and these few pixels wobble as much on a scroll
+        // as on a swipe. The press is then read as the browser reads it, and
+        // no softer: past that, the browser has dropped its pan for the whole
+        // touch, and a press given up there belongs to nobody.
         const reachX = Math.abs(coveredOn("x", gestureInfo));
         const reachY = Math.abs(coveredOn("y", gestureInfo));
         if (!reachX && !reachY) {
           return;
         }
-        const travelsX = axesLeft.includes("x");
-        const travelsY = axesLeft.includes("y");
-        if (travelsX && !travelsY) {
-          axis = reachY > reachX * AXIS_CROSS_DOMINANCE ? "y" : "x";
-        } else if (travelsY && !travelsX) {
-          axis = reachX > reachY * AXIS_CROSS_DOMINANCE ? "x" : "y";
+        if (crossAxis) {
+          const along = crossAxis === "y" ? reachX : reachY;
+          const cross = crossAxis === "y" ? reachY : reachX;
+          const crossWins =
+            cross > along * AXIS_CROSS_DOMINANCE ||
+            browserPansAcross(reachX, reachY);
+          axis = crossWins ? crossAxis : axesLeft;
         } else {
           axis = reachX >= reachY ? "x" : "y";
         }
@@ -1040,6 +1078,29 @@ export const startDragToTravel = (
     });
     return dragGesture;
   };
+  // A press reading as the browser's pan is not given up before the browser has
+  // read it: a thumb's arc can bend flat in those few pixels, the browser then
+  // drops its pan, and a press already given up is nobody's. It goes on being
+  // measured, with nothing refused, so both read the same report. One reading
+  // as a travel takes the press at once: it needs the margin under the deadline.
+  const grabOnceTheBrowserHasRead = (moveEvent) => {
+    if (moveEvent) {
+      const reachX = Math.abs(moveEvent.clientX - pointerDownEvent.clientX);
+      const reachY = Math.abs(moveEvent.clientY - pointerDownEvent.clientY);
+      if (
+        Math.hypot(reachX, reachY) < BROWSER_PAN_READ_DISTANCE &&
+        browserPansAcross(reachX, reachY)
+      ) {
+        dragAfterIntent(pointerDownEvent, grab, {
+          longPress: false,
+          threshold: BROWSER_PAN_READ_DISTANCE,
+          selection: "manual",
+        });
+        return null;
+      }
+    }
+    return grab();
+  };
   if (inFlight) {
     // Started from the grab: what this press landed on is moving, and what the
     // hand means by it is still being listened to (see readHand), but the touch
@@ -1054,7 +1115,7 @@ export const startDragToTravel = (
       readHand(dragGesture.gestureInfo);
     }, DRAG_CATCH_HOLD_MS);
   } else {
-    dragAfterIntent(pointerDownEvent, grab, {
+    dragAfterIntent(pointerDownEvent, grabOnceTheBrowserHasRead, {
       longPress: false,
       threshold: startThreshold,
       selection: "manual",
