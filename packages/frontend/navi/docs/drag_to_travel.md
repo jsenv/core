@@ -66,8 +66,10 @@ the pointer inside a box that travels.
 - **A hand that walks a whole box and keeps going is asking for the next one**,
   and the gesture walks on into it without being let go of.
 - **A wheel push moves one screen**, the way an arrow key does — never a
-  distance. What keeps arriving after the fingers are gone is momentum and is
-  not counted: a second screen takes a second push, or one that insists.
+  distance. It has to be a push, 60px one way: a scroll leaning sideways for an
+  event or two stays a scroll. What keeps arriving after the fingers are gone is
+  momentum and is not counted: a second screen takes a second push, or one that
+  insists.
 - **A press on a travel still moving is the next swipe first.** A step the way
   it is going asks for the screen after, and the travel goes on there without
   ever having stopped; only a step against it, or a finger saying nothing for

@@ -50,6 +50,7 @@ import { canScroll, pageScrolls } from "../scroll/is_scrollable.js";
 import {
   claimWheelGesture,
   releaseWheelGesture,
+  WHEEL_GESTURE_END_DELAY,
   wheelGestureIsTakenFrom,
 } from "../scroll/wheel_gesture.js";
 
@@ -70,7 +71,7 @@ import.meta.css = /* css */ `
        answering a gesture that is already answered, here, by what the finger is
        dragging: the page rocks under a travel that is doing its own moving, and
        one gesture is seen twice. Said once the press has become a gesture (the
-       distance crossed, a travel caught in flight, a first wheel event) and
+       distance crossed, a travel caught in flight, a wheel burst settled) and
        taken back when it ends, so a page that bounces the rest of the time goes
        on bouncing. A browser decides this when the gesture begins, so said this
        late it is a last resort: the contain rules below are what do the work. */
@@ -1165,6 +1166,11 @@ export const startDragToTravel = (
   };
 };
 
+// How far a burst has to push one way before that way is its own: what Chromium
+// asks of a touchpad before its history swipe (kStartTouchpadThresholdDips). A
+// real push covers it in a few events and a notch of a wheel in one, a sideways
+// crumb in a scroll never does.
+const WHEEL_START_DELTA = 60;
 // What each screen AFTER the first costs inside one gesture. Deliberately
 // steep: reconstructing "how much did that flick mean" from a stream nobody
 // agrees on is guesswork, and a guess that overshoots leaves someone three
@@ -1181,8 +1187,8 @@ const WHEEL_FADE_RUN = 2;
 // stream already recognized as momentum that GROWS twice in a row is a hand
 // pushing again — a second swipe thrown while the tail of the first is still
 // streaming. The browser sees one unbroken burst (the tail never went silent),
-// but to the hand these are two gestures, and the second is answered like a
-// first event: with a screen, now, not with credit towards one.
+// but to the hand these are two gestures, and the second is answered with a
+// screen, now, not with credit towards one.
 const WHEEL_REGROW_RUN = 2;
 
 /**
@@ -1201,14 +1207,18 @@ const WHEEL_REGROW_RUN = 2;
  * one push moves one slide — and the travel that follows plays at its own pace,
  * exactly as it would from a tab pressed or an arrow key.
  *
- * A gesture therefore moves ONE screen the moment it begins, on its first event
- * and whatever that event is worth: a hand that moved and saw nothing happen
- * does not wait, it pushes harder. Everything a threshold there would have
- * bought is bought instead by what the SECOND screen costs, which is a lot —
- * "how much did that flick mean" cannot be reconstructed from a stream nobody
- * agrees on, and a guess that overshoots leaves someone three screens away with
- * no idea how they got there. Under-shooting costs one more push, so that is
- * the side to be wrong on.
+ * A burst is read as a whole, never event by event: asked of each event, a scroll
+ * is a travel the moment one of them leans sideways, and they do — a finger
+ * rolling as it lands, the last crumbs of momentum, (1, 0). It has one axis, the
+ * one its events add up to once they have pushed WHEEL_START_DELTA that way. Not
+ * sooner: a push can open with a crumb of the other axis, and that first event
+ * says nothing about the rest. On the other axis, it is the content's scrolling
+ * to its end. On this box's axis, it moves ONE screen there and then.
+ *
+ * What a screen AFTER that costs is a lot — "how much did that flick mean" cannot
+ * be reconstructed from a stream nobody agrees on, and a guess that overshoots
+ * leaves someone three screens away with no idea how they got there.
+ * Under-shooting costs one more push, so that is the side to be wrong on.
  *
  * A burst has no target either — every event lands on whatever is under the
  * pointer at that instant — so it is CLAIMED at its first event and answered to
@@ -1234,6 +1244,7 @@ const WHEEL_REGROW_RUN = 2;
  * @returns {() => void} stop listening.
  */
 export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
+  let burst = null;
   let gesture = null;
 
   const forgetGesture = () => {
@@ -1270,11 +1281,93 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     );
   };
 
+  const readBurst = (wheelEvent) => {
+    if (
+      !burst ||
+      wheelEvent.timeStamp - burst.lastTime > WHEEL_GESTURE_END_DELAY
+    ) {
+      burst = {
+        x: 0,
+        y: 0,
+        lastTime: 0,
+        // Where the hand is pushing, asked at the START of a burst and never
+        // again: a pointer that has wandered off since says nothing about what
+        // the hand is pushing.
+        notOurs: !isOverElement(wheelEvent),
+      };
+    }
+    burst.lastTime = wheelEvent.timeStamp;
+    burst.x += wheelEvent.deltaX;
+    burst.y += wheelEvent.deltaY;
+    if (burst.notOurs) {
+      return;
+    }
+    const axis = Math.abs(burst.x) > Math.abs(burst.y) ? "x" : "y";
+    const pushed = axis === "x" ? burst.x : burst.y;
+    if (!pushed) {
+      return;
+    }
+    const settled = Math.abs(pushed) >= WHEEL_START_DELTA;
+    if (!axes.includes(axis)) {
+      // The other axis: the content's own scrolling, left whole to whatever
+      // wants it, down to the sideways crumbs of its tail. Only once it has
+      // pushed: before that it may be the crumb a sideways push opens with.
+      burst.notOurs = settled;
+      releaseWheelGesture(element);
+      return;
+    }
+    // Which way the screens go, said backwards (see onWheel).
+    const sign = pushed > 0 ? -1 : 1;
+    // Who owns it, asked until a screen has moved: until then the burst can still
+    // lean elsewhere, and what is asked is that way. These are the claims a press
+    // is read against (see the top of this file), all answered by giving the
+    // burst up whole: the browser scrolls as it would have.
+    const { target } = wheelEvent;
+    if (
+      (target.closest && isPressExcluded(target, element)) ||
+      scrollRoomTowards(target, element, axis, sign) ||
+      // …plus the third: a box below this one that travels on this axis. Its
+      // watcher hears the same wheel event this one does — they all listen at
+      // the document — so without this both step, and one push moves two
+      // things.
+      !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)
+    ) {
+      burst.notOurs = true;
+      releaseWheelGesture(element);
+      return;
+    }
+    // Refused and claimed from its first event, moving or not: the browser would
+    // answer it with its own history swipe, and whatever sits under the pointer
+    // with an answer of its own.
+    wheelEvent.preventDefault();
+    claimWheelGesture(element, { onEnd: forgetGesture });
+    if (!settled) {
+      return;
+    }
+    burst = null;
+    gesture = {
+      axis,
+      sign,
+      pushed: 0,
+      lastMagnitude: 0,
+      fadeRun: 0,
+      growRun: 0,
+      faded: false,
+    };
+    document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
+    document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
+    onStep({ axis, sign, event: wheelEvent });
+  };
+
   const onWheel = (wheelEvent) => {
     // The burst is already somebody else's — the box inside this one, a wheel
     // picker, whoever answered its first event. It is theirs to the end of it,
     // wherever the pointer has drifted since (see wheel_gesture.js).
     if (wheelGestureIsTakenFrom(element)) {
+      return;
+    }
+    if (!gesture) {
+      readBurst(wheelEvent);
       return;
     }
     const axis =
@@ -1287,47 +1380,6 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     // CONTENT scrolls, and pushing content to the left brings in what is on the
     // right.
     const sign = delta > 0 ? -1 : 1;
-    if (!gesture) {
-      // Where the hand is pushing, asked at the START of a burst and never
-      // again: from there on the gesture is this box's, and a pointer that has
-      // wandered off it says nothing about what the hand is pushing.
-      if (!isOverElement(wheelEvent)) {
-        return;
-      }
-      if (!axes.includes(axis)) {
-        // The other axis: the content's own scrolling, left whole to whatever
-        // wants it.
-        return;
-      }
-      // Who owns it, asked once for the gesture rather than for every event of
-      // it — the same claims a press is read against (see the top of this
-      // file), and all of them are answered by giving the gesture up whole:
-      // nothing is prevented and the browser scrolls as it would have.
-      const { target } = wheelEvent;
-      if (
-        (target.closest && isPressExcluded(target, element)) ||
-        scrollRoomTowards(target, element, axis, sign) ||
-        // …plus the third: a box below this one that travels on this axis. Its
-        // watcher hears the same wheel event this one does — they all listen at
-        // the document — so without this both step, and one push moves two
-        // things.
-        !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)
-      ) {
-        return;
-      }
-      gesture = {
-        axis,
-        sign,
-        pushed: 0,
-        lastMagnitude: 0,
-        fadeRun: 0,
-        growRun: 0,
-        faded: false,
-        stepped: false,
-      };
-      document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
-      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
-    }
     // Ours from here, on both axes: what the browser would do with the leftover
     // — scroll the page behind the box, bounce it, go back in history — is one
     // gesture answered twice. On the other axis that swallowing is absolute —
@@ -1356,25 +1408,16 @@ export const watchWheelTravel = (element, { axes = "xy", onStep }) => {
     if (sign !== gesture.sign) {
       // Turned around: what was adding up was going the other way, so the
       // ledger starts over — and only the ledger. The burst has been answered
-      // (stepped) and its stream is as much momentum as an event ago (faded):
-      // a flipping sign is the one thing a dying tail and a hand share, and a
-      // tail rocking to zero read as a first event walks a slide per event. A
-      // screen the other way costs what any screen after the first does, and a
-      // counter-push over a tail is heard by the regrow rule below.
+      // and its stream is as much momentum as an event ago (faded): a flipping
+      // sign is the one thing a dying tail and a hand share, and a tail rocking
+      // to zero read as a new push walks a slide per event. A screen the other
+      // way costs what any screen after the first does, and a counter-push over
+      // a tail is heard by the regrow rule below.
       gesture.sign = sign;
       gesture.pushed = 0;
       gesture.lastMagnitude = 0;
       gesture.fadeRun = 0;
       gesture.growRun = 0;
-    }
-    if (!gesture.stepped) {
-      // The first event of a gesture moves a screen, whatever it is worth —
-      // a pixel is a hand that moved, and a hand that moved and saw nothing
-      // happen pushes harder rather than waiting. Everything a threshold could
-      // buy here is bought by what a screen AFTER this one costs.
-      gesture.stepped = true;
-      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
-      return;
     }
     const magnitude = Math.abs(delta);
     if (magnitude < gesture.lastMagnitude) {

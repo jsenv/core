@@ -182,14 +182,23 @@ answered to the end wherever the pointer wanders** (`wheel_gesture.js`);
 unclaimed, a hand drifting off a nested carousel walks a slide, then the box
 around it, on one push. Silence is its only end: the claim lapses 150ms after
 the last event **on its axis**, long enough to survive a travel's busiest
-frames. Who owns it is asked once, at the first event, against the same claims
+frames. Who owns it is asked until a screen has moved, against the same claims
 as a press, all answered by giving it up whole.
 
 Cutting the stream into pushes is the whole difficulty — momentum keeps arriving
 with the fingers gone, and counted, one flick is five slides:
 
-- **the first event of a gesture moves a screen**, whatever it is worth: a hand
-  that moved and saw nothing happen pushes harder rather than waiting;
+- **a burst has one axis, and it is read as a whole**: what its events add up to,
+  settled once they have pushed 60px that way (`WHEEL_START_DELTA`, Chromium's
+  number before its own history swipe). Read event by event, a scroll is a travel
+  the moment one of its events leans sideways, and its crumbs do. Read from the
+  first event, a push opening with a crumb of the other axis is lost: the
+  arc of a press again. Settled on the other axis, it is the content's scrolling
+  to its end;
+- **settled on the box's axis, it moves a screen**, there and then. Until then
+  every event leaning this way is refused and claimed, and nothing moves: about
+  80ms on a real push, one event on a notch. A push thrown less than 150ms after
+  a scroll's last event is that scroll, and is lost;
 - **every screen after it costs a lot**: later events add up to 600 per screen
   (`WHEEL_NEXT_STEP_DELTA`, steep on purpose: an overshoot leaves someone three
   screens away, an undershoot costs one more push), and a stream weakening
@@ -198,10 +207,10 @@ with the fingers gone, and counted, one flick is five slides:
   are two screens; 160ms apart, ten;
 - **a faded stream that grows twice in a row is a hand pushing again**
   (`WHEEL_REGROW_RUN`; decay jitter bumps up alone, never twice running), and
-  it is answered like a first event — a screen, now, never credit towards one:
-  charged the second screen's price, it reads as "my swipes are ignored";
+  it is answered with a screen, now, never credit towards one: charged the second
+  screen's price, it reads as "my swipes are ignored";
 - **a sign that flips restarts the ledger, not the gesture**: a tail rocking to
-  zero read as a first event walks a slide per event;
+  zero read as a new push walks a slide per event;
 - **cross-axis events are swallowed absolutely, and renew nothing.** No
   per-event reading tells a scroll's onset from the gesture's wobble, and one
   crumb let through scrolls the slide's content under the travel. **Do not
@@ -262,7 +271,7 @@ A gesture already answered must not be answered a second time:
   not move, sometimes it does" is made of;
 - **the bounce and the history swipe**: `overscroll-behavior: none` on `:root`
   (`data-drag-travel-gesture`) once the press has become a gesture — the
-  distance crossed, a moving travel grabbed, a first wheel event. Same lateness:
+  distance crossed, a moving travel grabbed, a wheel burst settled. Same lateness:
   a last resort behind the rule above;
 - **the selection**: `user-select: none` (`data-drag-travel-walking`) once the
   press has become a travel — a press on text IS how one selects it — and what

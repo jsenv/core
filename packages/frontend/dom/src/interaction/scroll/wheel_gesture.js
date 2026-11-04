@@ -21,7 +21,7 @@
 // enough to survive a page that is busy — the frames right after something sets
 // off are the ones where the main thread has the most to do, and a silence read
 // there as "the hand is gone" would cut one gesture into several.
-const GESTURE_END_DELAY = 150;
+export const WHEEL_GESTURE_END_DELAY = 150;
 
 let gestureOwner = null;
 let gestureOnEnd = null;
@@ -54,7 +54,7 @@ export const wheelGestureIsTakenFrom = (candidate) =>
  */
 export const claimWheelGesture = (
   owner,
-  { onEnd, delay = GESTURE_END_DELAY } = {},
+  { onEnd, delay = WHEEL_GESTURE_END_DELAY } = {},
 ) => {
   if (wheelGestureIsTakenFrom(owner)) {
     return false;
