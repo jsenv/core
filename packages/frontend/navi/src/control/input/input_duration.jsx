@@ -265,7 +265,7 @@ export const InputDuration = (props) => {
   return (
     <Box
       ref={groupRef}
-      className="navi_input_duration"
+      baseClassName="navi_input_duration"
       data-callout-arrow-x="center"
       width="fit-content"
       flex

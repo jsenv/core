@@ -21,6 +21,7 @@ const css = /* css */ `
       --thumb-size: 16px;
       --thumb-width: var(--thumb-size);
       --thumb-height: var(--thumb-size);
+      --press-height: var(--thumb-height);
       --thumb-border-radius: 100%;
       --thumb-cursor: pointer;
       /* Range can contains text (legend etc) */
@@ -165,7 +166,12 @@ const css = /* css */ `
     outline-color: var(--outline-color);
     outline-offset: var(--outline-offset);
 
+    /* The press area. As wide as the drawing, since the value a press gives is
+       read against this width; as tall as asked, centered on the line and
+       overflowing the root, so that nothing moves around the range. */
     .navi_control_input {
+      width: 100%;
+      height: var(--press-height);
       margin: 0;
       opacity: 0;
       --webkit-appearance: none;
@@ -173,9 +179,13 @@ const css = /* css */ `
       font-size: inherit;
       appearance: none;
 
+      /* Never painted (see .navi_input_range_thumb). Its width is the drawn
+         thumb's, which the value a press gives depends on. Its height follows
+         the press area for Safari on iOS, known to let a finger take a range
+         only from this box (not measured here). */
       &::-webkit-slider-thumb {
         width: var(--thumb-width);
-        height: var(--thumb-height);
+        height: var(--press-height);
         border-radius: var(--thumb-border-radius);
         -webkit-appearance: none;
         cursor: var(--x-thumb-cursor);
@@ -383,6 +393,7 @@ const RangeNativeInput = (props) => {
   );
 };
 const RangeStyleCSSVars = {
+  "pressHeight": ["--press-height", "height"],
   "outlineWidth": "--outline-width",
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",

@@ -35,7 +35,7 @@ export const Color = ({ children, ...rest }) => {
   return (
     <Box
       as="span"
-      className="navi_color"
+      baseClassName="navi_color"
       navi-color-empty={color ? undefined : ""}
       // propsCSSVars={COLOR_PROP_CSS_VAR}
       color={color}

@@ -404,7 +404,7 @@ const SidePanelHead = (props) => (
  * @param {import("preact").ComponentChildren} props.children
  */
 const SidePanelFoot = (props) => (
-  <Box className="navi_side_panel_foot" {...props} />
+  <Box baseClassName="navi_side_panel_foot" {...props} />
 );
 SidePanel.Head = SidePanelHead;
 SidePanel.Foot = SidePanelFoot;

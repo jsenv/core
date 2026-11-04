@@ -102,6 +102,28 @@
         border-radius: 4px;
       }
 
+      .press-band {
+        display: inline-flex;
+        align-items: center;
+        background: #cfe2ff;
+      }
+
+      .thin-range {
+        --height: 4px;
+        --margin: 0;
+        --border-width: 0;
+        --thumb-size: 12px;
+      }
+
+      .press-by-pointer {
+        --press-height: 20px;
+      }
+      @media (pointer: coarse) {
+        .press-by-pointer {
+          --press-height: 32px;
+        }
+      }
+
       /* Custom thumb styles for native inputs */
       .small-thumb-range::-webkit-slider-thumb {
         width: 14px;
@@ -273,6 +295,7 @@
               <InteractivityDemo />
               <ColorVariationsDemo />
               <ThumbCustomizationDemo />
+              <PressAreaDemo />
             </div>
           </NaviDebug>
         );
@@ -305,6 +328,9 @@
               </li>
               <li>
                 <a href="#thumb">Thumb Customization</a>
+              </li>
+              <li>
+                <a href="#press">Press Area</a>
               </li>
             </ol>
           </div>
@@ -1194,6 +1220,76 @@
               ::-moz-range-thumb pseudo-elements
             </p>
           </div>
+        );
+      };
+
+      const PressAreaDemo = () => {
+        return (
+          <div className="demo-section" id="press">
+            <h2>Press Area</h2>
+            <p className="states-description">
+              The blue band is where a press counts.
+            </p>
+
+            <Box column spacing="sm">
+              <PressAreaExample
+                legend="Default: the thumb's height"
+                bandHeight="12px"
+                width="240px"
+              />
+              <PressAreaExample
+                legend='pressHeight="20px"'
+                bandHeight="20px"
+                width="240px"
+                pressHeight="20px"
+              />
+              <PressAreaExample
+                legend="--press-height: 20px, 32px under a finger"
+                bandClassName="press-by-pointer"
+                bandHeight="var(--press-height)"
+                width="240px"
+                className="thin-range press-by-pointer"
+              />
+              <PressAreaExample
+                legend='width="64px"'
+                bandHeight="20px"
+                width="64px"
+                pressHeight="20px"
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      const PressAreaExample = ({
+        legend,
+        bandClassName = "",
+        bandHeight,
+        className = "thin-range",
+        ...props
+      }) => {
+        const [value, setValue] = useState(50);
+        return (
+          <fieldset>
+            <legend>{legend}</legend>
+            <div className="range-group">
+              <div
+                className={`press-band ${bandClassName}`}
+                style={{ height: bandHeight }}
+              >
+                <Input
+                  type="range"
+                  className={className}
+                  min="0"
+                  max="100"
+                  value={value}
+                  uiAction={setValue}
+                  {...props}
+                />
+              </div>
+              <div className="value-display">{value}</div>
+            </div>
+          </fieldset>
         );
       };
 

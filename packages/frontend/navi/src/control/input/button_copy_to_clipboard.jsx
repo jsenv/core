@@ -62,7 +62,7 @@ export const ButtonCopyToClipboard = ({
   const [copied, copy] = useCopyToClipboard(children);
 
   return (
-    <Box className="navi_clipboard_container" {...props}>
+    <Box baseClassName="navi_clipboard_container" {...props}>
       {/* A status: what it says when the copy lands is announced, which is
           the only confirmation someone who cannot see the bubble gets. */}
       <Box className="navi_copied_notif" role="status" opacity={copied ? 1 : 0}>

@@ -381,7 +381,7 @@ export const Editable = (props) => {
     <>
       {children || <span>{value}</span>}
       <Box
-        className="navi_editable_wrapper"
+        baseClassName="navi_editable_wrapper"
         ref={wrapperRef}
         {...wrapperProps}
         // inert ensure input while not editing that:

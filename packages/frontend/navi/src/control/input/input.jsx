@@ -19,6 +19,7 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   boolean?: boolean,
  *   selectOnPress?: boolean,
  *   enterSendsNothing?: boolean,
+ *   pressHeight?: number | string,
  *   variant?: "checkbox" | "switch" | "icon" | "button",
  *   buttonVariant?: "discrete",
  *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
@@ -68,6 +69,12 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   street before its suggestion filled the city) and whose Enter would send
  *   an answer still missing its other half. The browser's own Enter is kept (a
  *   datalist choice), except in a `<Form>`, where it is the submission.
+ * @param {number|string} [pressHeight] How tall a press counts on a range, the
+ *   thumb's height by default, so a thin line stays easy to hit. The press area
+ *   only: nothing moves and nothing is drawn. It overflows the range, centered
+ *   on its line, over whatever is next to it and takes the presses aimed there,
+ *   so leave it the room it needs (`marginY`). Different for a mouse and a
+ *   finger: `--press-height` in a `@media (pointer: coarse)` rule.
  */
 export const Input = (props) => {
   resolveInputProps(props);

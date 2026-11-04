@@ -128,8 +128,7 @@ export const Select = ({ width, multiple, ...props }) => {
       as="span"
       inline
       flex
-      baseClassName="navi_input"
-      className="navi_select"
+      baseClassName="navi_input navi_select"
       {...rootProps}
       basePseudoState={basePseudoState}
       styleCSSVars={InputStyleCSSVars}
