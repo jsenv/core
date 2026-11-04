@@ -192,28 +192,31 @@ const DRAG_START_THRESHOLD = 10;
 const DRAG_START_THRESHOLD_TOUCH = 6;
 // Where the browser reads that same hand for itself, once and for good.
 const BROWSER_PAN_READ_DISTANCE = 8;
-// How much of a box has to be pulled for letting go to carry on rather than put
-// things back, when the caller does not say. Under half, because a gesture that
-// has clearly begun is an intention: asking for the box to be dragged all the
-// way across turns a travel into work.
-const DRAG_COMMIT_RATIO = 0.3;
-// A hand still moving towards what it is pulling in when it lets go has said
-// where this goes, however slowly: an intention still being acted on at the
-// lift travels whatever the distance. The bar sits just above stillness —
-// capacitive jitter and a hand settling before it lifts measure under it — so
-// only a release at rest is left to the position alone (the commit ratio).
-// It has to sit that low for another reason too: velocity is averaged over
-// the trailing window (see createVelocityMeter) and the release repeats the
-// last position a moment later, both pulling the measure down from the speed
-// the fingertip actually has. A few pixels of pull are asked besides, to tell
-// a movement from a tap that shook.
-const DRAG_DRIFT_VELOCITY = 0.03;
-const DRAG_DRIFT_DISTANCE = 8;
-// Thrown: a hand moving this fast as it lets go says where things go, whatever
-// the distance already covered. AWAY from what it was bringing in, it asks for
-// it to be put back (travelsAfter); the way a travel it caught in flight was
-// already going, it asks for the one after (see thrownOn). Well above the drift
-// bar, so a hand merely wavering as it lets go does not read as a throw.
+// How far a hand pulls before a travel that is costly to set off is asked for,
+// on top of the threshold above (see `setOff` in onStart): 16px in all with a
+// finger, what Android's pagers read as a page rather than a scroll
+// (ViewConfiguration.getScaledPagingTouchSlop, twice the scroll's).
+const DRAG_SET_OFF_PULL = 10;
+// How much of a box a hand at rest has to have pulled for letting go to carry on
+// rather than put things back, when the caller does not say. Half, as on every
+// platform: the screen showing more is the one the hand put there.
+const DRAG_COMMIT_RATIO = 0.5;
+// Too little of a finger's way for its speed to mean anything, however fast: a
+// tap that slipped. What Android's pagers ask of a fling (MIN_DISTANCE_FOR_FLING,
+// 25dp).
+const DRAG_FLICK_REACH = 25;
+// Where a hand letting go is about to put things: this long at the speed it has
+// at the lift. What UIScrollView's normal deceleration carries (Apple's
+// "Designing Fluid Interfaces": v * rate / (1 - rate) at 0.998).
+const DRAG_LANDING_MS = 500;
+// Past this speed the hand has said where this goes whatever the box measures: a
+// thumb flicks no faster on a tablet than on a phone, and half a wide box is out
+// of reach of any landing. Android's pagers' bar (400dp/s), which is also about
+// what a landing asks of a short flick on a phone.
+const DRAG_FLICK_VELOCITY = 0.4;
+// Thrown on: a hand moving this fast the way a travel it caught in flight was
+// already going asks for the one after it (see thrownOn). Read over the trailing
+// window (see createVelocityMeter), which sits below the fingertip's speed.
 const DRAG_THROW_VELOCITY = 0.3;
 // A hand landing on a travel still playing, and saying nothing for this long —
 // no step its way, none against it — is holding it: the travel stops there.
@@ -470,14 +473,16 @@ const somethingScrollsOn = (fromElement, axis) => {
   return pageScrolls(fromElement.ownerDocument, axis);
 };
 
-// A gesture is over: does it carry on, or does everything go back? The distance
-// pulled says it, and the speed says it too — a short flick means "away" as
-// clearly as half a box does.
+// A gesture is over: does it carry on, or does everything go back? Where the
+// hand is about to put things says it, with one question for every hand: thrown
+// back, a screen caught at two thirds lands short and goes back; thrown on, a
+// short flick lands far and goes; at rest, the picture is the only witness left.
 const travelsAfter = ({
   pulled,
   slack,
+  reach,
   size,
-  velocity,
+  liftVelocity,
   towardsSomething,
   cancelled,
   commitRatio,
@@ -500,28 +505,19 @@ const travelsAfter = ({
   if (cancelled) {
     return false;
   }
+  const distance = Math.abs(pulled);
+  const asked = size * commitRatio;
+  // Not for a travel caught: the way it covered before the hand got there is
+  // not the hand's, and a short throw is all it takes to send it back.
+  if (!slack && reach <= DRAG_FLICK_REACH) {
+    return distance > asked;
+  }
   const sign = pulled > 0 ? 1 : -1;
-  // A hand that is still moving says where it is going, and it says it about
-  // BOTH answers. Going away from what it was bringing in fast is "put it
-  // back", whatever the distance already covered — which is the whole of what
-  // one asks for when catching something in flight and throwing it back the
-  // other way. Without this the picture alone decides, and a screen caught at
-  // two thirds and thrown back still arrives: the gesture was read as the
-  // place it was let go of rather than as a movement.
-  if (
-    Math.abs(velocity) > DRAG_THROW_VELOCITY &&
-    Math.sign(velocity) !== sign
-  ) {
-    return false;
+  const speed = liftVelocity * sign;
+  if (Math.abs(speed) > DRAG_FLICK_VELOCITY) {
+    return speed > 0;
   }
-  // …and going towards it travels, however slowly: see DRAG_DRIFT_VELOCITY.
-  const drifting =
-    Math.abs(velocity) > DRAG_DRIFT_VELOCITY && Math.sign(velocity) === sign;
-  if (drifting && Math.abs(pulled) > DRAG_DRIFT_DISTANCE) {
-    return true;
-  }
-  // At rest: the position is the only witness left.
-  return Math.abs(pulled) > size * commitRatio;
+  return distance + speed * DRAG_LANDING_MS > asked;
 };
 
 // A travel caught in flight and thrown on the way it was already going: a
@@ -588,12 +584,12 @@ const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
  * @param {(detail: {axis: string, sign: number, event: PointerEvent}) => boolean} [options.onPushOn]
  *   - see `inFlight`: go on to the screen after the one the travel is bringing
  *   in, without stopping it. Answer whether there was a travel to push.
- * @param {number} [options.commitRatio=0.3] - what fraction of the box has to
- *   be pulled for letting go to carry on rather than put things back. A
+ * @param {number} [options.commitRatio=0.5] - what fraction of the box has to
+ *   be pulled for letting go at rest to carry on rather than put things back. A
  *   fraction and never a distance, so the same gesture asks for the same thing
- *   on a phone and on a wide screen. Speed still answers on its own (see
- *   travelsAfter), whatever this says.
- * @param {(detail: {axis: string, sign: number, target: Element, caught: boolean, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
+ *   on a phone and on a wide screen. A hand still moving is read by where it is
+ *   about to land, against that same fraction (see travelsAfter).
+ * @param {(detail: {axis: string, sign: number, target: Element, caught: boolean, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean, setOff?: (detail: {axis: string, sign: number, event: PointerEvent}) => false|{travelBack?: boolean, travelOn?: boolean}}} options.onStart
  *   - the finger has picked its axis. `caught`: the hand has taken hold of the
  *   travel given as `inFlight`, which the caller stops now, where it stands.
  *   Answer `false` to give the gesture up, or
@@ -602,6 +598,16 @@ const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
  *   mid-flight) and whether there is anywhere to go each way — `travelBack`
  *   towards the start of the axis, `travelOn` towards its end. A direction with
  *   nothing there is not refused, it resists.
+ *
+ *   `setOff`: answered by a travel that costs what a slide does not (a
+ *   navigation, a render, the requests of what arrives), which a hand that only
+ *   shook must not pay. The press is this box's all the same, its touch refused,
+ *   but nothing moves until the hand has pulled further, either way: `setOff` is
+ *   asked then, with the way it went, and answers where there is to go from
+ *   there, or `false` when there is nothing that way (the hand goes on being
+ *   read). Those pixels are withheld like the threshold's, and `onPull` starts
+ *   after them. Let go of before that, nothing was asked for: `onGiveUp` is told,
+ *   and neither `onPull` nor `onEnd` ever is.
  * @param {(detail: {axis: string, pulled: number, size: number, progress: number, event: PointerEvent}) => void} options.onPull
  *   - the finger has moved. `pulled` is in px from the resting place, `progress`
  *   the same as a fraction of the box, signed the same way.
@@ -903,6 +909,7 @@ export const startDragToTravel = (
               ? -startThreshold
               : covered,
         pulled: started.slack || 0,
+        setOff: started.setOff,
       };
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
       // What the first pixels may have started selecting is not a selection:
@@ -913,6 +920,25 @@ export const startDragToTravel = (
       dragGesture.capturePointer();
     }
     const { axis } = travel;
+    if (travel.setOff) {
+      const pullSoFar = pullOf(gestureInfo);
+      if (Math.abs(pullSoFar) < DRAG_SET_OFF_PULL) {
+        return;
+      }
+      const sign = pullSoFar > 0 ? 1 : -1;
+      const setOff = travel.setOff({
+        axis,
+        sign,
+        event: gestureInfo.dragEvent,
+      });
+      if (!setOff) {
+        return;
+      }
+      travel.setOff = null;
+      travel.travelBack = Boolean(setOff.travelBack);
+      travel.travelOn = Boolean(setOff.travelOn);
+      travel.origin += sign * DRAG_SET_OFF_PULL;
+    }
     let pulled = pullOf(gestureInfo);
     // Which side is being pulled in: dragging to the right brings in what is
     // on the left, which is what comes BEFORE.
@@ -998,10 +1024,16 @@ export const startDragToTravel = (
         return;
       }
       finish();
+      if (travel.setOff) {
+        onGiveUp();
+        return;
+      }
       const { axis, size, pulled, slack } = travel;
       const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
       const velocity =
         axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
+      const liftVelocity =
+        axis === "x" ? gestureInfo.liftVelocityX : gestureInfo.liftVelocityY;
       const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
       const { cancelled } = gestureInfo;
       if (thrownOn({ pulled, slack, velocity, towardsSomething, cancelled })) {
@@ -1043,8 +1075,9 @@ export const startDragToTravel = (
         travels: travelsAfter({
           pulled,
           slack,
+          reach: Math.abs(coveredOn(axis, gestureInfo)),
           size,
-          velocity,
+          liftVelocity,
           towardsSomething,
           cancelled,
           commitRatio,

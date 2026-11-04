@@ -8,9 +8,9 @@ description: The spec of the travel gesture — a pointer or a wheel pushing a s
 A travel is a hand pushing a whole screen aside to bring in the next one. Four
 feelings, and every rule below serves one of them:
 
-1. **The screen is where the hand puts it.** From the moment a press becomes a
-   gesture, every pixel the hand covers moves the picture: nothing jumps, and a
-   flick is never refused for having been fast.
+1. **The screen is where the hand puts it.** From the moment a screen sets off,
+   every pixel the hand covers moves the picture: nothing jumps, and a flick is
+   never refused for having been fast.
 2. **One gesture, one answer.** A press is this box's, another box's, or the
    browser's — decided once, at the press, before the browser has answered it.
    Half of each is a page rocking under a travel that is already moving.
@@ -88,37 +88,60 @@ ambiguous with a scroll and goes to the page, which at least answers visibly.
 (`inFlight.axis`) — the first pixel of a hand landing on a moving thing is a
 tremor as often as a direction.
 
+**Owning a press and setting off are two decisions, and only the first has a
+deadline.** The press has to be taken before the browser's 8px. What a travel
+costs when it sets off need not be paid there: moving a mounted slide costs
+nothing, but changing a route costs a navigation, a render and the requests of
+two pages, all of it spent on a hand that only shook. So a consumer whose start
+is costly says so (`setOff`, answered by `onStart`) and the module holds that
+start for a further 10px (`DRAG_SET_OFF_PULL`), 16px in all with a finger,
+Android's paging slop. The wait is a number about a gesture, so it lives in the
+module, and it says which way the hand went when it ends, so a hand turned around
+meanwhile has nothing to undo. The press is still refused to the browser, and its
+click is still lost.
+
 **Of the way covered when the gesture forms, only the threshold is withheld.**
 Reports are coalesced to frames, so a fast flick may arrive in one: charged
 whole, it has nothing left to have pulled, moves nothing, and is refused at the
 release. A caught travel is the exception: stopped where it stands, what the
-hand did before holding it moved nothing.
+hand did before holding it moved nothing. A wait for a costly start
+(`setOff`) is withheld the same way.
 
 ## What letting go means
 
-- **Towards what it was bringing in, still moving, it carries on** — however
-  slowly (above 0.03 px/ms), once it has pulled more than 8px: an intention
-  still being acted on at the lift.
-- **Away from it, fast (above 0.3 px/ms), everything goes back**, whatever the
-  distance — or a screen caught at two thirds and thrown back still arrives.
-- **At rest, or retreating slowly, the picture decides**: `commitRatio` of the
-  box (0.3), a fraction, so a gesture means the same on a phone and a wide
-  screen.
+**One question, where the hand is about to put things**: where the picture stands
+plus 500ms at the speed the fingertip has at the lift (`DRAG_LANDING_MS`, iOS's
+projection), against `commitRatio` of the box (0.5, a fraction, so a gesture
+means the same on a phone and a wide screen). That one number answers all three
+hands: thrown back lands short and everything goes back, or a screen caught at
+two thirds still arrives; a short flick lands far and goes; a hand at rest leaves
+the picture alone to answer. Around it:
 
-**The bars sit well below the fingertip's speed, and they must.** Velocity is
-averaged over a trailing 100ms (the last event before a release often repeats
-its coordinates: measured on that pair, every throw ends at zero), and the
-release adds a sample at the same place. Both pull the measure down from the
-hand's peak: a bar sized against the hand refuses the hand.
+- **Speed counts from 25px of finger** (`DRAG_FLICK_REACH`, Android's
+  `MIN_DISTANCE_FOR_FLING`), counted on the finger so that waiting for a costly
+  start asks nothing more of a flick. Under it, a tap that slipped: the picture
+  answers. Not for a travel caught, whose way covered is not the hand's.
+- **Past 0.4 px/ms speed answers alone, both ways** (`DRAG_FLICK_VELOCITY`,
+  Android's 400dp/s). A thumb flicks no faster on a tablet than on a phone, and
+  half a wide box is out of reach of any landing. On a phone it changes nothing:
+  that speed lands past half the box anyway.
 
-**The third is not tuned per box**: not a `SlideContainer` or `RouteTravel`
-prop, not lowered for slides against a sheet pushed back. A hand learns one
-number, and this one already asks less than the platforms do (iOS paging snaps
-to the nearest page, Android's ViewPager wants 60%). A "short swipe goes back"
-report is almost never the ratio: a short swipe is a moving release, judged by
-speed, so look first at how the speed was read — behind a busy main thread,
-samples stamped when handled rather than when they happened read a thumb's
-last drift as a throw back (the velocity window in `drag_gesture.js`).
+**The speed read is the fingertip's, not the mean's.** The trailing 100ms mean
+lags a hand slowing down by its whole window, so a hand that has stopped still
+reads as moving: `liftVelocityX`/`Y` read the last 50ms of moves that went
+somewhere, zero after 40ms without moving (Android's
+`ASSUME_POINTER_STOPPED_TIME`), and a thumb rolling back up to 8px as it lifts is
+read up to where it got to: a 34ms window weighs those pixels heavily, and read
+whole they refuse a real swipe. Stamps are the events' own, not the handling's:
+behind a busy main thread they would read a thumb's last roll as a throw back.
+Only `thrownOn` keeps the mean, for what a second swipe over a travel means.
+
+**The half is not tuned per box**: not a `SlideContainer` or `RouteTravel` prop,
+not lowered for slides against a sheet pushed back. A hand learns one number, and
+it is the platforms' (iOS paging snaps to the nearest page, Compose's `Pager`
+and Chrome's scroll snap stop at 50%). A "short swipe goes back" report is almost
+never the ratio: a short swipe is a moving release, judged by speed, so look
+first at how the speed was read.
 
 **Towards nothing, the picture follows at 0.3 and comes back**: a wall one can
 lean on, never walk through. A direction with nothing there resists; it is not
@@ -453,7 +476,8 @@ and paints nothing, and the two pictures cover its rectangle.
 
 `SlideContainer` and `RouteTravel` carry screens: both read the press and the
 wheel, answer a press on a moving travel (`inFlight`, `onPushOn`) and walk on
-into the next box (`onEdge`). `swipe_to_close.js` pushes a docked `Dialog` (from
+into the next box (`onEdge`); only `RouteTravel`, whose start costs a navigation,
+waits to set off (`setOff`). `swipe_to_close.js` pushes a docked `Dialog` (from
 its grip) or a `SidePanel` (from its whole surface) back towards its edge: one
 box, one way (a press pushing it further in gives the gesture up), no wheel,
 nothing in flight, no edge. The `interactions` swipes (`startSwipe`) differ

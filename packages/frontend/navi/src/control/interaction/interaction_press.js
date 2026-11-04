@@ -42,7 +42,7 @@
  * A swipe is its own gesture, not the drag-to-travel of a slide container: it
  * borrows the same reader (`startDragToTravel`, whose axis lock, resistance, flick
  * and click-swallowing are exactly what a swipe needs) with its own settings, and
- * it is those settings that differ — a third of a row rather than a third of a
+ * it is those settings that differ — a third of a row rather than half a
  * screen, tuned per element with `data-swipe-threshold`.
  *
  * A hold does NOT take the context menu with it. Declaring one says what a held

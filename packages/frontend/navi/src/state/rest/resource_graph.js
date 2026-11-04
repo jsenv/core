@@ -161,6 +161,10 @@ const SCOPED_MANY_OPTIONS = new Set([
  * relationship method, never as an `op`/`type` discriminator dispatched inside one
  * verb's callback.
  *
+ * Bound to a signal, a read of one item starts new params on nothing and a list on
+ * the previous list; a binding overrides it with `inheritData` (docs/resource.md,
+ * "What a read shows while its params move").
+ *
  * @param {string} name - resource name, used in action names and error messages
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
@@ -703,6 +707,8 @@ const createResource = (
           paramScope,
         },
         name: `${name}.${verb}`,
+        // Another params' answer is another owner's.
+        inheritData: verb !== "GET",
         resultToValue: (result, action) => {
           if (verb === "DELETE") {
             if (!isProps(result) && !primitiveCanBeId(result)) {
@@ -934,6 +940,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       return createAction(callback, {
         meta: { verb, isMany: false, paramScope },
         name: `${name}.${verb}`,
+        // Another params' answer is another row.
+        inheritData: verb !== "GET",
         resultToValue: (result, action) => {
           if (verb === "DELETE") {
             if (!Array.isArray(result) || result.length !== 2) {
@@ -1036,6 +1044,9 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       return createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
+        // A list standing in for the next one beats a skeleton. A screen where
+        // the previous owner's list would be false says so on its binding.
+        inheritData: true,
         resultToValue: (result, action) => {
           if (verb === "GET") {
             if (!isProps(result)) {
@@ -1248,6 +1259,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         meta: writeName
           ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
           : { verb, isMany: false, paramScope },
+        // Another params' answer is another owner's.
+        inheritData: verb !== "GET",
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length !== 2) {
             throw new TypeError(
@@ -1491,6 +1504,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         meta: writeName
           ? { verb, isMany, paramScope, writeName, writeRerunOn }
           : { verb, isMany, paramScope },
+        // One item: another params' answer is another row. A list standing in
+        // for the next one beats a skeleton, and a screen where the previous
+        // owner's list would be false says so on its binding.
+        inheritData: isMany || verb !== "GET",
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length < 2) {
             throw new TypeError(
@@ -1824,10 +1841,11 @@ const createRestActionFactoryForRoot = (
       // undefined so a screen can tell "not asked yet" from "answered: none".
       valueToData: (idArray) =>
         idArray === undefined ? undefined : store.selectAll(idArray),
+      // A binding moving to new params hands over the previous answer: a list
+      // standing in for the next one beats a skeleton.
+      inheritData: true,
       // The rows the page kept from the previous document (kept_reads.js),
-      // drawn while the request is out. A binding moving to new params still
-      // hands over the previous answer when there are none: a list standing
-      // in for the next one beats a skeleton.
+      // drawn while the request is out when nothing was handed over.
       provisionalValue:
         verb === "GET"
           ? (params, action) =>

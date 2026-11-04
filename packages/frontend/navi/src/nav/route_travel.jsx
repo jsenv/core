@@ -8,7 +8,9 @@
  * browser's view transitions keep a picture of the page being left, and this
  * hands that picture to the finger:
  *
- *   the first pixel of drag       the URL changes (replaced, not pushed) and
+ *   the press is a gesture        the touch is taken, and nothing else: a hand
+ *                                 that only shook costs nothing (see setOff)
+ *   the hand has really pulled    the URL changes (replaced, not pushed) and
  *                                 the browser freezes the page being left
  *   while the finger moves        the two pictures are dragged, the old one a
  *                                 still, the new one live under it
@@ -20,14 +22,16 @@
  * mounted that does not match. The page being pulled in is therefore mounting
  * WHILE it is being dragged in — it arrives as its own loading state and fills
  * in under the finger, which is honest about what is happening (it is being
- * fetched) and is the only thing that can happen without a second router.
+ * fetched) and is the only thing that can happen without a second router. What
+ * reads the URL reads where the hand is heading: where the reader still is, is
+ * routeTravelSettledPageSignal.
  *
- * What travels is decided at the first pixel, like the axis: a travel brings in
- * ONE neighbour, and turning the hand around mid-drag puts the current page
- * back rather than fetching the other side. A hand that walks a whole page
- * across and keeps going is not turning around though — it is asking for the
- * next one, and the gesture relays into a second travel without being let go
- * of (see onEdge).
+ * What travels is decided when the hand sets off: a travel brings in ONE
+ * neighbour, and turning the hand around mid-drag puts the current page back
+ * rather than fetching the other side. A hand that walks a whole page across
+ * and keeps going is not turning around though — it is asking for the next one,
+ * and the gesture relays into a second travel without being let go of (see
+ * onEdge).
  *
  * Anything else that must follow the gesture — the trait under a tab bar, a
  * header — follows by being NAMED, not by being told: give it a
@@ -37,7 +41,7 @@
  */
 
 import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
-import { computed } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 
 import {
   getScrollContainer,
@@ -531,6 +535,27 @@ const css = /* css */ `
 `;
 
 /**
+ * The page a reader is still on while a hand travels: `{ route, params }`, the
+ * page the travel set off from, or `null` when the URL is the truth.
+ *
+ * A travel changes the URL before it arrives, so what reads the URL reads where
+ * the hand is heading. A counter, a title or a breadcrumb around the box must
+ * not move for a pull that is let go of: it reads this first. It holds for as
+ * long as the pictures move, whichever way they end up going, and is back to
+ * `null` when they stop, which is when `scrollsnapchange` fires and a pager's
+ * `settledPage` changes. A page walked whole under the hand has arrived too. A
+ * travel no hand set off (a tab pressed, a wheel) holds nothing: it goes where
+ * it goes.
+ *
+ * One for the document, as there is one view transition at a time. `route` says
+ * which row, for a page holding several boxes.
+ */
+export const routeTravelSettledPageSignal = signal(null);
+// Which travel wrote it, the only one that may clear it: a travel ending after
+// another has taken over leaves that one's answer alone.
+let travelHoldingSettledPage = null;
+
+/**
  * @type {import("preact").FunctionComponent<{
  *   routes?: Array<object|{route: object, params?: object}>,
  *   axis?: "x"|"y",
@@ -648,8 +673,8 @@ export const RouteTravel = ({
     const travel = {
       page,
       // The page this set off from, kept rather than looked up again: the URL
-      // changes at the first pixel, so a moment later nothing on screen
-      // remembers where it started.
+      // changes as it sets off, so a moment later nothing on screen remembers
+      // where it started.
       fromPage,
       direction,
       scrub,
@@ -665,6 +690,8 @@ export const RouteTravel = ({
       element: elementRef.current,
     };
     travelRef.current = travel;
+    travelHoldingSettledPage = travel;
+    routeTravelSettledPageSignal.value = scrub ? fromPage : null;
     // A press landing on a playing travel lands on the document root: the box
     // is captured by the transition and cannot be pointed at, so neither its
     // touch-action nor its own touchmove listener is on the touch's path. Left
@@ -725,6 +752,16 @@ export const RouteTravel = ({
     // screen and an error nobody asked for.
     const renderWait = armRouteRenderWait();
     const viewTransition = startViewTransition(async () => {
+      // Let go of too early before the browser got here, a frame or several on
+      // a slow phone. Skipping a transition does not cancel this callback, and
+      // the router asked from here would take the page anyway, with nobody left
+      // to bring it back.
+      if (travel.reverting) {
+        renderWait.stop();
+        releaseRendering();
+        return;
+      }
+      travel.calledBack = true;
       // Whatever is awaited here must be able to resolve without the page being
       // rendered: the document is frozen for the whole of this callback, and a
       // frame never comes — waiting for one waits until the browser gives up on
@@ -981,7 +1018,9 @@ export const RouteTravel = ({
         }
         travel.viewTransition.skipTransition();
       } finally {
-        if (travel.scrollsDocument) {
+        // Refused before the browser called back, nothing was swapped: the
+        // offset is still the page's own, and no render is on its way to say so.
+        if (travel.scrollsDocument && travel.calledBack) {
           // The page coming back was read somewhere else, and the offset
           // currently on the document is the one the page that came in put
           // there. Given back once the page is really back — the render is
@@ -1104,6 +1143,10 @@ export const RouteTravel = ({
     travel.ended = true;
     travel.dropHold?.();
     travel.dropHold = null;
+    if (travelHoldingSettledPage === travel) {
+      travelHoldingSettledPage = null;
+      routeTravelSettledPageSignal.value = null;
+    }
     if (travelRef.current === travel) {
       document.documentElement.removeEventListener(
         "touchmove",
@@ -1198,21 +1241,41 @@ export const RouteTravel = ({
       ) {
         return false;
       }
-      if (CAN_KEEP_PICTURE) {
-        beginTravel({
-          page,
-          fromPage: pages[currentIndex],
-          direction: sign > 0 ? "back" : "forward",
-          scrub: true,
-          change: () => travelTo(page, "drag"),
-        });
-      } else {
+      if (!CAN_KEEP_PICTURE) {
         travelRef.current = { page, noPicture: true, ended: false };
+        return {
+          size,
+          travelBack: sign > 0,
+          travelOn: sign < 0,
+        };
       }
       return {
         size,
         travelBack: sign > 0,
         travelOn: sign < 0,
+        // A page change costs what a slide does not, whatever the hand does
+        // next: a navigation, a render, the requests of the page arriving, and
+        // those of the page coming back. So nothing is asked of the router
+        // until the hand has really pulled, and the neighbour is read then:
+        // turned around before that, there is nothing to undo.
+        setOff: ({ sign: signNow }) => {
+          const pageThatWay =
+            signNow > 0 ? pages[currentIndex - 1] : pages[currentIndex + 1];
+          if (!pageThatWay || travelRef.current) {
+            return false;
+          }
+          beginTravel({
+            page: pageThatWay,
+            fromPage: pages[currentIndex],
+            direction: signNow > 0 ? "back" : "forward",
+            scrub: true,
+            change: () => travelTo(pageThatWay, "drag"),
+          });
+          return {
+            travelBack: signNow > 0,
+            travelOn: signNow < 0,
+          };
+        },
       };
     },
     onPull: ({ progress }) => {
@@ -1266,9 +1329,9 @@ export const RouteTravel = ({
         // the start of a gesture that gap is invisible, the hand has barely
         // moved; here the hand is at full speed, and this is what it costs.
         //
-        // Where we are is what THIS travel was bringing in — the URL changed at
-        // the first pixel, so `currentIndex` belongs to a render this gesture
-        // is older than.
+        // Where we are is what THIS travel was bringing in — the URL changed as
+        // it set off, so `currentIndex` belongs to a render this gesture is
+        // older than.
         const fromIndex = pageIndexOf(pages, travel.page);
         const page =
           direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];

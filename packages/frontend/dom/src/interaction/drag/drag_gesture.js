@@ -220,6 +220,10 @@ export const createDragGestureController = (options = {}) => {
       velocityX: 0,
       velocityY: 0,
       velocity: 0,
+      // …and how fast the fingertip was going as it let go, known at the release
+      // (see measureLiftVelocity)
+      liftVelocityX: 0,
+      liftVelocityY: 0,
 
       // metadata about interaction sources
       grabEvent: event,
@@ -244,7 +248,11 @@ export const createDragGestureController = (options = {}) => {
     // Where the pointer IS is not where it is going: throwing something is a
     // matter of speed, and the gesture is the only place that sees the timing of
     // the events it receives.
-    const measureVelocity = createVelocityMeter(grabX, grabY, event.timeStamp);
+    const { measureVelocity, measureLiftVelocity } = createVelocityMeter(
+      grabX,
+      grabY,
+      event.timeStamp,
+    );
 
     document_interactions: {
       if (documentInteractions === "manual") {
@@ -551,6 +559,13 @@ export const createDragGestureController = (options = {}) => {
       gestureInfo.velocityX = velocityX;
       gestureInfo.velocityY = velocityY;
       gestureInfo.velocity = Math.hypot(velocityX, velocityY);
+      if (isRelease) {
+        const [liftVelocityX, liftVelocityY] = measureLiftVelocity(
+          event.timeStamp,
+        );
+        gestureInfo.liftVelocityX = liftVelocityX;
+        gestureInfo.liftVelocityY = liftVelocityY;
+      }
       if (gestureInfo.isGoingDown) {
         gestureInfo.intentGoingDown = true;
         gestureInfo.intentGoingUp = false;
@@ -1008,6 +1023,12 @@ export const isPrimaryButtonEvent = (event) =>
  * stamped at its creation, which is when it happens.
  */
 const VELOCITY_WINDOW_MS = 100;
+const LIFT_WINDOW_MS = 50;
+// A pointer that has not moved for this long before it lifts has stopped: what
+// Android's VelocityTracker assumes (ASSUME_POINTER_STOPPED_TIME).
+const LIFT_STOPPED_MS = 40;
+// How far a thumb rolls back as it lifts without meaning anything by it.
+const LIFT_ROLL_BACK = 8;
 const createVelocityMeter = (grabX, grabY, grabTime) => {
   const samples = [{ time: grabTime, x: grabX, y: grabY }];
 
@@ -1024,7 +1045,54 @@ const createVelocityMeter = (grabX, grabY, grabTime) => {
     return [(x - oldestSample.x) / elapsed, (y - oldestSample.y) / elapsed];
   };
 
-  return measureVelocity;
+  // The fingertip as it lets go, which the window above cannot say: averaged
+  // over 100ms, a hand slowing down to a stop still reads as moving. Read over
+  // the last moves that went somewhere (a release repeating the last place is
+  // no move), and nothing for a hand that had already stopped. A thumb rolling
+  // back a few pixels as it lifts is not a hand throwing back: its speed is read
+  // up to where it got to.
+  const liftWindowStart = (end) => {
+    let start = end - 1;
+    while (
+      start > 0 &&
+      samples[end].time - samples[start - 1].time <= LIFT_WINDOW_MS
+    ) {
+      start--;
+    }
+    return start;
+  };
+  const speedAtLift = (axis, time) => {
+    let last = samples.length - 1;
+    while (last > 0 && samples[last][axis] === samples[last - 1][axis]) {
+      last--;
+    }
+    if (last === 0 || time - samples[last].time > LIFT_STOPPED_MS) {
+      return 0;
+    }
+    const windowStart = liftWindowStart(last);
+    const way = Math.sign(samples[last][axis] - samples[windowStart][axis]);
+    let end = last;
+    for (let i = last - 1; i > windowStart; i--) {
+      if (way * samples[i][axis] > way * samples[end][axis]) {
+        end = i;
+      }
+    }
+    if (way * (samples[end][axis] - samples[last][axis]) > LIFT_ROLL_BACK) {
+      end = last;
+    }
+    const start = liftWindowStart(end);
+    const elapsed = samples[end].time - samples[start].time;
+    if (elapsed === 0) {
+      return 0;
+    }
+    return (samples[end][axis] - samples[start][axis]) / elapsed;
+  };
+  const measureLiftVelocity = (time) => [
+    speedAtLift("x", time),
+    speedAtLift("y", time),
+  ];
+
+  return { measureVelocity, measureLiftVelocity };
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {

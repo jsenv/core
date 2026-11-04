@@ -53,7 +53,9 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  * Stale data is always returned: the previous `data` remains available while
  * the action re-runs and after a run has failed, so a screen that had something
  * to show never has it taken away. What is drawn over it — a loading indicator,
- * the error, nothing — is entirely up to the component.
+ * the error, nothing — is entirely up to the component. A binding moving to other
+ * params is another question: what it holds until its answer lands is what
+ * `inheritData` says (createAction, docs/actions.md).
  *
  * `loading` covers the delay of a debounced binding
  * (`bindParams(paramsSignal, { debounce })`, `actionRunEffect({ debounce })`)

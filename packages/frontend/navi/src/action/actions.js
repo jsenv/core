@@ -825,11 +825,13 @@ const actionWeakMap = new WeakMap();
  *   than a first load (data_states.md). Called at the start of every run whose
  *   value is undefined; the answer replaces it as usual, and `undefined` means
  *   "nothing known". A resource `GET` uses it to draw the row its store holds.
- * @param {boolean} [rootOptions.inheritData=true] - `false`: a binding moving
- *   to new params starts the new instance without the previous params' answer
- *   (see createActionProxyFromSignal). For an answer that would say something
- *   false about the new params (a `GET` drawing another row), not for one that
- *   stands in while the next one comes (a list of search results).
+ * @param {boolean} [rootOptions.inheritData=false] - `true`: a binding moving
+ *   to new params starts the new instance holding the previous params' answer
+ *   until its own lands (see createActionProxyFromSignal). For an answer that
+ *   stands in while the next one comes (a list of search results), not for one
+ *   that would say something false about the new params (a profile, drawn under
+ *   the next person's name). A resource declares it for each of its reads:
+ *   docs/resource.md, "What a read shows while its params move".
  * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
  *   answer stays good once it has landed. Without it an answer lives exactly as
  *   long as something references it: the screen that asked goes away, and
@@ -890,7 +892,7 @@ export const createAction = (callback, rootOptions = {}) => {
       resultToValue,
       valueToData,
       provisionalValue,
-      inheritData = true,
+      inheritData = false,
       dataDefault,
       data = dataDefault,
 
@@ -1129,6 +1131,11 @@ export const createAction = (callback, rootOptions = {}) => {
      *   The instance follows where the signal settles, never a value it only
      *   passed through: a signal back where it started before the delay elapses
      *   asks nothing.
+     * @param {boolean} [options.inheritData] - `inheritData` of createAction,
+     *   said for this binding, which it overrides: one action can serve a search
+     *   (the previous results stand in) and a page naming someone (they would be
+     *   someone else's). Only for a signal; params that cannot change hand over
+     *   nothing.
      */
     const bindParams = (newParamsOrSignal, options = {}) => {
       if (newParamsOrSignal === null) {
@@ -1690,15 +1697,14 @@ export const createAction = (callback, rootOptions = {}) => {
  * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.inheritData - When false, each new target action starts fresh with no inherited state.
- *   By default (true), the proxy carries over the previous target's value and error into the new action —
- *   unless the action itself declares `inheritData: false` (createAction), which a resource `GET` does.
- *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
+ * @param {boolean} options.inheritData - Whether a new target action starts with the previous target's value
+ *   and error, instead of nothing. Defaults to what the action declares (createAction).
+ *   When true, the facade stays on the latest known data: `action.dataSignal.value` only changes when a
  *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
  *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
  *   available data — even while a newer action is in flight.
- *   This default also enables "Apply Filters" workflows where parameters change but the action only reruns
- *   on an explicit user trigger: the previous results remain visible until the new action completes.
+ *   It also serves "Apply Filters" workflows where parameters change but the action only reruns on an
+ *   explicit user trigger: the previous results remain visible until the new action completes.
  * @param {function} options.onChange - Optional callback triggered when the target action changes
  */
 const createActionProxyFromSignal = (
@@ -1707,7 +1713,7 @@ const createActionProxyFromSignal = (
   {
     runOnce = false,
     rerunOnChange = false,
-    inheritData = true,
+    inheritData = getActionPrivateProperties(action).inheritData,
     onChange,
     syncParams,
     paramsSettlingSignal = NOT_SETTLING_SIGNAL,
@@ -1739,16 +1745,10 @@ const createActionProxyFromSignal = (
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
 
-  // An action whose answer for other params would be false for these (a
-  // resource GET: another row) says so itself, and is not handed it. What it
-  // does not know stays unknown: a skeleton, or its provisionalValue, never a
-  // different row.
-  const inheritsAnswer =
-    inheritData && getActionPrivateProperties(action).inheritData;
   const createTarget = (params) => {
     // `undefined` is "nothing to ask": no answer is coming to replace a stand-in,
     // and that one instance is shared by every binding of the action.
-    if (inheritsAnswer && params !== undefined) {
+    if (inheritData && params !== undefined) {
       const previousActionTarget = actionTargetPreviousWeakRef?.deref();
       const previousTarget = previousActionTarget || action;
       return action.bindParams(params, {

@@ -31,6 +31,8 @@ import { runUnwatched } from "./run_unwatched.js";
  *   ```
  *   The action will not fire while the user is actively changing filters; it fires once
  *   they pause for half a second.
+ * @param {boolean} [options.inheritData] - whether the previous params' answer stands in until
+ *   the next one lands. By default what the action declares (see `inheritData` on createAction).
  * @returns {object} the instance bound to the derived params: the one to read
  *   (`useAsyncData`), since the answer lands there and never on `action` itself.
  */

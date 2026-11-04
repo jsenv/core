@@ -42,6 +42,7 @@ Actions are read in components through the action system (`useAsyncData`,
 - [Callback return contracts](#callback-return-contracts)
 - [When the backend answers a sub-route with the whole parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)
 - [Relations and autorerun](#relations-and-autorerun)
+- [What a read shows while its params move](#what-a-read-shows-while-its-params-move)
 - [`withParams()`: a scope with reruns of its own](#withparams-a-scope-with-reruns-of-its-own)
   - [`dependencies`: rerun after another resource writes](#dependencies-rerun-after-another-resource-writes)
 - [A function calling the verb, or the instance](#a-function-calling-the-verb-or-the-instance)
@@ -665,6 +666,43 @@ graph: a parent field the parent's own response kept fresh is, once the relation
 is a resource of its own, refreshed only by these rules. When a parent field
 depends on a child mutation, say so with `dependencies` rather than relying on a
 rerun that will not happen.
+
+## What a read shows while its params move
+
+A binding following a signal — a route action, `bindParams(signal)` — moves to
+another instance when its params change, and that instance has no answer yet.
+What it holds until its answer lands depends on the action
+([actions.md](./actions.md#while-the-next-answer-comes)):
+
+| Action                                                                                       | Until its answer lands                               |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `GET`                                                                                        | the row the store holds for these params, or nothing |
+| the `GET` of a relation (`.one()`, `.scopedOne()`, one item of `.many()` or `.scopedMany()`) | nothing, whatever the store holds                    |
+| `GET_MANY`, and the `GET_MANY` of `.many()` or `.scopedMany()`                               | the previous list                                    |
+| a write (`POST`, `PUT`, `PATCH`, `DELETE`, plural or not)                                    | what the previous instance held                      |
+
+A read of one item never starts on the previous answer: it would be another row,
+or another owner's, drawn under the new params, and nothing would give it away.
+
+A list hands over because one standing in for the next beats a skeleton. That is
+right for a search, the same collection asked again, and for a list nobody reads
+as a claim about its owner: a sheet of courts that catches up with the club a
+round trip later. It is false where the list says something about who it belongs
+to: one person's partners, on another's profile. The read cannot tell the two
+apart and the screen can, so the screen says it on its binding:
+
+```js
+const PARTNERS_ACTION = routeAction(
+  PROFILE_ROUTE,
+  USER_PARTNERS.GET_MANY,
+  () => ({ id: profileIdSignal.value }),
+  { inheritData: false },
+);
+```
+
+A `GET_RANGE` reader has no such choice to make: bound to other params it is
+another collection, drawn from its first item
+([above](#a-question-that-follows-a-search-field)).
 
 ## `withParams()`: a scope with reruns of its own
 

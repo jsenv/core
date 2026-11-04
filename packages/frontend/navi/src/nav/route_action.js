@@ -166,6 +166,9 @@ const ROUTE_ACTION_BINDING_OPTIONS = new Set([
  *   still before the action runs on them: a search param a field writes as
  *   the person types asks once typing stops (see `bindParams` in
  *   docs/actions.md).
+ * @param {boolean} [options.inheritData] - whether the previous params' answer
+ *   stands in until the next one lands, for this route action. By default what
+ *   the action declares (see docs/actions.md, "While the next answer comes").
  */
 export const routeAction = (
   routeOrRoutes,

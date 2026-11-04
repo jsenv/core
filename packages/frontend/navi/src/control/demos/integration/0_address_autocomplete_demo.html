@@ -88,13 +88,17 @@
       // Les suggestions suivent la frappe: une lecture liée à ce qui est
       // tapé, attendue dans la liaison (debounce), et non l'action du champ —
       // un champ dont l'action tourne est occupé, donc en lecture seule, et
-      // on ne pourrait plus taper pendant la recherche.
-      const ADDRESS_SUGGESTIONS = createAction(async ({ q }, { signal }) => {
-        const url = `${GEO_API_URL}?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`;
-        const response = await fetch(url, { signal });
-        const geoJson = await response.json();
-        return geoJson.features || [];
-      });
+      // on ne pourrait plus taper pendant la recherche. Les suggestions d'avant
+      // restent le temps que les suivantes arrivent (inheritData).
+      const ADDRESS_SUGGESTIONS = createAction(
+        async ({ q }, { signal }) => {
+          const url = `${GEO_API_URL}?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`;
+          const response = await fetch(url, { signal });
+          const geoJson = await response.json();
+          return geoJson.features || [];
+        },
+        { inheritData: true },
+      );
 
       const AddressFields = ({ id }) => {
         const searchSignal = useSignal("");

@@ -90,6 +90,14 @@ puts a reload on the second line as well, and so does
 [`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document) for
 what the page on screen reads — a `GET_MANY` and a `GET_RANGE` included.
 
+**Params moving ask another question, and its first answer is a first load.** A
+binding following a signal lands on an instance with no answer, on the first
+line: an action made with `createAction`, or the `GET` of a relation, which does
+not look in the store. What declares that the previous answer stands in starts on
+the second line: a `GET_MANY`, or `createAction(callback, { inheritData: true })`
+([actions.md](./actions.md#while-the-next-answer-comes),
+[resource.md](./resource.md#what-a-read-shows-while-its-params-move)).
+
 **The emptiness test is `data === undefined`, never `loading`.** Reading
 `loading` as "there is nothing to display" blanks the screen on every refresh —
 for a checkbox ticked on one row of a list, the whole list goes. A list is no

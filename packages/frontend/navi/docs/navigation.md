@@ -554,6 +554,23 @@ replace moves the scroll
 ([below](#a-row-of-tabs-where-a-replace-is-an-arrival)). Several `RouteTravel`
 boxes may live on one page, and only the one travelling is captured.
 
+**The URL says where the hand is heading, not where the reader is.** It changes
+once the hand has really pulled, and comes back if the page is let go of. So a
+counter, a title or a breadcrumb around the box reads
+`routeTravelSettledPageSignal` first, or it moves for a pull that goes nowhere:
+
+```jsx
+const settledPage = routeTravelSettledPageSignal.value;
+const shownId = settledPage ? settledPage.params.gameId : currentId;
+```
+
+It holds the `{ route, params }` the travel set off from for as long as the
+pictures move, and is `null` when they stop, the URL being the truth again. A
+page walked whole under the hand has arrived. A tab pressed or a wheel pushed
+holds nothing, and `null` is all they ever read. One signal for the document, as
+there is one transition at a time: on a page with several boxes, `route` says
+which row is travelling.
+
 `RouteTravel` is for pages that form a ROW the finger can push; pages related
 pair by pair are animated with `defineRouteTransition`, and a given pair by one
 of the two, never both (see

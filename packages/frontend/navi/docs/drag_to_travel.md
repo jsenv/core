@@ -38,12 +38,21 @@ the pointer inside a box that travels.
   pointer it has already cancelled (see
   [mobile_touch.md](./mobile_touch.md#the-browser-decides-about-8px-in-and-does-not-wait)).
   Its price is the click of a tap that shook more than 6px.
-- **A hand still moving when it lets go says where this goes, and it says it
-  both ways.** Towards what it was bringing in, the travel carries on, however
-  slowly, once it has pulled a few pixels. Away from it, fast, everything goes
-  back whatever the distance already covered — otherwise a screen caught in
-  flight and thrown back still arrives. Only a release at rest is judged by the
-  picture: about a third of the box.
+- **A page change is asked for a little later than the press is taken.** A
+  `RouteTravel` holds the press at the same 6px, but nothing is asked of the
+  router until the hand has pulled 10px further, 16px in all with a finger: a
+  navigation, a render and the requests of the page arriving are not worth a
+  hand that only shook. Turned around before that, it simply picks the other
+  neighbour. The picture sets off from where it stands rather than jumping those
+  pixels, and let go of before that, nothing has moved.
+- **Letting go asks where the hand is about to put things.** Where the picture
+  stands, plus half a second at the speed the fingertip has as it lifts, against
+  half the box. A flick lands far and goes. A hand thrown back lands short and
+  everything goes back, otherwise a screen caught in flight and thrown back
+  still arrives. A hand that slowed to a stop has no speed left, and the picture
+  answers alone. Speed counts from 25px of finger, a tap that slipped not being
+  a flick, and past 0.4 px/ms it answers on its own, or half a wide box would be
+  out of reach of any flick.
 - Pulling towards nothing follows the finger at a fraction of its distance and
   comes back: a wall one can lean on, never walk through.
 - **A direction that will be refused is one of those walls, and it must be a
@@ -210,6 +219,7 @@ carry screens.
 | what the screens are    | `<Slide>`s in one box, all mounted | routes — one mounted, ever         |
 | what says which is here | a `signal`, `current` / a command  | the URL                            |
 | what the finger moves   | a translated track                 | the pictures of a view transition  |
+| when the picture moves  | from the press becoming a gesture  | from 10px after that               |
 | letting go too early    | the track comes back               | the transition is played backwards |
 | what says the order     | the layout map                     | the `<Route>` children, in order   |
 | what one wheel push is  | `move(±1)`, as an arrow key        | one travel, as a tab pressed       |

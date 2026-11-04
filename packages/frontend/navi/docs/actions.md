@@ -22,6 +22,7 @@ them by hand — see [resource.md](./resource.md).
 
 - [Params: `bindParams`, and calling the action](#params-bindparams-and-calling-the-action)
   - [The answer is kept on the instance that ran](#the-answer-is-kept-on-the-instance-that-ran)
+  - [While the next answer comes](#while-the-next-answer-comes)
   - [Nothing to ask, and coming back](#nothing-to-ask-and-coming-back)
   - [The in-between states of a gesture are real params](#the-in-between-states-of-a-gesture-are-real-params)
 - [Running: `run`, `rerun`, `prerun`, `reset`](#running-run-rerun-prerun-reset)
@@ -112,9 +113,11 @@ A request that follows typing — the suggestions under an address field — is
 this binding, never the field's `action`: a field whose action runs is busy,
 and a busy field is read-only, so the person could not go on typing.
 `actionDebounce` delays an action that saves what was typed. Such a request,
-written with a plain `createAction`, has no verb for the network policy to see
-([network_policy.md](./network_policy.md)): offline, its params say there is
-nothing to ask (`undefined`, [below](#nothing-to-ask-and-coming-back)).
+written with a plain `createAction`, declares that its previous suggestions
+stand in ([below](#while-the-next-answer-comes)), and has no verb for the
+network policy to see ([network_policy.md](./network_policy.md)): offline, its
+params say there is nothing to ask (`undefined`,
+[below](#nothing-to-ask-and-coming-back)).
 `src/control/demos/integration/0_address_autocomplete_demo.html` is this shape.
 
 ### The answer is kept on the instance that ran
@@ -138,13 +141,48 @@ verb — `computed(() => ME.GET.dataSignal.value)` — only works for a verb
 something runs **directly**, with no params; anything else derives from the
 instance: `computed(() => COUNTS.dataSignal.value)`.
 
+### While the next answer comes
+
+A binding moving to new params lands on an instance with no answer yet: `data`
+is `undefined` until its own arrives, and the screen draws its wait. The previous
+answer would be about something else — a club's podium under the name of the
+department just pressed, one person's partners on another's profile — and nothing
+would give it away: it reads as data, it only shows on a slow network, and it
+fixes itself when the answer lands.
+
+Another answer to **the same question** is different: results refined by a
+keystroke, a window recentred along a list, a thread read again because it grew.
+A blank between two of those is the only thing wrong on the screen, and the
+action says so:
+
+```js
+const searchAddresses = createAction(search, { inheritData: true });
+```
+
+The new instance then starts on what the previous one held, its failure included,
+and `loading` says a newer answer is coming. A resource declares this for each of
+its reads: one item starts on nothing, a list hands over
+([resource.md](./resource.md#what-a-read-shows-while-its-params-move)). When one
+action serves both kinds of screen, a binding says it for itself, in either
+direction:
+
+```js
+routeAction(AUTHOR_PAGE, VIDEOS, () => ({ author: authorSignal.value }), {
+  inheritData: false,
+});
+```
+
+Only a binding following a signal moves. Plain params make an instance that stays
+what it is, and hand nothing over.
+
 ### Nothing to ask, and coming back
 
 A binding has nothing to ask while its params as a whole are `undefined` or
 `null` — a question computed from a form still missing a field.
 `{ id: undefined }` is not that: it is a question, and it is asked. With nothing
 to ask, the binding reads an instance holding nothing, idle: no data, no wait.
-The previous answer stands in only while a newer one is coming, and none is.
+An answer declared to stand in does so only while a newer one is coming, and none
+is.
 
 What the previous params got stays on the instance that ran. A run still out
 for them is called off by `actionRunEffect` (so by a route action) and carries
