@@ -181,14 +181,28 @@ const css = /* css */ `
 
       /* Never painted (see .navi_input_range_thumb). Its width is the drawn
          thumb's, which the value a press gives depends on. Its height follows
-         the press area for Safari on iOS, known to let a finger take a range
-         only from this box (not measured here). */
+         the press area for Safari on iOS, where a finger only starts a drag
+         from inside this box (measured on iOS 26.5). */
       &::-webkit-slider-thumb {
         width: var(--thumb-width);
         height: var(--press-height);
         border-radius: var(--thumb-border-radius);
         -webkit-appearance: none;
         cursor: var(--x-thumb-cursor);
+      }
+    }
+
+    /* Safari on iOS only starts a drag from inside the native thumb, too narrow
+       for a finger once it is the size of the drawing. Scaled rather than sized:
+       the value a press gives is read against its layout width. The clip keeps it
+       off what is next to the range when it sits at an end of the line. */
+    @media (pointer: coarse) {
+      .navi_control_input {
+        overflow: clip;
+
+        &::-webkit-slider-thumb {
+          transform: scaleX(3);
+        }
       }
     }
 

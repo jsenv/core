@@ -74,7 +74,9 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   only: nothing moves and nothing is drawn. It overflows the range, centered
  *   on its line, over whatever is next to it and takes the presses aimed there,
  *   so leave it the room it needs (`marginY`). Different for a mouse and a
- *   finger: `--press-height` in a `@media (pointer: coarse)` rule.
+ *   finger: `--press-height` in a `@media (pointer: coarse)` rule. On Safari for
+ *   iOS a drag only starts close to the thumb, within three times its width; a
+ *   tap further along the line moves the value.
  */
 export const Input = (props) => {
   resolveInputProps(props);
