@@ -55,10 +55,13 @@ const css = /* css */ `
        inherit, hence 0 below rather than "inherit" (see layer="local"
        below). */
     &[data-layer="top"] {
-      --popover-max-height: var(--navi-app-height);
+      /* The ceiling a covered popup holds is written on one of the two
+         maxmax-height, depending on its renderer (see popup_cover.js): the
+         others read it, so that the panel's height is held with it. */
       --popover-maxmax-height: var(--navi-app-height);
+      --popover-max-height: var(--popover-maxmax-height);
       --popover-maxmax-width: var(--navi-app-width);
-      --dialog-maxmax-height: var(--navi-app-height);
+      --dialog-maxmax-height: var(--popover-maxmax-height);
       --dialog-maxmax-width: var(--navi-app-width);
 
       &[navi-side="left"],

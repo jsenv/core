@@ -1,27 +1,30 @@
 /**
- * A modal dialog covered by another modal dialog is not in use, so it does not
- * answer the keyboard: a sheet raising one leaves what is behind it where it
- * is, under the keyboard like anything else behind that sheet.
+ * A popup covered by a modal dialog is not in use, so it does not answer the
+ * keyboard: a sheet raising one leaves what is behind it where it is, under the
+ * keyboard like anything else behind that sheet.
  *
- * Two things make an open dialog follow the keyboard, and both are held here
- * for as long as it is covered:
- * - its ceiling (--dialog-maxmax-height), which CSS keeps tracking
- *   --navi-app-height. Written back resolved, inline. `freezeSize` cannot do it:
- *   a max-* wins over the width/height it writes;
+ * Two things make an open popup follow the keyboard, and both are held here for
+ * as long as it is covered:
+ * - its ceiling (--dialog-maxmax-height, --popover-maxmax-height), which CSS keeps
+ *   tracking --navi-app-height. Written back resolved, inline. `freezeSize` cannot
+ *   do it: a max-* wins over the width/height it writes;
  * - its placement, which reads the live viewport. Deferred, see
  *   deferPlacementWhileCovered.
  *
- * A dialog back on top answers the screen as it is, at once, with one exception:
- * a keyboard on its way out. It is still counted for a while after the sheet
- * closes (the browser takes its time, then --navi-vvh waits for the resize to
- * settle, see responsive.js), and answering that makes the dialog jump up and
+ * A popup uncovered answers the screen as it is, at once, with one
+ * exception: a keyboard on its way out. It is still counted for a while after the
+ * sheet closes (the browser takes its time, then --navi-vvh waits for the resize
+ * to settle, see responsive.js), and answering that makes the popup jump up and
  * back down. A keyboard belongs to a focused field, so the focus says which case
  * this is: on a field the keyboard stays, anywhere else it is leaving and the
- * dialog waits for the viewport to change. No timer: how long a keyboard takes
- * to leave is unknown, and a duration would also delay a keyboard that stays.
+ * popup waits for the viewport to change. No timer: how long a keyboard takes to
+ * leave is unknown, and a duration would also delay a keyboard that stays.
  *
- * Only modal dialogs stack here. What sits under a non-modal one is still
- * usable, and keeps following the keyboard.
+ * Modal dialogs hold what is below them. What sits under a non-modal one is
+ * still usable, and keeps following the keyboard. A top-layer popover can be
+ * held and holds nothing: it follows its anchor, and that anchor may be inside
+ * the popup below, whose rising is what carries a field in the popover above the
+ * keyboard.
  */
 
 import {
@@ -33,46 +36,44 @@ import {
 import { isEditableTarget } from "../box/pseudo_styles.js";
 import { visualViewportHeightSignal } from "./responsive.js";
 
-const CEILING = "--dialog-maxmax-height";
-
-const modalStack = [];
+const coverStack = [];
 
 /**
- * @param {HTMLDialogElement} dialogEl - The modal dialog being shown.
+ * @param {HTMLElement} popupEl - The popup being shown.
  * @param {object} params
- * @param {() => void} params.place - Places the dialog against the viewport as
- *   it is. Called on a dialog that was held once it answers the viewport again.
- * @returns {() => void} To call when the dialog closes.
+ * @param {string} params.ceiling - The custom property capping its height.
+ * @param {boolean} params.holdsBelow - Whether it covers what is below it.
+ * @param {() => void} params.place - Places the popup against the viewport as
+ *   it is. Called on a popup that was held once it answers the viewport again.
+ * @returns {() => void} To call when the popup closes.
  */
-export const enterModalStack = (dialogEl, { place }) => {
-  const entry = { dialogEl, place, hold: null };
-  const entryBelow = modalStack.at(-1);
-  if (entryBelow) {
-    holdEntry(entryBelow);
-  }
-  modalStack.push(entry);
-  return () => {
-    const index = modalStack.indexOf(entry);
-    const wasOnTop = index === modalStack.length - 1;
-    modalStack.splice(index, 1);
-    dropHold(entry);
-    if (wasOnTop && modalStack.length > 0) {
-      releaseBackOnTop(modalStack.at(-1), { closedDialogEl: dialogEl });
+export const enterCoverStack = (popupEl, { ceiling, holdsBelow, place }) => {
+  const entry = { popupEl, ceiling, holdsBelow, place, hold: null };
+  if (holdsBelow) {
+    // All of them: one under a popover was not held when that popover opened.
+    for (const entryBelow of coverStack) {
+      holdEntry(entryBelow);
     }
+  }
+  coverStack.push(entry);
+  return () => {
+    coverStack.splice(coverStack.indexOf(entry), 1);
+    dropHold(entry);
+    releaseUncovered({ closedPopupEl: popupEl });
   };
 };
 
 /**
- * Answers true when the dialog must not be placed right now, and remembers to
+ * Answers true when the popup must not be placed right now, and remembers to
  * place it on release.
  *
  * Only while the room differs from the one it was covered with: the placement
  * reads the live viewport whatever triggered it, so with the same room it lands
- * where the dialog already is, and content growing under the sheet is answered
+ * where the popup already is, and content growing under the sheet is answered
  * as usual.
  */
-export const deferPlacementWhileCovered = (dialogEl) => {
-  const entry = modalStack.find((candidate) => candidate.dialogEl === dialogEl);
+export const deferPlacementWhileCovered = (popupEl) => {
+  const entry = coverStack.find((candidate) => candidate.popupEl === popupEl);
   if (!entry || !entry.hold) {
     return false;
   }
@@ -91,8 +92,8 @@ const holdEntry = (entry) => {
     entry.hold.stopWaiting = null;
     return;
   }
-  const { dialogEl, place } = entry;
-  holdCeiling(dialogEl);
+  const { place } = entry;
+  holdCeiling(entry);
   entry.hold = {
     room: readRoom(),
     placementOwed: false,
@@ -113,7 +114,7 @@ const holdEntry = (entry) => {
       }
       hold.windowWidth = window.innerWidth;
       hold.windowHeight = window.innerHeight;
-      holdCeiling(dialogEl);
+      holdCeiling(entry);
       hold.room = readRoom();
       hold.placementOwed = false;
       place();
@@ -121,18 +122,33 @@ const holdEntry = (entry) => {
   };
 };
 
-const releaseBackOnTop = (entry, { closedDialogEl }) => {
+// From the top down to the first popup that holds what is below it: nothing
+// above covers any of these.
+const releaseUncovered = ({ closedPopupEl }) => {
+  for (let i = coverStack.length - 1; i >= 0; i--) {
+    const entry = coverStack[i];
+    releaseBackOnTop(entry, { closedPopupEl });
+    if (entry.holdsBelow) {
+      return;
+    }
+  }
+};
+
+const releaseBackOnTop = (entry, { closedPopupEl }) => {
   const { hold } = entry;
   if (!hold) {
     return;
   }
+  // Already waiting when a popover above it closes in turn: this close asks again.
+  hold.stopWaiting?.();
+  hold.stopWaiting = null;
   // Nothing taken away, or a keyboard that stays: the room read here is the
-  // screen as it is. A field in the dialog that closed is one still leaving: a
-  // dialog leaving the tree only gives the focus back after the commit.
+  // screen as it is. A field in the popup that closed is one still leaving: a
+  // popup leaving the tree only gives the focus back after the commit.
   const { activeElement } = document;
   if (
     readRoom() >= hold.room ||
-    (isEditableTarget(activeElement) && !closedDialogEl.contains(activeElement))
+    (isEditableTarget(activeElement) && !closedPopupEl.contains(activeElement))
   ) {
     release(entry);
     return;
@@ -178,25 +194,25 @@ const release = (entry) => {
 };
 
 const dropHold = (entry) => {
-  const { hold, dialogEl } = entry;
+  const { hold, popupEl, ceiling } = entry;
   if (!hold) {
     return;
   }
   hold.stopWaiting?.();
   hold.stopWatchingWindow();
-  dialogEl.style.removeProperty(CEILING);
+  popupEl.style.removeProperty(ceiling);
   entry.hold = null;
 };
 
 // The declared ceiling rather than the used max-height: it is the one cap that
 // follows the keyboard, and the other caps (maxHeight) keep their say. Its
 // computed value has every var() resolved, so it stops following once written
-// back. Registered with inherits: false, it does not reach a dialog nested
-// inside this one.
-const holdCeiling = (dialogEl) => {
-  dialogEl.style.removeProperty(CEILING);
-  const ceiling = getComputedStyle(dialogEl).getPropertyValue(CEILING);
-  dialogEl.style.setProperty(CEILING, ceiling);
+// back. Registered with inherits: false, it does not reach a popup nested inside
+// this one.
+const holdCeiling = ({ popupEl, ceiling }) => {
+  popupEl.style.removeProperty(ceiling);
+  const value = getComputedStyle(popupEl).getPropertyValue(ceiling);
+  popupEl.style.setProperty(ceiling, value);
 };
 
 // An overlaying keyboard leaves the viewport alone and arrives on its own.

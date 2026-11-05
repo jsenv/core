@@ -55,6 +55,9 @@ covers anything else behind that sheet. Once back on top it answers the screen
 as it is: at once when the focus landed on a field, since the keyboard stays;
 once the keyboard has left otherwise, so it never jumps up and back down. What
 sits under a non-modal dialog is still usable, and keeps following the keyboard.
+A `layer="top"` `Popover` covered by a modal dialog is held the same way, but it
+holds nothing itself: it may be anchored inside what is below it, and what is
+below rising is what carries a field in the popover above the keyboard.
 
 ## One dialog, two shapes
 

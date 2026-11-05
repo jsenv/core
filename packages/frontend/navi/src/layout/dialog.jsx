@@ -129,7 +129,7 @@ import {
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
-import { deferPlacementWhileCovered, enterModalStack } from "./popup_cover.js";
+import { deferPlacementWhileCovered, enterCoverStack } from "./popup_cover.js";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 import {
   installPopupLiftCss,
@@ -2067,7 +2067,9 @@ const useDialogProps = (props) => {
     rectEffect.observeSize(dialogEl);
     if (isModal) {
       addCleanup(
-        enterModalStack(dialogEl, {
+        enterCoverStack(dialogEl, {
+          ceiling: "--dialog-maxmax-height",
+          holdsBelow: true,
           // "resize": what it was held from is a viewport change, and it answers
           // the way it answers one, animated. Called directly because the
           // effect's dedup already saw that viewport go by.

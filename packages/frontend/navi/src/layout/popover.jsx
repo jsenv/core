@@ -102,6 +102,7 @@ import { usePopupStandIn } from "./popup_stand_in.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
+import { deferPlacementWhileCovered, enterCoverStack } from "./popup_cover.js";
 import {
   armOutsidePressClose,
   armPointerDownOutsideClose,
@@ -177,6 +178,10 @@ const css = /* css */ `
     inherits: false;
   }
   @property --popover-max-height {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --popover-maxmax-height {
     syntax: "*";
     inherits: false;
   }
@@ -1638,25 +1643,35 @@ const usePopoverProps = (props) => {
       );
     }
 
+    let anchorVisibilityRatio = 1;
+    const placeUnlessAnchorOutOfView = (placeEvent) => {
+      // Only a real anchor can meaningfully go "out of view" — gating on
+      // document.documentElement's own visibilityRatio (used for
+      // anchorless/docked popups) would wrongly skip positioning on a
+      // tall page, since its ratio is often low even when nothing's
+      // hidden. hasAnchorElement is already false for the custom
+      // renderer, so this never triggers for it either.
+      if (hasAnchorElement && anchorVisibilityRatio <= 0.2) {
+        popoverEl.setAttribute("data-anchor-out-of-view", "");
+        return false;
+      }
+      popoverEl.removeAttribute("data-anchor-out-of-view");
+      positionPopover(placeEvent);
+      return true;
+    };
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
       ({ visibilityRatio }, { event }) => {
-        // Only a real anchor can meaningfully go "out of view" — gating on
-        // document.documentElement's own visibilityRatio (used for
-        // anchorless/docked popups) would wrongly skip positioning on a
-        // tall page, since its ratio is often low even when nothing's
-        // hidden. hasAnchorElement is already false for the custom
-        // renderer, so this never triggers for it either.
-        if (hasAnchorElement && visibilityRatio <= 0.2) {
-          popoverEl.setAttribute("data-anchor-out-of-view", "");
+        anchorVisibilityRatio = visibilityRatio;
+        // Before the out-of-view rule: a keyboard going over the anchor, behind
+        // the sheet that raised it, hides nothing.
+        if (deferPlacementWhileCovered(popoverEl)) {
           return;
         }
-        popoverEl.removeAttribute("data-anchor-out-of-view");
-        positionPopover(event);
         // Same as Dialog's own — a popup with a scrolling body and a footer
         // swallows the field it just got shorter around. See
         // keepFocusedElementVisible's own doc in popup_shared.js.
-        if (mayHaveHiddenFocus(event)) {
+        if (placeUnlessAnchorOutOfView(event) && mayHaveHiddenFocus(event)) {
           keepFocusedElementVisible(popoverEl);
         }
       },
@@ -1671,6 +1686,23 @@ const usePopoverProps = (props) => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // Whatever its own backdrop: a modal dialog above leaves all of the page
+    // inert, a popover without a wall included. layer="local" is left out, its
+    // ceiling answers to its container.
+    if (isTopLayer) {
+      addCleanup(
+        enterCoverStack(popoverEl, {
+          ceiling: "--popover-maxmax-height",
+          holdsBelow: false,
+          // "resize": see Dialog's own.
+          place: () => {
+            if (placeUnlessAnchorOutOfView(new CustomEvent("resize"))) {
+              keepFocusedElementVisible(popoverEl);
+            }
+          },
+        }),
+      );
+    }
     // Content that sizes itself once on screen (a shrink-wrapped BadgeList)
     // says so, after the placement read it: placed again on the spot, where
     // observeSize answers a frame late. Stopped here, since a popup further up
