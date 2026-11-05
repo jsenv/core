@@ -2577,7 +2577,16 @@ const KEYBOARD_RAISING_CONTROL_SELECTOR = `
   [contenteditable]:not([contenteditable="false"])
 `;
 const warnBottomSheetHoldingKeyboardControl = (dialogEl) => {
-  const controlEl = dialogEl.querySelector(KEYBOARD_RAISING_CONTROL_SELECTOR);
+  // A popup opens inside its opener's subtree, so the sheet's subtree also
+  // holds the fields of popups opened from it. Those are typed into in that
+  // popup, and a nested Dialog docked to the bottom runs this check itself.
+  const controlEl = Array.from(
+    dialogEl.querySelectorAll(KEYBOARD_RAISING_CONTROL_SELECTOR),
+  ).find(
+    (el) =>
+      el.closest(`[navi-control="dialog"], [navi-control="popover"]`) ===
+      dialogEl,
+  );
   if (!controlEl) {
     return;
   }

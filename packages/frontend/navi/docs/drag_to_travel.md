@@ -48,9 +48,10 @@ web does, and these are its rules, not ours:
 
 What stays ours:
 
-- **A travel asked for** (a tab, a key, a command, a state) plays in `duration`,
-  one box long whatever the distance, in `SlideContainer`. In `RouteTravel` it is
-  the browser's smooth scroll.
+- **A travel asked for** (a tab, a key, a command, a state) is one box long whatever
+  the distance: the pages in between are not crossed. In `SlideContainer` it plays in
+  `duration`. In `RouteTravel` it is the browser's smooth scroll, which has no
+  duration to ask for. A finger landing on it finishes it first.
 - **A press beats a row still moving.** It sets off at once from what is on screen,
   and the row never lands where the hand was sending it. In `SlideContainer`
   `onCurrentChange` hears about the slide pressed and not about that one, and on iOS a
@@ -243,7 +244,7 @@ A row of screens is a scroll container, and contains itself.
 | what says which is here       | a `signal`, `current` / a command | the URL                                     |
 | what a screen not on it shows | itself, built or `mount="near"`   | itself once visited; before that, see below |
 | what says the order           | the layout map                    | the `<Route>` children, or `routes`         |
-| a travel asked for            | plays in `duration`, one box long | the browser's smooth scroll                 |
+| a travel asked for            | plays in `duration`, one box long | the browser's smooth scroll, one box long   |
 
 A `RouteTravel` page not visited yet can only be built by the address moving, since
 a route's actions ask only while it matches. So the address moves once the hand has

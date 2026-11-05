@@ -40,9 +40,9 @@
  * than two pages is not a scroller at all, for that reason.
  *
  * A travel nobody's hand is on (a tab pressed, the back button) is the browser's
- * smooth scroll, after ending a snap a hand has left running (takeRowFromHand).
- * Whatever else follows, the trait under a tab bar first, follows the row through
- * route_row_follow.js.
+ * smooth scroll, one box long however far the page is (travelRowTo), after ending a
+ * snap a hand has left running (takeRowFromHand). Whatever else follows, the trait
+ * under a tab bar first, follows the row through route_row_follow.js.
  */
 
 import { useLayoutEffect, useMemo, useReducer, useRef } from "preact/hooks";
@@ -197,6 +197,9 @@ const css = /* css */ `
 // there yet: past what a hand that only shook covers, so that a shake costs
 // neither a navigation nor the requests of a page.
 const SET_OFF_PULL = 16;
+// A row of routes is one line, whatever `offsetTop` its pinned panes read (see the pin
+// above): they are on it all the same.
+const ROW_READING = { sideways: true };
 
 /**
  * @type {import("preact").FunctionComponent<{
@@ -367,7 +370,7 @@ export const RouteTravel = ({
       const paneCurrent = panesOf(row)[currentIndex];
       if (paneCurrent) {
         movement.travelling = true;
-        row.scrollTo({ left: paneCurrent.offsetLeft, behavior: "smooth" });
+        travelRowTo(currentIndex, movement);
       }
     });
   };
@@ -379,12 +382,77 @@ export const RouteTravel = ({
       return;
     }
     const { pages } = latestRef.current;
-    const { base, toward, fraction } = readRowStretch(row, panes, panes[0]);
+    const { base, toward, fraction } = readRowFrame(row, panes);
     publishRouteRowMove({
       basePath: pathOf(pages[panes.indexOf(base)]),
       towardPath: toward ? pathOf(pages[panes.indexOf(toward)]) : null,
       progress: -fraction,
     });
+  };
+
+  // A travel no hand set off is one box long however far the page is, as in a
+  // SlideContainer: the browser's smooth scroll would fly past every page in between.
+  // So the page asked for takes the column next to what is in the frame, on the side
+  // it already stands, which moves nothing on screen, and endMovement puts the columns
+  // back. Columns rather than offsets: every page stays a place to snap to, and none
+  // has to be hidden.
+  const travelRowTo = (index, movement) => {
+    const row = rowRef.current;
+    const panes = panesOf(row);
+    const pane = panes[index];
+    if (!pane) {
+      return;
+    }
+    const { base, toward, fraction } = readRowFrame(row, panes);
+    const inFrame = toward && fraction > 0 ? [base, toward] : [base];
+    if (!inFrame.includes(pane)) {
+      // In a window, what the window put in a column moves with its pane.
+      const standingIn = (paneIndex) => {
+        const standing = [panes[paneIndex]];
+        if (windowed) {
+          const picture = movement.pictures.get(paneIndex);
+          if (picture) {
+            standing.push(picture);
+          }
+          if (paneIndex === latestRef.current.liveIndex) {
+            standing.push(liveRef.current);
+          }
+        }
+        return standing;
+      };
+      const columns = [...panes].sort((a, b) => a.offsetLeft - b.offsetLeft);
+      const first = columns.indexOf(inFrame[0]);
+      const last = columns.indexOf(inFrame[inFrame.length - 1]);
+      const from = columns.indexOf(pane);
+      columns.splice(from, 1);
+      columns.splice(from < first ? first - 1 : last + 1, 0, pane);
+      movement.placed ||= new Map();
+      columns.forEach((eachPane, column) => {
+        for (const element of standingIn(panes.indexOf(eachPane))) {
+          if (!movement.placed.has(element)) {
+            movement.placed.set(element, element.style.gridColumn);
+          }
+          element.style.gridColumn = String(column + 1);
+        }
+      });
+    }
+    row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+  };
+
+  // Every column back where the map says, and the row on the page of the address, in
+  // one go: that page stands at the same place on screen either way.
+  const putRowBack = (movement) => {
+    const row = rowRef.current;
+    if (movement.placed) {
+      for (const [element, column] of movement.placed) {
+        element.style.gridColumn = column;
+      }
+      movement.placed = null;
+    }
+    const pane = panesOf(row)[latestRef.current.currentIndex];
+    if (pane && !restsOn(row, pane, ROW_READING)) {
+      row.scrollTo({ left: pane.offsetLeft, behavior: "instant" });
+    }
   };
 
   // A tab pressed over a row a hand has left moving, which the browser plays on and
@@ -407,9 +475,8 @@ export const RouteTravel = ({
       row.setAttribute("data-route-row-taken", "");
       row.style.removeProperty("--navi-route-row-stand");
       afterFrames(1, () => {
-        const pane = panesOf(row)[latestRef.current.currentIndex];
-        if (movementRef.current === movement && pane) {
-          row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+        if (movementRef.current === movement) {
+          travelRowTo(latestRef.current.currentIndex, movement);
         }
       });
     });
@@ -424,6 +491,7 @@ export const RouteTravel = ({
       return;
     }
     movementRef.current = null;
+    putRowBack(movement);
     row.removeAttribute("data-moving");
     row.removeAttribute("data-route-row-taken");
     publishRouteRowMove(null);
@@ -457,7 +525,7 @@ export const RouteTravel = ({
     const pane = panesOf(row)[currentIndex];
     const answered = answeredPageRef.current;
     if (samePage(answered, page)) {
-      if (pane && !movementRef.current && !restsOn(row, pane)) {
+      if (pane && !movementRef.current && !restsOn(row, pane, ROW_READING)) {
         row.scrollTo({ left: pane.offsetLeft, behavior: "instant" });
       }
       return;
@@ -470,29 +538,30 @@ export const RouteTravel = ({
     if (asked && samePage(asked, page)) {
       askedPageRef.current = null;
       // The hand landed before the address did.
-      if (movementRef.current?.landed && restsOn(row, pane)) {
+      if (movementRef.current?.landed && restsOn(row, pane, ROW_READING)) {
         Promise.resolve().then(endMovement);
       }
       return;
     }
-    if (!answered || restsOn(row, pane)) {
-      if (!restsOn(row, pane)) {
+    if (!answered || restsOn(row, pane, ROW_READING)) {
+      if (!restsOn(row, pane, ROW_READING)) {
         row.scrollTo({ left: pane.offsetLeft, behavior: "instant" });
       }
       return;
     }
     const movementBefore = movementRef.current;
     const movement = beginMovement({ travelling: true });
-    // In this very commit: the tab pressed already wears its bar, and the first
-    // scroll event is a frame away.
-    sayRowMoves();
     if (movementBefore?.byHand && !movementBefore.rowTaken) {
+      sayRowMoves();
       takeRowFromHand(movement);
       return;
     }
     if (row.getAttribute("data-route-row-taken") !== "clip") {
-      row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+      travelRowTo(currentIndex, movement);
     }
+    // In this very commit: the tab pressed already wears its bar, and the first
+    // scroll event is a frame away.
+    sayRowMoves();
   });
 
   // Somebody else is about to move the address to another page of a window: its
@@ -530,7 +599,7 @@ export const RouteTravel = ({
       }
       const moving = movementRef.current;
       const pane = panes[currentIndex];
-      if (!moving && pane && restsOn(row, pane)) {
+      if (!moving && pane && restsOn(row, pane, ROW_READING)) {
         // Written by this box, at rest: nobody is moving anything.
         return;
       }
@@ -543,7 +612,7 @@ export const RouteTravel = ({
       // the first tab lit for the whole trip: the nearest page answers. A finger has a
       // lift to wait for (onLeftToSnap), and until then the page held stands.
       if (!finger) {
-        const { base, toward, fraction } = readRowStretch(row, panes, panes[0]);
+        const { base, toward, fraction } = readRowFrame(row, panes);
         followPageOnScreen(
           pages[panes.indexOf(fraction >= 0.5 && toward ? toward : base)],
           askedPageRef.current || pages[currentIndex],
@@ -580,7 +649,7 @@ export const RouteTravel = ({
         return;
       }
       const panes = panesOf(row);
-      const { base, toward } = readRowStretch(row, panes, panes[0]);
+      const { base, toward } = readRowFrame(row, panes);
       const index = panes.indexOf(forward && toward ? toward : base);
       const page = pages[index];
       if (!page) {
@@ -599,8 +668,15 @@ export const RouteTravel = ({
         return;
       }
       const panes = panesOf(row);
-      const pane = pageAtRest(row, panes);
+      const pane = pageAtRest(row, panes, ROW_READING);
       if (!pane) {
+        // A travel stopped short of its page: the layout moved under it (a scrollbar
+        // coming in narrows the row), and where it was sent is not where the page
+        // stands. Sent again: the row then rests, or does not move and is not heard.
+        const target = panes[latestRef.current.currentIndex];
+        if (movement.travelling && !isClipped() && target) {
+          row.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
+        }
         return;
       }
       movement.landed = true;
@@ -622,8 +698,15 @@ export const RouteTravel = ({
       onLand,
       onLeftToSnap,
     });
-    // A hand back on a row taken from one: it is the hand's again, snapping included.
-    const onHandBack = () => {
+    // A finger on a travel still playing: the row is the finger's from here, and it
+    // stands where the travel was going, as in a SlideContainer. A wheel only gives the
+    // row its snapping back: a page scrolled vertically over it is no hand on it.
+    const onTouchOnTravel = () => {
+      if (movementRef.current?.travelling && !isClipped()) {
+        endMovement();
+      }
+    };
+    const onWheelOnTravel = () => {
       if (row.getAttribute("data-route-row-taken") === "") {
         row.removeAttribute("data-route-row-taken");
       }
@@ -645,13 +728,13 @@ export const RouteTravel = ({
       movement.travelling = true;
       takeRowFromHand(movement);
     };
-    row.addEventListener("touchstart", onHandBack, { passive: true });
-    row.addEventListener("wheel", onHandBack, { passive: true });
+    row.addEventListener("touchstart", onTouchOnTravel, { passive: true });
+    row.addEventListener("wheel", onWheelOnTravel, { passive: true });
     document.addEventListener("click", onPress, { capture: true });
     return () => {
       stopWatching();
-      row.removeEventListener("touchstart", onHandBack);
-      row.removeEventListener("wheel", onHandBack);
+      row.removeEventListener("touchstart", onTouchOnTravel);
+      row.removeEventListener("wheel", onWheelOnTravel);
       document.removeEventListener("click", onPress, { capture: true });
       movementRef.current?.resumeScrollRecording?.();
       movementRef.current = null;
@@ -668,7 +751,7 @@ export const RouteTravel = ({
       return;
     }
     const pane = panesOf(rowRef.current)[currentIndex];
-    if (pane && restsOn(rowRef.current, pane)) {
+    if (pane && restsOn(rowRef.current, pane, ROW_READING)) {
       Promise.resolve().then(endMovement);
     }
   }, [currentIndex]);
@@ -785,9 +868,6 @@ const copyScrollPositions = (from, to) => {
   }
 };
 
-// A page of the row: a route, and the params that say which of its tabs when
-// several of them share it. Written as a bare route by a caller whose tabs are
-// routes of their own — which is the same page with nothing to tell apart.
 const afterFrames = (count, callback) => {
   if (count === 0) {
     callback();
@@ -798,6 +878,13 @@ const afterFrames = (count, callback) => {
   });
 };
 
+// The two pages the row stands between.
+const readRowFrame = (row, panes) =>
+  readRowStretch(row, panes, panes[0], ROW_READING);
+
+// A page of the row: a route, and the params that say which of its tabs when
+// several of them share it. Written as a bare route by a caller whose tabs are
+// routes of their own — which is the same page with nothing to tell apart.
 const normalizePage = (page) =>
   page.isRoute ? { route: page, params: undefined } : page;
 

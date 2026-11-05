@@ -27,17 +27,19 @@ const STOPPED_SILENCE = 150;
 const isOnRow = (page) =>
   page.offsetWidth > 0 && !page.hasAttribute("data-off-row");
 
-export const restsOn = (scroller, page) =>
+// `sideways`: see readRowStretch.
+export const restsOn = (scroller, page, { sideways } = {}) =>
   Math.abs(page.offsetLeft - scroller.scrollLeft) <= AT_REST_DISTANCE &&
-  Math.abs(page.offsetTop - scroller.scrollTop) <= AT_REST_DISTANCE;
+  (sideways ||
+    Math.abs(page.offsetTop - scroller.scrollTop) <= AT_REST_DISTANCE);
 
 /**
  * @returns {Element|undefined} the page the row rests on, nothing while it stands
  *   between two: a hand can pause midway, and an engine may call that the end of
  *   a scroll.
  */
-export const pageAtRest = (scroller, pages) =>
-  pages.find((page) => isOnRow(page) && restsOn(scroller, page));
+export const pageAtRest = (scroller, pages, options) =>
+  pages.find((page) => isOnRow(page) && restsOn(scroller, page, options));
 
 /**
  * Where the row stands between two neighbouring pages, on the side it has moved
@@ -45,14 +47,18 @@ export const pageAtRest = (scroller, pages) =>
  * since is walked over. A map moves along one axis at a time, the one it has
  * moved furthest on.
  *
+ * @param {object} [options]
+ * @param {boolean} [options.sideways] - a row with one line, whatever `offsetTop` its
+ *   pages read: a page pinned with `top` is still on it.
  * @returns {{base: Element, toward: Element|undefined, fraction: number, forward: boolean}}
  *   the last page the row has passed (`page` itself until then), the one after,
  *   and how far between the two from 0 to 1. Nothing `toward` past the last.
  */
-export const readRowStretch = (scroller, pages, page) => {
+export const readRowStretch = (scroller, pages, page, { sideways } = {}) => {
   const alongX =
+    sideways ||
     Math.abs(scroller.scrollLeft - page.offsetLeft) >=
-    Math.abs(scroller.scrollTop - page.offsetTop);
+      Math.abs(scroller.scrollTop - page.offsetTop);
   const position = alongX ? "offsetLeft" : "offsetTop";
   const cross = alongX ? "offsetTop" : "offsetLeft";
   const scrolled = alongX ? scroller.scrollLeft : scroller.scrollTop;
@@ -60,7 +66,8 @@ export const readRowStretch = (scroller, pages, page) => {
   const step = forward ? 1 : -1;
   const line = pages
     .filter(
-      (candidate) => isOnRow(candidate) && candidate[cross] === page[cross],
+      (candidate) =>
+        isOnRow(candidate) && (sideways || candidate[cross] === page[cross]),
     )
     .sort((pageA, pageB) => pageA[position] - pageB[position]);
   let index = line.indexOf(page);

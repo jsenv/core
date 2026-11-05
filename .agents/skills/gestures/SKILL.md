@@ -76,6 +76,19 @@ out), and writes the position in one go when it lands. Native smooth scroll has 
 duration and flies past every slide in between. A row's scroll position while a
 travel plays belongs to the travel: a finger landing finishes it first.
 
+**A row of routes travels one box too.** For a reader the two are the same thing. Its
+travel stays the browser's smooth scroll, which would fly past every page in between, so
+the page asked for takes the column next to what is in the frame (`grid-column`), on
+the side it already stands, which moves nothing on screen, and the columns and the
+scroll position go back in one go at rest. Columns, never stacking: placed over an
+occupied column with `left`, every other page had to be hidden, the readers taught to
+skip them and snapping turned off. Reordered, every page stays a place to snap to. A
+finger landing finishes the travel first, as in a `SlideContainer`; a wheel does not,
+since a page scrolled vertically over the row is no hand on it. A travel the layout
+moves under (a scrollbar coming in narrows the row) is sent again from its landing. A
+pane pinned with `top` reads another `offsetTop` than the page on screen, so every
+reading of a row of routes is one line (`sideways`), the landing's included.
+
 **A press over a row still moving wins, at once.** A press is not a hand, and it is
 answered at full strength (the animations skill), so this is the one movement of the
 browser's that navi takes over. The position the row stands at becomes the track's
