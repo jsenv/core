@@ -70,7 +70,7 @@ export const sayRefusal = (element, error) => {
   let anchorElement = element;
   if (
     typeof error === "object" &&
-    !Error.isError(error) &&
+    !(error instanceof Error) &&
     !isValidElement(error)
   ) {
     message = error.message;

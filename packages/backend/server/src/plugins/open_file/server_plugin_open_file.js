@@ -10,7 +10,7 @@ export const serverPluginOpenFile = () => {
         description: "Can be used to open a given file in your editor.",
         declarationSource: import.meta.url,
         fetch: (request) => {
-          let file = decodeURIComponent(request.params[0]);
+          const file = request.params[0];
           if (!file) {
             return {
               status: 400,

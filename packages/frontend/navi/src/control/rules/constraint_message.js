@@ -55,7 +55,7 @@ export const getMessageString = (message) => {
   if (typeof message === "string") {
     return message;
   }
-  if (Error.isError(message)) {
+  if (message instanceof Error) {
     return message.message;
   }
   return undefined;

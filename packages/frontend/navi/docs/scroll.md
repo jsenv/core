@@ -254,6 +254,14 @@ list warns in dev when the second is missing:
 A row selected during the search does not hold the view: emptying the search
 takes the list back to where it was, which may be nowhere near that row.
 
+The offset is given back once, in the frame after the search empties, and then
+forgotten. A list under a `display: none` at that moment cannot scroll, so it has
+nowhere to put it: shown again, it stands at its start, and the `navi_scroll` of
+that restore carries no `item`. It does not wait to be shown, because the user
+may have moved on by then, and an old offset would surprise them more than the
+start of the list. A list that is only out of view still gets its offset back. To
+keep the place across a hide, empty the search once the list is shown again.
+
 ### Loading: two different situations
 
 `loading` (with `loadingFallback`, `loadingSkeletonCount`, `renderSkeleton`)

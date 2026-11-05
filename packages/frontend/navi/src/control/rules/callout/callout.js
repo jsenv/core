@@ -703,7 +703,7 @@ export const openCallout = (
         element: calloutElement,
       });
     } else {
-      if (Error.isError(newMessage)) {
+      if (newMessage instanceof Error) {
         const error = newMessage;
         newMessage = error.message;
         if (showErrorStack && error.stack) {

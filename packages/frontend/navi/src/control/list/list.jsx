@@ -601,11 +601,14 @@ const css = /* css */ `
      padding after its own content — the track — so a track kept at the box's
      width puts that room in the middle of the items, and the last one touches
      the edge. min-content and not max-content: items that can shrink still fit
-     the box as they did, down to their longest word. A grid of columns is
-     sized by its columns. */
+     the box as they did, down to their widest letter since they break anywhere
+     (see .navi_list_item). A grid of columns is sized by its columns. A wrapping
+     track has no item past the edge, so no end room to place, and in a frame
+     sized by its content min-content would give each item a line of its own. */
   .navi_list_container[data-horizontal]:not(
       [data-scroller],
-      [data-overflow-visible]
+      [data-overflow-visible],
+      [data-flex-wrap]
     )
     > .navi_list_scroll_container
     > .navi_list:not([navi-box-flow="grid"]) {
@@ -1371,6 +1374,7 @@ const ListUI = (props) => {
     horizontal &&
     !scrollerAttribute &&
     !overflowVisibleAttribute &&
+    !rest.flexWrap &&
     !(columns || itemColumns);
 
   return (
@@ -1384,6 +1388,7 @@ const ListUI = (props) => {
       data-borderless={isBorderless(rest) ? "" : undefined}
       data-scroller={scrollerAttribute}
       data-overflow-visible={overflowVisibleAttribute}
+      data-flex-wrap={rest.flexWrap ? "" : undefined}
       navi-hover-while-scrolling={hoverWhileScrolling ? "" : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       data-expand-y={expandY || expand ? "" : undefined}
@@ -2315,6 +2320,12 @@ const useListScrollSync = ({
   // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
   const topMatchScoresKeyRef = useRef("");
   const restoreScrollRafRef = useRef(null);
+  // The frame reads the list's ref, which an unmount empties.
+  useLayoutEffect(() => {
+    return () => {
+      cancelAnimationFrame(restoreScrollRafRef.current);
+    };
+  }, []);
   useLayoutEffect(() => {
     const listScrollContainerEl = ref.current ? getScroller() : null;
     if (!listScrollContainerEl) {
@@ -2359,8 +2370,9 @@ const useListScrollSync = ({
         // based on virtual item height which can wrongly restore the scroll.
         // However we have a contract with outside to inside which item is scrolled
         // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
-        // so we do our best to give that item back
-        const { item } = getScrollInfo({
+        // so we do our best to give that item back: there is none to give when
+        // the list has no visible part, and the restore happens all the same.
+        const scrollInfo = getScrollInfo({
           scrollValues: savedScroll,
           scrollerEl: listScrollContainerEl,
           listEl: getListEl(),
@@ -2376,7 +2388,7 @@ const useListScrollSync = ({
         });
         const listEl = getListEl();
         dispatchPublicCustomEvent(listEl, "navi_scroll", {
-          item,
+          item: scrollInfo?.item,
           event: new CustomEvent("navi_scroll_restore"),
         });
       });

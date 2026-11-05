@@ -41,7 +41,14 @@ export const createResourcePattern = (pattern) => {
     matchesEveryResource,
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
-      let decodedPathname = decodeURIComponent(pathname);
+      let decodedPathname;
+      try {
+        decodedPathname = decodeURIComponent(pathname);
+      } catch {
+        // the path comes from the client: one that cannot be decoded (/%c0)
+        // names no resource, it is not an internal error
+        return null;
+      }
       let result = pathnamePattern.match(decodedPathname);
       if (!result && directoryPattern) {
         result = directoryPattern.match(

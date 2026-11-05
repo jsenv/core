@@ -69,7 +69,7 @@ export const useExecuteAction = (
       //   and it is then shown exactly as if there were no mapping at all.
       if (typeof errorMappingResult === "string") {
         message = errorMappingResult;
-      } else if (Error.isError(errorMappingResult)) {
+      } else if (errorMappingResult instanceof Error) {
         message = errorMappingResult;
       } else if (isValidElement(errorMappingResult)) {
         message = errorMappingResult;

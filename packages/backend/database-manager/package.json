@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@jsenv/database": "0.0.30",
-    "@jsenv/server": "17.7.2",
+    "@jsenv/server": "17.7.3",
     "@jsenv/urls": "2.9.22",
     "@tanstack/table-core": "9.3.1",
     "jsonwebtoken": "9.0.3",
