@@ -96,6 +96,7 @@
         Picker,
         Route,
         RouteTravel,
+        defineRouteTransition,
         Select,
         Text,
         resource,
@@ -575,17 +576,14 @@
         );
       };
 
-      // La partie et sa modification voyagent entre elles, sur leur propre axe:
-      // la modification est au-dessus, donc elle descend sur la partie et
-      // s'enregistrer la fait remonter. C'est la même partie vue de deux façons,
-      // donc rien d'autre à l'écran ne se déplace.
+      // La partie et sa modification sont la même partie vue de deux façons: elles
+      // se retournent l'une sur l'autre, et rien d'autre à l'écran ne se déplace.
+      defineRouteTransition(GAME_ROUTE, EDIT_GAME_ROUTE, "flip");
       const GameArea = () => (
-        <RouteTravel axis="y" routes={[EDIT_GAME_ROUTE, GAME_ROUTE]}>
-          <Route>
-            <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
-            <Route route={GAME_ROUTE} element={GamePage} />
-          </Route>
-        </RouteTravel>
+        <Route>
+          <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
+          <Route route={GAME_ROUTE} element={GamePage} />
+        </Route>
       );
 
       // Deux ordres, et ils ne disent pas la même chose:

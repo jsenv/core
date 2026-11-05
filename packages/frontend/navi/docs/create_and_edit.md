@@ -410,30 +410,19 @@ right. **A page left out of `routes` does not travel**: one opens the create
 screen from the list, one does not slide there, so the list is absent and that
 move plays nothing — leaving a page out is how a movement is refused.
 
-A pair with a movement of its own gets a row of its own, on its own axis. The
-game and its edit screen are the same thing seen two ways, so they travel
-vertically inside the place the outer row holds for them — editing above
-(the column's order is the children's), coming down over the game, sent back up
-by saving:
+A pair with a movement of its own takes a route transition rather than a row. The
+game and its edit screen are the same thing seen two ways, so they turn over inside
+the place the outer row holds for them, with `defineRouteTransition`:
 
 ```jsx
-const GameArea = () => (
-  <RouteTravel axis="y">
-    <Route>
-      <Route route={EDIT_GAME_ROUTE} element={EditGamePage} />
-      <Route route={GAME_ROUTE} element={GamePage} />
-    </Route>
-  </RouteTravel>
-);
+defineRouteTransition(GAME_ROUTE, EDIT_GAME_ROUTE, "flip");
 
-// in the outer row: the same element on both branches
+// in the row: the same element on both branches
 <Route route={EDIT_GAME_ROUTE} element={GameArea} />
 <Route route={GAME_ROUTE} element={GameArea} />
 ```
 
-The outer row does not move for it — the edit url is not one of its pages — and
-the same element on both branches keeps the inner row mounted, with something
-to travel between.
+The row does not move for it: the edit url is not one of its pages.
 
 ## The same loop in a dialog
 

@@ -179,7 +179,7 @@ nothing to preload — the navigation itself asks.
 
 A route element still waiting is what the container rendered — its pending
 screen, or the fallback of the boundary it suspended into — so a route transition
-or a `RouteTravel` takes its picture of **that**, code and data alike. navi does
+takes its picture of **that**, code and data alike. navi does
 not hold a navigation for a chunk: the honest answer to "a chunk is a hundred
 milliseconds" is the prefetch above — the code is there before the press — and a
 skeleton in the page's own shape is what gets photographed when it is not.

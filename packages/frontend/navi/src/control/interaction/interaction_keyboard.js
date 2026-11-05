@@ -21,6 +21,9 @@
  * well, whether the gate lets the interaction through or refuses it and says
  * why — the same as a number field's arrows.
  *
+ * A key pressed in a popup nested in the element is not this element's, like a
+ * press there (see isPressOnLayerOver).
+ *
  * The interaction is dispatched under its full name, colon included, so
  * `findEvent(event, "keyboard:ctrl+backspace")` gets back to it — the shortcut
  * that asked is what the action wants to know, not that a key went down.

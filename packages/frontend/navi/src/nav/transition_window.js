@@ -2,12 +2,6 @@
  * The window two pages are seen through while one replaces the other, measured
  * at the one moment both exist and published for the length of the movement.
  *
- * Both ways of moving from one route to another need the same numbers, so they
- * are written under the same names and read by the same CSS formulas —
- * `route_travel.jsx` for a row a finger pushes, `route_transition.jsx` for a
- * relation between two pages. Only one of them ever plays at a time (there is
- * one view transition per document), which is what lets them share the names.
- *
  * What the numbers are for:
  *
  * - **the box the movement happens in**, in the WINDOW's coordinates. The
@@ -305,21 +299,6 @@ export const placeTransitionWindow = (owner, groupName) => {
   document.documentElement.setAttribute(WINDOW_PLACED_ATTRIBUTE, "");
 };
 
-/**
- * Whether a point of the window lies in a band the furniture keeps: the pictures
- * are cut at those bands, so what is seen there is never a page, however far the
- * box runs under it.
- */
-export const isPointInTransitionBand = (clientX, clientY) => {
-  const band = readBand();
-  return (
-    clientX < band.left ||
-    clientX > window.innerWidth - band.right ||
-    clientY < band.top ||
-    clientY > window.innerHeight - band.bottom
-  );
-};
-
 // The live layout takes the box back. A discontinuity by construction — the
 // window stands at the held height, the box is at its own — and an invisible
 // one: the page arriving is fully in place, and the strip below it that the
@@ -402,8 +381,7 @@ const shiftRect = (rect, byTop, byLeft) => {
 // What has scrolled OUTSIDE the box: the offsets of every scroller above the
 // one the pages scroll in, the viewport's included. That nearest scroller is
 // the pages' own — an offset there is a page scrolled, and it is not counted;
-// a hidden overflow counts as one so that the box asked about is the same the
-// travel asks about (see pagesScrollTheDocument in route_travel.jsx). What is
+// a hidden overflow counts as one. What is
 // pinned to the viewport (fixed, in the top layer) is not carried by the
 // document's offset, and the walk stops under it.
 const readOuterScroll = (element) => {

@@ -66,7 +66,7 @@ start when unsure which export solves a problem.
   `SlideContainer` read from the URL, what a layer drawn over the screen may say
   in its address. Before any routing code.
 - `route_transitions.md` — a transition states a relation between two pages;
-  `RouteTravel` or a transition, never both on one pair; fixed bars and
+  `RouteTravel` or a transition on one pair; fixed bars and
   `RouteTransitionArea`; the page being left stays mounted, hidden, until the
   movement is over; a test waits for the page, never for its address; what a
   transition costs. Before animating a navigation, and before believing a
@@ -77,8 +77,9 @@ start when unsure which export solves a problem.
   whole document, what cannot be pointed at while one plays. Before
   `document.startViewTransition`, and before putting a value on `:root` for a
   movement.
-- `drag_to_travel.md` — a pointer or a wheel pushing a screen aside, and who owns
-  a press several boxes want. Before putting anything that reads the pointer
+- `drag_to_travel.md` — a hand pushing a screen aside: what a row the browser
+  scrolls answers, what a box pushed aside reads, and who owns a press several
+  boxes want. Before putting anything that reads the pointer
   inside a box that travels.
 
 ### Data

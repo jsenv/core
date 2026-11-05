@@ -4,6 +4,7 @@ import { useEffect, useRef } from "preact/hooks";
 
 import { useAction } from "../action/use_action.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
+import { isPressOnLayerOver } from "../control/interaction/press_target.js";
 import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
@@ -225,6 +226,9 @@ const createOnKeyDownForShortcutArray = (
   };
 };
 /**
+ * A key pressed in a popup nested in the listening element is not offered to
+ * these shortcuts: see applyKeyboardShortcuts.
+ *
  * @param {object} shortcuts
  * @param {object} [options]
  * @param {(target: Element) => boolean} [options.ownsTarget] Whether a
@@ -250,6 +254,13 @@ export const createOnKeyDownForShortcuts = (shortcuts, { ownsTarget } = {}) => {
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent, { ownsTarget }) => {
   const currentTarget = keyboardEvent.currentTarget;
   const target = keyboardEvent.target;
+  // A popup stays a DOM descendant of what it was written in, so a key pressed
+  // in it bubbles through boxes the reader cannot reach while it is open. Those
+  // boxes have no shortcut to answer it with: an arrow in a sheet does not walk
+  // the slides behind it, and Escape closes the popup it was pressed in.
+  if (isPressOnLayerOver(target, currentTarget)) {
+    return null;
+  }
   let canIntercept;
   if (target === currentTarget) {
     // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements

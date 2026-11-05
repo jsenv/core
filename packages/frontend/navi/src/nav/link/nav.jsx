@@ -15,10 +15,12 @@ import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import {
+  SLIDE_BASE_ATTRIBUTE,
   SLIDE_CURRENT_ATTRIBUTE,
   SLIDE_STATE_EVENT,
   SLIDE_TOWARD_ATTRIBUTE,
 } from "../../layout/use_slide_container.js";
+import { followRouteRows } from "../route_row_follow.js";
 import { observeTransitionDestination } from "../transition_destination.js";
 import { NavContext } from "./nav_context.js";
 
@@ -166,6 +168,13 @@ const css = /* css */ `
     }
   }
 
+  /* A row of routes the browser scrolls has no transition to name the bar for:
+     for as long as it moves, the bar of the whole row above is drawn and the one
+     under each tab stands aside (see followRouteRows). */
+  .navi_nav[data-nav-following-row] .navi_current_indicator {
+    visibility: hidden;
+  }
+
   /* The bar under the current tab of a nav made of routes is NAMED: a change
      played as a view transition then finds it on both pictures and moves it
      from the tab it was under to the tab it is under, which is all "the bar
@@ -184,7 +193,7 @@ const css = /* css */ `
      must leave or arrive with its row. So the name is dropped unless the
      movement goes from a tab of this row to another one of its tabs (see
      markIndicatorTakesPart). */
-  :root:is([data-navi-route-transition], [data-navi-route-travel])
+  :root[data-navi-route-transition]
     .navi_nav:not([data-nav-between-tabs])
     .navi_current_indicator {
     view-transition-name: none;
@@ -376,6 +385,60 @@ const NavStyleCSSVars = {
   currentIndicatorSize: ["--nav-current-indicator-size", "height"],
 };
 
+// Where the bar is, where it is headed and in which colour at each end: the
+// numbers the CSS above interpolates between. Measured off the DOM (offsets force
+// a layout, the colours a style resolve), so asked only when the two tabs change.
+const writeIndicatorGeometry = (
+  navElement,
+  { baseTabElement, towardTabElement, towardIsAfter, vertical },
+) => {
+  const measure = (tabElement) =>
+    vertical
+      ? { position: tabElement.offsetTop, length: tabElement.offsetHeight }
+      : { position: tabElement.offsetLeft, length: tabElement.offsetWidth };
+  // The colour a tab asks the bar to be under it. Read from the tab and not
+  // from the row, so a tab that says nothing gives the row's value back —
+  // it inherits it (see the css above) — and one that says something gives
+  // its own. Empty when neither resolves to anything: the css then falls
+  // back on its own, rather than being handed a colour that is not one.
+  const colorOf = (tabElement) =>
+    getComputedStyle(tabElement)
+      .getPropertyValue("--link-current-indicator-color")
+      .trim();
+  const writeColor = (property, color) => {
+    if (color) {
+      navElement.style.setProperty(property, color);
+    } else {
+      navElement.style.removeProperty(property);
+    }
+  };
+  const baseMeasure = measure(baseTabElement);
+  let positionDelta = 0;
+  let lengthDelta = 0;
+  let towardSign = 0;
+  let towardColor = "";
+  if (towardTabElement) {
+    const towardMeasure = measure(towardTabElement);
+    // What one box of travel is worth in pixels of this row, signed so that
+    // the trait is exactly on the other tab when the progress is at its own
+    // end: the container counts +1 when the picture leans on a slide sitting
+    // BEFORE the current one and -1 when it sits after.
+    const sign = towardIsAfter ? -1 : 1;
+    positionDelta = (towardMeasure.position - baseMeasure.position) * sign;
+    lengthDelta = (towardMeasure.length - baseMeasure.length) * sign;
+    towardSign = sign;
+    towardColor = colorOf(towardTabElement);
+  }
+  const { style } = navElement;
+  style.setProperty("--nav-indicator-position", baseMeasure.position);
+  style.setProperty("--nav-indicator-length", baseMeasure.length);
+  style.setProperty("--nav-indicator-position-delta", positionDelta);
+  style.setProperty("--nav-indicator-length-delta", lengthDelta);
+  style.setProperty("--nav-indicator-toward-sign", towardSign);
+  writeColor("--nav-indicator-color", colorOf(baseTabElement));
+  writeColor("--nav-indicator-color-toward", towardColor);
+};
+
 const positionOfCurrentIndicator = (currentIndicator, vertical) => {
   if (currentIndicator === true) {
     return vertical ? "left" : "bottom";
@@ -455,6 +518,10 @@ export const Nav = ({
   const indicatorPosition = slideContainer
     ? positionOfCurrentIndicator(currentIndicator, vertical)
     : null;
+  // A row of routes draws that same bar only while it follows a row scrolling.
+  const rowIndicatorPosition = slideContainer
+    ? null
+    : positionOfCurrentIndicator(currentIndicator, vertical);
 
   // Which tab of this row is the one being shown: the slide the container says
   // it is on, or, for a row of routes, the link the browser is on.
@@ -467,7 +534,11 @@ export const Nav = ({
     if (!containerElement) {
       return navElement.querySelector("[data-href-current]");
     }
-    const currentArea = containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
+    // The tab the trait counts from: the current one, unless a hand has carried
+    // the row past it.
+    const currentArea =
+      containerElement.getAttribute(SLIDE_BASE_ATTRIBUTE) ??
+      containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
     if (currentArea === null) {
       return null;
     }
@@ -541,56 +612,18 @@ export const Nav = ({
       tabCount: tabElements.length,
       vertical,
     };
-    const measure = (tabElement) =>
-      vertical
-        ? { position: tabElement.offsetTop, length: tabElement.offsetHeight }
-        : { position: tabElement.offsetLeft, length: tabElement.offsetWidth };
-    // The colour a tab asks the bar to be under it. Read from the tab and not
-    // from the row, so a tab that says nothing gives the row's value back —
-    // it inherits it (see the css above) — and one that says something gives
-    // its own. Empty when neither resolves to anything: the css then falls
-    // back on its own, rather than being handed a colour that is not one.
-    const colorOf = (tabElement) =>
-      getComputedStyle(tabElement)
-        .getPropertyValue("--link-current-indicator-color")
-        .trim();
-    const writeColor = (property, color) => {
-      if (color) {
-        navElement.style.setProperty(property, color);
-      } else {
-        navElement.style.removeProperty(property);
-      }
-    };
-    const currentMeasure = measure(tabElements[currentIndex]);
-    const towardArea = towardAreaNow;
     const towardIndex = tabElements.findIndex(
-      (tabElement) => areaOf(tabElement) === towardArea,
+      (tabElement) => areaOf(tabElement) === towardAreaNow,
     );
-    let positionDelta = 0;
-    let lengthDelta = 0;
-    let towardSign = 0;
-    let towardColor = "";
-    if (towardIndex !== -1 && towardIndex !== currentIndex) {
-      const towardTabElement = tabElements[towardIndex];
-      const towardMeasure = measure(towardTabElement);
-      // What one box of travel is worth in pixels of this row, signed so that
-      // the trait is exactly on the other tab when the progress is at its own
-      // end: the container counts +1 when the picture leans on a slide sitting
-      // BEFORE the current one and -1 when it sits after.
-      const sign = towardIndex > currentIndex ? -1 : 1;
-      positionDelta = (towardMeasure.position - currentMeasure.position) * sign;
-      lengthDelta = (towardMeasure.length - currentMeasure.length) * sign;
-      towardSign = sign;
-      towardColor = colorOf(towardTabElement);
-    }
-    const { style } = navElement;
-    style.setProperty("--nav-indicator-position", currentMeasure.position);
-    style.setProperty("--nav-indicator-length", currentMeasure.length);
-    style.setProperty("--nav-indicator-position-delta", positionDelta);
-    style.setProperty("--nav-indicator-length-delta", lengthDelta);
-    style.setProperty("--nav-indicator-toward-sign", towardSign);
-    writeColor("--nav-indicator-color", colorOf(tabElements[currentIndex]));
-    writeColor("--nav-indicator-color-toward", towardColor);
+    writeIndicatorGeometry(navElement, {
+      baseTabElement: tabElements[currentIndex],
+      towardTabElement:
+        towardIndex !== -1 && towardIndex !== currentIndex
+          ? tabElements[towardIndex]
+          : null,
+      towardIsAfter: towardIndex > currentIndex,
+      vertical,
+    });
     navElement.setAttribute("data-nav-indicator-measured", "");
   };
   // Reached through a ref by everything watching the DOM below: those watchers
@@ -598,6 +631,66 @@ export const Nav = ({
   // about the row as it is now.
   const paintIndicatorGeometryRef = useRef(null);
   paintIndicatorGeometryRef.current = paintIndicatorGeometry;
+
+  // The bar following a row of routes the browser scrolls, between the two tabs
+  // of the pages it stands between. A row this nav holds no tab for is another
+  // nav's to draw.
+  useLayoutEffect(() => {
+    if (!rowIndicatorPosition) {
+      return undefined;
+    }
+    let paintedBase = null;
+    let paintedToward = null;
+    const letGo = () => {
+      const navElement = navRef.current;
+      paintedBase = null;
+      paintedToward = null;
+      navElement?.removeAttribute("data-nav-following-row");
+      navElement?.removeAttribute("data-nav-indicator-measured");
+      navElement?.style.removeProperty("--slide-travel-progress");
+    };
+    const stopFollowing = followRouteRows((move) => {
+      const navElement = navRef.current;
+      if (!navElement) {
+        return;
+      }
+      if (!move) {
+        letGo();
+        return;
+      }
+      const tabElements = Array.from(navElement.querySelectorAll(".navi_link"));
+      const tabOf = (path) =>
+        tabElements.find((tabElement) => tabElement.pathname === path);
+      const baseTabElement = tabOf(move.basePath);
+      if (!baseTabElement) {
+        letGo();
+        return;
+      }
+      const towardTabElement = move.towardPath ? tabOf(move.towardPath) : null;
+      if (
+        baseTabElement !== paintedBase ||
+        towardTabElement !== paintedToward
+      ) {
+        paintedBase = baseTabElement;
+        paintedToward = towardTabElement;
+        writeIndicatorGeometry(navElement, {
+          baseTabElement,
+          towardTabElement,
+          towardIsAfter:
+            tabElements.indexOf(towardTabElement) >
+            tabElements.indexOf(baseTabElement),
+          vertical,
+        });
+        navElement.setAttribute("data-nav-indicator-measured", "");
+        navElement.setAttribute("data-nav-following-row", "");
+      }
+      navElement.style.setProperty("--slide-travel-progress", move.progress);
+    });
+    return () => {
+      stopFollowing();
+      letGo();
+    };
+  }, [rowIndicatorPosition, vertical]);
   // What the last paint measured for — see the memo at the top of
   // paintIndicatorGeometry.
   const indicatorPaintedForRef = useRef(null);
@@ -982,7 +1075,9 @@ export const Nav = ({
       data-expand-y={expand || expandY ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       data-panel-position={panelPosition}
-      data-nav-indicator={indicatorPosition ?? undefined}
+      data-nav-indicator={
+        indicatorPosition ?? rowIndicatorPosition ?? undefined
+      }
       // "write your travel here too": a custom property cannot be read across
       // the DOM, so the container paints its progress onto this element and the
       // trait follows in CSS alone (see SlideContainer's followerElements).
@@ -1006,7 +1101,9 @@ export const Nav = ({
       }
       styleCSSVars={NavStyleCSSVars}
     >
-      {indicatorPosition && <span className="navi_nav_indicator" />}
+      {(indicatorPosition || rowIndicatorPosition) && (
+        <span className="navi_nav_indicator" />
+      )}
       <NavContext.Provider value={navContextValue}>
         {children}
       </NavContext.Provider>

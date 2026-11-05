@@ -1,7 +1,7 @@
 # View transitions: what navi animates, and what stays the app's
 
-navi components animate their own changes — `itemTransition` on `List`, the
-pictures of a `RouteTravel`, the bar of a `Nav` — and never decide for the whole
+navi components animate their own changes — `itemTransition` on `List`, a route
+transition, the bar of a `Nav` — and never decide for the whole
 document. An app that starts a transition of its own runs into a handful of
 browser facts no component can absorb for it; they are collected here so that
 they are met once.
@@ -102,10 +102,8 @@ not handle a rejection, an unhandled one is what it leaves behind, and
 A captured element is not painted where it stands, and nothing hit-tests to it: a
 press over it falls through to the nearest ancestor still being painted, whatever
 the pseudo-elements are told about `pointer-events`. Under the root's default
-name, that is the whole page for the length of the movement. It is why a
-`RouteTravel` keeps the root out of its pictures, so the page around the box stays
-live, and catches a press on the travelling box at the document, handing it to the
-box it fell inside; and why a door in a bar a route transition photographs needs
+name, that is the whole page for the length of the movement. It is why a door in a
+bar a route transition photographs needs
 `pressableDuringRouteTransition` to stay pressable (see
 [route_transitions.md](./route_transitions.md#pages-between-fixed-bars-the-transition-area)).
 
@@ -211,6 +209,5 @@ of the second picture (see
 
 - [route_transitions.md](./route_transitions.md) — pages moving against each
   other on navigation
-- [drag_to_travel.md](./drag_to_travel.md) — a transition held under a finger
 - [drag_interactions.md](./drag_interactions.md#naming-what-travels) — naming what
   moves when something is dropped on a place

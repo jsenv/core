@@ -968,7 +968,7 @@ const css = /* css */ `
      for the length of such a movement and the list crosses the screen with the
      page, as a block. */
   @supports (view-transition-group: contain) {
-    :root:not([data-navi-route-transition], [data-navi-route-travel])
+    :root:not([data-navi-route-transition])
       .navi_list_container[data-item-transition] {
       /* The list needs a name to be a group at all; which name does not matter,
          only that no other element in the document carries it. */
@@ -2705,8 +2705,8 @@ const useListScrollSync = ({
       return undefined;
     }
     return routePage.leavingSignal.subscribe((leaving) => {
+      pageLeftRef.current = leaving;
       if (leaving) {
-        pageLeftRef.current = true;
         letGo();
       }
     });

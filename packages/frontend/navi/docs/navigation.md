@@ -461,10 +461,11 @@ says once, for the whole row, where the bar that marks the current tab goes:
 </Nav>
 ```
 
-The bar glides from one tab to the next when the change between them plays as a
-view transition — a `RouteTravel` swipe, a route transition — because `<Nav>`
-names it for that movement (`currentIndicatorSlides`, on by default), and only
-for a movement between two tabs of its own row: during any other route movement
+A hand on a `RouteTravel` row carries the bar with it, for any row the `<Nav>` holds
+tabs for. It also glides from one tab to the next when the change between them plays
+as a route transition, because `<Nav>` names it for that movement
+(`currentIndicatorSlides`, on by default), and only for a movement between two tabs
+of its own row: during any other route movement
 the bar leaves or arrives with its row, a named element inside a page that moves
 standing still (see
 [view_transitions.md](./view_transitions.md#a-name-is-unique-per-document)).
@@ -527,9 +528,9 @@ by a button, it is a command carrying the fallback:
 
 ## Tabs that travel: `RouteTravel`
 
-`<RouteTravel>` wraps the `<Route>` tree of a row of tabs and makes every change
-between them a movement — a tab pressed, a key, the back button, and a thumb
-dragging the pages:
+`<RouteTravel>` wraps the `<Route>` tree of a row of tabs and makes it a row the
+browser scrolls, with one snap point per page: a tab pressed, the back button, and
+a hand pushing the pages:
 
 ```jsx
 <SectionNav />
@@ -542,41 +543,63 @@ dragging the pages:
 </RouteTravel>
 ```
 
-The router still mounts only the branch that matches: the page being left is the
-picture the browser keeps of it, and the page arriving mounts during the gesture,
-filling in under the finger as its own loading state. The order of the tabs —
-"one step that way", which no URL says — is the order the children are written;
-the row is on the **first** of its pages that matches, like a `<Route>`; a page
-left out of the row does not travel. A swipe **replaces** the current entry, as
-`<Link replace>` does for a tab pressed: two gestures towards the same neighbour
-must not write two different histories — and a row of tabs is the one place a
-replace moves the scroll
-([below](#a-row-of-tabs-where-a-replace-is-an-arrival)). Several `RouteTravel`
-boxes may live on one page, and only the one travelling is captured.
+A page is built when its route first matches, since a route's actions only ask
+while it does, and stays once built: a hand brings back the page itself, with where
+it was scrolled to. The order of the tabs — "one step that way", which no URL says —
+is the order the children are written; the row is on the **first** of its pages
+that matches, like a `<Route>`; a page left out of the row does not travel. A swipe
+**replaces** the current entry, as `<Link replace>` does for a tab pressed: two
+gestures towards the same neighbour must not write two different histories — and a
+row of tabs is the one place a replace moves the scroll
+([below](#a-row-of-tabs-where-a-replace-is-an-arrival)).
 
-**The URL says where the hand is heading, not where the reader is.** It changes
-once the hand has really pulled, and comes back if the page is let go of. So a
-counter, a title or a breadcrumb around the box reads
-`routeTravelSettledPageSignal` first, or it moves for a pull that goes nowhere:
+**A window over something longer** says its pages with `routes`, and its children
+are then one page, rendered once, whatever the address:
+
+```jsx
+<RouteTravel routes={ids.map((id) => ({ route: GAME_ROUTE, params: { id } }))}>
+  <GamePage />
+</RouteTravel>
+```
+
+That is the form for pages that are one route with other params, the same component
+and so only one of it, and for pages that are not children of the box. What a hand
+leaves behind is a picture of it, a clone, in the pane it stood in. `routes` may be
+given again around the page on screen as the reader moves through the list: it is
+taken once the row has come to rest, and nothing is seen moving for it. With fewer
+than two pages, the box is not a scroller at all.
+
+**The box has a height, or the document scrolls.** Pages may scroll themselves in a
+box the page gives a height to. If the document is what scrolls, it goes on doing
+so, and a page brought in stands where the reader is looking; what is lost is
+`position: sticky` inside the row (see
+[drag_to_travel.md](./drag_to_travel.md#the-browser-scrolls-the-row)).
+
+**The URL can say where the hand is heading, not where the reader is.** For a page
+that is not there yet, a page of a window or a tab never visited, it changes once
+the hand has really pulled, and comes back if the page is let go of. A tab already
+built waits for the landing. So a counter, a title or a breadcrumb around the box
+reads `routeTravelSettledPageSignal` first, or it moves for a pull that goes
+nowhere:
 
 ```jsx
 const settledPage = routeTravelSettledPageSignal.value;
 const shownId = settledPage ? settledPage.params.gameId : currentId;
 ```
 
-It holds the `{ route, params }` the travel set off from for as long as the
-pictures move, and is `null` when they stop, the URL being the truth again. A
-page walked whole under the hand has arrived. A tab pressed or a wheel pushed
-holds nothing, and `null` is all they ever read. One signal for the document, as
-there is one transition at a time: on a page with several boxes, `route` says
-which row is travelling.
+It holds the `{ route, params }` the hand set off from, and is `null` when the row
+has come to rest, the URL being the truth again. A tab pressed holds nothing, and
+`null` is all it ever reads. One signal for the document: on a page with several
+boxes, `route` says which row it is.
 
 `RouteTravel` is for pages that form a ROW the finger can push; pages related
 pair by pair are animated with `defineRouteTransition`, and a given pair by one
 of the two, never both (see
 [route_transitions.md](./route_transitions.md#route-transitions-and-routetravel--one-pair-one-system)).
 The gesture itself: [drag_to_travel.md](./drag_to_travel.md). Demos:
-`src/nav/demos/route_travel/route_travel.html`, `src/nav/demos/tabs/tabs.html`.
+`src/nav/demos/route_travel/route_travel.html`,
+`src/nav/demos/route_travel/route_travel_window.html`,
+`src/nav/demos/tabs/tabs.html`.
 
 ## Where a navigation lands: the scroll
 
@@ -773,7 +796,7 @@ The tabs of a `<RouteTravel>` navigate by replacing, and yet each one is another
 route, sharing one scrollport — the document — that the tab on screen makes
 tall: the moment the arriving tab is shorter, the browser clamps, and the
 reader's place is gone. The row is the only thing that knows this, so on every
-travel — a tab pressed, a thumb, a wheel, a travel put back — it gives the
+movement — a tab pressed, a hand, a page let go of and coming back — it gives the
 arriving tab the offset it was read at, once it is really rendered; opens a tab
 never read at its **top**, not wherever its neighbour happened to be; and never
 records the clamp, which, recorded against the arriving tab's url, would destroy

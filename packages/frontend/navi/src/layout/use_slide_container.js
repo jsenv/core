@@ -40,6 +40,10 @@ import { SlideContainerContext } from "./slide_container_context.js";
 // ([data-slide-ways~="right"]).
 export const SLIDE_CURRENT_ATTRIBUTE = "data-slide-current";
 export const SLIDE_TOWARD_ATTRIBUTE = "data-slide-travel-toward";
+// The slide --slide-travel-progress counts from, when that is not the current
+// one: a hand on a row the browser scrolls can carry it past several slides, and
+// what follows it goes on between the two it is standing between.
+export const SLIDE_BASE_ATTRIBUTE = "data-slide-travel-base";
 // Every way out that would DO something right now, in the words the commands
 // use: a direction ("left", "right", "up", "down") when there is a slide that
 // way, plus "first" and "last" when one is not already standing at that end of

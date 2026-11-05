@@ -3,11 +3,11 @@
  * using @jsenv/navi as intended.
  */
 import { installImportMetaCssBuild, coarsePointerSignal, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, getAppHeight, getAppWidth, smallTouchScreenSignal } from "./jsenv_navi_side_effects.js";
-import { createPubSub, createIterableWeakSet, elementIsFocusable, getScrollContainer, dispatchInternalCustomEvent, dispatchCustomEvent, createEventGroupLogger, findEvent, mergeOneStyle, findFocusable, getElementSignature, chainEvent, isTouchDrivenEvent, getKeyboardEventDefaultAction, isPressDrivenClick, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, createValueEffect, findFocusDelegateTarget, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, keepTouchRefusable, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createInternalCustomEvent, activeElementSignal, normalizeStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, watchWheelTravel, scrollRoomTowards, trapScrollInside, scrollIntoViewScoped, isPressDisputedByDrag, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, isScrollable, resolveOklchLightness, contrastColor, overflowGoesToViewport, parsePositionArea, snapToPixel, trapFocusInside, getVirtualKeyboardOverlayHeight, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, setVirtualKeyboardOverlaysContent, subscribeVirtualKeyboardGeometryChange } from "@jsenv/dom";
+import { createPubSub, createIterableWeakSet, elementIsFocusable, getScrollContainer, dispatchInternalCustomEvent, dispatchCustomEvent, createEventGroupLogger, findEvent, mergeOneStyle, findFocusable, getElementSignature, chainEvent, isTouchDrivenEvent, getKeyboardEventDefaultAction, isPressDrivenClick, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, createValueEffect, findFocusDelegateTarget, scrollIntoViewThroughScrollables, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, getScrollContainerSet, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, keepTouchRefusable, waitForTap, waitForPressHeld, suppressClickAfterGesture, startDragToTravel, dragSourceThatStoodDown, markDragSource, refuseDragTo, startDragTo, installPanZoom, createInternalCustomEvent, activeElementSignal, normalizeStyle, getPositionedParent, normalizeStyles, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, trapScrollInside, scrollIntoViewScoped, isPressDisputedByDrag, closestOpenableAncestor, isAncestorOpen, isDisplayedDespiteClosedAncestor, observeAncestorOpenState, getAncestorOpenType, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, releaseWheelGesture, getScrollIntoViewScopedOffsets, wheelGestureIsTakenFrom, claimWheelGesture, initFocusGroup, stringifyStyle as stringifyStyle$1, isScrollable, resolveOklchLightness, contrastColor, scrollRoomTowards, overflowGoesToViewport, getVirtualKeyboardOverlayHeight, subscribeWindowResizeSettled, subscribeVirtualKeyboardGeometryChange, parsePositionArea, snapToPixel, trapFocusInside, onAncestorReopen, canScroll, measureWidestChildRow, performTabNavigation, dragAfterIntent, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, setVirtualKeyboardOverlaysContent } from "@jsenv/dom";
 export { chainEvent, clickIsSuppressed, contrastColor, createDragGestureController, dragAfterIntent, findEvent, markDragSource, startDragTo } from "@jsenv/dom";
 import { signal, computed, effect, untracked, batch, useComputed, useSignal } from "@preact/signals";
 import { useState, useLayoutEffect, useErrorBoundary, useContext, useMemo, useRef, useEffect, useReducer, useCallback } from "preact/hooks";
-import { options, isValidElement, createContext, render as render$1, h, toChildArray, createRef, cloneElement, createElement, Fragment as Fragment$1 } from "preact";
+import { options, isValidElement, createContext, render as render$1, h, toChildArray, cloneElement, createRef, createElement, Fragment as Fragment$1 } from "preact";
 import { humanizeI18n, prefixFirstAndIndentRemainingLines, setRuntimeLangSource, formatDuration, formatMonth, formatDay, resolveTimeRangePrecision, formatDatePlaceholder, toDate, getRelativeDay, formatDayRelative, formatMonthPlaceholder, formatWeekPlaceholder, formatDatetimePlaceholder, formatDatetime, toTimeOfDay, formatTimeOfDay, formatMinuteDuration, formatTime, formatSecondDuration, formatHourDuration, formatTimeRelative, pluralCategory, formatNumber, interpolateText, installInterpolateJsx } from "@jsenv/humanize";
 export { createI18n, formatByteSize, formatDatetime, formatDay, formatDayRelative, formatDuration, formatHourDuration, formatList, formatMinuteDuration, formatMonth, formatNumber, formatSecondDuration, formatTime, formatTimeOfDay, formatTimeRange, formatTimeRelative, interpolateText, pluralCategory } from "@jsenv/humanize";
 import { createValidity, CHAR_CLASS_PRESETS, durationContainsNaN, compareTwoDurations, TYPE_RULE, durationToSeconds, resolveCharClass, getCharClassMessageKey, compileCharClassAnchored, compileCharClass, DISPLAYABLE_RULE, MAX_LINE_BREAKS_RULE, NO_EMOJI_RULE, SINGLE_SPACE_RULE, parseDuration, durationToISOString } from "@jsenv/validity";
@@ -444,8 +444,7 @@ const flushSyncRendering = (fn) => {
  * it was left, and the bottom arrives under a page that has already jumped. So
  * whoever writes an arrival's offset builds first the boxes that offset shows
  * (buildDeferredBoxesAbove), in the same task — synchronously, since what comes
- * right after it (the offset, a route travel measuring its window) reads the
- * layout.
+ * right after it (the offset) reads the layout.
  */
 
 const deferredBoxes = new Set();
@@ -489,32 +488,33 @@ const MountAfterPaint = ({
 /**
  * Builds, now, every box still waiting whose top is above `bottom` (in the
  * document's coordinates): what the document will show once scrolled so that
- * `bottom` is the bottom of the screen. Boxes built push those below them
- * further down, so the ones measured above `bottom` are all the ones that can
- * be shown there, and a few more at worst.
+ * `bottom` is the bottom of the screen.
+ *
+ * Each box is read once those before it have their height. A box has no height
+ * until it is built, so read together they would all stand at the end of what
+ * is built, above `bottom` as soon as the offset is worth a screen: a page of
+ * sections would be built whole before its first frame. A box found below
+ * `bottom` waits: a build only pushes it further down, and where it stands
+ * already makes the document tall enough for the offset.
+ *
+ * The walk follows the set live, in mount order: a box mounted by a build is
+ * read too. One standing higher than boxes built before it (mounted later) can
+ * leave a few built that the offset does not show, never one missing that it
+ * does.
  *
  * Renders synchronously, so it must be called outside a Preact commit: a render
  * flushed from a layout effect runs inside the commit still walking the tree.
  */
 const buildDeferredBoxesAbove = bottom => {
-  if (deferredBoxes.size === 0) {
-    return;
-  }
-  const toBuild = [];
   for (const deferredBox of deferredBoxes) {
     const top = readTopInWindow(deferredBox.getElement());
-    if (top !== null && top + window.scrollY < bottom) {
-      toBuild.push(deferredBox);
+    if (top === null || top + window.scrollY >= bottom) {
+      continue;
     }
-  }
-  if (toBuild.length === 0) {
-    return;
-  }
-  flushSyncRendering(() => {
-    for (const deferredBox of toBuild) {
+    flushSyncRendering(() => {
       deferredBox.build();
-    }
-  });
+    });
+  }
 };
 
 // null for a box nothing draws (a closed popup, a hidden tab): no frame shows
@@ -545,9 +545,8 @@ const readTopInWindow = element => {
  * around Preact's `options.debounceRendering`, and two of them installed
  * independently restore each other in the wrong order when they let go — every
  * render queued in between is then handed to a wrapper nobody will ever
- * release. Everything that photographs a navigation (RouteTravel's box, a
- * route transition) must therefore hold through this module, never through a
- * wrapper of its own.
+ * release. Everything that photographs a navigation must therefore hold through
+ * this module, never through a wrapper of its own.
  */
 
 
@@ -3955,11 +3954,13 @@ const actionWeakMap = new WeakMap();
  *   than a first load (data_states.md). Called at the start of every run whose
  *   value is undefined; the answer replaces it as usual, and `undefined` means
  *   "nothing known". A resource `GET` uses it to draw the row its store holds.
- * @param {boolean} [rootOptions.inheritData=true] - `false`: a binding moving
- *   to new params starts the new instance without the previous params' answer
- *   (see createActionProxyFromSignal). For an answer that would say something
- *   false about the new params (a `GET` drawing another row), not for one that
- *   stands in while the next one comes (a list of search results).
+ * @param {boolean} [rootOptions.inheritData=false] - `true`: a binding moving
+ *   to new params starts the new instance holding the previous params' answer
+ *   until its own lands (see createActionProxyFromSignal). For an answer that
+ *   stands in while the next one comes (a list of search results), not for one
+ *   that would say something false about the new params (a profile, drawn under
+ *   the next person's name). A resource declares it for each of its reads:
+ *   docs/resource.md, "What a read shows while its params move".
  * @param {{ ms?: number, max?: number }} [rootOptions.keep] - how long an
  *   answer stays good once it has landed. Without it an answer lives exactly as
  *   long as something references it: the screen that asked goes away, and
@@ -4020,7 +4021,7 @@ const createAction = (callback, rootOptions = {}) => {
       resultToValue,
       valueToData,
       provisionalValue,
-      inheritData = true,
+      inheritData = false,
       dataDefault,
       data = dataDefault,
 
@@ -4259,6 +4260,11 @@ const createAction = (callback, rootOptions = {}) => {
      *   The instance follows where the signal settles, never a value it only
      *   passed through: a signal back where it started before the delay elapses
      *   asks nothing.
+     * @param {boolean} [options.inheritData] - `inheritData` of createAction,
+     *   said for this binding, which it overrides: one action can serve a search
+     *   (the previous results stand in) and a page naming someone (they would be
+     *   someone else's). Only for a signal; params that cannot change hand over
+     *   nothing.
      */
     const bindParams = (newParamsOrSignal, options = {}) => {
       if (newParamsOrSignal === null) {
@@ -4820,15 +4826,14 @@ const createAction = (callback, rootOptions = {}) => {
  * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
  *   This enables live updates - for example, performing an HTTP GET request every time
  *   a list of filters changes, providing real-time results without user interaction.
- * @param {boolean} options.inheritData - When false, each new target action starts fresh with no inherited state.
- *   By default (true), the proxy carries over the previous target's value and error into the new action —
- *   unless the action itself declares `inheritData: false` (createAction), which a resource `GET` does.
- *   This keeps the facade in sync with the latest known data: `action.dataSignal.value` only changes when a
+ * @param {boolean} options.inheritData - Whether a new target action starts with the previous target's value
+ *   and error, instead of nothing. Defaults to what the action declares (createAction).
+ *   When true, the facade stays on the latest known data: `action.dataSignal.value` only changes when a
  *   new action completes, not when it starts loading. Code that needs to distinguish loading state can still
  *   check `action.runningState`, while code that just reads `action.data` always sees the most recent
  *   available data — even while a newer action is in flight.
- *   This default also enables "Apply Filters" workflows where parameters change but the action only reruns
- *   on an explicit user trigger: the previous results remain visible until the new action completes.
+ *   It also serves "Apply Filters" workflows where parameters change but the action only reruns on an
+ *   explicit user trigger: the previous results remain visible until the new action completes.
  * @param {function} options.onChange - Optional callback triggered when the target action changes
  */
 const createActionProxyFromSignal = (
@@ -4837,7 +4842,7 @@ const createActionProxyFromSignal = (
   {
     runOnce = false,
     rerunOnChange = false,
-    inheritData = true,
+    inheritData = getActionPrivateProperties(action).inheritData,
     onChange,
     syncParams,
     paramsSettlingSignal = NOT_SETTLING_SIGNAL,
@@ -4869,16 +4874,10 @@ const createActionProxyFromSignal = (
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
 
-  // An action whose answer for other params would be false for these (a
-  // resource GET: another row) says so itself, and is not handed it. What it
-  // does not know stays unknown: a skeleton, or its provisionalValue, never a
-  // different row.
-  const inheritsAnswer =
-    inheritData && getActionPrivateProperties(action).inheritData;
   const createTarget = (params) => {
     // `undefined` is "nothing to ask": no answer is coming to replace a stand-in,
     // and that one instance is shared by every binding of the action.
-    if (inheritsAnswer && params !== undefined) {
+    if (inheritData && params !== undefined) {
       const previousActionTarget = actionTargetPreviousWeakRef?.deref();
       const previousTarget = previousActionTarget || action;
       return action.bindParams(params, {
@@ -5297,6 +5296,8 @@ const isPlainObject$2 = (obj) => {
  *   ```
  *   The action will not fire while the user is actively changing filters; it fires once
  *   they pause for half a second.
+ * @param {boolean} [options.inheritData] - whether the previous params' answer stands in until
+ *   the next one lands. By default what the action declares (see `inheritData` on createAction).
  * @returns {object} the instance bound to the derived params: the one to read
  *   (`useAsyncData`), since the answer lands there and never on `action` itself.
  */
@@ -8918,7 +8919,7 @@ const route = (pattern, options = {}) => {
     };
     route.redirectTo = (
       params,
-      { callReason, history = "replace", debounceUrl } = {},
+      { callReason, history = "replace", debounceUrl, isSignalChange } = {},
     ) => {
       if (!integration) {
         {
@@ -8933,6 +8934,7 @@ const route = (pattern, options = {}) => {
         replace: history !== "push",
         debounce: debounceUrl,
         callReason,
+        fromSignal: isSignalChange,
       });
     };
     route.replaceParams = (
@@ -8947,52 +8949,18 @@ const route = (pattern, options = {}) => {
         return null;
       }
 
-      // Find all matching routes and update their actions, then delegate to most specific (deeper = more specific)
-      let mostSpecificRoute = route;
-      const routePrivateProperties = getRoutePrivateProperties(route);
-      let maxDepth = routePrivateProperties.routePattern.depth;
-      for (const routeCandidate of routeSet) {
-        if (routeCandidate === route) {
-          continue;
-        }
-        if (!routeCandidate.matching) {
-          continue;
-        }
-        const matchingRoute = routeCandidate;
-        const matchingRoutePrivateProperties =
-          getRoutePrivateProperties(matchingRoute);
-        const depth = matchingRoutePrivateProperties.routePattern.depth;
-        if (depth > maxDepth) {
-          maxDepth = depth;
-          mostSpecificRoute = matchingRoute;
-        }
-      }
+      const mostSpecificRoute = findMostSpecificMatchingRoute(route, routeSet);
       const isMostSpecificRoute = mostSpecificRoute === route;
 
-      // If we found a more specific route, delegate to it; otherwise handle it ourselves
+      // If we found a more specific route, delegate to it; otherwise handle it ourselves.
+      // A signal change reaches this only when the more specific route does not
+      // carry the param (see writeValueInUrl): left to it, the change would be dropped.
       if (!isMostSpecificRoute) {
-        // For signal-originated calls, only skip delegation if the more specific route
-        // has its own signal connection for the same params — meaning its own effect will
-        // fire and handle the redirect. If it doesn't have the connection, the signal
-        // change would be silently dropped, so we must delegate anyway.
-        if (isSignalChange) {
-          const mostSpecificRoutePrivateProperties =
-            getRoutePrivateProperties(mostSpecificRoute);
-          const { pathConnectionMap, queryConnectionMap } =
-            mostSpecificRoutePrivateProperties.routePattern;
-          const willHandleItself = Object.keys(newParams).every(
-            (paramName) =>
-              pathConnectionMap.has(paramName) ||
-              queryConnectionMap.has(paramName),
-          );
-          if (willHandleItself) {
-            return null;
-          }
-        }
         return mostSpecificRoute.redirectTo(newParams, {
           callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
           history,
           debounceUrl,
+          isSignalChange,
         });
       }
 
@@ -9016,6 +8984,7 @@ const route = (pattern, options = {}) => {
         replace: history !== "push",
         debounce: debounceUrl,
         callReason,
+        fromSignal: isSignalChange,
       });
     };
     route.matchesParams = (providedParams) => {
@@ -9078,7 +9047,7 @@ const route = (pattern, options = {}) => {
   });
   // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
   // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
-  registerSetup(() => {
+  registerSetup(({ routeSet }) => {
     const cleanupSignalUrlEffectSet = new Set();
     // important: read connections at setup time so it includes query connections
     // inherited from ancestor patterns
@@ -9116,6 +9085,24 @@ const route = (pattern, options = {}) => {
         if (!matching) {
           // Route not matching, no URL sync needed
           return;
+        }
+        // A param declared on an ancestor is carried by every route below it,
+        // each with its own connection: all of them hear the write, the most
+        // specific one makes it. The others step aside before the history is
+        // read — a stateSignalGroup's push goes to the first write reading it.
+        const mostSpecificRoute = findMostSpecificMatchingRoute(
+          route,
+          routeSet,
+        );
+        if (mostSpecificRoute !== route) {
+          const { pathConnectionMap, queryConnectionMap } =
+            getRoutePrivateProperties(mostSpecificRoute).routePattern;
+          if (
+            pathConnectionMap.has(paramName) ||
+            queryConnectionMap.has(paramName)
+          ) {
+            return;
+          }
         }
         if (urlParamValue === undefined) {
           // No URL parameter exists - check if signal has meaningful value to add
@@ -9909,6 +9896,27 @@ const urlWithoutSearchAndHash = (url) => {
   return `${urlObject.origin}${urlObject.pathname}`;
 };
 
+// Deeper is more specific: among the routes matching the address, the one a
+// params write lands on.
+const findMostSpecificMatchingRoute = (route, routeSet) => {
+  let mostSpecificRoute = route;
+  let maxDepth = getRoutePrivateProperties(route).routePattern.depth;
+  for (const routeCandidate of routeSet) {
+    if (routeCandidate === route) {
+      continue;
+    }
+    if (!routeCandidate.matching) {
+      continue;
+    }
+    const depth = getRoutePrivateProperties(routeCandidate).routePattern.depth;
+    if (depth > maxDepth) {
+      maxDepth = depth;
+      mostSpecificRoute = routeCandidate;
+    }
+  }
+  return mostSpecificRoute;
+};
+
 // Every route action, with whether it asks something of the address at the
 // moment: its route matches and its params getter returns something.
 const routeActionEntriesSignal = signal([]);
@@ -10055,6 +10063,9 @@ const ROUTE_ACTION_BINDING_OPTIONS = new Set([
  *   still before the action runs on them: a search param a field writes as
  *   the person types asks once typing stops (see `bindParams` in
  *   docs/actions.md).
+ * @param {boolean} [options.inheritData] - whether the previous params' answer
+ *   stands in until the next one lands, for this route action. By default what
+ *   the action declares (see docs/actions.md, "While the next answer comes").
  */
 const routeAction = (
   routeOrRoutes,
@@ -10221,8 +10232,8 @@ const haveSameMembers = (setA, setB) => {
  * A route matching is a signal changing, and the page it selects reaches the
  * DOM only once Preact has rendered — an unknown number of passes later, in an
  * unknown number of microtasks. Anyone who needs the page as it IS rather than
- * as it has been decided (a travel about to have its picture taken by the
- * browser, see route_travel.jsx) waits for this instead of counting.
+ * as it has been decided (a route transition about to have its picture taken by
+ * the browser) waits for this instead of counting.
  *
  * A page waiting on data is announced too, by the boundary showing its loading
  * state (see Loading in use_async_data.jsx): what the container could put on
@@ -10832,6 +10843,12 @@ const startAtTop = (url, { from } = {}) => {
   // position to come back to — the return would keep the offset of the page
   // being left.
   positionByUrl.set(href, { x: 0, y: 0 });
+  // A list holding the document on the page arriving has placed it already: a
+  // navigation holding the rendering gets here after that render, and nothing
+  // owes the list another commit to put it back (see holdDocumentScroll).
+  if (isDocumentHeld()) {
+    return;
+  }
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 // Also what decides whether a push carries the state of the page it keeps
@@ -10964,6 +10981,19 @@ const recallScrollerPosition = (name) => {
     return undefined;
   }
   return positionByName.get(name);
+};
+
+// Said by a scroller sent back to its start while it stays mounted: where it
+// was is a place in what it no longer shows, so nothing is carried and nothing
+// is come back to under this address until it says where it is again. What it
+// said under another address stays, for the way back to that address.
+const forgetScrollerPosition = (name) => {
+  loadStore();
+  saidByScrollerName.delete(name);
+  const positionByName = scrollerPositionsByUrl.get(readShownUrl());
+  if (positionByName) {
+    positionByName.delete(name);
+  }
 };
 
 // Said by a scroller as it unmounts. Its page is being left when the url is
@@ -14003,10 +14033,17 @@ const isRenderingPageChange = () => renderingPageChange;
  *   outside any render — by a subscription deciding whether to re-render, by
  *   the scroll restoration when a position is due — and it reads the routes
  *   untracked, so asking subscribes nobody to them.
- * - `leavingSignal` — true once the page is hidden and kept while its movement
- *   plays: still mounted, so what it fills or moves outside its own nodes (a
- *   slot in a bar, the document a list scrolls) steps out rather than showing
- *   with, or moving, the page arriving. Every box of it measures 0×0 by then.
+ * - `hasLeft()` — whether the page, or a page it sits in, is kept while leaving.
+ *   Written by the container's render, before anything below it renders, and
+ *   final. `isShown()` can answer false for a page that stays on screen (the
+ *   address coming back, a container first rendered while the routes are
+ *   frozen), so what cannot be undone asks this one.
+ * - `leavingSignal` — true once the page, or a page it sits in, is hidden and
+ *   kept while the movement plays: still mounted, so what it fills or moves
+ *   outside its own nodes (a slot in a bar, the document a list scrolls) steps
+ *   out rather than showing with, or moving, the page arriving. Every box of it
+ *   measures 0×0 by then. Set after the render keeping the page, so that render
+ *   and what it builds can only ask `hasLeft()`.
  */
 const RoutePageContext = createContext(null);
 
@@ -14496,11 +14533,15 @@ const setupBrowserIntegrationViaHistory = ({
     // browser answers — a before/after cycle here would be about a navigation
     // that never happens. A push with something of its own for its entry — a
     // state, what the press handed over (see carryByLinkNavigation) — is a
-    // new entry, never one standing there already.
+    // new entry, never one standing there already. So is a push a signal write
+    // makes: the writes after it in the same move (a layer, then what is open
+    // inside it) build on its address at once, and a traversal would only land
+    // after they went to the entry being left.
     if (
       options.navigationType === "push" &&
       options.state === undefined &&
       !options.pressWrites &&
+      !options.fromSignal &&
       url !== readAddress()
     ) {
       const delta = adjacentEntryDelta(url);
@@ -14923,12 +14964,23 @@ const setupBrowserIntegrationViaHistory = ({
 
   const navTo = async (
     url,
-    { replace, state, routeTransition, debounce, asReturn, open } = {},
+    {
+      replace,
+      state,
+      routeTransition,
+      debounce,
+      asReturn,
+      open,
+      fromSignal,
+    } = {},
   ) => {
     const routingOptions = {
       reason: `navTo called with "${url}"`,
       navigationType: replace ? "replace" : "push",
       state,
+      // Made by a signal written into the url (see route.js writeValueInUrl):
+      // such a push is never turned into a traversal (see handleRoutingTask).
+      fromSignal,
       // A push that lands where its address was last left (see
       // link_return.js).
       asReturn,
@@ -21975,6 +22027,11 @@ const BUSY_CONSTRAINT = {
       return null;
     }
 
+    // Same as READONLY_CONSTRAINT: a run inside the popup holds it from there.
+    if (intent === "close") {
+      return null;
+    }
+
     // Busy, and what it opens still opens: a picker's answer lives in a shape
     // only its popup draws, and refusing to open leaves it unreadable for as
     // long as the wait lasts. Opening reads and nothing more — the same
@@ -22069,9 +22126,14 @@ const findBusySource = (field) => {
 const DISABLED_CONSTRAINT = {
   name: "disabled",
   messageAttribute: "data-disabled-message",
-  check: (field) => {
+  check: (field, { intent } = {}) => {
     const disabled = field.controlHostProps.disabled;
     if (!disabled) {
+      return null;
+    }
+
+    // Same as READONLY_CONSTRAINT: a popup still open leaves like any other.
+    if (intent === "close") {
       return null;
     }
 
@@ -23063,6 +23125,14 @@ const READONLY_CONSTRAINT = {
       return null;
     }
 
+    // Leaving a popup already open is never the control's to refuse, whatever
+    // it would refuse on the way in: closing writes nothing, and what may hold
+    // a popup is the popup's own question (see popup_busy.js and the picker's
+    // onRequestClose).
+    if (intent === "close") {
+      return null;
+    }
+
     // Read-only, and what it opens still opens: a picker's answer often lives
     // in a shape only its popup draws — a plan with one tile ringed, a wheel
     // stopped on a time — and refusing to open leaves that shape unreadable.
@@ -23162,7 +23232,8 @@ const readOnlyMessage = (field) => {
  *   → onRequestInteraction
  *       → check disabled / read-only / busy (via controller.rules.interaction)
  *         against the interaction's `intent` ("write" by default, "read" for one
- *         that only shows what is already there — see READONLY_CONSTRAINT)
+ *         that only shows what is already there, "close" for one leaving a popup
+ *         — see READONLY_CONSTRAINT)
  *       → if blocked  → prevented()
  *       → if allowed  → allowed()
  *         → (in allowed callback) setUIState(value)
@@ -23445,9 +23516,10 @@ const onRequestInteraction = (
     name,
     // What this interaction would do to the control: write it, or only read it.
     // Everything writes unless it says otherwise — an interaction that merely
-    // shows what is already there (opening a picker's popup, closing it again)
-    // says "read", and that is what a control held read-only can still let
-    // through (see READONLY_CONSTRAINT).
+    // shows what is already there (opening a picker's popup) says "read", and
+    // that is what a control held read-only can still let through. Closing that
+    // popup says "close", which no state of the control refuses (see
+    // READONLY_CONSTRAINT).
     intent = "write",
     bypassInteractivity = false,
     // navi continuing a gesture on its own rather than a user asking for
@@ -24440,10 +24512,10 @@ const readNumberFromDom = (element, attribute, defaultValue) => {
  *
  * A popup is painted OVER the page and stays a DOM descendant of whatever it
  * was written in — a dialog inside the card that opens it, a callout beside the
- * button it belongs to. Its pointer events therefore bubble through boxes it
- * covers, and a box reading a gesture off one of them answers for something
- * nobody aimed at it: a finger held in a sheet opening the card underneath the
- * sheet, a card the sheet is drawn from and that the finger cannot even reach.
+ * button it belongs to. Its pointer and key events therefore bubble through
+ * boxes it covers, and a box reading a gesture off one of them answers for
+ * something nobody aimed at it: a finger held in a sheet opening the card
+ * underneath the sheet, an arrow pressed in a sheet walking the slides behind it.
  *
  * The same list, read for the same reason, as the drag sources in @jsenv/dom
  * (see DRAG_IGNORED_SELECTOR in drag_to.js) and as the selection rule in
@@ -25200,26 +25272,7 @@ const ensureDocumentStartViewTransition = () => {
     startViewTransitionPolyfill.isPolyfill = true;
     document.startViewTransition = startViewTransitionPolyfill;
   }
-  return startViewTransition$2;
-};
-
-// A transition a finger is holding still (see route_travel.jsx): it has to be
-// let go of before any other one starts, and this is the only place that knows
-// a new one is about to. There is a single transition per document — starting
-// one SKIPS the one in flight — and the hold that keeps pictures under a finger
-// is written against whatever transition is running, because everything the
-// gesture must carry along (a trait under a tab row) belongs to that same
-// transition and has no name of its own here. Left on, it takes hold of the
-// transition that has just replaced ours: born paused, held by nobody, it never
-// finishes, and its pictures stand over a page that cannot be touched anymore.
-let releaseHeldViewTransition = null;
-const holdViewTransition = (release) => {
-  releaseHeldViewTransition = release;
-  return () => {
-    if (releaseHeldViewTransition === release) {
-      releaseHeldViewTransition = null;
-    }
-  };
+  return startViewTransition$1;
 };
 
 // The last transition started here, for code that runs a callback of the
@@ -25229,12 +25282,7 @@ const holdViewTransition = (release) => {
 let lastViewTransition = null;
 const peekLastViewTransition = () => lastViewTransition;
 
-const startViewTransition$2 = (updateCallback) => {
-  if (releaseHeldViewTransition) {
-    const release = releaseHeldViewTransition;
-    releaseHeldViewTransition = null;
-    release();
-  }
+const startViewTransition$1 = (updateCallback) => {
   const viewTransition = document.startViewTransition(updateCallback);
   viewTransition.updateCallbackDone.catch(ignoreSkip);
   viewTransition.ready.catch(ignoreSkip);
@@ -27227,6 +27275,9 @@ const createOnKeyDownForShortcutArray = (
   };
 };
 /**
+ * A key pressed in a popup nested in the listening element is not offered to
+ * these shortcuts: see applyKeyboardShortcuts.
+ *
  * @param {object} shortcuts
  * @param {object} [options]
  * @param {(target: Element) => boolean} [options.ownsTarget] Whether a
@@ -27252,6 +27303,13 @@ const createOnKeyDownForShortcuts = (shortcuts, { ownsTarget } = {}) => {
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent, { ownsTarget }) => {
   const currentTarget = keyboardEvent.currentTarget;
   const target = keyboardEvent.target;
+  // A popup stays a DOM descendant of what it was written in, so a key pressed
+  // in it bubbles through boxes the reader cannot reach while it is open. Those
+  // boxes have no shortcut to answer it with: an arrow in a sheet does not walk
+  // the slides behind it, and Escape closes the popup it was pressed in.
+  if (isPressOnLayerOver(target, currentTarget)) {
+    return null;
+  }
   let canIntercept;
   if (target === currentTarget) {
     // the event occurs on the element itself so we are sure we won't interfere with native behaviors of child elements
@@ -27486,6 +27544,9 @@ const isSameKey = (browserEventKey, key) => {
  * A declared key that matches takes the key: its default does not happen as
  * well, whether the gate lets the interaction through or refuses it and says
  * why — the same as a number field's arrows.
+ *
+ * A key pressed in a popup nested in the element is not this element's, like a
+ * press there (see isPressOnLayerOver).
  *
  * The interaction is dispatched under its full name, colon included, so
  * `findEvent(event, "keyboard:ctrl+backspace")` gets back to it — the shortcut
@@ -29914,6 +29975,10 @@ const SCOPED_MANY_OPTIONS = new Set([
  * relationship method, never as an `op`/`type` discriminator dispatched inside one
  * verb's callback.
  *
+ * Bound to a signal, a read of one item starts new params on nothing and a list on
+ * the previous list; a binding overrides it with `inheritData` (docs/resource.md,
+ * "What a read shows while its params move").
+ *
  * @param {string} name - resource name, used in action names and error messages
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
@@ -30456,6 +30521,8 @@ const createResource = (
           paramScope,
         },
         name: `${name}.${verb}`,
+        // Another params' answer is another owner's.
+        inheritData: verb !== "GET",
         resultToValue: (result, action) => {
           if (verb === "DELETE") {
             if (!isProps(result) && !primitiveCanBeId(result)) {
@@ -30681,6 +30748,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       return createAction(callback, {
         meta: { verb, isMany: false, paramScope },
         name: `${name}.${verb}`,
+        // Another params' answer is another row.
+        inheritData: verb !== "GET",
         resultToValue: (result, action) => {
           if (verb === "DELETE") {
             if (!Array.isArray(result) || result.length !== 2) {
@@ -30783,6 +30852,9 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       return createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
+        // A list standing in for the next one beats a skeleton. A screen where
+        // the previous owner's list would be false says so on its binding.
+        inheritData: true,
         resultToValue: (result, action) => {
           if (verb === "GET") {
             if (!isProps(result)) {
@@ -30995,6 +31067,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         meta: writeName
           ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
           : { verb, isMany: false, paramScope },
+        // Another params' answer is another owner's.
+        inheritData: verb !== "GET",
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length !== 2) {
             throw new TypeError(
@@ -31238,6 +31312,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         meta: writeName
           ? { verb, isMany, paramScope, writeName, writeRerunOn }
           : { verb, isMany, paramScope },
+        // One item: another params' answer is another row. A list standing in
+        // for the next one beats a skeleton, and a screen where the previous
+        // owner's list would be false says so on its binding.
+        inheritData: isMany || verb !== "GET",
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length < 2) {
             throw new TypeError(
@@ -31571,10 +31649,11 @@ const createRestActionFactoryForRoot = (
       // undefined so a screen can tell "not asked yet" from "answered: none".
       valueToData: (idArray) =>
         idArray === undefined ? undefined : store.selectAll(idArray),
+      // A binding moving to new params hands over the previous answer: a list
+      // standing in for the next one beats a skeleton.
+      inheritData: true,
       // The rows the page kept from the previous document (kept_reads.js),
-      // drawn while the request is out. A binding moving to new params still
-      // hands over the previous answer when there are none: a list standing
-      // in for the next one beats a skeleton.
+      // drawn while the request is out when nothing was handed over.
       provisionalValue:
         verb === "GET"
           ? (params, action) =>
@@ -32460,7 +32539,9 @@ const useForceRender = () => {
  * Stale data is always returned: the previous `data` remains available while
  * the action re-runs and after a run has failed, so a screen that had something
  * to show never has it taken away. What is drawn over it — a loading indicator,
- * the error, nothing — is entirely up to the component.
+ * the error, nothing — is entirely up to the component. A binding moving to other
+ * params is another question: what it holds until its answer lands is what
+ * `inheritData` says (createAction, docs/actions.md).
  *
  * `loading` covers the delay of a debounced binding
  * (`bindParams(paramsSignal, { debounce })`, `actionRunEffect({ debounce })`)
@@ -33045,8 +33126,7 @@ const LoadingFallback = ({
   // A page that suspends never gets to say it is on screen — its own effects
   // are held with it — so this says it for it: what the document shows of the
   // page arriving is this. Anyone waiting for the page to be there before
-  // moving (a travel about to have its picture taken, see route_travel.jsx)
-  // would otherwise wait for a render that cannot happen until the data does.
+  // moving (a route transition about to have its picture taken) would otherwise wait for a render that cannot happen until the data does.
   useLayoutEffect(() => {
     publishRouteRender();
   });
@@ -37535,29 +37615,6 @@ const samePages = (pages, otherPages) => {
 installImportMetaCssBuild(import.meta);
 
 /**
- * Keep every container showing the page it is showing, whatever the routes say.
- *
- * For a caller whose picture of a page is LIVE and must not follow the router:
- * a travel being undone shows the page it is going back to on both sides at
- * once if the router is allowed to swap under it (see route_travel.jsx). Only
- * the pages are held still — the rest of the document goes on rendering, which
- * is the whole reason this lives here rather than in Preact's own scheduler.
- */
-let routeRenderFrozen = false;
-const routeRenderFrozenSignal = signal(0);
-const freezeRouteRender = () => {
-  routeRenderFrozen = true;
-  return () => {
-    if (!routeRenderFrozen) {
-      return;
-    }
-    routeRenderFrozen = false;
-    // Read during every container's render, so letting go brings them all back.
-    routeRenderFrozenSignal.value++;
-  };
-};
-
-/**
  * Keep the page a container leaves, hidden, until its route transition is over.
  *
  * The browser photographs the page being left before the change, and the page
@@ -37627,8 +37684,11 @@ const debug$1 = (...args) => {
  * collectBranches).
  */
 const Route = props => {
+  const inRow = useContext(RouteRowContext);
   if (props.children) {
-    return jsx(RouteContainer, {
+    return inRow ? jsx(RouteRowContainer, {
+      ...props
+    }) : jsx(RouteContainer, {
       ...props
     });
   }
@@ -37692,6 +37752,105 @@ const collectRoutePages = children => {
   return pages;
 };
 
+/**
+ * Whether the next container down is a row a hand scrolls: every page has a
+ * place on it from the start, and the browser moves between them (see
+ * RouteTravel's `nativeScroll`). Told to one container, not to the pages it holds.
+ */
+const RouteRowContext = createContext(false);
+
+// A container as a row: one pane per leaf, in the order they are written. A page
+// still builds when its route first matches, since a route's actions only ask
+// while it does: before that its pane is empty. Once built it stays, with what
+// it holds and where it was scrolled to, so a hand brings back the page itself
+// and the address coming back to it finds it there.
+//
+// A page not on screen is treated as one kept while leaving, except that this
+// can be undone: it does not re-render for what it reads (isShown), and it steps
+// out of whatever it fills outside its pane (leavingSignal).
+const RouteRowContainer = ({
+  children
+}) => {
+  const {
+    activeBranch,
+    leaves
+  } = collectBranches(children);
+  const childrenRef = useRef(null);
+  childrenRef.current = children;
+  const readShownBranchRef = useRef(null);
+  if (!readShownBranchRef.current) {
+    readShownBranchRef.current = () => collectBranches(childrenRef.current).activeBranch;
+  }
+  const parentPage = useContext(RoutePageContext);
+  const pagesRef = useRef(new Map());
+  const pageOf = branch => {
+    let page = pagesRef.current.get(branch.id);
+    if (!page) {
+      page = createRoutePage(readShownBranchRef.current, parentPage);
+      pagesRef.current.set(branch.id, page);
+    }
+    page.branchId = branch.id;
+    // Never answering for another pane: two leaves rendering the same element
+    // are two pages here, each in its pane, where a container carries one over.
+    page.element = null;
+    return page;
+  };
+  const shownPage = activeBranch ? pageOf(activeBranch) : null;
+  const containerKey = useRef({}).current;
+  useLayoutEffect(() => {
+    publishRouteRender();
+    reportContainerShows(containerKey, {
+      parentPage,
+      page: shownPage,
+      branchType: activeBranch ? activeBranch.type : null,
+      routePage: branchRoutePage(activeBranch)
+    });
+  });
+  useLayoutEffect(() => {
+    return () => {
+      forgetContainer(containerKey);
+    };
+  }, []);
+  if (activeBranch && activeBranch.type === "fallback") {
+    // An address the row has no place for: nothing to scroll between.
+    return jsx(RouteRowPane, {
+      branch: activeBranch,
+      page: shownPage,
+      shown: true
+    }, "fallback");
+  }
+  return leaves.map(leaf => jsx(RouteRowPane, {
+    branch: leaf,
+    page: pageOf(leaf),
+    shown: activeBranch !== null && leaf.id === activeBranch.id
+  }, leaf.id));
+};
+const RouteRowPane = ({
+  branch,
+  page,
+  shown
+}) => {
+  // The very vnode rendered last, while not on screen: Preact does not look into
+  // it, and a page nobody can see costs nothing when the address moves.
+  const contentRef = useRef(null);
+  if (shown) {
+    contentRef.current = h(RouteRowContext.Provider, {
+      value: false
+    }, h(RoutePageContext.Provider, {
+      value: page
+    }, branch.node));
+  }
+  useLayoutEffect(() => {
+    page.ownLeavingSignal.value = !shown;
+  }, [shown]);
+  return jsx("div", {
+    "data-route-row-pane": "",
+    "data-built": contentRef.current ? "" : undefined,
+    inert: !shown,
+    children: contentRef.current
+  });
+};
+
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No contexts, no state of its own: it reads the route signals directly, and
@@ -37708,16 +37867,7 @@ const RouteContainer = ({
     pages
   } = collectBranches(children);
   const fallbackPage = fallbackBranch ? fallbackBranch.page : null;
-
-  // Told to hold still: what is on screen stays on screen. Kept as the very
-  // vnode that was rendered last time, which is how Preact is told there is
-  // nothing to look at in that subtree.
-  const frozen = routeRenderFrozenSignal.value >= 0 && routeRenderFrozen;
-  const shownBranchRef = useRef(null);
-  if (!frozen) {
-    shownBranchRef.current = activeBranch;
-  }
-  const branch = shownBranchRef.current || activeBranch;
+  const branch = activeBranch;
   // What this container would show if it rendered now, by the same rule as
   // the render above — asked from outside any render (see isShown below).
   const childrenRef = useRef(null);
@@ -37725,9 +37875,6 @@ const RouteContainer = ({
   const readShownBranchRef = useRef(null);
   if (!readShownBranchRef.current) {
     readShownBranchRef.current = () => {
-      if (routeRenderFrozen) {
-        return shownBranchRef.current;
-      }
       return collectBranches(childrenRef.current).activeBranch;
     };
   }
@@ -37851,7 +37998,7 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
         continue;
       }
       entry.hidden = true;
-      entry.page.leavingSignal.value = true;
+      entry.page.ownLeavingSignal.value = true;
       // The page renders on its own while kept (a component reading a signal
       // the address moved), never through this container: a top node it
       // replaces lands between the markers unmarked, a text it writes shows
@@ -37939,11 +38086,21 @@ const hideNodesBetween = (start, end, observer) => {
 // page it sits in is shown itself. Never again once kept while leaving: coming
 // back to its route mounts the page anew.
 const createRoutePage = (readShownBranch, parentPage) => {
+  const ownLeavingSignal = signal(false);
   const page = {
     branchId: null,
     element: undefined,
     left: false,
-    leavingSignal: signal(false),
+    ownLeavingSignal,
+    // A page nested in one that left is hidden with it, even while its own
+    // container goes on picking it (a route matching on both sides).
+    leavingSignal: parentPage ? computed(() => ownLeavingSignal.value || parentPage.leavingSignal.value) : ownLeavingSignal,
+    hasLeft: () => {
+      if (page.left) {
+        return true;
+      }
+      return parentPage ? parentPage.hasLeft() : false;
+    },
     isShown: () => {
       if (page.left) {
         return false;
@@ -38012,7 +38169,7 @@ const branchRouteNode = branch => {
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass. Anything that is not a <Route> is read
 // through and kept around the branch it holds (see below).
-// Returns { matchingBranch, fallbackBranch, activeBranch, pages }.
+// Returns { matchingBranch, fallbackBranch, activeBranch, pages, leaves }.
 //
 // Each branch is given an id from where it is written among the children,
 // which is what tells a container it changed page: the vnodes themselves are
@@ -38027,6 +38184,8 @@ const collectBranches = (children, path = "") => {
   // matching or a leaf matching under it is enough to select it, and the
   // fallback then stands down.
   const pages = [];
+  // Every leaf, wrappers kept, whichever matches: what a row has a pane for.
+  const leaves = [];
   const visit = child => {
     if (!child || child === true || child === false) {
       return;
@@ -38056,10 +38215,14 @@ const collectBranches = (children, path = "") => {
       const {
         matchingBranch: matchingInside,
         fallbackBranch: fallbackInside,
-        pages: pagesInside
+        pages: pagesInside,
+        leaves: leavesInside
       } = collectBranches(wrapperChildren, `${id}.`);
       for (const pageInside of pagesInside) {
         pages.push(pageInside);
+      }
+      for (const leafInside of leavesInside) {
+        leaves.push(wrapBranch(leafInside, child));
       }
       if (matchingInside && !matchingBranch) {
         matchingBranch = wrapBranch(matchingInside, child);
@@ -38133,6 +38296,7 @@ const collectBranches = (children, path = "") => {
         id,
         node: child
       };
+      leaves.push(branch);
       pages.push({
         route,
         params: routeParams
@@ -38161,7 +38325,8 @@ const collectBranches = (children, path = "") => {
     matchingBranch,
     fallbackBranch,
     activeBranch,
-    pages
+    pages,
+    leaves
   };
 };
 const describeContainer = ({
@@ -38331,8 +38496,7 @@ const releaseTransitionDestination = (owner) => {
  *
  * A control therefore may ask to keep answering, and while a route transition
  * plays the press is caught at the document and handed to it when it fell
- * inside its rectangle — which is where the hand thinks it pressed. The same
- * move route_travel.jsx makes for the box a finger reaches for mid-flight.
+ * inside its rectangle — which is where the hand thinks it pressed.
  *
  * ASKED FOR, never derived, and that is the whole safety of it: only the
  * application knows the control does not move. One that travels with the pages
@@ -38439,7 +38603,7 @@ const warnAboutPressablesThatMove = (areaElement) => {
     }
     warnOnce$1(
       "inside-area",
-      `A control asking to stay pressable during a route transition stands inside the pages (the element marked ${AREA_ATTRIBUTE}), and the pages are what moves: its rectangle says where it will BE, not where it is drawn, so a press aimed at what is on screen would be handed to whatever ends up under the finger. Only the furniture around the pages stands still for the length of a movement.`,
+      `A control asking to stay pressable during a route transition stands inside the pages (the element marked ${AREA_ATTRIBUTE}, or the box of a RouteTravel), and the pages are what moves: its rectangle says where it will BE, not where it is drawn, so a press aimed at what is on screen would be handed to whatever ends up under the finger. Only the furniture around the pages stands still for the length of a movement.`,
     );
     return;
   }
@@ -39259,7 +39423,7 @@ const holdTransitionWindow = (
 ) => {
   const bandBefore = stateBefore.band;
   const rectAfter = element.getBoundingClientRect();
-  const bandAfter = readBand();
+  readBand();
   const outerScroll = readOuterScroll(element);
   // The state being left, at where its box stands under the offset the box
   // is measured under NOW: what scrolled outside the box between the two
@@ -39293,9 +39457,7 @@ const holdTransitionWindow = (
   setTransitionValue(WINDOW_OLD_LEFT_PROPERTY, `${rectBefore.left}px`);
   setTransitionValue(WINDOW_NEW_TOP_PROPERTY, `${rectAfter.top}px`);
   setTransitionValue(WINDOW_NEW_LEFT_PROPERTY, `${rectAfter.left}px`);
-  const oldBand = furnitureLive
-    ? bandTheCutMayBeRelaxedTo(bandBefore, bandAfter, rectAfter)
-    : bandBefore;
+  const oldBand = bandBefore;
   setTransitionValue(OLD_BAND_TOP_PROPERTY, `${oldBand.top}px`);
   setTransitionValue(OLD_BAND_RIGHT_PROPERTY, `${oldBand.right}px`);
   setTransitionValue(OLD_BAND_BOTTOM_PROPERTY, `${oldBand.bottom}px`);
@@ -39418,8 +39580,7 @@ const shiftRect = (rect, byTop, byLeft) => {
 // What has scrolled OUTSIDE the box: the offsets of every scroller above the
 // one the pages scroll in, the viewport's included. That nearest scroller is
 // the pages' own — an offset there is a page scrolled, and it is not counted;
-// a hidden overflow counts as one so that the box asked about is the same the
-// travel asks about (see pagesScrollTheDocument in route_travel.jsx). What is
+// a hidden overflow counts as one. What is
 // pinned to the viewport (fixed, in the top layer) is not carried by the
 // document's offset, and the walk stops under it.
 const readOuterScroll = (element) => {
@@ -39484,40 +39645,6 @@ const readBand = () => {
     right: readEdge("right"),
     bottom: readEdge("bottom"),
     left: readEdge("left"),
-  };
-};
-
-// How far the cut may be opened for the picture being left when the furniture
-// is LIVE under the pictures — the band its own state kept free, which is the
-// whole point of photographing it: furniture present in only one of the two
-// states is not the frame, it is part of what changes, and cutting the page
-// being left at a bar it never had shows its header being sliced instead of
-// leaving.
-//
-// Never past what the picture ARRIVING needs, though: the cut is one line for
-// both pictures, so opening it for one opens it for the other. A box that runs
-// under the live furniture it arrives beside — a page scrolled below a top bar
-// — would then be watched painting over that bar for the length of the
-// movement, which is what the cut exists to prevent. On such an edge the
-// arriving band stands, and the page being left is cut as it always was.
-//
-// With the furniture photographed (a route transition) none of this holds: a
-// bar only the arriving state has is a picture ordered over the page it
-// belongs to, and a page arriving under it paints nothing over it. The band
-// of the state being left is then published as it was, so the page being
-// left is never cut at a bar it never had.
-const bandTheCutMayBeRelaxedTo = (bandBefore, bandAfter, rectAfter) => {
-  return {
-    top: rectAfter.top < bandAfter.top ? bandAfter.top : bandBefore.top,
-    right:
-      rectAfter.right > window.innerWidth - bandAfter.right
-        ? bandAfter.right
-        : bandBefore.right,
-    bottom:
-      rectAfter.bottom > window.innerHeight - bandAfter.bottom
-        ? bandAfter.bottom
-        : bandBefore.bottom,
-    left: rectAfter.left < bandAfter.left ? bandAfter.left : bandBefore.left,
   };
 };
 
@@ -39696,7 +39823,7 @@ const easedProgress = (x, [x1, y1, x2, y2]) => {
 };
 
 installImportMetaCssBuild(import.meta);
-const startViewTransition$1 = ensureDocumentStartViewTransition();
+const startViewTransition = ensureDocumentStartViewTransition();
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
 const TRANSITION_DURATION_PROPERTY = "--navi-route-transition-duration";
@@ -39728,12 +39855,6 @@ const AREA_NAME = "navi-route-transition";
 // the pages', or the document's own when the pages ARE the document (see
 // findLeadAnimation).
 const LEAD_NAMES = [AREA_NAME, "root"];
-// route_travel.jsx wears this on the root for the length of one of its
-// travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
-// name rather than imported: importing route_travel.jsx would pull the whole
-// travel machinery into an application that only defines transitions.
-const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
-
 // The same movements, written once and played on either target: the document,
 // or the marked area. The guard keeps the two exclusive — with an area marked,
 // the root pictures must NOT move (they carry the whole viewport, blank bands
@@ -39834,6 +39955,16 @@ const css$17 = /* css */`@property --navi-route-transition-leave {
 
     &::view-transition-group(*), &::view-transition-old(*), &::view-transition-new(*) {
       animation-duration: var(--navi-route-transition-duration, .3s);
+    }
+
+    &::view-transition-old(.navi_furniture_shared) {
+      mix-blend-mode: plus-lighter;
+      animation-name: navi-route-transition-fade-out;
+    }
+
+    &::view-transition-new(.navi_furniture_shared) {
+      mix-blend-mode: plus-lighter;
+      animation-name: navi-route-transition-fade-in;
     }
   }
 
@@ -40111,6 +40242,10 @@ const css$17 = /* css */`@property --navi-route-transition-leave {
 }
 
 @keyframes navi-route-transition-fade-out {
+  from {
+    opacity: 1;
+  }
+
   to {
     opacity: 0;
   }
@@ -40119,6 +40254,10 @@ const css$17 = /* css */`@property --navi-route-transition-leave {
 @keyframes navi-route-transition-fade-in {
   from {
     opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 `;
@@ -40527,10 +40666,10 @@ const rebuildWatcher = () => {
     from,
     to
   } of relations) {
-    if (from && pageIndexOf$1(pages, from) === -1) {
+    if (from && pageIndexOf(pages, from) === -1) {
       pages.push(from);
     }
-    if (pageIndexOf$1(pages, to) === -1) {
+    if (pageIndexOf(pages, to) === -1) {
       pages.push(to);
     }
   }
@@ -40618,7 +40757,7 @@ const rebuildWatcher = () => {
 // What plays when no relation matched (see defineRouteDefaultTransition), what
 // the navigation now landing asked for on its own (see readNavigationRequest),
 // where it goes, and whether it found an answer already — a relation's
-// transition, a "none", a RouteTravel travel. The last three are read at the
+// transition, a "none". The last three are read at the
 // start of every navigation, so they are always about the latest one.
 let defaultTransition = null;
 let navigationRequest = null;
@@ -40869,14 +41008,6 @@ const beginTransition = ({
 }) => {
   navigationAnimated = true;
   const documentElement = document.documentElement;
-  // One navigation, one animator. A RouteTravel box already travelling this
-  // change owns the document's transition — and possibly a finger; starting
-  // one here on top would skip its pictures mid-slide. A pair of routes must
-  // be animated by RouteTravel or by a route transition, never both.
-  if (documentElement.hasAttribute(ROUTE_TRAVEL_ATTRIBUTE)) {
-    console.warn("A RouteTravel is animating this navigation; the route transition defined between these routes is skipped. Animate a pair of routes with RouteTravel or defineRouteTransition, not both.");
-    return;
-  }
   navigationDecision = {
     type,
     direction,
@@ -40961,7 +41092,7 @@ const beginTransition = ({
   // calls that callback a frame later, and a navigation that has already
   // been decided renders its page in between — a wait armed then waits for
   // something that has already happened.
-  const renderWait = armRouteRenderWait$1();
+  const renderWait = armRouteRenderWait();
   // What the browser ACTUALLY captured, read once the pictures exist: it is
   // the only place the silent misconfigurations show. They are all about the
   // same thing — a movement playing on pictures that are not the pages.
@@ -40990,7 +41121,7 @@ const beginTransition = ({
       break;
     }
   };
-  const viewTransition = startViewTransition$1(async () => {
+  const viewTransition = startViewTransition(async () => {
     // The picture the browser is about to take must be of the page that was
     // asked for, and a route matching is not yet a page rendered. Whatever
     // is awaited here must be able to resolve without a frame: the document
@@ -41070,7 +41201,7 @@ const beginTransition = ({
     }
   };
   transition.viewTransition = viewTransition;
-  viewTransition.ready.then(viewTransitionReady, ignoreSkipped$1);
+  viewTransition.ready.then(viewTransitionReady, ignoreSkipped);
   viewTransition.finished.then(end, end);
 };
 
@@ -41178,7 +41309,7 @@ const turnRunningTransitionRound = (fromUrl, url) => {
 const absoluteUrl = url => url ? new URL(url, window.location.href).href : null;
 
 // A transition skipped by another one starting is an outcome, not a failure.
-const ignoreSkipped$1 = () => {};
+const ignoreSkipped = () => {};
 
 // The names the browser captured, read off the pictures themselves: what was
 // asked for in CSS and what was taken are not the same question (see
@@ -41247,7 +41378,7 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
       continue;
     }
     const unclipped = NESTED_GROUPS_SUPPORTED ? "" : " This browser has no nested groups (view-transition-group: contain), so it is not even cut at the pages' edge.";
-    warnOnce("names-escaping-area", `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and the page on the other side of the navigation has nothing of that name. A name lifts its element out of the pages' pictures, in every browser: with nothing to morph into, it stands where it was captured and fades on its own while the pages move.${unclipped} Give that name only for the length of the gesture it serves, or drop it while the pages move: :root:is([${TRANSITION_ATTRIBUTE}], [${ROUTE_TRAVEL_ATTRIBUTE}]) <that element> { view-transition-name: none } (with !important over an inline name).`);
+    warnOnce("names-escaping-area", `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and the page on the other side of the navigation has nothing of that name. A name lifts its element out of the pages' pictures, in every browser: with nothing to morph into, it stands where it was captured and fades on its own while the pages move.${unclipped} Give that name only for the length of the gesture it serves, or drop it while the pages move: :root[${TRANSITION_ATTRIBUTE}] <that element> { view-transition-name: none } (with !important over an inline name).`);
     return;
   }
 };
@@ -41268,7 +41399,7 @@ const warnOnce = (id, message) => {
 // answer it is its own business, and the render is the moment the picture can
 // be taken. Listening starts before the change, or a render landing while the
 // change settles is a render nobody heard.
-const armRouteRenderWait$1 = () => {
+const armRouteRenderWait = () => {
   let stopListening;
   const rendered = new Promise(resolve => {
     stopListening = observeRouteRender(resolve);
@@ -41308,7 +41439,7 @@ const samePage$1 = (a, b) => {
   }
   return a.route === b.route && compareTwoJsValues(a.params, b.params);
 };
-const pageIndexOf$1 = (pages, page) => pages.findIndex(candidate => samePage$1(candidate, page));
+const pageIndexOf = (pages, page) => pages.findIndex(candidate => samePage$1(candidate, page));
 
 // The FIRST page that answers, and every page read all the same: a page that
 // is not the current one today is the one that must wake the reader tomorrow.
@@ -41391,1359 +41522,718 @@ const installRouteTransitionCss = () => {
   installTransitionFurnitureCss();
 };
 
+/**
+ * Where a row of routes scrolled by the browser stands, for what is drawn about
+ * it elsewhere: the bar under the tabs, in a <Nav> that sits outside the box and
+ * knows nothing of it. A tab says which page it is through its address, so a
+ * nav follows any row it holds tabs for, with nothing to wire.
+ *
+ * Said per scroll and not through a signal: a number written on one element is
+ * all it takes, and a signal would make that a render.
+ */
+const followers = new Set();
+
+const followRouteRows = (onMove) => {
+  followers.add(onMove);
+  return () => {
+    followers.delete(onMove);
+  };
+};
+
+/**
+ * @param {{basePath: string, towardPath: string|null, progress: number}|null} move
+ *   - the two pages the row stands between, by the pathname of their address,
+ *   and how far past the first in the terms of --slide-travel-progress. `null`
+ *   once it has stopped.
+ */
+const publishRouteRowMove = (move) => {
+  for (const follower of followers) {
+    follower(move);
+  }
+};
+
+/**
+ * A row of pages the browser scrolls itself, and what is left to read from it.
+ *
+ * The hand is not interpreted here: the browser follows it, on its compositor,
+ * and it alone knows what the page cannot be told (a notch from a trackpad, the
+ * end of a stroke from its momentum, which scroller a stream is latched on). What
+ * remains is reading where the row stands and when it has come to rest.
+ *
+ * Rows are measured off their pages rather than by rank and width: a row that
+ * ends early because a page is held leaves what lies beyond out (`data-off-row`),
+ * and ranks would then lie about where the others are. An `offsetLeft` is rounded,
+ * but by half a pixel at most whatever the rank, which a rank multiplied by a
+ * rounded width is not. It also ignores a transform: a row inside a popup still
+ * growing into place measures as it will stand.
+ *
+ * Each scroller must be the offsetParent of its pages.
+ */
+
+// What the rest of a scroll is worth while a page sits a rounding away from it.
+const AT_REST_DISTANCE = 1;
+// How long without a scroll event means the row stopped. The browser's word is
+// not enough: Firefox says `scrollend` once, when the wheel goes quiet, some 200ms
+// before its snap has finished and never again, and Safari before 26.2 does not
+// say it at all.
+const STOPPED_SILENCE = 150;
+
+const isOnRow = (page) =>
+  page.offsetWidth > 0 && !page.hasAttribute("data-off-row");
+
+const restsOn = (scroller, page) =>
+  Math.abs(page.offsetLeft - scroller.scrollLeft) <= AT_REST_DISTANCE &&
+  Math.abs(page.offsetTop - scroller.scrollTop) <= AT_REST_DISTANCE;
+
+/**
+ * @returns {Element|undefined} the page the row rests on, nothing while it stands
+ *   between two: a hand can pause midway, and an engine may call that the end of
+ *   a scroll.
+ */
+const pageAtRest = (scroller, pages) =>
+  pages.find((page) => isOnRow(page) && restsOn(scroller, page));
+
+/**
+ * Where the row stands between two neighbouring pages, on the side it has moved
+ * to from `page`: a hand is not limited to the next one, so what it has passed
+ * since is walked over. A map moves along one axis at a time, the one it has
+ * moved furthest on.
+ *
+ * @returns {{base: Element, toward: Element|undefined, fraction: number, forward: boolean}}
+ *   the last page the row has passed (`page` itself until then), the one after,
+ *   and how far between the two from 0 to 1. Nothing `toward` past the last.
+ */
+const readRowStretch = (scroller, pages, page) => {
+  const alongX =
+    Math.abs(scroller.scrollLeft - page.offsetLeft) >=
+    Math.abs(scroller.scrollTop - page.offsetTop);
+  const position = alongX ? "offsetLeft" : "offsetTop";
+  const cross = alongX ? "offsetTop" : "offsetLeft";
+  const scrolled = alongX ? scroller.scrollLeft : scroller.scrollTop;
+  const forward = scrolled > page[position];
+  const step = forward ? 1 : -1;
+  const line = pages
+    .filter(
+      (candidate) => isOnRow(candidate) && candidate[cross] === page[cross],
+    )
+    .sort((pageA, pageB) => pageA[position] - pageB[position]);
+  let index = line.indexOf(page);
+  let base = page;
+  let toward = line[index + step];
+  while (
+    toward &&
+    (forward ? toward[position] <= scrolled : toward[position] >= scrolled)
+  ) {
+    index += step;
+    base = toward;
+    toward = line[index + step];
+  }
+  const span = toward ? Math.abs(toward[position] - base[position]) : 0;
+  const fraction = span ? Math.abs(scrolled - base[position]) / span : 0;
+  return { base, toward, fraction, forward };
+};
+
+/**
+ * @param {Element} scroller
+ * @param {object} options
+ * @param {() => void} options.onScroll - the row moved.
+ * @param {(event: Event|null) => void} options.onLand - the row may have stopped.
+ *   Read `pageAtRest` to know whether it stopped on a page. Heard more than once
+ *   for one landing, so what it does must find nothing to do the second time.
+ * @returns {() => void} stop listening.
+ */
+const watchRowScroll = (scroller, { onScroll, onLand }) => {
+  let stoppedTimeout = null;
+  let touching = false;
+  const landOnSilence = () => {
+    // A finger holding the row still: nothing has stopped.
+    if (!touching) {
+      onLand(null);
+    }
+  };
+  const armSilence = () => {
+    clearTimeout(stoppedTimeout);
+    stoppedTimeout = setTimeout(landOnSilence, STOPPED_SILENCE);
+  };
+  const onScrollEvent = () => {
+    onScroll();
+    armSilence();
+  };
+  const onTouchStart = () => {
+    touching = true;
+    clearTimeout(stoppedTimeout);
+  };
+  const onTouchEnd = (touchEvent) => {
+    touching = touchEvent.touches.length > 0;
+    if (!touching) {
+      armSilence();
+    }
+  };
+  scroller.addEventListener("scroll", onScrollEvent, { passive: true });
+  scroller.addEventListener("scrollend", onLand);
+  scroller.addEventListener("touchstart", onTouchStart, { passive: true });
+  scroller.addEventListener("touchend", onTouchEnd, { passive: true });
+  scroller.addEventListener("touchcancel", onTouchEnd, { passive: true });
+  return () => {
+    clearTimeout(stoppedTimeout);
+    scroller.removeEventListener("scroll", onScrollEvent);
+    scroller.removeEventListener("scrollend", onLand);
+    scroller.removeEventListener("touchstart", onTouchStart);
+    scroller.removeEventListener("touchend", onTouchEnd);
+    scroller.removeEventListener("touchcancel", onTouchEnd);
+  };
+};
+
 installImportMetaCssBuild(import.meta);
-// The pictures carrying a travel, among everything else the movement takes
-// along (see findLeadAnimation).
-const TRAVEL_LEAD_NAMES = ["navi-route-travel"];
-
-// A browser with no view transitions of its own has no picture of the page
-// being left, so there is nothing to drag: the gesture is still read (it is how
-// one asks to change tab with a thumb), and the change happens on release, as a
-// press on the tab would have done.
-const CAN_KEEP_PICTURE = Boolean(document.startViewTransition && !document.startViewTransition.isPolyfill);
-const startViewTransition = ensureDocumentStartViewTransition();
-
-// route_transition.js reads this attribute by name (not imported, see its
-// ROUTE_TRAVEL_ATTRIBUTE) to refuse animating a navigation a travel already
-// animates — keep the two in sync.
-const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
-// Which way the pages move, said on the document: the pictures of a transition
-// hang off the root, not off the box that travels, so the box's own `axis` has
-// to be lent to the document for the length of the travel.
-const TRAVEL_AXIS_ATTRIBUTE = "data-navi-route-travel-axis";
-// While a finger holds the travel: the pictures stand still and go exactly
-// where it says (see the CSS, and scrubTravel).
-const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
-// A travel a finger set off, for its whole life — including what plays out
-// after the finger is gone. It moves by another law than one asked for by a
-// press (see the CSS).
-const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
-// A travel that changed its mind about where it was going (see
-// redirectTravel). Only the pages can be aimed somewhere else: everything the
-// transition carries was measured once, at the start, against a destination
-// this travel is no longer going to.
-const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
-// The name the box wears while it travels, and only then (see nameForTravel).
-const TRAVEL_NAME = "navi-route-travel";
 const css$16 = /* css */`.navi_route_travel {
   position: relative;
-
-  &[data-travel-by-drag="x"] {
-    touch-action: pan-y;
-  }
-
-  &[data-travel-by-drag="y"] {
-    touch-action: pan-x;
-  }
 }
 
-:root[data-navi-route-travel] {
-  view-transition-name: none;
+[data-route-travel-row] {
+  overflow-anchor: none;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  flex: auto;
+  grid-template-rows: minmax(0, 1fr);
+  grid-auto-columns: 100%;
+  grid-auto-flow: column;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  position: relative;
+  overflow: auto hidden;
 
-  &::view-transition, &::view-transition-group(*), &::view-transition-image-pair(*), &::view-transition-old(*), &::view-transition-new(*) {
-    pointer-events: none;
-  }
-
-  &::view-transition-old(navi-route-travel), &::view-transition-new(navi-route-travel) {
-    object-fit: none;
-    object-position: top left;
-    mix-blend-mode: normal;
-    height: auto;
-  }
-
-  &::view-transition-old(navi-route-travel) {
-    top: calc(var(--navi-transition-window-old-top) - var(--navi-transition-window-top));
-    left: calc(var(--navi-transition-window-old-left) - var(--navi-transition-window-left));
-    width: auto;
-  }
-
-  &::view-transition-new(navi-route-travel) {
-    top: calc(var(--navi-transition-window-new-top) - var(--navi-transition-window-top));
-    left: calc(var(--navi-transition-window-new-left) - var(--navi-transition-window-left));
-    width: auto;
-  }
-
-  &::view-transition-group(navi-route-travel), &::view-transition-image-pair(navi-route-travel) {
-    overflow: clip;
-  }
-
-  &::view-transition-group(navi-route-travel) {
-    top: calc(var(--navi-transition-window-top) - var(--navi-transition-window-new-top));
-    left: calc(var(--navi-transition-window-left) - var(--navi-transition-window-new-left));
-    width: var(--navi-transition-window-width);
-    height: var(--navi-transition-window-height);
-    --navi-route-travel-clip-top: max(0px,
-        min(var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
-            var(--navi-transition-old-band-top)) - var(--navi-transition-window-top));
-    --navi-route-travel-clip-left: max(0px,
-        min(var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
-            var(--navi-transition-old-band-left)) - var(--navi-transition-window-left));
-    --navi-route-travel-clip-bottom: max(0px,
-        var(--navi-transition-window-top) +
-          var(--navi-transition-window-height) +
-          min(var(--navi-safe-area-inset-bottom) +
-              var(--navi-transition-cover-bottom),
-            var(--navi-transition-old-band-bottom)) -
-          100dvh);
-    --navi-route-travel-clip-right: max(0px,
-        var(--navi-transition-window-left) +
-          var(--navi-transition-window-width) +
-          min(var(--navi-safe-area-inset-right) +
-              var(--navi-transition-cover-right),
-            var(--navi-transition-old-band-right)) -
-          100dvw);
-    clip-path: inset(var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
-          var(--navi-route-travel-clip-bottom)
-          var(--navi-route-travel-clip-left));
-    animation-duration: var(--navi-route-travel-duration, .3s);
-    animation-name: none;
-  }
-
-  &[data-navi-transition-window-placed]::view-transition-group(navi-route-travel) {
-    top: calc(var(--navi-transition-window-top) + var(--navi-transition-viewport-top));
-    left: calc(var(--navi-transition-window-left) +
-          var(--navi-transition-viewport-left));
-    transform: none;
-  }
-}
-
-:root[data-navi-route-travel-held] {
-  &::view-transition-group(*), &::view-transition-old(*), &::view-transition-new(*) {
-    animation-play-state: paused;
-  }
-}
-
-:root[data-navi-route-travel] {
-  &::view-transition-old(navi-route-travel), &::view-transition-new(navi-route-travel) {
-    animation-duration: var(--navi-route-travel-duration, .3s);
-    animation-timing-function: ease;
-    animation-fill-mode: both;
-  }
-}
-
-:root[data-navi-route-travel-turned] {
-  &::view-transition-group(*) {
+  &::-webkit-scrollbar {
     display: none;
   }
 
-  &::view-transition-group(navi-route-travel) {
-    display: block;
-  }
-}
-
-:root[data-navi-route-travel-dragged] {
-  &::view-transition-group(navi-route-travel), &::view-transition-old(navi-route-travel), &::view-transition-new(navi-route-travel) {
-    animation-timing-function: linear;
-  }
-}
-
-:root[data-navi-route-travel="forward"] {
-  &::view-transition-old(navi-route-travel) {
-    animation-name: navi-route-travel-leave-towards-start;
+  &[data-route-travel-row="code"] {
+    overflow-x: hidden;
   }
 
-  &::view-transition-new(navi-route-travel) {
-    animation-name: navi-route-travel-enter-from-end;
-  }
-}
-
-:root[data-navi-route-travel="back"] {
-  &::view-transition-old(navi-route-travel) {
-    animation-name: navi-route-travel-leave-towards-end;
+  &[data-route-travel-row="still"] {
+    overflow: visible;
   }
 
-  &::view-transition-new(navi-route-travel) {
-    animation-name: navi-route-travel-enter-from-start;
-  }
-}
-
-:root[data-navi-route-travel-axis="y"] {
-  &[data-navi-route-travel="forward"] {
-    &::view-transition-old(navi-route-travel) {
-      animation-name: navi-route-travel-leave-towards-top;
-    }
-
-    &::view-transition-new(navi-route-travel) {
-      animation-name: navi-route-travel-enter-from-bottom;
-    }
+  & > [data-route-row-pane] {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    flex-direction: column;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
   }
 
-  &[data-navi-route-travel="back"] {
-    &::view-transition-old(navi-route-travel) {
-      animation-name: navi-route-travel-leave-towards-bottom;
-    }
-
-    &::view-transition-new(navi-route-travel) {
-      animation-name: navi-route-travel-enter-from-top;
-    }
-  }
-}
-
-@keyframes navi-route-travel-leave-towards-start {
-  from {
-    translate: 0;
+  &:not([data-moving]) > [data-route-row-pane][inert] {
+    visibility: hidden;
   }
 
-  to {
-    translate: -100%;
-  }
-}
-
-@keyframes navi-route-travel-enter-from-end {
-  from {
-    translate: 100%;
+  & > [data-route-row-pane][inert] {
+    top: var(--navi-route-row-pin, 0);
+    max-height: 100dvh;
+    position: relative;
+    overflow: clip;
   }
 
-  to {
-    translate: 0;
-  }
-}
-
-@keyframes navi-route-travel-leave-towards-end {
-  from {
-    translate: 0;
-  }
-
-  to {
-    translate: 100%;
-  }
-}
-
-@keyframes navi-route-travel-enter-from-start {
-  from {
-    translate: -100%;
+  & > [data-route-row-live] {
+    flex-direction: column;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    position: relative;
   }
 
-  to {
-    translate: 0;
-  }
-}
-
-@keyframes navi-route-travel-leave-towards-top {
-  from {
-    translate: 0;
+  & > [data-route-row-pictures] {
+    display: contents;
   }
 
-  to {
-    translate: 0 -100%;
-  }
-}
-
-@keyframes navi-route-travel-enter-from-bottom {
-  from {
-    translate: 0 100%;
-  }
-
-  to {
-    translate: 0;
-  }
-}
-
-@keyframes navi-route-travel-leave-towards-bottom {
-  from {
-    translate: 0;
-  }
-
-  to {
-    translate: 0 100%;
-  }
-}
-
-@keyframes navi-route-travel-enter-from-top {
-  from {
-    translate: 0 -100%;
-  }
-
-  to {
-    translate: 0;
+  & > [data-route-row-pictures] > * {
+    contain: layout paint;
+    pointer-events: none;
+    grid-row: 1;
+    min-width: 0;
   }
 }
 `;
 
+// How far a hand must have pulled before the address moves for a page that is not
+// there yet: past what a hand that only shook covers, so that a shake costs
+// neither a navigation nor the requests of a page.
+const SET_OFF_PULL = 16;
+
+/**
+ * What the URL says while a hand holds the row is where it is heading, for a page
+ * not built yet: it builds by the address moving. A counter, a title or a
+ * breadcrumb around the box must not move for a pull that is let go of: it reads
+ * this first. The page the reader is still on while that lasts, and `null` when
+ * the row has come to rest, which is when `scrollsnapchange` fires and a pager's
+ * `settledPage` changes. A travel no hand set off holds nothing: it goes where it
+ * goes.
+ *
+ * One for the document. `route` says which row, for a page holding several boxes.
+ */
+const routeTravelSettledPageSignal = signal(null);
+
 /**
  * @type {import("preact").FunctionComponent<{
  *   routes?: Array<object|{route: object, params?: object}>,
- *   axis?: "x"|"y",
  *   travelByDrag?: boolean,
  *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
  * }>}
- * @param {Array<object|{route: object, params?: object}>} [props.routes] - the
- *   tabs, in the order they are shown. Read from the <Route> children by
- *   default, in the order they are written: the router already holds that list,
- *   and asking a caller to write it twice is asking for the two to disagree.
- *   Pass it to say another order, when the pages are not children of this box,
- *   or to name a tab the children cannot — the section a <Route fallback> shows
- *   is a tab like the others, and only its params say which one.
+ * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
+ *   over something longer, in order. Read from the <Route> children by default,
+ *   in the order they are written. Given here, the children are one page rendered
+ *   once, whatever the address, and may be anything: use it when the pages are one
+ *   route with other params, or not children of this box. An entry is a route, or
+ *   `{ route, params }`.
+ * @param {boolean} [props.travelByDrag=true] - whether a hand travels. Off where the
+ *   gesture belongs to the content; a tab pressed still does.
+ * @param {(detail: {route: object, params: object|undefined, cause: "drag"}) => void|Promise<void>} [props.onTravel]
+ *   - how to go to a page a hand has brought in. The default REPLACES the current
+ *   history entry rather than pushing one: a swipe is how one browses a page, not a
+ *   place one aimed at, and three swipes back and forth must not bury the way out
+ *   of the page under six entries. A tab pressed goes the way its <Link> says —
+ *   `<Link replace>` for a row of tabs, so a press and a swipe towards the same
+ *   neighbour write the same history.
  *
- *   An entry is a route, or `{ route, params }` when the tabs of the row are a
- *   PARAM of one route rather than routes of their own (the form
- *   `<Route routeParams>` selects a branch on, and the form that lets a link
- *   with no params reopen the section one was looking at). Written as bare
- *   routes, three tabs of one route are the same object three times: there is
- *   then one tab, and nowhere to travel.
- * @param {"x"|"y"} [props.axis="x"] - which way the pages are laid out.
- * @param {boolean} [props.travelByDrag=true] - whether a pointer dragging the
- *   page travels. Off where the gesture belongs to the content.
- * @param {(detail: {route: object, params: object|undefined, cause: "drag"|"wheel"|"revert"}) => void|Promise<void>} [props.onTravel]
- *   - how to go to a tab. The default REPLACES the current history entry
- *   rather than pushing one: a swipe is how one browses a page, not a place one
- *   aimed at, and three swipes back and forth must not bury the way out of the
- *   page under six entries. A tab pressed goes the way its <Link> says —
- *   `<Link replace>` for a row of tabs, so a press and a swipe towards the
- *   same neighbour write the same history.
- *
- * Every other prop lands on the box itself (`id`, `data-testid`, `className`,
- * …), which is how one of these is named: a page can hold several — a row of
- * sections inside the box the whole application travels in — and the class they
- * share plus their axis are not enough to tell them apart from the outside.
- *
- * The pages are cut at the edge of this box while they travel, and at the app's
- * safe area the box runs under, which is written on the transition's own
- * pseudo-elements — no overflow of the document reaches pictures drawn in the
- * top layer. It needs nothing of the browser beyond view transitions
- * themselves: a browser without them navigates without the movement, and the
- * gesture applies its change on release instead of dragging a picture that does
- * not exist.
- *
- * While a travel plays, the rest of the page is NOT taken as a picture: the
- * root's name is dropped for that time (`view-transition-name: none`), so what
- * stands around the box — a tab row beside it — stays live and answers a press
- * mid-travel. The application's own rule for the root applies again the moment
- * the travel is over.
+ * Every other prop lands on the box itself (`id`, `data-testid`, `className`, …).
+ * The box has to outlive every page of its row: around those <Route>s, or around
+ * one <Route> whose params are the tabs, never inside one of the pages.
  */
 const RouteTravel = ({
   routes: routesProp,
-  axis = "x",
   travelByDrag = true,
   onTravel = ({
     route,
     params
-  }) => route.redirectTo(params),
+  }) => route.navTo(params, {
+    replace: true,
+    routeTransition: "none"
+  }),
   className,
   children,
   ...rest
 }) => {
   import.meta.css = [css$16, "@jsenv/navi/src/nav/route_travel.jsx"];
-  installTransitionWindowCss();
-  const elementRef = useRef();
-  const gestureRef = useRef(null);
-  // The travel in hand: the transition keeping the picture of the page being
-  // left, the animations the finger drives, and what to do with them once the
-  // browser has them ready. Null when no page is on its way anywhere.
-  const travelRef = useRef(null);
-  // The page this box has ASKED for and is still waiting to see arrive.
-  // Routing is asynchronous: a travel's own navigation lands well after the
-  // travel decided anything about it — sometimes after the travel was undone —
-  // and read back as "the page changed" it would start a second travel nobody
-  // asked for, over pictures that are already showing something else.
-  const pageAskedForRef = useRef(null);
-  // The latest way to answer a gesture, for a watcher that outlives every
-  // render (see the wheel effect below).
-  const travelHandlersRef = useRef(null);
-  const pointerDownRef = useRef(null);
+  const rowRef = useRef();
+  const liveRef = useRef();
+  const picturesRef = useRef();
+  const windowed = Boolean(routesProp);
+  const [, render] = useReducer(count => count + 1, 0);
   const pagesFromChildren = useMemo(() => collectRoutePages(children), [children]);
   const pagesFromProp = useMemo(() => routesProp && routesProp.map(normalizePage), [routesProp]);
-  const pages = pagesFromProp || pagesFromChildren;
-
-  // Which page is on screen, read from the pages themselves: every one of them
-  // is read, so this re-renders when any of them starts or stops matching — and
-  // for a row whose tabs are params of one route, when the params move from one
-  // tab to the next (see pageIsCurrent).
+  // Held while the row moves: a window recentred under a hand would move the very
+  // panes it is pushing. It is taken as soon as the row has stopped.
+  const pagesAsked = pagesFromProp || pagesFromChildren;
+  const movementRef = useRef(null);
+  const pagesRef = useRef(pagesAsked);
+  if (!movementRef.current) {
+    pagesRef.current = pagesAsked;
+  }
+  const pages = pagesRef.current;
   const currentIndex = currentPageIndex(pages);
-  // The page that was on screen when the change now happening was asked for:
-  // a travel is between two of them, and by the time anything renders the first
-  // one is already gone. Written after each render (below), so a subscriber
-  // reading it — they all run before Preact flushes — reads the one being left.
-  // The page and not its place in the row: a row given again around the page
-  // on screen (a window over a list, read anew around it) puts that page at
-  // another index without anything having moved.
-  const currentPage = currentIndex === -1 ? null : pages[currentIndex];
-  const currentPageRef = useRef(currentPage);
+  // Where the page of a window stands: the address, or where it last was for an
+  // address the row has no place for.
+  const liveIndexRef = useRef(0);
+  if (currentIndex !== -1) {
+    liveIndexRef.current = currentIndex;
+  }
+  const liveIndex = liveIndexRef.current;
+  const latestRef = useRef(null);
+  latestRef.current = {
+    pages,
+    currentIndex,
+    liveIndex,
+    onTravel,
+    travelByDrag
+  };
 
-  // Where a page is asked for, whoever asks: a page is a route AND the params
-  // that say which of its tabs, and a caller told only the route would send the
-  // row back to whichever tab the URL already says (see redirectTo).
-  const travelTo = (page, cause) => onTravel({
-    route: page.route,
-    params: page.params,
-    cause
-  });
+  // The page this box asked for: routing lands later, and read back as somebody
+  // changing the address it would send the row where the hand already is.
+  const askedPageRef = useRef(null);
+  const panesOf = row => Array.from(row.children).filter(child => child.hasAttribute("data-route-row-pane"));
+  const pathOf = ({
+    route,
+    params
+  }) => new URL(route.buildUrl(params), window.location.href).pathname;
 
-  // One travel, whoever asked for it: a finger, a tab pressed, the browser's
-  // own back button. What differs is only who moves it — the finger drives it
-  // frame by frame (`scrub`), everything else lets it play.
-  const beginTravel = ({
-    page,
-    fromPage,
-    direction,
-    scrub,
-    change
-  }) => {
-    const travel = {
-      page,
-      // The page this set off from, kept rather than looked up again: the URL
-      // changes at the first pixel, so a moment later nothing on screen
-      // remembers where it started.
-      fromPage,
-      direction,
-      scrub,
-      ratio: 0,
-      // The animations of the pictures, once the browser has them. Held still
-      // by CSS until then, so an empty hand here costs nothing: there is
-      // nothing to stop, only nowhere to put them yet.
-      animations: null,
-      ended: false
+  // One movement, whoever set it off, from the first thing that moves to the row
+  // at rest. Null when nothing moves.
+  const beginMovement = fields => {
+    const row = rowRef.current;
+    if (movementRef.current) {
+      Object.assign(movementRef.current, fields);
+      return movementRef.current;
+    }
+    row.setAttribute("data-moving", "");
+    const movement = {
+      travelling: false,
+      pictures: new Map(),
+      resumeScrollRecording: null,
+      scrollsDocument: getScrollContainer(row.parentElement, {
+        includeHidden: true
+      }) === document.documentElement,
+      ...fields
     };
-    travelRef.current = travel;
-    // A press landing on a playing travel lands on the document root: the box
-    // is captured by the transition and cannot be pointed at, so neither its
-    // touch-action nor its own touchmove listener is on the touch's path. Left
-    // there, the browser takes the finger's first vertical pixels for a scroll
-    // and cancels the pointer under a travel that was just caught. Refusable
-    // from the root for the length of the travel, the gesture that catches it
-    // refuses every touchmove of that press (it is started from the grab), and
-    // the finger's only answer is the travel it landed on.
-    document.documentElement.addEventListener("touchmove", keepTouchRefusable, {
-      passive: false
+    movementRef.current = movement;
+    if (movement.scrollsDocument) {
+      // Whatever the browser does with the offset meanwhile (clamping it to a page
+      // shorter than the trip) is not the reader scrolling, and the address it
+      // would be written against may already be another page's.
+      movement.resumeScrollRecording = suspendScrollRecording();
+      row.style.setProperty("--navi-route-row-pin", `${pinOf(row)}px`);
+    }
+    return movement;
+  };
+
+  // A clone of the page in the pane it stands in, before anything changes it. In
+  // that pane and the same height: the row keeps its size, so the document its
+  // offset, and the page one looked at is where it was.
+  const leavePictureOfLive = movement => {
+    const live = liveRef.current;
+    const index = latestRef.current.liveIndex;
+    const picture = live.cloneNode(true);
+    picture.removeAttribute("data-route-row-live");
+    picture.setAttribute("inert", "");
+    picture.setAttribute("aria-hidden", "true");
+    picture.style.gridColumn = String(index + 1);
+    picture.style.top = "";
+    movement.pictures.get(index)?.remove();
+    movement.pictures.set(index, picture);
+    // After the live page in the document: an id it holds still finds the page.
+    picturesRef.current.append(picture);
+    copyScrollPositions(live, picture);
+    if (movement.scrollsDocument) {
+      live.style.top = `${pinOf(rowRef.current)}px`;
+    }
+  };
+  const askFor = page => {
+    const {
+      onTravel
+    } = latestRef.current;
+    askedPageRef.current = page;
+    notePageChange();
+    return onTravel({
+      route: page.route,
+      params: page.params,
+      cause: "drag"
     });
-    // Whether the document's offset is this row's business at all (see
-    // pagesScrollTheDocument), asked once and before anything is swapped.
-    travel.scrollsDocument = pagesScrollTheDocument(elementRef.current);
-    if (travel.scrollsDocument) {
-      // One of the tabs is about to be swapped out from under that scrollport,
-      // and whatever the browser does with the offset meanwhile — clamping it
-      // to a page shorter than the trip — is not the reader scrolling. The url
-      // it would be written against is already the arriving tab's, so recorded
-      // it is that tab's own position that the tab being left destroys. Deaf
-      // for the whole travel, which is exactly as long as the offset belongs
-      // to nobody (see endTravel).
-      travel.resumeScrollRecording = suspendScrollRecording();
+  };
+  const sayRowMoves = () => {
+    const row = rowRef.current;
+    const panes = panesOf(row);
+    if (panes.length < 2) {
+      return;
     }
-    // Taken before the picture is: the browser reads the name off the DOM as it
-    // stands when the transition starts, and this box is only a picture of its
-    // own for as long as it is the one travelling. Where it travels to is said
-    // at the same moment and for the same reason: whoever names something for
-    // a movement between two pages decides on it now (see
-    // transition_destination.js).
-    nameForTravel(elementRef.current);
-    holdTransitionDestination(travel, page.route.buildUrl(page.params));
-    document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
-    document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
-    if (scrub) {
-      holdPictures(travel);
-      document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
+    const {
+      pages
+    } = latestRef.current;
+    const {
+      base,
+      toward,
+      fraction
+    } = readRowStretch(row, panes, panes[0]);
+    publishRouteRowMove({
+      basePath: pathOf(pages[panes.indexOf(base)]),
+      towardPath: toward ? pathOf(pages[panes.indexOf(toward)]) : null,
+      progress: -fraction
+    });
+  };
+
+  // The row has stopped, on the page of the address: everything held for the
+  // movement is let go of in one go, before anything paints.
+  const endMovement = () => {
+    const row = rowRef.current;
+    const movement = movementRef.current;
+    if (!movement) {
+      return;
     }
-    pageAskedForRef.current = page;
-    // The box as it stands before anything moves, and the band the furniture
-    // around it leaves free: rendering is held, so both are still the page
-    // being left (see transition_window.js).
-    const stateBefore = measureTransitionWindowState(elementRef.current);
-    // The hold a navigation already took, if this travel is the answer to one:
-    // taking another would be taking a hold on a page that is holding still.
-    const releaseRendering = takeoverRoutingRenderingHold();
-    // The picture the browser is about to take must be of the page that was
-    // asked for, and a route matching is not yet a page rendered. Watched from
-    // here rather than from inside the callback below: the browser calls that
-    // callback a frame later, and a navigation that has already been decided
-    // (what follows a send, a command) renders its page in between. A wait
-    // armed then waits for something that has already happened — until the
-    // browser gives up on the transition, leaving the page it was leaving on
-    // screen and an error nobody asked for.
-    const renderWait = armRouteRenderWait();
-    const viewTransition = startViewTransition(async () => {
-      // Whatever is awaited here must be able to resolve without the page being
-      // rendered: the document is frozen for the whole of this callback, and a
-      // frame never comes — waiting for one waits until the browser gives up on
-      // the transition. And it stays frozen exactly this long, so this is also
-      // the shortest thing there is to keep short.
-      await whilePageRenders(page, async () => {
-        releaseRendering();
-        if (change) {
-          await change();
-        }
-      }, renderWait);
-      // Where the arriving tab was left, or its top when it has never been
-      // read. A travel is an arrival — the tab pressed is another route, and
-      // the replace it navigates by is the only thing about it that says
-      // otherwise — and this is the one place that knows it. Read from the
-      // travel rather than from the page it set off for: a travel aimed
-      // somewhere else while it waited lands where it is aimed now.
-      if (travel.scrollsDocument) {
+    movementRef.current = null;
+    row.removeAttribute("data-moving");
+    publishRouteRowMove(null);
+    routeTravelSettledPageSignal.value = null;
+    if (liveRef.current) {
+      liveRef.current.style.top = "";
+    }
+    for (const picture of movement.pictures.values()) {
+      picture.remove();
+    }
+    if (movement.scrollsDocument) {
+      row.style.removeProperty("--navi-route-row-pin");
+      const {
+        pages,
+        currentIndex
+      } = latestRef.current;
+      if (currentIndex !== -1) {
         const {
           route,
           params
-        } = travel.page;
+        } = pages[currentIndex];
         arriveAtScrollPosition(route.buildUrl(params));
       }
-      // The page arriving is in the DOM and the transition has not started
-      // playing: the one moment both boxes can be known. After the scroll,
-      // which is what the box is measured through: the two states are at the
-      // same place in the layout without being at the same place in the window
-      // (see transition_window.js).
-      // The bars stay live under the pictures for a travel: only the box is
-      // photographed (see the TRAVEL_ATTRIBUTE css).
-      holdTransitionWindow(travel, elementRef.current, stateBefore, {
-        furnitureLive: true
-      });
-    });
-    travel.viewTransition = viewTransition;
-    // Subscribed first, so it reads before the scrub below writes anything.
-    viewTransition.ready.then(() => {
-      placeTransitionWindow(travel, TRAVEL_NAME);
-    }, ignoreSkipped);
-    if (scrub) {
-      // Said only now: the release has to have something to let go of, and the
-      // transition did not exist a line above.
-      travel.dropHold = holdViewTransition(() => {
-        viewTransition.skipTransition();
-        endTravel(travel);
-      });
+      movement.resumeScrollRecording();
     }
-    // Another transition starting SKIPS this one — there is only ever one in a
-    // document. That must end the travel here and now, and above all lift the
-    // hold: the hold is written in CSS against whatever transition is running
-    // (it has to be, so that everything named — a trait under a tab row —
-    // follows the same finger), so left on it would take hold of the transition
-    // that has just replaced ours. Born paused, with nobody holding it, that
-    // one never finishes: its pictures stand over a page that cannot be
-    // touched anymore.
-    viewTransition.finished.catch(() => {
-      // A transition that fails before it ever calls back leaves the page held:
-      // whoever asked for the hold gives it back, here as everywhere else.
-      renderWait.stop();
-      releaseRendering();
-      endTravel(travel);
-    });
-    if (!scrub) {
-      // Nobody is holding it: it plays as any transition does, and is over when
-      // the browser says so.
-      viewTransition.finished.then(() => {
-        endTravel(travel);
-      }, ignoreSkipped);
-      return travel;
-    }
-    // The pictures exist from `ready` on, and the finger may have moved a long
-    // way by then — held at their start meanwhile, so this is where they catch
-    // up with it rather than where they set off.
-    viewTransition.ready.then(() => {
-      if (travel === travelRef.current) {
-        scrubTravel(travel, travel.ratio);
-      }
-    }, ignoreSkipped);
-    return travel;
+    // A window recentred meanwhile is taken now.
+    render();
   };
 
-  // A page change nobody here asked for: a tab pressed, a key, the back button.
-  // The transition is started from what the router SAYS rather than from a
-  // render, because a render is one flush too late — by then the DOM holds the
-  // new page and the picture of the old one cannot be taken anymore.
-  //
-  // Watched as a position in the row rather than route by route. A route
-  // announces its own status, and the row's tabs can all be one route: the
-  // announcement then says a section changed without saying which is on screen,
-  // and it says it about things this row does not move for (a route that has
-  // now been visited, a param of its own that is not a tab of this row). Worse,
-  // a status is published from inside the routing and the params it carries are
-  // the ones known at that instant — a section that lands as a signal settles
-  // is announced late, or not at all. The signals ARE the position, so the
-  // position is read from them: one computed over the whole row, notified once
-  // per move, whichever route moved and whether by matching or by params.
+  // The address and the row, in step. The opening and a row given again around the
+  // page on screen have nothing to show for it; somebody else moving the address
+  // (a tab pressed, the back button) is a travel.
+  const answeredPageRef = useRef(null);
   useLayoutEffect(() => {
-    const currentIndexSignal = computed(() => currentPageIndex(pages));
-    const onRowMove = index => {
-      if (index === -1) {
-        return;
-      }
-      const page = pages[index];
-      if (samePage(page, currentPageRef.current)) {
-        // Where the row already was — the first reading of all, a row given
-        // again around the page on screen, and any move this box has already
-        // taken note of (a render writes it too). What it was still waiting
-        // for is here nonetheless, so the wait is called off.
-        if (samePage(pageAskedForRef.current, page)) {
-          pageAskedForRef.current = null;
-        }
-        return;
-      }
-      // Whoever asked for it: a tab of this row can be a param, and a move
-      // between two of them is a page change the path does not show (see
-      // page_change.js).
-      notePageChange();
-      // A page this box asked for itself — a travel's own navigation, or one
-      // it had given up waiting on: what arrives here is the answer to a
-      // question already answered, not somebody going somewhere.
-      if (samePage(pageAskedForRef.current, page)) {
-        pageAskedForRef.current = null;
-        currentPageRef.current = page;
-        return;
-      }
-      // Somewhere else arrived first: whatever this box was still waiting for
-      // is not coming, or no longer means anything. Forgotten here rather
-      // than kept, or the next press on that very tab would be taken for the
-      // late answer to a question nobody remembers asking.
-      pageAskedForRef.current = null;
-      // Asked for a page while one was already on its way: the travel in
-      // flight is the answer, aimed somewhere else. Starting a second one on
-      // top would leave this one's pictures to be dropped mid-slide.
-      if (travelRef.current) {
-        currentPageRef.current = page;
-        retargetTravel(travelRef.current, page);
-        return;
-      }
-      const fromIndex = pageIndexOf(pages, currentPageRef.current);
-      currentPageRef.current = page;
-      if (fromIndex === -1) {
-        // Arriving from outside this row: there is no pair of pages to show,
-        // so there is nothing to travel between.
-        return;
-      }
-      beginTravel({
-        page,
-        fromPage: pages[fromIndex],
-        direction: index > fromIndex ? "forward" : "back",
-        scrub: false
-      });
-    };
-    // `subscribe` rather than `effect`: it hands the value to a callback that
-    // is NOT being tracked, and what this one does — navigate, ask the router
-    // for another page — reads and writes the very signals the row is watched
-    // through.
-    return currentIndexSignal.subscribe(onRowMove);
-  }, [pages]);
-
-  // Rendering is held for the length of a navigation, so that whatever picture
-  // this box is about to take is of the page being LEFT (see
-  // rendering_hold.js).
-  useLayoutEffect(() => {
-    const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
-    // Nobody may have had a picture to take: this navigation is not always one
-    // this box travels. Whoever wanted the hold took it over (beginTravel)
-    // while the change was being applied, and left nothing here.
-    const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
-    return () => {
-      stopWatchingStart();
-      stopWatchingEnd();
-    };
-  }, []);
-
-  // What the next announcement will compare itself against: written after the
-  // render that shows it, so it is always the page one is looking at.
-  useLayoutEffect(() => {
-    currentPageRef.current = currentPage;
-  }, [currentPage]);
-
-  // Let go of far enough: the movement carries on from under the finger, at its
-  // own pace, to the end.
-  const finishTravel = travel => {
-    // Nobody is driving it anymore. `scrub` is who MOVES the pictures, not what
-    // set them off: left standing after the release, this travel would go on
-    // claiming a hand that is no longer there — and everything that asks
-    // "is somebody holding this?" before touching it (a press on the tab one
-    // came from, a wheel push) would be answered yes and do nothing, while the
-    // pages carry on to a page the router has already left.
-    travel.scrub = false;
-    releaseHold();
-    travel.viewTransition.finished.then(() => endTravel(travel), () => endTravel(travel));
-  };
-
-  // Let go of too early: the pages go back the way they came, and the URL with
-  // them. The way back is not a travel of its own — the same animations are run
-  // backwards, and the page that was left is put back under the picture BEFORE
-  // the picture is dropped, so the two are the same thing at the moment they
-  // are swapped and nothing is seen changing.
-  const revertTravel = travel => {
-    travel.reverting = true;
-    // A revert somebody ASKED for — a press on the tab this travel came from —
-    // has a problem the others do not: that page is already back, and the
-    // picture being brought in is LIVE, so it shows the page one is going back
-    // to. Both sides then show the same thing and the way back is invisible:
-    // one presses, and one is simply there.
-    //
-    // So the pages are held where they are until the pictures have finished
-    // going back. Only the pages: unlike the hold a navigation takes to have
-    // its picture taken, nothing is being photographed here — everything else
-    // may go on rendering, and a tab row beside the box keeps answering.
-    const releaseRendering = freezeRouteRender();
-    const animations = travelAnimations(travel);
-    walkPicturesHome(animations, TRAVEL_LEAD_NAMES);
-    releaseHold(travel);
-    whenPicturesArrived(animations).then(async () => {
-      try {
-        pageAskedForRef.current = travel.fromPage;
-        // The page that was left is put back UNDER the picture before the
-        // picture is dropped, so the two are the same thing at the moment they
-        // are swapped: that only holds once the page is really back.
-        if (pageIsCurrent(travel.fromPage)) {
-          // It never left: the press that set this revert off put it back
-          // there, and the pages have been held where they were until now.
-          // Nothing to ask for, and nothing to wait for — waiting anyway is a
-          // render that never comes and a page frozen under its own pictures.
-          releaseRendering();
-        } else {
-          await whilePageRenders(travel.fromPage, () => onTravel({
-            route: travel.fromPage.route,
-            params: travel.fromPage.params,
-            cause: "revert"
-          }));
-        }
-        travel.viewTransition.skipTransition();
-      } finally {
-        if (travel.scrollsDocument) {
-          // The page coming back was read somewhere else, and the offset
-          // currently on the document is the one the page that came in put
-          // there. Given back once the page is really back — the render is
-          // what makes the document tall enough to hold that offset again —
-          // and the recording stays deaf until then, over the clamp the swap
-          // back makes on the way. Its own deafness rather than the travel's:
-          // the travel ends here, and this outlives it by a render. Written
-          // once the commit that says so has ended, as arriveAtScrollPosition
-          // asks.
-          const resumeScrollRecording = suspendScrollRecording();
-          const stopWatchingRender = observeRouteRender(() => {
-            stopWatchingRender();
-            queueMicrotask(() => {
-              const {
-                route,
-                params
-              } = travel.fromPage;
-              arriveAtScrollPosition(route.buildUrl(params));
-              resumeScrollRecording();
-            });
-          });
-        }
-        releaseRendering();
-        // A travel ENDS, whatever happened on the way back: put the state back,
-        // fail to drop the picture, be interrupted by something else — the one
-        // thing that must not happen is a travel that stays "in flight"
-        // forever. Nothing would lift the hold, the pictures would stand where
-        // they are over a page that cannot be touched, and every gesture after
-        // this one would find the box busy.
-        endTravel(travel);
-      }
-    });
-  };
-
-  // Taken back in hand: the pictures stop where they are and answer the finger
-  // again (see the CSS hold).
-  const holdTravel = travel => {
-    if (travel.ended || travel.reverting) {
-      return;
-    }
-    travel.scrub = true;
-    holdPictures(travel);
-    // Whatever asks for a transition next takes ours away (there is one per
-    // document): it must find this one already let go of, or it inherits a hold
-    // nobody is holding.
-    travel.dropHold = holdViewTransition(() => {
-      travel.viewTransition?.skipTransition();
-      endTravel(travel);
-    });
-  };
-
-  // The same travel, aimed at another page. The still it starts from does not
-  // change — only what is being brought in against it, and that one is LIVE:
-  // pointing the router elsewhere is all it takes for the picture to show that
-  // page instead.
-  const redirectTravel = (travel, page, direction) => {
-    travel.page = page;
-    // Everything the transition carries that is NOT the pages was measured
-    // against a destination this travel is no longer going to (see the CSS).
-    document.documentElement.setAttribute(TURNED_ATTRIBUTE, "");
-    if (direction === travel.direction) {
-      // Same way, another page: the pictures in hand are already the right
-      // pair, and nothing has to move.
-      return;
-    }
-    travel.direction = direction;
-    travel.ratio = 0;
-    // The other way round is another pair of keyframes, and naming another
-    // animation builds another Animation: whatever was collected answers to
-    // nobody now. They start again from the beginning, which is where a travel
-    // that turns around is.
-    travel.animations = null;
-    document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
-  };
-
-  // Somebody asked for a page while one was on its way. Where they asked for
-  // decides what that means.
-  const retargetTravel = (travel, page) => {
-    if (travel.scrub || travel.reverting || travel.ended || travel.noPicture) {
-      // A hand is holding the pages, or they are already on their way back:
-      // either way this travel's end is decided by somebody else.
-      return;
-    }
-    if (samePage(page, travel.page)) {
-      // Already on its way there.
-      return;
-    }
-    if (samePage(page, travel.fromPage)) {
-      // Back where it set off from: that is not another travel, it is this one
-      // undone — the same pictures, run backwards.
-      revertTravel(travel);
-      return;
-    }
-    const fromIndex = pageIndexOf(pages, travel.fromPage);
-    const toIndex = pageIndexOf(pages, page);
-    if (fromIndex === -1 || toIndex === -1) {
-      return;
-    }
-    redirectTravel(travel, page, toIndex > fromIndex ? "forward" : "back");
-  };
-
-  // One page further than the travel in flight is going, the same way: what
-  // a second swipe asks for over a page still arriving. Reached the way a tab
-  // pressed while it plays reaches it — the same pictures, the router pointed
-  // one page further (see redirectTravel) — so nothing restarts and nothing
-  // stops. Past the last page there is nothing to aim at, and the travel
-  // simply arrives where it was going.
-  const aimOnePageFurther = (travel, sign) => {
-    const fromIndex = pageIndexOf(pages, travel.page);
-    const page = sign > 0 ? pages[fromIndex - 1] : pages[fromIndex + 1];
-    if (fromIndex === -1 || !page) {
-      return;
-    }
-    redirectTravel(travel, page, travel.direction);
-    pageAskedForRef.current = page;
-    travelTo(page, "drag");
-  };
-  const endTravel = travel => {
-    if (travel.ended) {
-      return;
-    }
-    travel.ended = true;
-    travel.dropHold?.();
-    travel.dropHold = null;
-    if (travelRef.current === travel) {
-      document.documentElement.removeEventListener("touchmove", keepTouchRefusable);
-    }
-    // The offset on the scrollport belongs to a page again — the one that
-    // arrived, or the one put back. A travel that never got as far as saying
-    // which still has to give the recording back; the gesture's own
-    // pseudo-travel never took it (see noPicture).
-    travel.resumeScrollRecording?.();
-    // Its own hold, always — whether or not this travel is still the current
-    // one. Nobody else will lift it.
-    releaseHold(travel);
-    if (travelRef.current === travel) {
-      travelRef.current = null;
-      // Given back, so another box may wear it: kept, two of them on a page
-      // would both answer to it and the browser refuses the whole transition
-      // rather than pick.
-      unnameAfterTravel(elementRef.current);
-      document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
-      document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
-      document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
-      document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
-      releaseTransitionWindow(travel);
-      releaseTransitionDestination(travel);
-    }
-  };
-
-  // What a gesture is about, whichever hand made it: a thumb dragging the page
-  // and two fingers pushing it sideways on a trackpad ask for the same travel,
-  // so they are answered by the same three callbacks and only the reading of
-  // the input differs (see drag_to_travel.js).
-  const boxSizeOnAxis = () => {
-    const box = elementRef.current.getBoundingClientRect();
-    return axis === "x" ? box.width : box.height;
-  };
-  const travelHandlers = {
-    onStart: ({
-      sign,
-      target
-    }) => {
-      const size = boxSizeOnAxis();
-      const travelInFlight = travelRef.current;
-      if (travelInFlight) {
-        // A travel is already playing, and a second one cannot be started on
-        // top of it: there is one picture of the page being left, and it is
-        // taken. So the gesture takes over THIS travel instead of asking for
-        // another — which is what a hand reaching for a page still sliding is
-        // asking for anyway. It is refused only when there is nothing to take
-        // over (no picture at all).
-        //
-        // Never given up, even then: a gesture handed back to the browser is a
-        // page that rocks under a travel that is already moving.
-        // A travel being undone is not up for grabs either: it is already on
-        // its way back and its end is decided. Held again mid-revert, its
-        // animations would never finish — and the wait for them never resolves,
-        // so the pictures stay where they are, over a page that cannot be
-        // touched anymore.
-        if (travelInFlight.noPicture || travelInFlight.ended || travelInFlight.reverting) {
-          return {
-            size,
-            travelBack: false,
-            travelOn: false
-          };
-        }
-        // Stopped here, where it stands now: left playing under the press
-        // until the hand said it holds it (see inFlight in onPointerDown).
-        holdTravel(travelInFlight);
-        // Where the pictures stand right now, said as a pull: what the finger
-        // continues from, so nothing jumps when it takes them over.
-        const ratio = ratioOfTravel(travelInFlight);
-        travelInFlight.ratio = ratio;
-        const pulledSign = travelInFlight.direction === "back" ? 1 : -1;
-        return {
-          size,
-          slack: ratio * size * pulledSign,
-          // One box, the one being travelled. Either of its ends can be walked
-          // out of and the hand carries on into the next page, but that is a
-          // travel of its own and the gesture asks for it when it gets there
-          // (see onEdge) — from here there is one page on its way.
-          travelBack: travelInFlight.direction === "back",
-          travelOn: travelInFlight.direction === "forward"
-        };
-      }
-      // Dragging the page towards the end of the axis brings in what is
-      // BEFORE it, the way pushing a sheet to the right reveals its left.
-      const page = sign > 0 ? pages[currentIndex - 1] : pages[currentIndex + 1];
-      if (!page || !size || scrollRoomTowards(target, elementRef.current, axis, sign)) {
-        return false;
-      }
-      if (CAN_KEEP_PICTURE) {
-        beginTravel({
-          page,
-          fromPage: pages[currentIndex],
-          direction: sign > 0 ? "back" : "forward",
-          scrub: true,
-          change: () => travelTo(page, "drag")
+    const row = rowRef.current;
+    const page = currentIndex === -1 ? null : pages[currentIndex];
+    const pane = panesOf(row)[currentIndex];
+    const answered = answeredPageRef.current;
+    if (samePage(answered, page)) {
+      if (pane && !movementRef.current && !restsOn(row, pane)) {
+        row.scrollTo({
+          left: pane.offsetLeft,
+          behavior: "instant"
         });
-      } else {
-        travelRef.current = {
-          page,
-          noPicture: true,
-          ended: false
-        };
       }
-      return {
-        size,
-        travelBack: sign > 0,
-        travelOn: sign < 0
-      };
-    },
-    onPull: ({
-      progress
-    }) => {
-      const travel = travelRef.current;
-      if (!travel || travel.noPicture) {
-        return;
+      return;
+    }
+    answeredPageRef.current = page;
+    if (!page || !pane) {
+      return;
+    }
+    const asked = askedPageRef.current;
+    if (asked && samePage(asked, page)) {
+      askedPageRef.current = null;
+      // The hand landed before the address did.
+      if (movementRef.current?.landed && restsOn(row, pane)) {
+        Promise.resolve().then(endMovement);
       }
-      // Only what goes the way the gesture set off: a hand turning around
-      // mid-drag is putting the page back, and there is no second picture to
-      // show it anything else.
-      const ratio = travel.direction === "back" ? progress : -progress;
-      travel.ratio = ratio > 0 ? ratio : 0;
-      scrubTravel(travel, travel.ratio);
-    },
-    // A page walked all the way to one of its ends and the finger still going:
-    // what it asks for is the page past that end, and it has said so by not
-    // stopping. Which end decides how it is answered, and the two are not the
-    // same amount of work.
-    onEdge: ({
-      sign,
-      thrown
-    }) => {
-      const travel = travelRef.current;
-      if (thrown) {
-        // Caught, then thrown on before its end: the page after is reached by
-        // aiming the travel in hand further, and let go of it arrives there.
-        // There is no box to hand over — a new one would mean jumping these
-        // pictures the rest of the way first, a page seen leaping — so none
-        // is answered, and the gesture lets the travel go as it is.
-        if (travel && !travel.noPicture && !travel.ended && !travel.reverting) {
-          aimOnePageFurther(travel, sign);
-        }
-        return false;
-      }
-      if (!travel || travel.noPicture || travel.ended || travel.reverting || !CAN_KEEP_PICTURE) {
-        return false;
-      }
-      // Where the page in hand is coming from, said the way the gesture says
-      // it: dragging towards the end of the axis brings in what comes BEFORE.
-      const pulledSign = travel.direction === "back" ? 1 : -1;
-      const direction = sign > 0 ? "back" : "forward";
-      if (sign === pulledSign) {
-        // Walked whole. What the pictures show is the page that has arrived,
-        // and the one leaving is gone: there is no pair left to travel with, so
-        // the next travel needs pictures of its own — a navigation, a render, a
-        // snapshot, and for those few frames the page does not follow the
-        // finger before catching up with it (see `ready` in beginTravel). At
-        // the start of a gesture that gap is invisible, the hand has barely
-        // moved; here the hand is at full speed, and this is what it costs.
-        //
-        // Where we are is what THIS travel was bringing in — the URL changed at
-        // the first pixel, so `currentIndex` belongs to a render this gesture
-        // is older than.
-        const fromIndex = pageIndexOf(pages, travel.page);
-        const page = direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];
-        if (fromIndex === -1 || !page) {
-          return false;
-        }
-        // At their very end before they are let go of: what ends the travel in
-        // hand is the next transition starting (there is one per document, and
-        // the funnel skips ours), and a picture skipped short of its end is a
-        // page seen jumping the last few pixels.
-        scrubTravel(travel, 1);
-        travel.ratio = 1;
-        beginTravel({
-          page,
-          fromPage: travel.page,
-          direction,
-          scrub: true,
-          change: () => travelTo(page, "drag")
+      return;
+    }
+    if (!answered || restsOn(row, pane)) {
+      if (!restsOn(row, pane)) {
+        row.scrollTo({
+          left: pane.offsetLeft,
+          behavior: "instant"
         });
-        return {
-          size: boxSizeOnAxis(),
-          travelBack: sign > 0,
-          travelOn: sign < 0
-        };
       }
-      // Walked back to where it began, and out the other side. Nothing has to
-      // be built here: the pictures in hand are ALREADY the pair this new
-      // travel needs — the still of the page it starts from is the same one,
-      // and the picture being brought in is live, so pointing the router at the
-      // other neighbour is enough for it to show that one instead. The travel
-      // turns around where it stands, on the same transition and under the same
-      // hand, and there is no gap at all.
-      const fromIndex = pageIndexOf(pages, travel.fromPage);
-      const page = direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];
-      if (fromIndex === -1 || !page) {
-        return false;
-      }
-      redirectTravel(travel, page, direction);
-      pageAskedForRef.current = page;
-      travelTo(page, "drag");
-      return {
-        size: boxSizeOnAxis(),
-        travelBack: sign > 0,
-        travelOn: sign < 0
-      };
-    },
-    // The next swipe over a page still arriving: the page after it, and the
-    // travel in flight goes there — the same pictures, the router pointed one
-    // page further, exactly what a tab pressed while it plays does (see
-    // retargetTravel). Nothing is held and nothing restarts.
-    onPushOn: ({
-      sign
-    }) => {
-      const travel = travelRef.current;
-      if (!travel || travel.noPicture || travel.ended || travel.reverting || travel.scrub) {
-        return false;
-      }
-      aimOnePageFurther(travel, sign);
-      return true;
-    },
-    onEnd: ({
-      travels
-    }) => {
-      gestureRef.current = null;
-      const travel = travelRef.current;
-      if (!travel) {
-        // The travel this gesture was holding ended under it. Nothing left to
-        // decide, but the hold is this gesture's own doing and nobody else will
-        // take it off — a hold nobody lifts is a page nobody can touch.
-        releaseHold();
-        return;
-      }
-      if (travel.noPicture) {
-        travelRef.current = null;
-        if (travels) {
-          travelTo(travel.page, "drag");
-        }
-        return;
-      }
-      if (travels) {
-        finishTravel(travel);
-        return;
-      }
-      revertTravel(travel);
-    }
-  };
-  const onPointerDown = pointerDownEvent => {
-    if (!travelByDrag || gestureRef.current) {
       return;
     }
-    // A travel playing under the press is left playing: a hand landing on a
-    // page still sliding is far more often the next swipe than a catch, and
-    // stopping the pages at the press is what that swipe feels as a stall. The
-    // gesture listens to the hand first and says which it was — the next page
-    // (onPushOn) or this one, held (onStart) — see inFlight in
-    // drag_to_travel.js. Either way the press is not refused: a gesture given
-    // back to the browser is a page that rocks under a travel already moving.
-    const travelInFlight = travelRef.current;
-    const leftPlaying = travelInFlight && !travelInFlight.noPicture && !travelInFlight.ended && !travelInFlight.reverting && !travelInFlight.scrub;
-    if (currentIndex === -1) {
-      return;
-    }
-    const giveUp = () => {
-      gestureRef.current = null;
-    };
-    const gesture = startDragToTravel(pointerDownEvent, {
-      element: elementRef.current,
-      axes: axis,
-      inFlight: leftPlaying ? {
-        axis,
-        // The way a pull bringing in the page on its way would go:
-        // dragging towards the end of the axis brings in what is BEFORE.
-        way: travelInFlight.direction === "back" ? 1 : -1
-      } : false,
-      ...travelHandlers,
-      onGiveUp: giveUp
+    beginMovement({
+      travelling: true
     });
-    if (!gesture) {
-      // Not a press this box can be about — something that reads the pointer
-      // itself, a box below it that travels the same way.
-      giveUp();
-      return;
-    }
-    gestureRef.current = gesture;
-  };
-
-  // A press that lands ON the box while a travel is playing does not reach it:
-  // the browser's transition covers the page and the press is delivered to the
-  // document root instead, whatever the pictures are told about pointer events.
-  // So while a travel plays, the press is caught at the document and handed to
-  // the box when it fell inside it — which is where the hand thinks it pressed.
-  pointerDownRef.current = onPointerDown;
-  useLayoutEffect(() => {
-    const onDocumentPointerDown = pointerDownEvent => {
-      if (!travelRef.current) {
-        return;
-      }
-      const boxElement = elementRef.current;
-      if (!boxElement || boxElement.contains(pointerDownEvent.target)) {
-        // It got there on its own.
-        return;
-      }
-      const {
-        left,
-        right,
-        top,
-        bottom
-      } = boxElement.getBoundingClientRect();
-      const {
-        clientX,
-        clientY
-      } = pointerDownEvent;
-      if (clientX < left || clientX > right || clientY < top || clientY > bottom) {
-        return;
-      }
-      pointerDownRef.current(pointerDownEvent);
-    };
-    document.addEventListener("pointerdown", onDocumentPointerDown, true);
-    return () => {
-      document.removeEventListener("pointerdown", onDocumentPointerDown, true);
-    };
-  }, []);
-
-  // A wheel pushing the box sideways asks for a PAGE, not for a place between
-  // two: one push, one neighbour — the same thing a tab pressed asks for, and
-  // it plays at its own pace rather than under a hand (see watchWheelTravel).
-  const travelOneStep = sign => {
-    const travelInFlight = travelRef.current;
-    if (travelInFlight?.scrub) {
-      // A hand is holding the pages. They are its until it lets go.
-      return;
-    }
-    // Where the box is going, which is not where it is: a step asked for while
-    // a travel plays is the page after the one on its way.
-    const fromPage = travelInFlight ? travelInFlight.page : pages[currentIndex];
-    const fromIndex = pageIndexOf(pages, fromPage);
-    if (fromIndex === -1) {
-      return;
-    }
-    const page = sign > 0 ? pages[fromIndex - 1] : pages[fromIndex + 1];
-    if (!page) {
-      return;
-    }
-    if (travelInFlight) {
-      // Finished where it stands before the next one sets off: what ends it is
-      // that transition starting, and a picture dropped short of its end is a
-      // page seen jumping the last few pixels.
-      scrubTravel(travelInFlight, 1);
-      travelInFlight.ratio = 1;
-    }
-    beginTravel({
-      page,
-      fromPage,
-      direction: sign > 0 ? "back" : "forward",
-      scrub: false,
-      change: () => travelTo(page, "wheel")
+    row.scrollTo({
+      left: pane.offsetLeft,
+      behavior: "smooth"
     });
-  };
+    // In this very commit: the tab pressed already wears its bar, and the first
+    // scroll event is a frame away.
+    sayRowMoves();
+  });
 
-  // Reached through a ref, and the watcher is never rebuilt for it: a travel
-  // CHANGES the current page, so anything listening on `currentIndex` would be
-  // torn down halfway through the very gesture that is moving it.
-  travelHandlersRef.current = travelHandlers;
-  const travelOneStepRef = useRef(null);
-  travelOneStepRef.current = travelOneStep;
+  // Somebody else is about to move the address to another page of a window: its
+  // picture has to be taken now, while it still shows the page being left.
   useLayoutEffect(() => {
-    if (!travelByDrag) {
+    if (!windowed) {
       return undefined;
     }
-    return watchWheelTravel(elementRef.current, {
-      axes: axis,
-      onStep: ({
-        sign
-      }) => travelOneStepRef.current(sign)
+    return observeBeforeRouting(({
+      url
+    }) => {
+      const {
+        pages,
+        currentIndex
+      } = latestRef.current;
+      const asked = askedPageRef.current;
+      if (asked || currentIndex === -1) {
+        return;
+      }
+      const path = new URL(url, window.location.href).pathname;
+      if (pathOf(pages[currentIndex]) === path || !pages.some(page => pathOf(page) === path)) {
+        return;
+      }
+      const movement = beginMovement({
+        travelling: true
+      });
+      leavePictureOfLive(movement);
     });
-  }, [travelByDrag, axis]);
+  }, [windowed]);
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    const onScroll = () => {
+      const {
+        pages,
+        currentIndex,
+        travelByDrag
+      } = latestRef.current;
+      const panes = panesOf(row);
+      if (panes.length < 2) {
+        return;
+      }
+      const moving = movementRef.current;
+      const pane = panes[currentIndex];
+      if (!moving && pane && restsOn(row, pane)) {
+        // Written by this box, at rest: nobody is moving anything.
+        return;
+      }
+      const movement = moving || beginMovement({});
+      sayRowMoves();
+      if (movement.travelling || !travelByDrag || !pane) {
+        return;
+      }
+      const pulled = row.scrollLeft - pane.offsetLeft;
+      if (Math.abs(pulled) < SET_OFF_PULL) {
+        return;
+      }
+      const index = pulled > 0 ? currentIndex + 1 : currentIndex - 1;
+      const paneTowards = panes[index];
+      const page = pages[index];
+      if (!paneTowards || samePage(askedPageRef.current, page)) {
+        return;
+      }
+      if (windowed) {
+        if (movement.pictures.has(index)) {
+          return;
+        }
+        leavePictureOfLive(movement);
+      } else if (paneTowards.hasAttribute("data-built")) {
+        return;
+      }
+      if (routeTravelSettledPageSignal.peek() === null) {
+        routeTravelSettledPageSignal.value = pages[currentIndex];
+      }
+      askFor(page);
+    };
+    const onLand = () => {
+      const movement = movementRef.current;
+      if (!movement) {
+        return;
+      }
+      const panes = panesOf(row);
+      const pane = pageAtRest(row, panes);
+      if (!pane) {
+        return;
+      }
+      movement.landed = true;
+      const {
+        pages
+      } = latestRef.current;
+      const page = pages[panes.indexOf(pane)];
+      if (!page || pageIsCurrent(page)) {
+        if (!askedPageRef.current || samePage(askedPageRef.current, page)) {
+          endMovement();
+        }
+        return;
+      }
+      if (samePage(askedPageRef.current, page)) {
+        return;
+      }
+      if (windowed && !movement.pictures.has(panes.indexOf(pane))) {
+        leavePictureOfLive(movement);
+      }
+      Promise.resolve(askFor(page)).then(() => {
+        if (pageIsCurrent(page)) {
+          return;
+        }
+        // Refused, or sent elsewhere: the row says where the address is.
+        askedPageRef.current = null;
+        const {
+          currentIndex
+        } = latestRef.current;
+        const paneCurrent = panesOf(row)[currentIndex];
+        if (paneCurrent) {
+          movement.travelling = true;
+          row.scrollTo({
+            left: paneCurrent.offsetLeft,
+            behavior: "smooth"
+          });
+        }
+      });
+    };
+    const stopWatching = watchRowScroll(row, {
+      onScroll,
+      onLand
+    });
+    return () => {
+      stopWatching();
+      movementRef.current?.resumeScrollRecording?.();
+      movementRef.current = null;
+      publishRouteRowMove(null);
+    };
+  }, [windowed]);
+
+  // A window's page lands on a pane as soon as the address does. The row has come
+  // to rest on it or will: when it already has, nothing else will say so.
+  useLayoutEffect(() => {
+    const movement = movementRef.current;
+    if (!movement?.landed || currentIndex === -1) {
+      return;
+    }
+    const pane = panesOf(rowRef.current)[currentIndex];
+    if (pane && restsOn(rowRef.current, pane)) {
+      Promise.resolve().then(endMovement);
+    }
+  }, [currentIndex]);
+  const rowKind = pages.length < 2 && windowed ? "still" : travelByDrag ? "" : "code";
   return jsx("div", {
     ...rest,
-    ref: elementRef,
     className: className ? `navi_route_travel ${className}` : "navi_route_travel",
-    "data-axis": axis
-    // What travels here, and on which axis: read by the shared gesture
-    // stylesheet, which keeps this box's scrolling from spilling onto the
-    // page (see drag_to_travel.js).
-    ,
-    "data-drag-travel": travelByDrag ? axis : undefined
-    // The same fact said once per gesture, and for the other question the
-    // DOM answers: a box that travels INSIDE this one — a row of slides in a
-    // page — takes the axis it walks, and these are what it reads to know
-    // this box walks it too.
-    ,
-    "data-travel-by-drag": travelByDrag ? axis : undefined,
-    "data-travel-by-wheel": travelByDrag ? axis : undefined
-    // A touch this box may take has to be refusable before the finger lands,
-    // or the browser can cancel an established travel mid-swipe by scrolling
-    // the axis touch-action leaves it — see keepTouchRefusable for why a JSX
-    // prop is enough (an element-level touchmove listener is non-passive).
-    ,
-    onTouchMove: travelByDrag ? keepTouchRefusable : undefined,
-    onPointerDown: onPointerDown,
-    children: children
+    children: jsx("div", {
+      ref: rowRef,
+      "data-route-travel-row": rowKind
+      // What a box around this one and a control acting on the press read: this
+      // axis is taken here (see drag_to_travel.js).
+      ,
+      "data-travel-by-drag": travelByDrag && rowKind !== "still" ? "x" : undefined,
+      children: windowed ? jsxs(Fragment, {
+        children: [pages.map((page, index) => jsx("div", {
+          "data-route-row-pane": "",
+          style: {
+            gridColumn: index + 1
+          }
+        }, index)), jsx("div", {
+          ref: liveRef,
+          "data-route-row-live": "",
+          style: {
+            gridColumn: liveIndex + 1
+          },
+          children: children
+        }), jsx("div", {
+          ref: picturesRef,
+          "data-route-row-pictures": ""
+        })]
+      }) : jsx(RouteRowContext.Provider, {
+        value: true,
+        children: children
+      })
+    })
   });
 };
 
-// Nobody holds the pictures anymore: whatever they were told (a time to stand
-// at, a direction to run in) is what they carry on from.
-// Which travel is keeping the pictures still, if any. The hold belongs to the
-// travel that took it and only that one may give it back: a travel ending after
-// another has taken over must not lift a hold it no longer owns, and — the way
-// this went wrong — a travel whose end comes once something else has replaced
-// it must still lift its OWN. A hold left behind is a page frozen under
-// pictures nobody is holding.
-let travelHoldingPictures = null;
-const holdPictures = travel => {
-  travelHoldingPictures = travel;
-  document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
-};
-const releaseHold = travel => {
-  if (travel && travelHoldingPictures !== travel) {
-    return;
-  }
-  travelHoldingPictures = null;
-  document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
+// How far down the row the reader is looking, for a page brought in: a page on
+// screen scrolls with the document, and one arriving has to start from there.
+const pinOf = row => {
+  const {
+    top
+  } = row.getBoundingClientRect();
+  return top < 0 ? -top : 0;
 };
 
-// The animations of the pictures, asked for again until there are some: they
-// come into existence with the transition, several frames after it was asked
-// for, and the gesture has already begun by then. Kept once found — the set
-// does not change for the length of one travel.
-const travelAnimations = travel => {
-  if (travel.animations) {
-    return travel.animations;
-  }
-  const animations = viewTransitionAnimations();
-  if (animations.length) {
-    travel.animations = animations;
-  }
-  return animations;
-};
-
-// How far a travel has come, read off the pictures themselves rather than off
-// what the last gesture wrote: one let go of is still moving, and a hand
-// reaching for it must find it where it IS.
-const ratioOfTravel = travel => {
-  const animations = travelAnimations(travel);
-  const animation = findLeadAnimation(animations, TRAVEL_LEAD_NAMES) || animations[0];
-  if (!animation) {
-    return travel.ratio;
-  }
-  const timing = animation.effect.getComputedTiming();
-  const duration = timing.delay + timing.activeDuration;
-  if (!duration) {
-    return travel.ratio;
-  }
-  return animation.currentTime / duration;
-};
-
-// Where the two pictures stand, said as a moment in the movement they would
-// have played on their own: the browser knows how they move (it is written in
-// CSS), so the finger only has to say how far in. They are held still by CSS
-// while this lasts, so a time written here is a place they stay at.
-const scrubTravel = (travel, ratio) => {
-  for (const animation of travelAnimations(travel)) {
-    const timing = animation.effect.getComputedTiming();
-    const duration = timing.delay + timing.activeDuration;
-    animation.currentTime = ratio * duration;
-  }
-};
-
-// A page change, carried out and then waited for until the page it selects is
-// really on screen. The container doing the swapping is the only one who knows
-// when that is (observeRouteRender): a route matching is a signal changing, and
-// how many passes Preact takes to answer it is its own business.
-//
-// Nothing is waited for when the change did not take — a route refused, a
-// redirect somewhere else. There is no page on its way then, and this runs
-// inside the callback of a view transition: the browser has stopped rendering
-// and is waiting on this very promise to take its picture, so a wait that never
-// ends is a page frozen under a transition that never became ready.
-// Listening starts before the change, or a render landing while the change is
-// being awaited is a render nobody heard. Armed apart from the wait itself
-// because the two do not always happen at the same moment: a view transition
-// calls its update callback a frame after it is started, and the render can
-// land in that gap — see beginTravel, which arms this the moment the travel is
-// decided and hands it over.
-const armRouteRenderWait = () => {
-  let stopListening;
-  const rendered = new Promise(resolve => {
-    stopListening = observeRouteRender(resolve);
-  });
-  return {
-    rendered,
-    stop: () => stopListening()
-  };
-};
-const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
-  try {
-    await change();
-    if (pageIsCurrent(page)) {
-      await wait.rendered;
+// What a clone does not take: where what scrolls inside was left.
+const copyScrollPositions = (from, to) => {
+  const fromElements = from.querySelectorAll("*");
+  const toElements = to.querySelectorAll("*");
+  for (let i = 0; i < fromElements.length; i++) {
+    const {
+      scrollTop,
+      scrollLeft
+    } = fromElements[i];
+    if (scrollTop || scrollLeft) {
+      toElements[i].scrollTop = scrollTop;
+      toElements[i].scrollLeft = scrollLeft;
     }
-  } finally {
-    wait.stop();
   }
-};
-
-// Whether the document's offset belongs to the tabs. The pages of a row scroll
-// the document when nothing between the box and the viewport is a scroll
-// container: the tab on screen is then what makes the document tall, and the
-// offset on it is that tab's — it has to be given back with the tab, and the
-// browser's clamping of it while pages are swapped has to be ignored.
-//
-// A box that lives inside a scroller of its own — a frame in an article, a
-// panel beside other content — shares nothing with the document: the offset
-// there is the surrounding page's, the reader never left it, and a travel has
-// no business moving it. Each of its pages brings its own scrollport, which
-// goes away with the page and has nothing to restore.
-//
-// includeHidden, because an `overflow: hidden` ancestor is one of those
-// scrollers: it shows no scrollbar and still holds an offset of its own, and
-// what is under it never reaches the document. A wrapper that merely clips
-// (`overflow: clip`) holds nothing and is walked straight through — see
-// is_scrollable.js.
-const pagesScrollTheDocument = element => {
-  // What window.scrollTo moves. A body whose overflow is the viewport's is
-  // walked through to it (see overflowGoesToViewport in @jsenv/dom); a body
-  // the walk stops on scrolls itself, out of the viewport's reach.
-  return getScrollContainer(element, {
-    includeHidden: true
-  }) === document.documentElement;
 };
 
 // A page of the row: a route, and the params that say which of its tabs when
@@ -42766,8 +42256,6 @@ const samePage = (a, b) => {
   }
   return a.route === b.route && compareTwoJsValues(a.params, b.params);
 };
-const pageIndexOf = (pages, page) => pages.findIndex(candidate => samePage(candidate, page));
-
 // The FIRST page that answers, as with the branches of a <Route>: several
 // routes match at once — a literal one and the parameterized one it is a case of
 // ("/games/new" is also a "/games/:gameId"), a section and the page inside it —
@@ -42786,20 +42274,6 @@ const currentPageIndex = pages => {
     }
   }
   return currentIndex;
-};
-
-// A transition skipped by another one starting is an outcome, not a failure.
-const ignoreSkipped = () => {};
-
-// The name is lent to the box that is travelling and taken back afterwards.
-// There is one transition in a document at a time, so one box wears it at a
-// time — and the others, unnamed, are simply not captured: they stay live
-// under the pictures rather than being frozen with the page.
-const nameForTravel = element => {
-  element.style.viewTransitionName = TRAVEL_NAME;
-};
-const unnameAfterTravel = element => {
-  element.style.viewTransitionName = "";
 };
 
 /**
@@ -44606,11 +44080,8 @@ const clearCommand = (source, event) => {
       return;
     }
     // Only what is open: the clear cross of a picker sits on the closed
-    // trigger, and asking that trigger to close is asking it to do nothing —
-    // except that the ask goes through the interaction gate, which turns it
-    // down while the clear it just sent is still running and says so out loud
-    // ("this element is busy"). A clear pressed INSIDE an open popup is the
-    // one this is for: it answers the popup, so the popup goes away.
+    // trigger, with nothing to close. A clear pressed INSIDE an open popup is
+    // the one this is for: it answers the popup, so the popup goes away.
     const expandable = resolveClosestExpandable(source);
     if (expandable?.getAttribute("aria-expanded") !== "true") {
       return;
@@ -48466,7 +47937,7 @@ const useRenderScope = (init, update) => {
  * interface UIStateController {
  *   id: string;
  *   controlType: string;          // Used for debug logging
- *   uiStateSignal: Signal;        // Accessed by button children to inherit parent value
+ *   uiStateSignal: Signal | null; // What a button child with no value of its own inherits (null: nothing)
  *   registerChild(child): void;   // Called on child mount
  *   onChildUIAction(child, e, { stateChanged: boolean }): void; // Called when a child fires a UI action
  *   unregisterChild(child): void; // Called on child unmount
@@ -50872,7 +50343,12 @@ const useUIFacadeStateController = (props, realUIStateController) => {
         props,
         pushStateDownToChild,
         ref: realUIStateController.ref,
-        uiStateSignal: realUIStateController.uiStateSignal,
+        // Nothing for a button in the popup to inherit. The picker's value is
+        // what its one child holds, and a button is refused as that child
+        // (canRegisterAsFacadeChild): it answers for itself. Handed the value,
+        // its action would run with the picker's selection over the params it
+        // was bound with — a "refresh" in a sort picker sending the sort order.
+        uiStateSignal: null,
         controlHostProps: realUIStateController.controlHostProps,
         readOnlyWithoutRun: realUIStateController.readOnlyWithoutRun,
         registerChild: (child) => {
@@ -51003,7 +50479,6 @@ const useUIFacadeStateController = (props, realUIStateController) => {
     (s) => {
       s.controller.props = props;
       s.controller.ref = realUIStateController.ref;
-      s.controller.uiStateSignal = realUIStateController.uiStateSignal;
       s.controller.controlHostProps = realUIStateController.controlHostProps;
       s.controller.readOnlyWithoutRun =
         realUIStateController.readOnlyWithoutRun;
@@ -53009,21 +52484,20 @@ const useInteractiveProps = (props, {
     // — a diskette saving a row into the reader's own address book stays
     // pressable on a game nobody may edit. Its own props still hold; only what
     // came from above is dropped (see self_interactions.js for the three modes).
-    const zoneStateApplies = !selfInteractionsIgnoreBlock(props);
     // A press that only leaves the popup it sits in writes nothing to the zone
-    // around it either, so that zone being read-only — or holding a write the
-    // network policy keeps — does not hold it: the popup answers the close
-    // itself. A read-only picker's popup then closes from its own button as
-    // it does from a press outside, and refuses both alike when it holds a
-    // change it cannot send.
-    const zoneReadOnlyApplies = zoneStateApplies && !pressOnlyLeaves(props);
+    // around it either, so that zone being disabled, read-only or busy — or
+    // holding a write the network policy keeps — does not hold it: the popup
+    // answers the close itself. A read-only picker's popup then closes from its
+    // own button as it does from a press outside, and refuses both alike when it
+    // holds a change it cannot send or a run it cannot give up on.
+    const zoneStateApplies = !selfInteractionsIgnoreBlock(props) && !pressOnlyLeaves(controlInfo.controlType, props);
     // A press feeding nothing to the write around it — a travel, a page, a
     // uiAction, a function of its own — has nothing for the network policy to
     // keep: only its own verb holds it, as anywhere else. What the zone holds
     // for its own reasons (read-only, busy) still holds it.
     const asksNothingOfTheWrite = pressAsksNothingOfTheWrite(controlInfo.controlType, props, boundAction);
     const controlDisabled = zoneStateApplies && controlDisabledFromAbove;
-    const controlReadOnly = zoneReadOnlyApplies && !(asksNothingOfTheWrite && controlReadOnlyFromAbove === "network-policy") && controlReadOnlyFromAbove;
+    const controlReadOnly = zoneStateApplies && !(asksNothingOfTheWrite && controlReadOnlyFromAbove === "network-policy") && controlReadOnlyFromAbove;
     const controlLoading = zoneStateApplies && controlLoadingFromAbove;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
@@ -53042,7 +52516,7 @@ const useInteractiveProps = (props, {
     // picker's popup) — refuses before the press and says why (see
     // network_policy.js): a press that looks accepted and fails after is what
     // the policy exists to avoid.
-    const heldByNetworkPolicy = networkPolicyReason !== null && (isWriteAction(boundAction) || Boolean(zoneReadOnlyApplies && !asksNothingOfTheWrite && parentAction && isWriteAction(parentAction)) || controlReadOnly === "network-policy");
+    const heldByNetworkPolicy = networkPolicyReason !== null && (isWriteAction(boundAction) || Boolean(zoneStateApplies && !asksNothingOfTheWrite && parentAction && isWriteAction(parentAction)) || controlReadOnly === "network-policy");
     // Held back because the surface above already has as many runs in flight as
     // it allows (see parallel_guard.js). Only a control that would START one:
     // anything without an action of its own runs nothing and has nothing to
@@ -53616,10 +53090,11 @@ const splitControlProps = (props, {
   return [controlRootProps, controlHostProps];
 };
 // What a press leaving a popup asks for: closing it, or cancelling it. Only on
-// a control running nothing of its own — one with an action writes, wherever
-// it then leads.
+// a button or a link running nothing of its own — one with an action writes,
+// wherever it then leads, and on a field or a form `command` is what follows
+// the value it writes.
 const LEAVING_COMMAND_SET = new Set(["--navi-close", "--navi-cancel"]);
-const pressOnlyLeaves = props => LEAVING_COMMAND_SET.has(props.command) && !props.action;
+const pressOnlyLeaves = (controlType, props) => (controlType === "button" || controlType === "link") && LEAVING_COMMAND_SET.has(props.command) && !props.action;
 // What these commands move reads only the person's place: the slide shown,
 // the item pointed at, the scroll, the page (see commands.js).
 const COMMANDS_ASKING_NOTHING_OF_THE_WRITE = new Set(["--navi-right", "--navi-left", "--navi-down", "--navi-up", "--navi-previous", "--navi-next", "--navi-first", "--navi-last", "--navi-go-to-slide", "--navi-back", "--navi-scroll", "--navi-nav-to", "--navi-nav-back"]);
@@ -56759,17 +56234,68 @@ const TextShrinkWrap = props => {
     shrinkWrap: undefined
   });
 };
-// Whether the text is cut is read on the axis navi cuts it on: one line ends
-// in an ellipsis on the inline axis, n lines are clamped on the block one. The
-// 1px is the rounding of a box that exactly fits.
+// Whether the text is cut is read from its line boxes against the content box,
+// on the axis navi cuts it on: one line ends in an ellipsis on the inline axis,
+// n lines are clamped on the block one. Not from scrollWidth/scrollHeight: the
+// scroll extent holds the padding, so a text cut inside its end padding would
+// read as fitting.
 const isTextTruncated = (element, maxLines) => {
   if (maxLines === 1 || maxLines === "1") {
-    return element.scrollWidth - element.clientWidth > 1;
+    const content = getContentEdges(element);
+    // The ellipsis is painted over a line laid out at its full width. The
+    // 0.5px absorbs the rounding of a box that exactly fits.
+    return getLineRects(element).some(rect => rect.right - content.right > 0.5 || content.left - rect.left > 0.5);
   }
   if (maxLines > 1) {
-    return element.scrollHeight - element.clientHeight > 1;
+    const content = getContentEdges(element);
+    // A clamped line is still laid out, under the content box. Its middle is
+    // read, not its top: under a line-height of 1 or less the glyphs of the
+    // next line start above the bottom of the one before.
+    return getLineRects(element).some(rect => rect.top + rect.height / 2 > content.bottom);
   }
   return false;
+};
+// Read from the in-flow children: an overlay positioned over the box (a loading
+// skeleton) fills the padding and is not part of a line.
+const getLineRects = element => {
+  const range = document.createRange();
+  const rects = [];
+  for (const child of element.childNodes) {
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      const {
+        position
+      } = window.getComputedStyle(child);
+      if (position === "absolute" || position === "fixed") {
+        continue;
+      }
+    }
+    range.selectNode(child);
+    rects.push(...range.getClientRects());
+  }
+  return rects;
+};
+// In the coordinates of the line rects: a transformed ancestor (a pressed
+// button's scale) shrinks the rects and the box, not the computed paddings.
+const getContentEdges = element => {
+  const style = window.getComputedStyle(element);
+  const box = element.getBoundingClientRect();
+  const scaleX = scaleOf(box.width, element.offsetWidth);
+  const scaleY = scaleOf(box.height, element.offsetHeight);
+  const startX = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+  const endX = parseFloat(style.borderRightWidth) + parseFloat(style.paddingRight);
+  const endY = parseFloat(style.borderBottomWidth) + parseFloat(style.paddingBottom);
+  return {
+    left: box.left + startX * scaleX,
+    right: box.right - endX * scaleX,
+    bottom: box.bottom - endY * scaleY
+  };
+};
+const scaleOf = (screenSize, layoutSize) => {
+  // A box with no size has no padding or border to scale either.
+  if (layoutSize === 0) {
+    return 1;
+  }
+  return screenSize / layoutSize;
 };
 const TextReportingTruncation = ({
   onTruncatedChange,
@@ -57481,6 +57007,10 @@ const css$$ = /* css */`@layer navi {
     --link-color: unset;
     --link-text-decoration: none;
   }
+
+  .navi_link[data-color-inherit] {
+    --link-color-visited: var(--navi-link-color-visited, var(--link-color));
+  }
 }
 
 .navi_link {
@@ -57642,12 +57172,20 @@ const css$$ = /* css */`@layer navi {
   }
 
   &[data-stretch] {
+    z-index: auto;
+    outline-width: 0;
     position: static;
 
     &:after {
       content: "";
       position: absolute;
       inset: 0;
+    }
+
+    &[data-focus-visible]:after {
+      border-radius: var(--link-border-radius);
+      outline: var(--link-outline-width) solid var(--link-outline-color);
+      outline-offset: calc(-1 * var(--link-outline-width));
     }
   }
 
@@ -57872,7 +57410,10 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   positioned; navi's `Text` is not. A control in the row that keeps its own
  *   press sits above the area when it is positioned and comes after the link
  *   (navi's `Button` is positioned); one written before the link is raised
- *   with a `z-index`. The link is never positioned itself, in any state.
+ *   with a `z-index`. The link is never positioned itself, in any state. The
+ *   focus ring is drawn inside the press area and cannot read the ancestor's
+ *   radius: a rounded ancestor repeats it on the link
+ *   (`<Link stretch borderRadius="m">`).
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
  * @param {string|{type?: string, duration?: number|string, direction?: "forward"|"back"}} [props.routeTransition] -
@@ -58313,6 +57854,7 @@ const LinkPlain = props => {
     // Visual
     ,
     "data-variant": variant,
+    "data-color-inherit": props.color === "inherit" ? "" : undefined,
     "data-current-effect-bold": currentEffectBoldTechnique,
     "data-current-effect-shadow": currentEffectShadow ? "" : undefined,
     "data-current-indicator-position": currentIndicatorPosition,
@@ -58396,6 +57938,10 @@ const SlideContainerContext = createContext(null);
 // ([data-slide-ways~="right"]).
 const SLIDE_CURRENT_ATTRIBUTE = "data-slide-current";
 const SLIDE_TOWARD_ATTRIBUTE = "data-slide-travel-toward";
+// The slide --slide-travel-progress counts from, when that is not the current
+// one: a hand on a row the browser scrolls can carry it past several slides, and
+// what follows it goes on between the two it is standing between.
+const SLIDE_BASE_ATTRIBUTE = "data-slide-travel-base";
 // Every way out that would DO something right now, in the words the commands
 // use: a direction ("left", "right", "up", "down") when there is a slide that
 // way, plus "first" and "last" when one is not already standing at that end of
@@ -58633,11 +58179,15 @@ const css$_ = /* css */`@layer navi {
   }
 }
 
+.navi_nav[data-nav-following-row] .navi_current_indicator {
+  visibility: hidden;
+}
+
 .navi_nav .navi_link[data-href-current] .navi_current_indicator {
   view-transition-name: var(--nav-indicator-name);
 }
 
-:root:is([data-navi-route-transition], [data-navi-route-travel]) .navi_nav:not([data-nav-between-tabs]) .navi_current_indicator {
+:root[data-navi-route-transition] .navi_nav:not([data-nav-between-tabs]) .navi_current_indicator {
   view-transition-name: none;
 }
 
@@ -58768,6 +58318,64 @@ const NavStyleCSSVars = {
   currentIndicatorColor: "--nav-current-indicator-color",
   currentIndicatorSize: ["--nav-current-indicator-size", "height"]
 };
+
+// Where the bar is, where it is headed and in which colour at each end: the
+// numbers the CSS above interpolates between. Measured off the DOM (offsets force
+// a layout, the colours a style resolve), so asked only when the two tabs change.
+const writeIndicatorGeometry = (navElement, {
+  baseTabElement,
+  towardTabElement,
+  towardIsAfter,
+  vertical
+}) => {
+  const measure = tabElement => vertical ? {
+    position: tabElement.offsetTop,
+    length: tabElement.offsetHeight
+  } : {
+    position: tabElement.offsetLeft,
+    length: tabElement.offsetWidth
+  };
+  // The colour a tab asks the bar to be under it. Read from the tab and not
+  // from the row, so a tab that says nothing gives the row's value back —
+  // it inherits it (see the css above) — and one that says something gives
+  // its own. Empty when neither resolves to anything: the css then falls
+  // back on its own, rather than being handed a colour that is not one.
+  const colorOf = tabElement => getComputedStyle(tabElement).getPropertyValue("--link-current-indicator-color").trim();
+  const writeColor = (property, color) => {
+    if (color) {
+      navElement.style.setProperty(property, color);
+    } else {
+      navElement.style.removeProperty(property);
+    }
+  };
+  const baseMeasure = measure(baseTabElement);
+  let positionDelta = 0;
+  let lengthDelta = 0;
+  let towardSign = 0;
+  let towardColor = "";
+  if (towardTabElement) {
+    const towardMeasure = measure(towardTabElement);
+    // What one box of travel is worth in pixels of this row, signed so that
+    // the trait is exactly on the other tab when the progress is at its own
+    // end: the container counts +1 when the picture leans on a slide sitting
+    // BEFORE the current one and -1 when it sits after.
+    const sign = towardIsAfter ? -1 : 1;
+    positionDelta = (towardMeasure.position - baseMeasure.position) * sign;
+    lengthDelta = (towardMeasure.length - baseMeasure.length) * sign;
+    towardSign = sign;
+    towardColor = colorOf(towardTabElement);
+  }
+  const {
+    style
+  } = navElement;
+  style.setProperty("--nav-indicator-position", baseMeasure.position);
+  style.setProperty("--nav-indicator-length", baseMeasure.length);
+  style.setProperty("--nav-indicator-position-delta", positionDelta);
+  style.setProperty("--nav-indicator-length-delta", lengthDelta);
+  style.setProperty("--nav-indicator-toward-sign", towardSign);
+  writeColor("--nav-indicator-color", colorOf(baseTabElement));
+  writeColor("--nav-indicator-color-toward", towardColor);
+};
 const positionOfCurrentIndicator = (currentIndicator, vertical) => {
   if (currentIndicator === true) {
     return vertical ? "left" : "bottom";
@@ -58840,6 +58448,8 @@ const Nav = ({
   const [currentSlideArea, setCurrentSlideArea] = useState(undefined);
   const slideContainerElementRef = useRef(null);
   const indicatorPosition = slideContainer ? positionOfCurrentIndicator(currentIndicator, vertical) : null;
+  // A row of routes draws that same bar only while it follows a row scrolling.
+  const rowIndicatorPosition = slideContainer ? null : positionOfCurrentIndicator(currentIndicator, vertical);
 
   // Which tab of this row is the one being shown: the slide the container says
   // it is on, or, for a row of routes, the link the browser is on.
@@ -58852,7 +58462,9 @@ const Nav = ({
     if (!containerElement) {
       return navElement.querySelector("[data-href-current]");
     }
-    const currentArea = containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
+    // The tab the trait counts from: the current one, unless a hand has carried
+    // the row past it.
+    const currentArea = containerElement.getAttribute(SLIDE_BASE_ATTRIBUTE) ?? containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
     if (currentArea === null) {
       return null;
     }
@@ -58912,56 +58524,13 @@ const Nav = ({
       tabCount: tabElements.length,
       vertical
     };
-    const measure = tabElement => vertical ? {
-      position: tabElement.offsetTop,
-      length: tabElement.offsetHeight
-    } : {
-      position: tabElement.offsetLeft,
-      length: tabElement.offsetWidth
-    };
-    // The colour a tab asks the bar to be under it. Read from the tab and not
-    // from the row, so a tab that says nothing gives the row's value back —
-    // it inherits it (see the css above) — and one that says something gives
-    // its own. Empty when neither resolves to anything: the css then falls
-    // back on its own, rather than being handed a colour that is not one.
-    const colorOf = tabElement => getComputedStyle(tabElement).getPropertyValue("--link-current-indicator-color").trim();
-    const writeColor = (property, color) => {
-      if (color) {
-        navElement.style.setProperty(property, color);
-      } else {
-        navElement.style.removeProperty(property);
-      }
-    };
-    const currentMeasure = measure(tabElements[currentIndex]);
-    const towardArea = towardAreaNow;
-    const towardIndex = tabElements.findIndex(tabElement => areaOf(tabElement) === towardArea);
-    let positionDelta = 0;
-    let lengthDelta = 0;
-    let towardSign = 0;
-    let towardColor = "";
-    if (towardIndex !== -1 && towardIndex !== currentIndex) {
-      const towardTabElement = tabElements[towardIndex];
-      const towardMeasure = measure(towardTabElement);
-      // What one box of travel is worth in pixels of this row, signed so that
-      // the trait is exactly on the other tab when the progress is at its own
-      // end: the container counts +1 when the picture leans on a slide sitting
-      // BEFORE the current one and -1 when it sits after.
-      const sign = towardIndex > currentIndex ? -1 : 1;
-      positionDelta = (towardMeasure.position - currentMeasure.position) * sign;
-      lengthDelta = (towardMeasure.length - currentMeasure.length) * sign;
-      towardSign = sign;
-      towardColor = colorOf(towardTabElement);
-    }
-    const {
-      style
-    } = navElement;
-    style.setProperty("--nav-indicator-position", currentMeasure.position);
-    style.setProperty("--nav-indicator-length", currentMeasure.length);
-    style.setProperty("--nav-indicator-position-delta", positionDelta);
-    style.setProperty("--nav-indicator-length-delta", lengthDelta);
-    style.setProperty("--nav-indicator-toward-sign", towardSign);
-    writeColor("--nav-indicator-color", colorOf(tabElements[currentIndex]));
-    writeColor("--nav-indicator-color-toward", towardColor);
+    const towardIndex = tabElements.findIndex(tabElement => areaOf(tabElement) === towardAreaNow);
+    writeIndicatorGeometry(navElement, {
+      baseTabElement: tabElements[currentIndex],
+      towardTabElement: towardIndex !== -1 && towardIndex !== currentIndex ? tabElements[towardIndex] : null,
+      towardIsAfter: towardIndex > currentIndex,
+      vertical
+    });
     navElement.setAttribute("data-nav-indicator-measured", "");
   };
   // Reached through a ref by everything watching the DOM below: those watchers
@@ -58969,6 +58538,60 @@ const Nav = ({
   // about the row as it is now.
   const paintIndicatorGeometryRef = useRef(null);
   paintIndicatorGeometryRef.current = paintIndicatorGeometry;
+
+  // The bar following a row of routes the browser scrolls, between the two tabs
+  // of the pages it stands between. A row this nav holds no tab for is another
+  // nav's to draw.
+  useLayoutEffect(() => {
+    if (!rowIndicatorPosition) {
+      return undefined;
+    }
+    let paintedBase = null;
+    let paintedToward = null;
+    const letGo = () => {
+      const navElement = navRef.current;
+      paintedBase = null;
+      paintedToward = null;
+      navElement?.removeAttribute("data-nav-following-row");
+      navElement?.removeAttribute("data-nav-indicator-measured");
+      navElement?.style.removeProperty("--slide-travel-progress");
+    };
+    const stopFollowing = followRouteRows(move => {
+      const navElement = navRef.current;
+      if (!navElement) {
+        return;
+      }
+      if (!move) {
+        letGo();
+        return;
+      }
+      const tabElements = Array.from(navElement.querySelectorAll(".navi_link"));
+      const tabOf = path => tabElements.find(tabElement => tabElement.pathname === path);
+      const baseTabElement = tabOf(move.basePath);
+      if (!baseTabElement) {
+        letGo();
+        return;
+      }
+      const towardTabElement = move.towardPath ? tabOf(move.towardPath) : null;
+      if (baseTabElement !== paintedBase || towardTabElement !== paintedToward) {
+        paintedBase = baseTabElement;
+        paintedToward = towardTabElement;
+        writeIndicatorGeometry(navElement, {
+          baseTabElement,
+          towardTabElement,
+          towardIsAfter: tabElements.indexOf(towardTabElement) > tabElements.indexOf(baseTabElement),
+          vertical
+        });
+        navElement.setAttribute("data-nav-indicator-measured", "");
+        navElement.setAttribute("data-nav-following-row", "");
+      }
+      navElement.style.setProperty("--slide-travel-progress", move.progress);
+    });
+    return () => {
+      stopFollowing();
+      letGo();
+    };
+  }, [rowIndicatorPosition, vertical]);
   // What the last paint measured for — see the memo at the top of
   // paintIndicatorGeometry.
   const indicatorPaintedForRef = useRef(null);
@@ -59327,7 +58950,7 @@ const Nav = ({
     "data-expand-y": expand || expandY ? "" : undefined,
     "data-vertical": vertical ? "" : undefined,
     "data-panel-position": panelPosition,
-    "data-nav-indicator": indicatorPosition ?? undefined
+    "data-nav-indicator": indicatorPosition ?? rowIndicatorPosition ?? undefined
     // "write your travel here too": a custom property cannot be read across
     // the DOM, so the container paints its progress onto this element and the
     // trait follows in CSS alone (see SlideContainer's followerElements).
@@ -59351,7 +58974,7 @@ const Nav = ({
       "--nav-indicator-name": indicatorNameRef.current
     } : props.style,
     styleCSSVars: NavStyleCSSVars,
-    children: [indicatorPosition && jsx("span", {
+    children: [(indicatorPosition || rowIndicatorPosition) && jsx("span", {
       className: "navi_nav_indicator"
     }), jsx(NavContext.Provider, {
       value: navContextValue,
@@ -60451,6 +60074,7 @@ const css$Y = /* css */`@layer navi {
     --navi-fixed-bar-border-width: 1px;
     --navi-fixed-bar-border-color: var(--navi-separator-color-default);
     --navi-fixed-bar-padding: 0px;
+    --navi-fixed-bar-shadow: none;
   }
 }
 
@@ -60515,6 +60139,35 @@ const css$Y = /* css */`@layer navi {
         var(--navi-fixed-bar-border-color);
   }
 }
+
+.navi_fixed_bar_shadow {
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: var(--navi-fixed-bar-shadow);
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.navi_fixed_bar[data-area="top"] > .navi_fixed_bar_shadow {
+  bottom: calc(-1 * var(--navi-fixed-bar-border-width));
+  clip-path: inset(0 0 -100vh);
+}
+
+.navi_fixed_bar[data-area="bottom"] > .navi_fixed_bar_shadow {
+  top: calc(-1 * var(--navi-fixed-bar-border-width));
+  clip-path: inset(-100vh 0 0);
+}
+
+.navi_fixed_bar[data-area="left"] > .navi_fixed_bar_shadow {
+  right: calc(-1 * var(--navi-fixed-bar-border-width));
+  clip-path: inset(0 -100vw 0 0);
+}
+
+.navi_fixed_bar[data-area="right"] > .navi_fixed_bar_shadow {
+  left: calc(-1 * var(--navi-fixed-bar-border-width));
+  clip-path: inset(0 0 0 -100vw);
+}
 `;
 const FixedBarStyleCSSVars = {
   // width/height go through the vars the size calc reads: written as plain
@@ -60526,7 +60179,8 @@ const FixedBarStyleCSSVars = {
   padding: "--navi-fixed-bar-padding",
   background: "--navi-fixed-bar-background",
   borderWidth: "--navi-fixed-bar-border-width",
-  borderColor: "--navi-fixed-bar-border-color"
+  borderColor: "--navi-fixed-bar-border-color",
+  shadow: ["--navi-fixed-bar-shadow", "boxShadow"]
 };
 
 /**
@@ -60540,6 +60194,7 @@ const FixedBarStyleCSSVars = {
  *   border?: boolean,
  *   borderWidth?: string|number,
  *   borderColor?: string,
+ *   shadow?: string,
  * }>}
  * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
  *   the window it is pinned to. One bar per edge: a second one does not stack
@@ -60562,6 +60217,9 @@ const FixedBarStyleCSSVars = {
  * @param {string|number} [props.padding=0] - Along the bar only: left/right on
  *   a top or bottom bar, top/bottom on a side one. Across it, the size is
  *   `height`/`width`.
+ * @param {string} [props.shadow] - What the bar casts over the content, in
+ *   `box-shadow` syntax, cut at the bar's box on every side but the content's.
+ *   Takes no room.
  */
 const FixedBar = ({
   children,
@@ -60625,12 +60283,14 @@ const FixedBar = ({
       setFixedBarSpace(area, barElement, null);
     };
   }, [area, vertical]);
-  return jsx(Box, {
+  return jsxs(Box, {
     baseClassName: "navi_fixed_bar",
     "data-area": area,
     ...props,
     styleCSSVars: FixedBarStyleCSSVars,
-    children: children
+    children: [children, jsx("span", {
+      className: "navi_fixed_bar_shadow"
+    })]
   });
 };
 
@@ -63829,8 +63489,11 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   says, for the other half of a toggle. Only for a control that does not
  *   travel with the pages.
  * @param {Function} [action] What the press runs: a button holds no value, so
- *   every press is one call. The button is busy while it runs, refuses a second
- *   press and draws the error on itself. On a button with an `href` or a
+ *   every press is one call. Inside a `<Form>` or a group it carries the value
+ *   around it, merged over the action's bound params — a value that is not an
+ *   object replaces them; in a picker's popup it carries nothing
+ *   (docs/actions.md#the-instance-a-control-runs). The button is busy while it
+ *   runs, refuses a second press and draws the error on itself. On a button with an `href` or a
  *   `route`, the same order as a Link's: it runs on the press, before the
  *   navigation, and the navigation does not wait for it (see Link's `action`).
  * @param {"GET"|"POST"|"PUT"|"PATCH"|"DELETE"} [actionVerb] What a plain
@@ -65875,6 +65538,7 @@ const css$M = /* css */`@layer navi {
     --thumb-size: 16px;
     --thumb-width: var(--thumb-size);
     --thumb-height: var(--thumb-size);
+    --press-height: var(--thumb-height);
     --thumb-border-radius: 100%;
     --thumb-cursor: pointer;
     --font-size: var(--navi-control-font-size);
@@ -65962,6 +65626,8 @@ const css$M = /* css */`@layer navi {
   position: relative;
 
   & .navi_control_input {
+    width: 100%;
+    height: var(--press-height);
     opacity: 0;
     --webkit-appearance: none;
     min-width: inherit;
@@ -65971,10 +65637,20 @@ const css$M = /* css */`@layer navi {
 
     &::-webkit-slider-thumb {
       width: var(--thumb-width);
-      height: var(--thumb-height);
+      height: var(--press-height);
       border-radius: var(--thumb-border-radius);
       -webkit-appearance: none;
       cursor: var(--x-thumb-cursor);
+    }
+  }
+
+  @media (pointer: coarse) {
+    & .navi_control_input {
+      overflow: clip;
+
+      &::-webkit-slider-thumb {
+        transform: scaleX(3);
+      }
     }
   }
 
@@ -66183,6 +65859,7 @@ const RangeNativeInput = props => {
   });
 };
 const RangeStyleCSSVars = {
+  "pressHeight": ["--press-height", "height"],
   "outlineWidth": "--outline-width",
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",
@@ -67689,6 +67366,7 @@ const InputPseudoElements = ["::-navi-loader"];
  *   boolean?: boolean,
  *   selectOnPress?: boolean,
  *   enterSendsNothing?: boolean,
+ *   pressHeight?: number | string,
  *   variant?: "checkbox" | "switch" | "icon" | "button",
  *   buttonVariant?: "discrete",
  *   actionVerb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
@@ -67738,6 +67416,14 @@ const InputPseudoElements = ["::-navi-loader"];
  *   street before its suggestion filled the city) and whose Enter would send
  *   an answer still missing its other half. The browser's own Enter is kept (a
  *   datalist choice), except in a `<Form>`, where it is the submission.
+ * @param {number|string} [pressHeight] How tall a press counts on a range, the
+ *   thumb's height by default, so a thin line stays easy to hit. The press area
+ *   only: nothing moves and nothing is drawn. It overflows the range, centered
+ *   on its line, over whatever is next to it and takes the presses aimed there,
+ *   so leave it the room it needs (`marginY`). Different for a mouse and a
+ *   finger: `--press-height` in a `@media (pointer: coarse)` rule. On Safari for
+ *   iOS a drag only starts close to the thumb, within three times its width; a
+ *   tap further along the line moves the value.
  */
 const Input = props => {
   resolveInputProps(props);
@@ -68438,7 +68124,7 @@ const Editable = props => {
     children: [children || jsx("span", {
       children: value
     }), jsx(Box, {
-      className: "navi_editable_wrapper",
+      baseClassName: "navi_editable_wrapper",
       ref: wrapperRef,
       ...wrapperProps,
       // inert ensure input while not editing that:
@@ -69332,26 +69018,47 @@ const css$I = /* css */`@property --slide-travel-progress {
 
 .navi_slide_container {
   border-radius: inherit;
+  overflow-anchor: none;
+  scroll-snap-type: both mandatory;
+  scrollbar-width: none;
   flex: 0 auto;
   min-width: 0;
   min-height: 0;
   display: grid;
   position: relative;
-  overflow: clip;
+  overflow: hidden;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &[data-slide-travelling] {
+    scroll-snap-type: none;
+  }
+
+  &[data-slide-hand*="x"] {
+    overscroll-behavior-x: contain;
+    overflow-x: auto;
+  }
+
+  &[data-slide-hand*="y"] {
+    overscroll-behavior-y: contain;
+    overflow-y: auto;
+  }
 
   &:focus {
     outline: none;
   }
 
-  &[data-travel-by-drag="x"] {
+  &[data-slide-no-touch="x"] {
     touch-action: pan-y;
   }
 
-  &[data-travel-by-drag="y"] {
+  &[data-slide-no-touch="y"] {
     touch-action: pan-x;
   }
 
-  &[data-travel-by-drag="xy"] {
+  &[data-slide-no-touch="xy"] {
     touch-action: none;
   }
 
@@ -69371,15 +69078,19 @@ const css$I = /* css */`@property --slide-travel-progress {
     display: grid;
 
     & > [data-slide] {
-      min-width: 0;
-      min-height: 0;
-      translate: var(--slide-offset, 0);
+      top: var(--slide-top, 0);
+      left: var(--slide-left, 0);
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
       border-radius: 0;
       outline: none;
       grid-area: 1 / 1;
+      min-width: 0;
+      min-height: 0;
+      position: relative;
     }
 
-    & > [data-slide][data-slide-offstage] {
+    & > [data-slide][data-slide-offstage], & > [data-slide][data-off-row] {
       visibility: hidden;
     }
   }
@@ -69409,22 +69120,15 @@ const ratioOfOneTravel = (track, from, to, targetBefore) => {
 // Where the track stands right now, in pixels, read off the box it draws in
 // rather than off the value that moves it: mid-animation the browser reports
 // that value as a calc() of a percentage and a length ("calc(-43% - 119px)"),
-// which no simple parse survives — read as 0, it puts the gesture a whole
-// travel away from what the eye is looking at.
+// which no simple parse survives. Against the box the track rests in, past the
+// border (clientLeft/clientTop), and plus what the box has scrolled, which the
+// track's rectangle carries and its translate does not.
 const trackOffsetPx = (track, containerElement) => {
   const trackRect = track.getBoundingClientRect();
   const containerRect = containerElement.getBoundingClientRect();
-  // Against the box the track RESTS in — the content box, past the border
-  // (clientLeft/clientTop are the border widths; the box never has a
-  // scrollbar nor padding, see the top-of-file comment on padding). Measured
-  // against the border box, a border reads as that many pixels of translate
-  // nothing ever asked for — and it COMPOUNDS: every travel interrupted
-  // mid-flight re-measures the track and carries the error into its "from",
-  // so rapid back-and-forth gestures stack a 1px border into a visible
-  // vertical drift of the whole track.
   return {
-    x: trackRect.x - containerRect.x - containerElement.clientLeft,
-    y: trackRect.y - containerRect.y - containerElement.clientTop
+    x: trackRect.x - containerRect.x - containerElement.clientLeft + containerElement.scrollLeft,
+    y: trackRect.y - containerRect.y - containerElement.clientTop + containerElement.scrollTop
   };
 };
 const offsetToPx = (offset, box) => {
@@ -69601,7 +69305,7 @@ const causeOfEvent = event => {
   const {
     type
   } = event;
-  if (type === "pointerup" || type === "pointercancel") {
+  if (type === "scrollend") {
     return "drag";
   }
   if (type === "keydown" || type === "keyup") {
@@ -69614,6 +69318,40 @@ const causeOfEvent = event => {
 // into says (see writeAreaAsked).
 const CAUSES_WRITTEN_BY_REPLACEMENT = ["drag", "refusal", "state"];
 const readArea = slideElement => slideElement.getAttribute("data-slide-area") || slideElement.id || "";
+const slidesOf = containerElement => Array.from(containerElement.querySelectorAll(":scope > [data-slide-track] > [data-slide]"));
+
+// Who is drawing something about a box from outside it: a tab bar saying where
+// one is, a row of dots. They name the box they follow by its id, the way
+// everything else that talks to it across the document does (commandfor).
+const readFollowerElements = containerElement => {
+  const {
+    id
+  } = containerElement;
+  if (!id) {
+    return [];
+  }
+  return Array.from(document.querySelectorAll(`[data-slide-container-follows="${CSS.escape(id)}"]`));
+};
+
+// The containers inside a slide bound to the same state as the slide's own
+// container (see `signal`) — the ones directly under it, a container sharing
+// with one of those is that one's business.
+const sharingContainersIn = slideElement => {
+  const holderElement = slideElement.closest("[data-slide-container]");
+  return Array.from(slideElement.querySelectorAll("[data-slide-shares-state]")).filter(innerElement => innerElement.parentElement.closest("[data-slide-container]") === holderElement);
+};
+
+// Whether the state holding `area` is on screen when this slide is: it is the
+// slide's own area, or a slide of a container sharing the state inside it.
+const slideShows = (slideElement, area) => readArea(slideElement) === area || sharingContainersIn(slideElement).some(innerElement => slidesOf(innerElement).some(innerSlide => slideShows(innerSlide, area)));
+
+// What the state holds while this slide is on screen: the area a container
+// sharing the state inside it stands on, its own area when there is none.
+const areaHeldOn = slideElement => {
+  const [innerElement] = sharingContainersIn(slideElement);
+  const innerCurrent = innerElement && slidesOf(innerElement).find(innerSlide => innerSlide.hasAttribute("data-current"));
+  return innerCurrent ? areaHeldOn(innerCurrent) : readArea(slideElement);
+};
 
 /**
  * The slide shown can be driven from outside (a `signal`, or `current` +
@@ -69648,6 +69386,10 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   "create"]`. Spelled like grid-template-areas ("." is a hole, a name
  *   repeated spans), except that a row needs no trailing hole: what is not
  *   written is simply not there.
+ *   A map is read as a map: a step landing on a hole is not offered. So rows
+ *   of different lengths, each walked on its own and changed as a whole (a
+ *   column of levels, a row of titles in each), are not a map but a container
+ *   in each slide of a column, all bound to one signal — see `signal`.
  * @param {string} [props.current] - area (or id) of the slide being shown; omit
  *   to keep it here and drive it by command. An area named from outside is a
  *   REQUEST rather than a placement — see `signal` for what that means.
@@ -69688,6 +69430,47 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   by links built to that route. Written by replacement unless the state says
  *   `history: "push"`, and even then a slide reached by DRAGGING replaces — see
  *   docs/navigation.md.
+ *   ONE STATE FOR CONTAINERS INSIDE ONE ANOTHER: a container in a slide,
+ *   bound to the SAME signal as the container holding it, shares that state.
+ *   For screens where one place is said at two levels — a column of
+ *   tournament levels with a row of titles in each, the address saying which
+ *   title (`?cup=P100:2`): the level is not a second state, it is read from
+ *   the title.
+ *   ```jsx
+ *   const cupSignal = stateSignal(undefined, { id: "cup" });
+ *
+ *   <SlideContainer layout="column" signal={cupSignal}>
+ *     {levels.map((level) => (
+ *       <Slide area={level.name}>
+ *         <LevelHeader level={level} />
+ *         <SlideContainer signal={cupSignal} defaultCurrent={level.entryKey}>
+ *           {level.titles.map((title) => (
+ *             <Slide area={title.key}>…</Slide>
+ *           ))}
+ *         </SlideContainer>
+ *       </Slide>
+ *     ))}
+ *   </SlideContainer>
+ *   ```
+ *   - The state holds an area of an INNER container. The outer one shows the
+ *     slide holding it, the inner ones that do not have it stay where they
+ *     are.
+ *   - A travel of the outer one writes the area the inner one stands on in the
+ *     slide it arrives at: a row left keeps its place for when one comes back,
+ *     and a row not seen yet opens on its `defaultCurrent`.
+ *   - A value written from outside (an address, a traversal) is walked to by
+ *     both, each on its own axis.
+ *   - The arrows of the inner one on screen are heard on the outer box and on
+ *     what follows it (`data-slide-container-follows`), so a surface follows
+ *     the OUTER one and all four arrows walk it.
+ *   - `onCurrentChange` still tells each one its own area: the level to the
+ *     outer one, the title to the inner one.
+ *   What an outer slide holds is read in the DOM: one whose content is not
+ *   built (`mount="near"`) holds nothing the state can name.
+ *   Neither `current` + `onCurrentChange` on each, ignoring `cause: "state"`
+ *   and remembering by hand where each row was left — that is a second copy of
+ *   the state (see docs/state_binding.md) — nor one map with rows of different
+ *   lengths (see `layout`).
  * @param {string} [props.defaultCurrent] - which slide to open on, for a
  *   container that owns its position. Mount-only, like every other `default*`:
  *   it says where one starts, not where one is — say `current` for that.
@@ -69697,7 +69480,8 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   opens is that state's own default (`stateSignal`'s first argument) rather
  *   than this: one place says where the area starts, and it is the place a
  *   reset goes back to. This still answers for a signal holding nothing at
- *   all.
+ *   all. And for a container sharing the state of the one holding it (see
+ *   `signal`), it is where it opens while the state names a place elsewhere.
  * @param {(area: string, detail: {cause: "drag"|"keyboard"|"command"|"code"|"state", event: Event}) => void|false|Promise<void|false>} [props.onCurrentChange]
  *   - the slide being shown has changed. `cause` says what asked for it, which
  *   is what tells a place browsed past from a place aimed at — a slide dragged
@@ -69746,19 +69530,19 @@ const readArea = slideElement => slideElement.getAttribute("data-slide-area") ||
  *   go in it), so the surface says `data-slide-container-follows={id}` and the
  *   arrows keep walking wherever the keyboard is in it. See the paragraph above
  *   about what is drawn AROUND the travel.
- * @param {boolean|"x"|"y"|"xy"} [props.travelByDrag=true] - whether a pointer
- *   dragging the slides travels. On by default: slides side by side are
- *   something one expects to push around with a thumb. Off where the gesture
- *   belongs to the content (a canvas one draws on, a map one pans), or where
- *   the slides are steps of a form rather than a row one browses.
- * @param {boolean|"x"|"y"|"xy"} [props.travelByScroll="x"] - whether a wheel
- *   pushing the box travels, one slide per push. Sideways only by default,
- *   because a page is hardly ever scrollable that way: a sideways scroll over
- *   the box can only have been meant for the box. Down the page it is the
- *   page's OWN gesture, and taking it would move a slide under someone who was
- *   scrolling the document — so a map that travels vertically has to be told
- *   (`travelByScroll` / `"y"` / `"xy"`) before a wheel moves it.
- * @param {string} [props.duration="300ms"] - how long a slide change takes.
+ * @param {boolean|"x"|"y"|"xy"} [props.travelByDrag=true] - whether a finger or
+ *   a pen pushing the slides travels: the browser pans them, a mouse does not.
+ *   Off where the gesture belongs to the content (a canvas one draws on, a map
+ *   one pans), or where the slides are steps of a form rather than a row one
+ *   browses.
+ * @param {boolean|"x"|"y"|"xy"} [props.travelByScroll="x"] - whether a wheel or a
+ *   trackpad pushing the box travels. Sideways only by default, because a page is
+ *   hardly ever scrollable that way: a sideways scroll over the box can only have
+ *   been meant for the box. Down the page it is the page's OWN gesture, handed on
+ *   to what scrolls around the box, so a map that travels vertically has to be
+ *   told (`travelByScroll` / `"y"` / `"xy"`) before a wheel moves it.
+ * @param {string} [props.duration="300ms"] - how long a slide change asked for
+ *   takes: a tab, a key, a command, a state. A hand goes at its own pace.
  * @param {"largest"|"frozen"} [props.sizing="largest"] - what decides the size
  *   of the box. "largest": the largest slide, at every moment — the box follows
  *   whatever the slides do. "frozen": the box is measured once and kept at that
@@ -69817,6 +69601,10 @@ const SlideContainer = ({
   // The box itself: it is what takes the keyboard when what is on screen holds
   // nothing that can (see handOverFocus).
   const containerRef = useRef();
+  // Bound to the state of the container holding this one: its slides are
+  // places inside one of that container's slides (see `signal`).
+  const holder = useContext(SlideContainerContext);
+  const sharesState = Boolean(currentSignal) && holder?.signal === currentSignal;
   // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
   // This is where the container's own answer lives, and it is the only one the
@@ -69827,7 +69615,10 @@ const SlideContainer = ({
   // walking past every lock in exactly the case the locks are there for.
   // So the picture starts where the state itself would open (a stateSignal's
   // own default), or on `defaultCurrent`, and the walk goes from there.
-  const [currentAreaState, setCurrentAreaState] = useState(() => currentSignal?.options?.getDefaultValue?.() ?? defaultCurrent);
+  // A container sharing its holder's state starts on `defaultCurrent`: the
+  // state's default is a place in ONE of the containers sharing it, and the
+  // one holding it is walked there like any other.
+  const [currentAreaState, setCurrentAreaState] = useState(() => sharesState ? defaultCurrent : currentSignal?.options?.getDefaultValue?.() ?? defaultCurrent);
   // The slide this container is travelling to while its controller has not been
   // told yet (commit="rest"): for the length of that travel the container is
   // ahead of whoever holds `current`, and this is where it keeps its own answer
@@ -69870,10 +69661,6 @@ const SlideContainer = ({
   // one being travelled TO while the track moves. What the next travel departs
   // from, because it is what one is looking at.
   const drawnAreaRef = useRef(undefined);
-  // The movement the track is playing, while it plays: the slide it is leaving
-  // and the slide it is going to. A hand landing on the box takes it over from
-  // its origin (see onStart in createTravelHandlers).
-  const movingRef = useRef(null);
   // Which way the travel about to be drawn goes, when whatever asked for it
   // knows: a window stepping off its last slide comes back on its first, and
   // only the press says that is a step forward — the map, read between those
@@ -69887,17 +69674,6 @@ const SlideContainer = ({
   // A focus transfer read off the interaction that asked for the travel, kept
   // until the slide it is meant for holds its final DOM (see handOverFocus).
   const focusHandOverRef = useRef(null);
-  // The gesture in hand, from the pointer that started it to the slides it
-  // brought alongside. Null when no finger is on the box.
-  const dragRef = useRef(null);
-  // Where the travel about to be drawn departs from, when that is not where the
-  // track rests: a slide let go of halfway carries on from under the finger.
-  // Read and dropped by the layout effect, which is the one drawing it.
-  const travelFromRef = useRef(null);
-  // The same fact for the indicator (--slide-travel-progress): how far the
-  // picture is from the slide ARRIVING when the travel starts, in boxes. Null
-  // for a travel nobody dragged, where a whole box is what is left to close.
-  const travelProgressFromRef = useRef(null);
   // One per element painting the progress: the box, plus everything following
   // it (see followerElementsRef). All started together and with the same
   // options, so they are one movement said in several places.
@@ -69908,6 +69684,23 @@ const SlideContainer = ({
   // draw in CSS alone, at the pace of the travel and under the finger, with
   // nothing measured per frame.
   const followerElementsRef = useRef([]);
+  // Whether a hand has the row away from the current slide. A render meanwhile
+  // must not send it back.
+  const handMovingRef = useRef(false);
+  // The slide a hand has just landed on, for the render it asks for: it is
+  // already there, so there is nothing to play.
+  const handLandedRef = useRef(null);
+  // Where the box rests on the row, and what the row starts from: a slide that
+  // holds on to the user ends the row on that side, and a scroll range starts at
+  // its first reachable slide (see writeRowAtRest).
+  const restPlaceRef = useRef({
+    x: 0,
+    y: 0
+  });
+  const originRef = useRef({
+    x: 0,
+    y: 0
+  });
   // What the caller holds, however they hold it: a `current` they re-render
   // themselves, or a `signal` this container also writes (see tellCurrentChange).
   if (currentSignal && currentProp !== undefined) {
@@ -69917,6 +69710,21 @@ const SlideContainer = ({
   }
   const currentFromCaller = currentSignal ? currentSignal.value : currentProp;
   const current = rollingArea ?? provisionalArea ?? currentAreaState;
+  // The area of this box a value held outside is shown on: the slide of that
+  // name, or the one holding a container that shares the state and has it.
+  // Read off the last commit, so a render before the first sees it as it is.
+  const ownAreaOf = value => {
+    const track = trackRef.current;
+    if (value === undefined || !track) {
+      return value;
+    }
+    const slideElements = Array.from(track.children);
+    if (slideElements.some(slideElement => readArea(slideElement) === value)) {
+      return value;
+    }
+    const holding = slideElements.find(slideElement => slideShows(slideElement, value));
+    return holding ? readArea(holding) : value;
+  };
   // The last area this container knows the caller holds, whether it wrote it
   // there or read it from there. What makes a two-way binding stop turning: an
   // area held outside is an INSTRUCTION only when it changed by itself (a load,
@@ -69935,7 +69743,7 @@ const SlideContainer = ({
   // it is painted, the first request included — and the container's own answer
   // otherwise. What a slide waiting for a travel reads to have its content in
   // the very render that shows it (see Slide's `mount`).
-  const areaShownNext = requestIsNews() ? currentFromCaller : current;
+  const areaShownNext = requestIsNews() ? ownAreaOf(currentFromCaller) : current;
   // Where the container stands, said where the caller holds it.
   //
   // Whether a slide is a place one came from is the STATE's own business (see
@@ -69952,17 +69760,31 @@ const SlideContainer = ({
   const writeAreaAsked = (area, {
     cause
   } = {}) => {
-    areaAskedSeenRef.current = area;
     if (!currentSignal) {
+      areaAskedSeenRef.current = area;
       return;
     }
+    const value = valueOfArea(area);
+    areaAskedSeenRef.current = value;
     if (CAUSES_WRITTEN_BY_REPLACEMENT.includes(cause) && currentSignal.set) {
-      currentSignal.set(area, {
+      currentSignal.set(value, {
         history: "replace"
       });
       return;
     }
-    currentSignal.value = area;
+    currentSignal.value = value;
+  };
+  // What the state holds for one of this box's areas: the place a container
+  // sharing it stands on inside that slide (see areaHeldOn). A state already
+  // naming a place in that slide is kept as it is — a container in there may
+  // have written it in this very commit, before its DOM says so.
+  const valueOfArea = area => {
+    const held = currentSignal.peek();
+    if (held !== area && ownAreaOf(held) === area) {
+      return held;
+    }
+    const slideElement = readMap().slideElements.find(slideElement => readArea(slideElement) === area);
+    return slideElement ? areaHeldOn(slideElement) : area;
   };
   const vertical = layout === "column";
   // What the map has, and what each way of asking is allowed to use of it.
@@ -70014,7 +69836,7 @@ const SlideContainer = ({
     if (provisionalArea === null) {
       return;
     }
-    const heldOutside = currentFromCaller ?? currentAreaState;
+    const heldOutside = ownAreaOf(currentFromCaller) ?? currentAreaState;
     if (heldOutside === provisionalArea) {
       setProvisionalArea(null);
     }
@@ -70105,20 +69927,6 @@ const SlideContainer = ({
     };
   };
 
-  // Who is drawing something about this box from outside it: a tab bar saying
-  // where one is, a row of dots. They name the box they follow by its id, the
-  // way everything else that talks to it across the document does (commandfor).
-  const readFollowerElements = () => {
-    const containerEl = containerRef.current;
-    const {
-      id
-    } = containerEl;
-    if (!id) {
-      return [];
-    }
-    return Array.from(document.querySelectorAll(`[data-slide-container-follows="${CSS.escape(id)}"]`));
-  };
-
   // Which slide is on screen, said in the DOM: it is what anything outside the
   // box reads to know where one is (a tab bar marking its current tab), and
   // there is nothing else for it to read — a slide the container holds by
@@ -70151,10 +69959,10 @@ const SlideContainer = ({
   // (areaTowards knows the holes and a loop's two ends).
   const areasAlongside = area => {
     const alongside = [];
-    if (dragAxes?.includes("x")) {
+    if (travelAxes?.includes("x")) {
       alongside.push(areaTowards(-1, 0, area), areaTowards(1, 0, area));
     }
-    if (dragAxes?.includes("y")) {
+    if (travelAxes?.includes("y")) {
       alongside.push(areaTowards(0, -1, area), areaTowards(0, 1, area));
     }
     return alongside;
@@ -70183,13 +69991,87 @@ const SlideContainer = ({
       return added.length ? [...previous, ...added] : previous;
     });
   };
-
-  // The travel is over: the stage is struck and every slide goes back where the
-  // map says it is. Nothing is seen moving for it — the slide on screen sits at
-  // the same place whatever the arrangement (its own offset and the track's are
-  // opposites and cancel out), and the others are off stage — as long as the
-  // two are written in one go, which is why this is done here rather than left
-  // to a render.
+  const writeSlidePlace = (slideElement, {
+    x,
+    y
+  }) => {
+    slideElement.style.setProperty("--slide-left", `${x * 100}%`);
+    slideElement.style.setProperty("--slide-top", `${y * 100}%`);
+  };
+  // Every slide where the map says it is, except what the slide on screen holds
+  // the user from: stacked under it, so the row ends there on that side. The same
+  // rule as the gate in goToArea. The row starts at its first reachable slide,
+  // since a scroll range starts at 0 and what lies before cannot be scrolled to.
+  const writeRowAtRest = (slideElements, placeOf, currentElement) => {
+    const currentPlace = placeOf.get(readArea(currentElement)) || {
+      x: 0,
+      y: 0
+    };
+    const holdsNext = currentElement.hasAttribute("data-prevent-nav-next");
+    const holdsPrevious = currentElement.hasAttribute("data-prevent-nav-previous");
+    const isOutOfReach = ({
+      x,
+      y
+    }) => {
+      if (x === currentPlace.x && y === currentPlace.y) {
+        return false;
+      }
+      const forward = y === currentPlace.y ? x > currentPlace.x : y > currentPlace.y;
+      return forward ? holdsNext : holdsPrevious;
+    };
+    const origin = {
+      x: currentPlace.x,
+      y: currentPlace.y
+    };
+    for (const slideElement of slideElements) {
+      const place = placeOf.get(readArea(slideElement)) || {
+        x: 0,
+        y: 0
+      };
+      if (isOutOfReach(place)) {
+        continue;
+      }
+      if (place.x < origin.x) {
+        origin.x = place.x;
+      }
+      if (place.y < origin.y) {
+        origin.y = place.y;
+      }
+    }
+    const rest = {
+      x: currentPlace.x - origin.x,
+      y: currentPlace.y - origin.y
+    };
+    for (const slideElement of slideElements) {
+      const place = placeOf.get(readArea(slideElement)) || {
+        x: 0,
+        y: 0
+      };
+      const outOfReach = isOutOfReach(place);
+      slideElement.toggleAttribute("data-off-row", outOfReach);
+      writeSlidePlace(slideElement, outOfReach ? rest : {
+        x: place.x - origin.x,
+        y: place.y - origin.y
+      });
+    }
+    originRef.current = origin;
+    restPlaceRef.current = rest;
+  };
+  const sendRowToRest = currentElement => {
+    const containerEl = containerRef.current;
+    if (!restsOn(containerEl, currentElement)) {
+      containerEl.scrollTo({
+        left: currentElement.offsetLeft,
+        top: currentElement.offsetTop,
+        behavior: "instant"
+      });
+    }
+  };
+  // The travel is over: the stage is struck, every slide goes back where the map
+  // says it is and the scroll position takes over from the track. Nothing is seen
+  // moving for it, the slide on screen standing at the same place either way, as
+  // long as it is all written in one go, which is why this is done here rather
+  // than left to a render.
   const settleTravel = () => {
     const track = trackRef.current;
     if (!track) {
@@ -70205,33 +70087,19 @@ const SlideContainer = ({
     }
     stageRef.current = null;
     trackAnimationRef.current = null;
-    movingRef.current = null;
     // At rest the picture IS the current slide, whatever the last gesture wrote
     // there: an indicator has nothing left to lean towards.
-    paintTravelProgress(0);
+    paintTravelProgress();
+    writeRowAtRest(slideElements, placeOf, currentElement);
     for (const slideElement of slideElements) {
-      const {
-        x,
-        y
-      } = placeOf.get(readArea(slideElement)) || {
-        x: 0,
-        y: 0
-      };
-      slideElement.style.setProperty("--slide-offset", `${x * 100}% ${y * 100}%`);
-      slideElement.toggleAttribute("data-slide-offstage", slideElement !== currentElement);
+      slideElement.removeAttribute("data-slide-offstage");
     }
     const currentArea = readArea(currentElement);
     drawnAreaRef.current = currentArea;
-    const {
-      x,
-      y
-    } = placeOf.get(currentArea) || {
-      x: 0,
-      y: 0
-    };
-    const offset = `${-x * 100}% ${-y * 100}%`;
-    offsetRef.current = offset;
-    track.style.setProperty("--slide-container-offset", offset);
+    offsetRef.current = "0% 0%";
+    track.style.setProperty("--slide-container-offset", "0% 0%");
+    containerRef.current.removeAttribute("data-slide-travelling");
+    sendRowToRest(currentElement);
     renderNear(currentArea, {
       alongside: true
     });
@@ -70257,7 +70125,7 @@ const SlideContainer = ({
     // Read on every render rather than subscribed to: a follower says who it
     // follows in the DOM, and the render that mounted one is the render this
     // runs after.
-    followerElementsRef.current = readFollowerElements();
+    followerElementsRef.current = readFollowerElements(containerRef.current);
     const {
       slideElements,
       placeOf
@@ -70284,11 +70152,12 @@ const SlideContainer = ({
     if (landsWithPage && trackAnimationRef.current) {
       trackAnimationRef.current.cancel();
       trackAnimationRef.current = null;
-      movingRef.current = null;
       cancelTravelProgressAnimation();
-      paintTravelProgress(0);
+      paintTravelProgress();
     }
-    const still = noTravel || landsWithPage;
+    const handLanded = handLandedRef.current === currentArea;
+    handLandedRef.current = null;
+    const still = noTravel || landsWithPage || handLanded;
     // Nothing is travelling, so nothing is staged: the picture to paint is the
     // map itself, and a stage left over from a travel that has just been given
     // up on would be painted instead of it.
@@ -70343,7 +70212,7 @@ const SlideContainer = ({
     // A transfer waiting for a travel that never happened — a controlled
     // `current` the caller chose not to move: dropped, the focus has no
     // business going anywhere. The one for a travel that DID happen stays,
-    // and lands when the slide it is for says it is settled (see settleFocus).
+    // and lands once the slide it is for is final (see landFocusHandOver).
     if (focusHandOverRef.current && focusHandOverRef.current.area !== readArea(currentElement)) {
       focusHandOverRef.current = null;
     }
@@ -70354,19 +70223,30 @@ const SlideContainer = ({
     // travel someone asked for has its own transfer waiting (focusHandOverRef),
     // and that one knows what was pressed.
     const focusIsLeaving = !focusHandOverRef.current && slideElements.some(slideElement => slideElement !== currentElement && slideElement.contains(document.activeElement));
+    // Read before the row is written: what the slide holds decides where it ends.
+    if (!stage) {
+      writeRowAtRest(slideElements, placeOf, currentElement);
+    }
+    const onRow = ({
+      x,
+      y
+    }) => ({
+      x: x - originRef.current.x,
+      y: y - originRef.current.y
+    });
     for (const slideElement of slideElements) {
       const area = readArea(slideElement);
-      const {
-        x,
-        y
-      } = placeOfArea(area);
-      slideElement.style.setProperty("--slide-offset", `${x * 100}% ${y * 100}%`);
       const isCurrent = slideElement === currentElement;
       slideElement.toggleAttribute("data-current", isCurrent);
       slideElement.toggleAttribute("data-slide-displaced", !isCurrent);
-      // On stage: the two ends of the travel while there is one, and the slide
-      // being shown when there is not.
-      slideElement.toggleAttribute("data-slide-offstage", stage ? !stage.placeByArea.has(area) : !isCurrent);
+      // Off stage only while a travel asked for plays: at rest a hand can bring in
+      // any of them, and it would find them unpainted.
+      const onStage = Boolean(stage) && stage.placeByArea.has(area);
+      slideElement.toggleAttribute("data-slide-offstage", Boolean(stage) && !onStage);
+      if (onStage) {
+        slideElement.removeAttribute("data-off-row");
+        writeSlidePlace(slideElement, onRow(stage.placeByArea.get(area)));
+      }
       if (isCurrent) {
         // Reachable again first, so the focus below has somewhere to land: an
         // inert element cannot take it.
@@ -70374,12 +70254,14 @@ const SlideContainer = ({
       }
     }
     const track = trackRef.current;
-    const offset = `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`;
+    containerRef.current.toggleAttribute("data-slide-travelling", Boolean(stage));
+    // How far the track stands from where the scroll position rests: none at rest.
+    const rowPlace = onRow(currentPlace);
+    const restPlace = restPlaceRef.current;
+    const offset = `${(restPlace.x - rowPlace.x) * 100}% ${(restPlace.y - rowPlace.y) * 100}%`;
     // The travel that was ASKED for is still one box, whatever is left of it to
-    // cover: a slide dragged most of the way there finishes in what is left of
-    // the duration rather than taking a full one over a few pixels.
+    // cover: what is left takes what is left of the duration.
     const offsetTargetBefore = offsetRef.current;
-    const targetMoves = offset !== offsetTargetBefore;
     // Where the track IS, read before anything is written: a travel asked for
     // while another is still playing must carry on from what is on screen. The
     // previous TARGET is where the last travel was going, not where it got to —
@@ -70398,35 +70280,16 @@ const SlideContainer = ({
       const onScreenPx = trackOffsetPx(track, containerRef.current);
       offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
     }
-    // …and where a slide let go of halfway was left, which is the same fact
-    // said by the gesture that put it there: the track is at rest as far as any
-    // animation is concerned, so nothing else could tell. Taken by the render
-    // that moves the track and by no other: a `current` held outside catches up
-    // with the gesture a render late (a parent's state, set from a handler that
-    // runs after the address is written and read back), and a render still
-    // standing on the slide being left would otherwise carry the finger's
-    // offset back to it — a travel home nobody asked for.
-    const offsetDragged = targetMoves ? travelFromRef.current : null;
-    if (targetMoves) {
-      travelFromRef.current = null;
-    }
-    const offsetBefore = offsetDragged ?? offsetOnScreen ?? offsetRef.current;
+    const offsetBefore = offsetOnScreen ?? offsetRef.current;
     offsetRef.current = offset;
-    // Where the track ends up, always — the animation below only covers the way
-    // there, and when it is over this is what holds. Except under a hand-off
-    // still waiting for its travel: the track stays where the finger left it,
-    // until the render that moves it or the frame after which the gesture gives
-    // up on it (see settleTowards in onEnd).
-    if (!travelFromRef.current) {
-      track.style.setProperty("--slide-container-offset", offset);
-    }
+    track.style.setProperty("--slide-container-offset", offset);
     // A travel to this very offset is already playing: left to play. Same
     // courtesy as the stage above — a re-render in the middle of a travel (a
     // signal read higher up answering) changes nothing here, and setting off
     // again from the on-screen position would replay what is left over a full
     // duration (the ask is zero, so ratioOfOneTravel answers 1), slowing the
     // travel at every re-render.
-    const sameTravelPlaying = travelInFlight && !offsetDragged && offsetTargetBefore === offset;
+    const sameTravelPlaying = travelInFlight && offsetTargetBefore === offset;
     const travels = !sameTravelPlaying && !still && durationMs > 0 && offsetBefore !== undefined && offsetBefore !== offset;
     if (travels) {
       // The time it takes is the distance it has left to cover: a travel picked
@@ -70436,10 +70299,9 @@ const SlideContainer = ({
       // this only ever shortens it (a longer travel is not made slower, which
       // would make a two-box move drag).
       const travelRatio = ratioOfOneTravel(track, offsetBefore, offset, offsetTargetBefore);
-      // Already moving — under an animation or under a finger that has just
-      // let go — so there is no ease-in to play: it would stall the track for
-      // an instant right where the eye is following it.
-      const easing = travelInFlight || offsetDragged ? "ease-out" : "ease";
+      // Already moving, so there is no ease-in to play: it would stall the track
+      // for an instant right where the eye is following it.
+      const easing = travelInFlight ? "ease-out" : "ease";
       // Cancelled rather than layered: two animations on the same property
       // would blend, and what one sees then is neither of the two moves.
       trackAnimationRef.current?.cancel();
@@ -70451,14 +70313,8 @@ const SlideContainer = ({
         duration: durationMs * travelRatio,
         easing
       });
-      movingRef.current = {
-        from: drawnArea,
-        to: currentArea
-      };
-      // The trait travels with the slides: from where the gesture left it when
-      // there was one, from a whole box away when the travel was asked for.
-      const progressFrom = travelProgressFromRef.current ?? (travelStep ? travelStep.x || travelStep.y : 0);
-      travelProgressFromRef.current = null;
+      // The trait travels with the slides, from a whole box away.
+      const progressFrom = travelStep ? travelStep.x || travelStep.y : 0;
       // The slide the picture leans on for the length of it is the one being
       // LEFT: it is the second one in the frame until the travel is over.
       animateTravelProgress(progressFrom, durationMs * travelRatio, easing, drawnArea);
@@ -70475,12 +70331,11 @@ const SlideContainer = ({
       trackAnimationRef.current.finished.then(settleTravel, () => {
         // cancelled by the next travel — that one carries the stage on
       });
-    } else if (stage && !dragRef.current?.axis && trackAnimationRef.current?.playState !== "running") {
+    } else if (stage && trackAnimationRef.current?.playState !== "running") {
       // Staged with nothing left to play: a travel that was drawn and then had
       // its animation taken away (a duration set to 0, a re-render landing
       // between the two). Struck at once rather than left standing, since the
-      // thing it was standing for is over. A gesture in hand is a stage that is
-      // standing for something — the finger still holding it.
+      // thing it was standing for is over.
       settleTravel();
     }
     // A window waiting for its travel to be over (see goToArea's own loop
@@ -70496,6 +70351,11 @@ const SlideContainer = ({
       } else {
         requestAnimationFrame(rollBack);
       }
+    }
+    // The slide a transfer waits for is current (any other one was dropped
+    // above): it lands once the renders this commit sets off are over.
+    if (focusHandOverRef.current) {
+      landFocusHandOver();
     }
     // The keyboard is on a slide about to go out of reach and nobody has moved
     // it: inert would drop it on the floor (document.body), so it is handed to
@@ -70514,9 +70374,10 @@ const SlideContainer = ({
     // Out of reach LAST, once the keyboard has already moved on: a browser
     // takes the focus off an element the moment it becomes inert, and on its
     // own schedule — doing this first would let that undo the landing above and
-    // leave the focus on nothing.
-    for (const slideElement of slideElements) {
-      slideElement.toggleAttribute("inert", slideElement !== currentElement);
+    // leave the focus on nothing. A transfer still on its way does it itself,
+    // once landed.
+    if (!focusHandOverRef.current) {
+      markOutOfReach(currentElement);
     }
     // What is on screen now, for the travel after this one to depart from.
     // While a travel is playing the stage is the one that knows (it holds the
@@ -70530,10 +70391,15 @@ const SlideContainer = ({
     // this one, in the same commit, and the slides around a picture about to be
     // walked away from would be built for nothing. The neighbours only at
     // rest, see renderNear.
-    const settlingArea = requestIsNews() && reachableTowards(currentArea, currentFromCaller) || currentArea;
+    const settlingArea = requestIsNews() && reachableTowards(currentArea, ownAreaOf(currentFromCaller)) || currentArea;
     renderNear(settlingArea, {
       alongside: !stageRef.current
     });
+    // Something moved the row under it at rest: an opening, a page changing, a
+    // slide added before it. Under a hand it stays where the hand has it.
+    if (!stageRef.current && !handMovingRef.current) {
+      sendRowToRest(currentElement);
+    }
     // Said last, and after data-current has been written: what a travel would do
     // is read off the map from the slide that is now current, and off the locks
     // that slide is wearing in this very commit.
@@ -70542,9 +70408,6 @@ const SlideContainer = ({
     // — a single announcement for a render that may have changed several of the
     // facts at once.
     announceState();
-    // The finger has the last word: everything above drew the map at rest, and
-    // where the track actually is right now is where the gesture put it.
-    paintDrag();
   });
 
   /**
@@ -70557,7 +70420,8 @@ const SlideContainer = ({
     value,
     released,
     dx = 0,
-    dy = 0
+    dy = 0,
+    landed
   } = {}) => {
     // A window mid-roll cannot travel yet: it is on its way somewhere and the
     // content that goes with it has not moved, so a second travel would be
@@ -70685,7 +70549,7 @@ const SlideContainer = ({
     // A caller writing the change somewhere that keeps a trace — the URL, a
     // history — needs it to know whether a place was aimed at or browsed past.
     const cause = causeOfEvent(event);
-    if (commit === "rest") {
+    if (commit === "rest" && !landed) {
       // The travel first, the change once it is over: a caller putting it
       // somewhere expensive or visible (the URL, the address bar, a server)
       // must not be asked for it sixty times a second, and the picture must not
@@ -70780,8 +70644,11 @@ const SlideContainer = ({
     // content arrives a request later. Not a refusal: nothing is remembered and
     // nothing is written, and the render that brings the slide asks again. A
     // name that will never be a slide is the state's to refuse (`oneOf`), not
-    // the container's: from here, "later" and "never" look the same.
-    if (!readMap().slideElements.some(slideElement => readArea(slideElement) === currentFromCaller)) {
+    // the container's: from here, "later" and "never" look the same. Nor is a
+    // place shown by another container sharing the state — a row of a column
+    // of rows stays where it was while the state names a place in another one.
+    const areaAsked = ownAreaOf(currentFromCaller);
+    if (!readMap().slideElements.some(slideElement => readArea(slideElement) === areaAsked)) {
       return;
     }
     areaAskedSeenRef.current = currentFromCaller;
@@ -70789,10 +70656,10 @@ const SlideContainer = ({
     // names a slide, and the container standing on its first one is a fact only
     // the map knows (see the layout effect that paints it).
     const areaOnScreen = containerRef.current.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
-    if (currentFromCaller === areaOnScreen) {
+    if (areaAsked === areaOnScreen) {
       return;
     }
-    const reached = reachableTowards(areaOnScreen, currentFromCaller);
+    const reached = reachableTowards(areaOnScreen, areaAsked);
     if (reached && reached !== areaOnScreen) {
       // Told rather than asked: the walk above has already put every lock on
       // the way the question goToArea would have put the first one, and this
@@ -70864,14 +70731,7 @@ const SlideContainer = ({
   // dialog is OPEN, not when it was asked to open). `prepareFocusTransfer` has
   // to read the interaction — which element a mousedown landed on, whether the
   // modality is the keyboard — while the event is still being dispatched. The
-  // landing waits for the slide to say its DOM is settled (settleFocus below),
-  // which is later than one would think: a travel hands the slide a value
-  // (useSlideValue) and that value reaches it through context, so Preact
-  // re-renders the slide in a flush of its own — the container's own layout
-  // effect runs BEFORE its children have seen the value. A screen keyed by it,
-  // a form whose uncontrolled fields must start again from a new prefill,
-  // replaces its whole subtree there. Landing before that took the focus to a
-  // node about to be thrown away, and the focus went to document.body with it.
+  // landing waits for the slide's DOM to be final (see landFocusHandOver).
   const handOverFocus = (slideElement, focusTransfer, event) => {
     focusTransfer.transferFocus(event, slideElement);
     // Asked of the SLIDE, not of this box: the box contains itself, so asking
@@ -70896,21 +70756,46 @@ const SlideContainer = ({
     }
   };
 
-  // A slide reporting that its DOM is settled (its own layout effect, see
-  // Slide) — the moment the transfer prepared in goToArea can land. Every
-  // slide reports on every commit; only the one a transfer is waiting for,
-  // and only while it is the current one, takes it.
-  const settleFocus = slideArea => {
+  // The transfer prepared in goToArea lands once the slide it is for is the
+  // current one AND everything the travel set off has rendered — which is
+  // later than this box's own commit. A travel hands the slide a value
+  // (useSlideValue), and what reads it below a component that skipped its own
+  // render is re-rendered by Preact in a commit of its own, after this one. A
+  // screen keyed by it, a form whose uncontrolled fields must start again from
+  // a new prefill, replaces its whole subtree there: a focus landed before it
+  // goes to document.body with the node. Nor can the slide say when it is done
+  // from its own layout effect: rendered in the same pass as this box, its
+  // effects run before this box has made it current.
+  // Preact drains its render queue in one go, the renders it cascades into
+  // included, so a microtask queued from this commit runs after all of them.
+  // Until then the slide being left stays within reach (see markOutOfReach):
+  // inert would take the keyboard off it first, and drop it on document.body.
+  const landFocusHandOver = () => {
     const focusHandOver = focusHandOverRef.current;
-    if (!focusHandOver || focusHandOver.area !== slideArea) {
-      return;
+    queueMicrotask(() => {
+      // Already landed by an earlier commit of this cascade, given up on, or
+      // replaced by the transfer of a newer travel.
+      if (focusHandOverRef.current !== focusHandOver || !trackRef.current) {
+        return;
+      }
+      focusHandOverRef.current = null;
+      const currentElement = readMap().slideElements.find(slideElement => slideElement.hasAttribute("data-current"));
+      if (!currentElement) {
+        return;
+      }
+      if (readArea(currentElement) === focusHandOver.area) {
+        handOverFocus(currentElement, focusHandOver.focusTransfer, focusHandOver.event);
+      }
+      markOutOfReach(currentElement);
+    });
+  };
+
+  // Every slide but the one on screen out of reach — of the keyboard and of
+  // assistive technology alike.
+  const markOutOfReach = currentElement => {
+    for (const slideElement of readMap().slideElements) {
+      slideElement.toggleAttribute("inert", slideElement !== currentElement);
     }
-    const slideElement = readMap().slideElements.find(slideElement => readArea(slideElement) === slideArea);
-    if (!slideElement || !slideElement.hasAttribute("data-current")) {
-      return;
-    }
-    focusHandOverRef.current = null;
-    handOverFocus(slideElement, focusHandOver.focusTransfer, focusHandOver.event);
   };
 
   /**
@@ -71049,22 +70934,152 @@ const SlideContainer = ({
     return area;
   };
 
-  // Where the track is right now, as the gesture left it: the resting place of
-  // the slide being dragged, plus what the pointer has pulled since.
-  const paintDrag = () => {
-    const drag = dragRef.current;
-    const track = trackRef.current;
-    // Nothing to paint for a pointer that is only resting on the box: until it
-    // has an axis a gesture has moved nothing and knows no geometry.
-    if (!drag || !drag.axis || !track) {
+  // Where a hand has the row, in the terms of --slide-travel-progress: from the
+  // current slide while it stands next to it, and past that between the two it
+  // stands between, as far as the hand carries it.
+  const paintNativeRow = () => {
+    if (trackAnimationRef.current?.playState === "running") {
       return;
     }
-    const x = drag.baseOffset.x + drag.pull.x;
-    const y = drag.baseOffset.y + drag.pull.y;
-    drag.offset = `${x}px ${y}px`;
-    track.style.setProperty("--slide-container-offset", drag.offset);
-    paintTravelProgress(drag.progress, drag.areaPulled);
+    const containerEl = containerRef.current;
+    const slideElements = Array.from(trackRef.current.children);
+    const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current"));
+    if (!currentElement) {
+      return;
+    }
+    if (restsOn(containerEl, currentElement)) {
+      if (handMovingRef.current) {
+        paintTravelProgress();
+      }
+      return;
+    }
+    handMovingRef.current = true;
+    const {
+      base,
+      toward,
+      fraction,
+      forward
+    } = readRowStretch(containerEl, slideElements, currentElement);
+    const baseArea = readArea(base);
+    for (const element of travelPainters()) {
+      if (base === currentElement) {
+        element.removeAttribute(SLIDE_BASE_ATTRIBUTE);
+      } else {
+        element.setAttribute(SLIDE_BASE_ATTRIBUTE, baseArea);
+      }
+      element.style.setProperty("--slide-travel-progress", forward ? -fraction : fraction);
+    }
+    paintTravelToward(toward ? readArea(toward) : null);
+    // What the hand reaches ahead of the neighbours built at rest is asked for on
+    // the way: an empty slide goes by otherwise.
+    renderNear(baseArea, {
+      alongside: true
+    });
   };
+  const landNativeRow = scrollEndEvent => {
+    if (!handMovingRef.current) {
+      return;
+    }
+    const containerEl = containerRef.current;
+    const {
+      slideElements,
+      placeOf
+    } = readMap();
+    const landedElement = pageAtRest(containerEl, slideElements);
+    if (!landedElement) {
+      return;
+    }
+    handMovingRef.current = false;
+    paintTravelProgress();
+    const area = readArea(landedElement);
+    const currentArea = containerEl.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
+    if (area === currentArea) {
+      settleTravel();
+      return;
+    }
+    const event = scrollEndEvent ?? new Event("scrollend");
+    if (loop) {
+      // A window does not change slide, it rolls: back at rest in the render the
+      // content moves in, the two being the same picture.
+      const from = placeOf.get(currentArea) || {
+        x: 0,
+        y: 0
+      };
+      const to = placeOf.get(area) || {
+        x: 0,
+        y: 0
+      };
+      setNoTravel(true);
+      onLoop?.({
+        area,
+        dx: Math.sign(to.x - from.x),
+        dy: Math.sign(to.y - from.y),
+        event
+      });
+      return;
+    }
+    handLandedRef.current = area;
+    if (goToArea(area, {
+      event,
+      landed: true
+    })) {
+      return;
+    }
+    // Refused: the row is put back in view of the slide that stays.
+    handLandedRef.current = null;
+    const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current"));
+    containerEl.scrollTo({
+      left: currentElement.offsetLeft,
+      top: currentElement.offsetTop,
+      behavior: "smooth"
+    });
+  };
+
+  // Reached through a ref, and the listeners are never rebuilt for it: a landing
+  // changes the current slide, and one is often already on its way when it does.
+  const nativeRowHandlersRef = useRef(null);
+  nativeRowHandlersRef.current = {
+    paintNativeRow,
+    landNativeRow
+  };
+  useLayoutEffect(() => {
+    return watchRowScroll(containerRef.current, {
+      onScroll: () => nativeRowHandlersRef.current.paintNativeRow(),
+      onLand: event => nativeRowHandlersRef.current.landNativeRow(event)
+    });
+  }, []);
+
+  // A wheel on an axis only a finger travels (travelByScroll) is not this box's,
+  // though a scroller takes it all the same: it goes to what scrolls inside, or
+  // on to what scrolls around, which is where it was headed.
+  const wheelRefusedAxes = Array.from(dragAxes ?? "").filter(axis => !scrollAxes?.includes(axis)).join("");
+  useLayoutEffect(() => {
+    if (!wheelRefusedAxes) {
+      return undefined;
+    }
+    const containerEl = containerRef.current;
+    const onWheel = wheelEvent => {
+      const axis = Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
+      if (!wheelRefusedAxes.includes(axis)) {
+        return;
+      }
+      const delta = axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY;
+      if (!delta || scrollRoomTowards(wheelEvent.target, containerEl, axis, delta > 0 ? -1 : 1)) {
+        return;
+      }
+      wheelEvent.preventDefault();
+      getScrollContainer(containerEl.parentElement)?.scrollBy({
+        [axis === "x" ? "left" : "top"]: delta,
+        behavior: "instant"
+      });
+    };
+    containerEl.addEventListener("wheel", onWheel, {
+      passive: false
+    });
+    return () => {
+      containerEl.removeEventListener("wheel", onWheel);
+    };
+  }, [wheelRefusedAxes]);
 
   // Everything that draws this travel: the box itself and whoever follows it.
   const travelPainters = () => {
@@ -71197,13 +71212,12 @@ const SlideContainer = ({
   // current slide changes under it.
   const paintTravelProgress = (progress, area) => {
     for (const element of travelPainters()) {
-      if (progress) {
-        element.style.setProperty("--slide-travel-progress", progress);
-      } else {
+      {
         element.style.removeProperty("--slide-travel-progress");
+        element.removeAttribute(SLIDE_BASE_ATTRIBUTE);
       }
     }
-    paintTravelToward(progress ? area : null);
+    paintTravelToward(null);
   };
   const cancelTravelProgressAnimation = () => {
     for (const animation of progressAnimationsRef.current) {
@@ -71221,9 +71235,9 @@ const SlideContainer = ({
     // Read again at the start of every travel, not only at every render: a
     // follower appearing does not make this box render, and the travel it must
     // draw is the one about to start.
-    followerElementsRef.current = readFollowerElements();
+    followerElementsRef.current = readFollowerElements(containerRef.current);
     cancelTravelProgressAnimation();
-    paintTravelProgress(0);
+    paintTravelProgress();
     const painters = travelPainters();
     if (!painters.length || !from || !durationMs) {
       return;
@@ -71244,598 +71258,8 @@ const SlideContainer = ({
       // cancelled by the next travel — that one says where the trait goes
     });
   };
-
-  // The two slides the gesture can bring in, placed one box either side of the
-  // one being dragged — the same stage a travel builds, except that both ends
-  // are set up at once because the finger has not said yet which way it goes.
-  const stageDrag = (drag, currentArea) => {
-    const {
-      slideElements,
-      placeOf
-    } = readMap();
-    const step = drag.axis === "x" ? {
-      x: 1,
-      y: 0
-    } : {
-      x: 0,
-      y: 1
-    };
-    const placeByArea = new Map();
-    placeByArea.set(drag.area, drag.basePlace);
-    if (drag.areaBack) {
-      placeByArea.set(drag.areaBack, {
-        x: drag.basePlace.x - step.x,
-        y: drag.basePlace.y - step.y
-      });
-    }
-    if (drag.areaOn) {
-      placeByArea.set(drag.areaOn, {
-        x: drag.basePlace.x + step.x,
-        y: drag.basePlace.y + step.y
-      });
-    }
-    stageRef.current = {
-      placeByArea,
-      area: currentArea
-    };
-    for (const slideElement of slideElements) {
-      const area = readArea(slideElement);
-      const {
-        x,
-        y
-      } = placeByArea.get(area) || placeOf.get(area) || {
-        x: 0,
-        y: 0
-      };
-      slideElement.style.setProperty("--slide-offset", `${x * 100}% ${y * 100}%`);
-      slideElement.toggleAttribute("data-slide-offstage", !placeByArea.has(area));
-    }
-  };
-
-  // Let go of, and the slides go where the gesture leaves them: back on the
-  // slide being dragged when nothing travels, on to the slide arriving when a
-  // travel caught in flight is let carry on. Over the distance left to cover,
-  // so a slide barely moved snaps back and one dragged most of the way there
-  // takes its time.
-  const settleTowards = (drag, area) => {
-    const track = trackRef.current;
-    if (!track) {
-      return;
-    }
-    const stage = stageRef.current;
-    const {
-      placeOf
-    } = readMap();
-    const place = stage?.placeByArea.get(area) || placeOf.get(area) || {
-      x: 0,
-      y: 0
-    };
-    const restPx = {
-      x: -place.x * drag.box.width,
-      y: -place.y * drag.box.height
-    };
-    const nowPx = {
-      x: drag.baseOffset.x + drag.pull.x,
-      y: drag.baseOffset.y + drag.pull.y
-    };
-    const restOffset = `${restPx.x}px ${restPx.y}px`;
-    const durationMs = durationToMs(duration);
-    const size = drag.axis === "x" ? drag.box.width : drag.box.height;
-    const left = Math.abs(restPx[drag.axis] - nowPx[drag.axis]);
-    trackAnimationRef.current?.cancel();
-    trackAnimationRef.current = null;
-    track.style.setProperty("--slide-container-offset", restOffset);
-    if (!durationMs || !left) {
-      paintTravelProgress(0);
-      settleTravel();
-      return;
-    }
-    // Which other slide the picture leans on while it arrives: the one being
-    // pulled in when it comes back on the dragged slide, the dragged slide
-    // itself when it goes on to the one arriving — and the trait is then a
-    // box short of that one, which is what it has to close.
-    const arrivesOnBase = area === drag.area;
-    const sign = drag.pull[drag.axis] > 0 ? 1 : -1;
-    const progressFrom = arrivesOnBase ? drag.progress : drag.progress - sign;
-    const otherArea = arrivesOnBase ? drag.areaPulled : drag.area;
-    movingRef.current = {
-      from: otherArea,
-      to: area
-    };
-    animateTravelProgress(progressFrom, durationMs * (left / size), "ease-out", otherArea);
-    const animation = track.animate([{
-      translate: `${nowPx.x}px ${nowPx.y}px`
-    }, {
-      translate: restOffset
-    }], {
-      duration: durationMs * (left / size),
-      easing: "ease-out"
-    });
-    trackAnimationRef.current = animation;
-    animation.finished.then(settleTravel, () => {
-      // cancelled by a travel asked for since — that one carries the stage on
-    });
-  };
-
-  // A travel that is playing when a gesture takes hold of it is STOPPED where it
-  // stands, at the moment the hand holds it (see readTravelInFlight for when
-  // that is): the track stays exactly under the eye, and the hand answers it
-  // from there.
-  // A gesture that turns out to be nothing lets the travel carry on from where
-  // it was caught (see onGiveUp).
-  const catchTravelInFlight = () => {
-    const trackElement = trackRef.current;
-    const travelCaught = trackAnimationRef.current;
-    if (!travelCaught || travelCaught.playState !== "running") {
-      return null;
-    }
-    const onScreenPx = trackOffsetPx(trackElement, containerRef.current);
-    const offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
-    travelCaught.cancel();
-    // Where it was, held: cancelling an animation puts the track back on the
-    // value underneath it, which is the far end of the travel — the very jump
-    // this is about.
-    trackElement.style.setProperty("--slide-container-offset", offsetOnScreen);
-    const moving = movingRef.current || {};
-    return {
-      trackElement,
-      onScreenPx,
-      offsetOnScreen,
-      offsetTarget: offsetRef.current,
-      from: moving.from,
-      to: moving.to
-    };
-  };
-  // Which way a travel still playing is going, read without touching it: a
-  // hand landing on something moving has no axis left to decide (a first pixel
-  // of tremor read as one gives the gesture up), and which WAY along it the
-  // travel goes is what tells the next swipe from a catch. `way` is the sign a
-  // pull going the same way would have.
-  const readTravelInFlight = () => {
-    const trackElement = trackRef.current;
-    const animation = trackAnimationRef.current;
-    if (!animation || animation.playState !== "running") {
-      return null;
-    }
-    const onScreenPx = trackOffsetPx(trackElement, containerRef.current);
-    const targetPx = offsetToPx(offsetRef.current, trackElement.getBoundingClientRect());
-    const towardsX = targetPx.x - onScreenPx.x;
-    const towardsY = targetPx.y - onScreenPx.y;
-    const axis = Math.abs(towardsX) >= Math.abs(towardsY) ? "x" : "y";
-    const towards = axis === "x" ? towardsX : towardsY;
-    if (Math.abs(towards) < 1) {
-      // On its last pixel: nothing left to catch or to push.
-      return null;
-    }
-    return {
-      axis,
-      way: towards > 0 ? 1 : -1
-    };
-  };
-
-  // What a travel gesture does to the slides, whoever asked for it: a pointer
-  // dragging the box and a wheel pushing it sideways ask for the same travel,
-  // so they are answered by the same callbacks and only the reading of the
-  // input differs (see drag_to_travel.js). The rules of the gesture are read
-  // there, the geometry of the slides here.
-  const createTravelHandlers = caughtAtStart => {
-    let caughtTravel = caughtAtStart;
-    // The travel in hand, as the slides see it: where the one being dragged
-    // stands, what is either side of it, and how far the gesture has taken it.
-    const drag = {
-      axis: null,
-      area: null,
-      areaBack: null,
-      areaOn: null,
-      areaPulled: null,
-      box: null,
-      basePlace: null,
-      baseOffset: null,
-      pull: {
-        x: 0,
-        y: 0
-      },
-      progress: 0,
-      offset: null,
-      gesture: null
-    };
-    return {
-      drag,
-      onStart: ({
-        axis,
-        sign,
-        target,
-        caught
-      }) => {
-        // A travel left playing under the press, which the hand has now taken
-        // hold of: stopped here, where it stands at this moment.
-        if (caught) {
-          caughtTravel = catchTravelInFlight();
-        }
-        // Everything positional is read HERE rather than when the pointer
-        // landed: the travel that was playing then may have arrived since, and
-        // it is what the slides are doing at the moment the gesture takes them
-        // over that the gesture must carry on from.
-        const track = trackRef.current;
-        const {
-          slideElements,
-          placeOf
-        } = readMap();
-        const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
-        const box = track.getBoundingClientRect();
-        if (!currentElement || !box.width || !box.height) {
-          return false;
-        }
-        const currentArea = readArea(currentElement);
-        const stage = stageRef.current;
-        // Where a slide stands: where the stage put it while a travel is
-        // playing, its place on the map otherwise.
-        const placeOfArea = someArea => stage?.placeByArea.get(someArea) || placeOf.get(someArea) || {
-          x: 0,
-          y: 0
-        };
-        // A travel caught in flight is measured from the slide it SET OFF from,
-        // with the slide it was going to as the one thing the hand can bring
-        // in — the way drag_to_travel reads a `slack`: how far the box already
-        // sits from its resting place, towards what is being pulled in. That is
-        // what makes its answer "carry on" mean arriving. Based on the slide
-        // arriving instead, the slack would point back at the origin, and a
-        // hand that merely touched the box would send it all the way back.
-        // A movement with no origin of its own (the track re-placed without a
-        // travel) is dragged from the slide shown, like any slide at rest.
-        const origin = caughtTravel && caughtTravel.from !== caughtTravel.to ? caughtTravel.from : null;
-        let area;
-        let areaBack;
-        let areaOn;
-        if (origin) {
-          area = origin;
-          const towardsEnd = axis === "x" ? placeOfArea(currentArea).x > placeOfArea(origin).x : placeOfArea(currentArea).y > placeOfArea(origin).y;
-          areaBack = towardsEnd ? undefined : currentArea;
-          areaOn = towardsEnd ? currentArea : undefined;
-        } else {
-          area = currentArea;
-          areaBack = axis === "x" ? areaTowards(-1, 0) : areaTowards(0, -1);
-          areaOn = axis === "x" ? areaTowards(1, 0) : areaTowards(0, 1);
-          // The hold goToArea reads at the release, read again HERE, off the
-          // same slide and the same attribute: a slide that will refuse the
-          // arrival must not offer the journey. A locked direction simply has
-          // nowhere to go for the length of this gesture — the one case the
-          // gesture already knows, being the last slide of a walk. The hand
-          // then gets the wall it can lean on and never walk through (see
-          // drag_to_travel), the slide behind it stays offstage instead of
-          // being read on the way, and the release has nothing left to refuse.
-          // Nothing here about `released` (--navi-done): that is one particular
-          // departure letting go, decided as it happens, and a gesture armed
-          // before it has no such thing to read — the attribute as rendered is
-          // what the hand is answered from.
-          if (currentElement.hasAttribute("data-prevent-nav-previous")) {
-            areaBack = undefined;
-          }
-          if (currentElement.hasAttribute("data-prevent-nav-next")) {
-            areaOn = undefined;
-          }
-          if (!areaBack && !areaOn ||
-          // Something else with a better claim on the gesture: a scroller
-          // between the finger and the slide, with room left that way.
-          scrollRoomTowards(target, currentElement, axis, sign)) {
-            return false;
-          }
-        }
-        const basePlace = placeOfArea(area);
-        const baseOffset = {
-          x: -basePlace.x * box.width,
-          y: -basePlace.y * box.height
-        };
-        // Where the track IS: a travel grabbed mid-flight was already stopped
-        // where the eye saw it, at the press — this only reads that place, so
-        // the gesture starts from it rather than from where the map rests.
-        const onScreen = caughtTravel ? caughtTravel.onScreenPx : baseOffset;
-        caughtTravel = null;
-        trackAnimationRef.current?.cancel();
-        trackAnimationRef.current = null;
-        cancelTravelProgressAnimation();
-        followerElementsRef.current = readFollowerElements();
-        drag.axis = axis;
-        drag.areaBack = areaBack;
-        drag.areaOn = areaOn;
-        drag.area = area;
-        drag.box = box;
-        drag.basePlace = basePlace;
-        drag.baseOffset = baseOffset;
-        const size = axis === "x" ? box.width : box.height;
-        // Where the track was when the gesture took it over — nowhere, unless
-        // it was travelling. Every pull is measured from it.
-        const slack = axis === "x" ? onScreen.x - baseOffset.x : onScreen.y - baseOffset.y;
-        drag.pull = {
-          x: 0,
-          y: 0,
-          [axis]: slack
-        };
-        drag.progress = slack / size;
-        drag.areaPulled = slack > 0 ? areaBack : slack < 0 ? areaOn : null;
-        stageDrag(drag, currentArea);
-        // From here the box is busy, whichever input asked: a wheel gesture and
-        // a press must not both be moving the same track.
-        dragRef.current = drag;
-        return {
-          size,
-          slack,
-          travelBack: Boolean(areaBack),
-          travelOn: Boolean(areaOn)
-        };
-      },
-      onPull: ({
-        axis,
-        pulled,
-        progress
-      }) => {
-        drag.pull = {
-          ...drag.pull,
-          [axis]: pulled
-        };
-        drag.progress = progress;
-        drag.areaPulled = pulled > 0 ? drag.areaBack : drag.areaOn;
-        paintDrag();
-      },
-      // The slide being brought in walked whole and the hand still going, or a
-      // travel caught on its way thrown on: either way the hand asks for the
-      // slide past it, and the gesture moves on to it. Nothing on screen moves
-      // for that — the slide reached becomes the one dragged, the one the hand
-      // came from stays next to it for a hand that turns around, and the slide
-      // past it is put on the other side.
-      onEdge: ({
-        axis,
-        sign
-      }) => {
-        const reached = sign > 0 ? drag.areaBack : drag.areaOn;
-        const {
-          slideElements,
-          placeOf
-        } = readMap();
-        const reachedElement = reached && slideElements.find(slideElement => readArea(slideElement) === reached);
-        if (!reachedElement) {
-          return false;
-        }
-        // The gate goToArea reads at the release, asked of the slide the hand
-        // is now in: a slide holding on to the user is not walked through.
-        const holds = reachedElement.hasAttribute(sign > 0 ? "data-prevent-nav-previous" : "data-prevent-nav-next");
-        const past = holds ? undefined : axis === "x" ? areaTowards(-sign, 0, reached) : areaTowards(0, -sign, reached);
-        if (!past) {
-          return false;
-        }
-        // Two slides from the one at rest, so possibly never rendered: asked
-        // for now, and built before the frame that brings it in is painted.
-        renderNear(past, {
-          alongside: false
-        });
-        const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
-        const basePlace = stageRef.current?.placeByArea.get(reached) || placeOf.get(reached) || {
-          x: 0,
-          y: 0
-        };
-        drag.areaBack = sign > 0 ? past : drag.area;
-        drag.areaOn = sign > 0 ? drag.area : past;
-        drag.area = reached;
-        drag.basePlace = basePlace;
-        drag.baseOffset = {
-          x: -basePlace.x * drag.box.width,
-          y: -basePlace.y * drag.box.height
-        };
-        stageDrag(drag, readArea(currentElement));
-        return {
-          size: axis === "x" ? drag.box.width : drag.box.height,
-          travelBack: Boolean(drag.areaBack),
-          travelOn: Boolean(drag.areaOn)
-        };
-      },
-      onEnd: ({
-        axis,
-        sign,
-        travels,
-        event
-      }) => {
-        dragRef.current = null;
-        // Where the gesture leaves the slides: on the one it was pulling in
-        // when it says so, back on the one it was dragging otherwise.
-        const destination = travels ? sign > 0 ? drag.areaBack : drag.areaOn : drag.area;
-        const {
-          slideElements,
-          placeOf
-        } = readMap();
-        const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
-        const currentArea = currentElement && readArea(currentElement);
-        if (!destination || destination === currentArea) {
-          // Nothing to ask of the state: the slide it names is already the one
-          // shown — a drag let go of short of a travel, a travel caught in
-          // flight and let carry on. The track goes there on its own.
-          settleTowards(drag, destination || drag.area);
-          return;
-        }
-        // Where the slide is being left, for the travel to depart from instead
-        // of from the map.
-        travelFromRef.current = drag.offset;
-        // …and where the indicator is being left, said about the slide that is
-        // ARRIVING: a box short of the slide being pulled in, right where the
-        // finger left it when going back to the slide being dragged.
-        travelProgressFromRef.current = travels ? drag.progress - sign : drag.progress;
-        // Which way the travel goes, read off where the two slides stand
-        // rather than off the pull: a travel caught in flight and put back
-        // goes the way it came, whatever the finger did meanwhile.
-        const stage = stageRef.current;
-        const placeOfArea = someArea => stage?.placeByArea.get(someArea) || placeOf.get(someArea) || {
-          x: 0,
-          y: 0
-        };
-        const towards = Math.sign(placeOfArea(destination)[axis] - placeOfArea(currentArea)[axis]);
-        const moved = goToArea(destination, {
-          forward: towards > 0,
-          event,
-          dx: axis === "x" ? towards : 0,
-          dy: axis === "y" ? towards : 0
-        });
-        if (!moved) {
-          // Nowhere to go after all — a slide holding on to the user
-          // (preventNav), or a caller that refused the change.
-          travelFromRef.current = null;
-          travelProgressFromRef.current = null;
-          settleTowards(drag, currentArea);
-          return;
-        }
-        // A container whose `current` is held outside and was not moved: no
-        // render moved the track, so the hand-off is still waiting and the
-        // track still under where the finger left it. One frame is all it
-        // takes to know.
-        requestAnimationFrame(() => {
-          if (travelFromRef.current) {
-            travelFromRef.current = null;
-            travelProgressFromRef.current = null;
-            settleTowards(drag, currentArea);
-          }
-        });
-      },
-      onGiveUp: () => {
-        dragRef.current = null;
-        // A press that never became a gesture: what it stopped goes on its way,
-        // from where the finger caught it and over what is left of the travel.
-        if (!caughtTravel) {
-          return;
-        }
-        const {
-          trackElement: trackCaught,
-          offsetOnScreen,
-          offsetTarget,
-          onScreenPx: caughtOnScreenPx,
-          from,
-          to
-        } = caughtTravel;
-        caughtTravel = null;
-        movingRef.current = {
-          from,
-          to
-        };
-        if (offsetOnScreen === offsetTarget) {
-          settleTravel();
-          return;
-        }
-        const durationMs = durationToMs(duration);
-        // What is LEFT of it, at the pace it had: a travel caught nine tenths
-        // of the way there and let go of does not start its duration again.
-        const boxRect = trackCaught.getBoundingClientRect();
-        const targetPx = offsetToPx(offsetTarget, boxRect);
-        const leftToCover = Math.abs(drag.axis === "y" ? targetPx.y - caughtOnScreenPx.y : targetPx.x - caughtOnScreenPx.x);
-        const size = drag.axis === "y" ? boxRect.height : boxRect.width;
-        const travelRatio = size ? leftToCover / size : 1;
-        trackCaught.style.setProperty("--slide-container-offset", offsetTarget);
-        trackAnimationRef.current = trackCaught.animate([{
-          translate: offsetOnScreen
-        }, {
-          translate: offsetTarget
-        }], {
-          duration: durationMs * travelRatio,
-          easing: "ease-out"
-        });
-        trackAnimationRef.current.finished.then(settleTravel, () => {
-          // taken over by a travel asked for since
-        });
-      }
-    };
-  };
-
-  // Whether a gesture may begin at all: one travel at a time, and a window
-  // mid-roll has nothing to drag yet — it is on its way somewhere and the
-  // content that goes with it has not moved (see goToArea).
-  const canStartTravel = () => dragAxes && !dragRef.current && !rollingRef.current;
-  const startDrag = pointerDownEvent => {
-    if (!canStartTravel()) {
-      return;
-    }
-    const travelInFlight = readTravelInFlight();
-    // Left playing when the hand can take it: the press is then far more
-    // likely the next swipe than a catch, and stopping the travel under it is
-    // what that swipe feels as a stall — the gesture listens to the hand first
-    // and says which it was (see inFlight in drag_to_travel.js). On an axis the
-    // hand cannot drag, it is caught at the press, as a travel under a finger
-    // that starts something else.
-    const leftPlaying = Boolean(travelInFlight && dragAxes.includes(travelInFlight.axis));
-    const caughtTravel = travelInFlight && !leftPlaying ? catchTravelInFlight() : null;
-    const handlers = createTravelHandlers(caughtTravel);
-    const gesture = startDragToTravel(pointerDownEvent, {
-      element: containerRef.current,
-      axes: dragAxes,
-      inFlight: leftPlaying ? travelInFlight : false,
-      // The next swipe over a travel still playing: one slide further, and the
-      // travel goes on there from where it is — the way a second arrow press
-      // sends it — without ever having stopped under the hand.
-      onPushOn: ({
-        axis,
-        sign,
-        event
-      }) => {
-        if (trackAnimationRef.current?.playState !== "running") {
-          return false;
-        }
-        // Nothing is held: the box is free for the travel that follows.
-        dragRef.current = null;
-        if (axis === "x") {
-          move(-sign, 0, event);
-        } else {
-          move(0, -sign, event);
-        }
-        return true;
-      },
-      ...handlers
-    });
-    if (!gesture) {
-      // Not a press this box can be about — something that reads the pointer
-      // itself, a box below it that travels the same way. Whatever the press
-      // stopped on its way in goes back on its way.
-      handlers.onGiveUp();
-      return;
-    }
-    handlers.drag.gesture = gesture;
-    dragRef.current = handlers.drag;
-  };
-
-  // A wheel pushing the box sideways asks for a SLIDE, not for a place between
-  // two: one push, one slide — the same thing an arrow key asks for, and it
-  // plays at its own pace rather than under a hand (see watchWheelTravel).
-  // Watched for the whole life of the box because such a gesture has no press
-  // to start it: it begins with its first event.
-  //
-  // Reached through a ref and never rebuilt for it: a travel CHANGES which
-  // slide is current, so a watcher listening on that would be torn down halfway
-  // through the very gesture moving it.
-  const travelOneStepRef = useRef(null);
-  travelOneStepRef.current = ({
-    axis,
-    sign,
-    event
-  }) => {
-    if (dragRef.current) {
-      // A hand is holding the slides. They are its until it lets go.
-      return;
-    }
-    if (axis === "x") {
-      move(-sign, 0, event);
-    } else {
-      move(0, -sign, event);
-    }
-  };
-  useLayoutEffect(() => {
-    if (!scrollAxes) {
-      return undefined;
-    }
-    return watchWheelTravel(containerRef.current, {
-      axes: scrollAxes,
-      onStep: detail => travelOneStepRef.current(detail)
-    });
-  }, [scrollAxes]);
-
-  // A gesture is listening on things that outlive this component.
   useLayoutEffect(() => {
     return () => {
-      dragRef.current?.gesture?.stop();
-      dragRef.current = null;
       cancelTravelProgressAnimation();
     };
   }, []);
@@ -71922,6 +71346,35 @@ const SlideContainer = ({
       }
     };
   });
+  // A container sharing the state of the one holding it is part of that one's
+  // surface: the arrows it walks are heard on the holder's box and on what
+  // follows it, while its slide is the one on screen — a row of a column of
+  // rows walks sideways with the keyboard on the column, or on a chevron of
+  // the column. A press something already travelled on is left alone (it is
+  // marked, see applyKeyboardShortcuts), and so is one pressed inside this box,
+  // which heard it first.
+  useLayoutEffect(() => {
+    const holderElement = sharesState && holder.containerRef.current;
+    if (!holderElement) {
+      return undefined;
+    }
+    const surfaceElements = [holderElement, ...readFollowerElements(holderElement)];
+    const onSurfaceKeyDown = keyDownEvent => {
+      const containerEl = containerRef.current;
+      if (keyDownEvent.defaultPrevented || !containerEl || containerEl.contains(keyDownEvent.target) || !containerEl.closest("[data-slide]")?.hasAttribute("data-current")) {
+        return;
+      }
+      onKeyDownShortcuts(keyDownEvent);
+    };
+    for (const surfaceElement of surfaceElements) {
+      surfaceElement.addEventListener("keydown", onSurfaceKeyDown);
+    }
+    return () => {
+      for (const surfaceElement of surfaceElements) {
+        surfaceElement.removeEventListener("keydown", onSurfaceKeyDown);
+      }
+    };
+  });
   return (
     // Box rather than a plain div: it is how every navi component takes the
     // onnavi_* handlers below — they are navi's own event names, and Box is
@@ -71931,31 +71384,26 @@ const SlideContainer = ({
       ref: containerRef,
       baseClassName: "navi_slide_container",
       "data-slide-container": ""
-      // Which axes a touch may travel on, said in the DOM: what the browser
-      // does with a finger is decided by CSS (touch-action) before any of this
-      // has seen the gesture — and it is also what a box HOLDING this one reads
-      // to know the gesture is not its own (see drag_to_travel.js).
+      // What the holder reads to show the slide holding the place the state
+      // names, and to write the place this box stands on (see `signal`).
       ,
-      "data-travel-by-drag": dragAxes ?? undefined
-      // …and said as a listener too, from the same render: a touch this box may
-      // take has to be refusable before the finger lands, and being registered
-      // is the whole of it — see keepTouchRefusable for why a JSX prop is
-      // enough here (an element-level touchmove listener is non-passive).
-      // Without it, a swipe the box has taken can be cancelled mid-gesture by
-      // the browser scrolling the page along the axis touch-action leaves it.
+      "data-slide-shares-state": sharesState ? "" : undefined
+      // Which axes the row scrolls on under a hand, and which of them a finger may
+      // not take (see the css above).
       ,
-      onTouchMove: dragAxes ? keepTouchRefusable : undefined
-      // The same fact for a wheel, and only for that second reason: this box
-      // takes the push, whatever the box around it also travels on.
+      "data-slide-hand": travelAxes ?? undefined,
+      "data-slide-no-touch": Array.from(scrollAxes ?? "").filter(axis => !dragAxes?.includes(axis)).join("") || undefined
+      // Read by what stands around the box: a press landing here may become a
+      // scroll, so a control acting on the press waits for its click, and a box
+      // around that a finger pushes leaves this axis alone (see drag_to_travel.js).
       ,
-      "data-travel-by-wheel": scrollAxes ?? undefined
-      // The same fact, read by the shared gesture stylesheet: what scrolls
-      // inside a box that travels must not spill onto the page behind it (see
-      // drag_to_travel.js).
-      ,
-      "data-drag-travel": travelAxes ?? undefined,
+      "data-travel-by-drag": dragAxes ?? undefined,
       onPointerDown: e => {
-        startDrag(e);
+        // A finger on a travel still playing: it is the row's from here, and the
+        // row is where the travel is going.
+        if (e.pointerType !== "mouse") {
+          trackAnimationRef.current?.finish();
+        }
         rest.onPointerDown?.(e);
       }
       // The focusable one, and a Tab stop: a slide is not (see Slide), so the
@@ -72065,13 +71513,15 @@ const SlideContainer = ({
             answeredAreas,
             done,
             valueByArea,
-            settleFocus,
             // What a slide reads to know whether its content is rendered yet
             // (see Slide's `mount`).
             mount,
             areaShownNext,
             nearAreas,
             claimOpening: areaShownNext === undefined ? claimOpening : null,
+            // What a container nested in a slide compares its own with, to
+            // know it shares this state (see `signal`).
+            signal: currentSignal,
             // The box itself, for what is written INSIDE it to read the same
             // facts what is written outside reads by id (useSlideContainer):
             // a way out is a way out on either side of the box.
@@ -72166,15 +71616,6 @@ const Slide = ({
   }), [nextIsLocked, preventNavPrevious]);
   // What the travel into this slide carried, if anything (see useSlideValue).
   const slideValue = container?.valueByArea?.[slideArea];
-  // This slide's DOM is settled — said after EVERY commit, no dependency
-  // array, because it is a fact about the render that just happened, not a
-  // reaction to a particular prop. The container is the one holding a focus
-  // transfer waiting for it (see settleFocus): a travel's value reaches this
-  // slide through context one flush after the container moved, and what it
-  // shows (a form keyed by a prefill) is only final here.
-  useLayoutEffect(() => {
-    container?.settleFocus?.(slideArea);
-  });
   return jsx(SlideContext.Provider, {
     value: locks,
     children: jsx(SlideValueContext.Provider, {
@@ -73639,16 +73080,12 @@ const css$H = /* css */`@property --x-popup-group-top {
   transition: none;
 }
 
-:is(:root[data-navi-route-transition] .navi_popup_group:modal, :root[data-navi-route-travel] .navi_popup_group:modal) {
+:root[data-navi-route-transition] .navi_popup_group:modal {
   view-transition-class: navi_popup;
 }
 
 @supports (view-transition-name: match-element) {
   :root[data-navi-route-transition]:not([data-navi-route-transition-target="area"]) .navi_popup_group:modal {
-    view-transition-name: match-element;
-  }
-
-  :root[data-navi-route-travel] .navi_popup_group:modal {
     view-transition-name: match-element;
   }
 }
@@ -75608,8 +75045,7 @@ const popupCss = /* css */ `
     }
   }
 
-  /* While the PAGES are the ones moving — a route transition, a route travel —
-     an open popup takes a picture of its own. The pictures of such a movement
+  /* While the PAGES are the ones moving, in a route transition, an open popup takes a picture of its own. The pictures of such a movement
      are drawn in the top layer, above everything the document paints, and a
      popup lives in the top layer too: uncaptured, it is simply covered for the
      length of the movement, so it disappears the instant its page starts to
@@ -75619,9 +75055,7 @@ const popupCss = /* css */ `
      The class is how navi reaches that picture afterwards: its clock below,
      and its place above the pages (the z-order in nav/route_transition.jsx). */
   :root[data-navi-route-transition] .navi_popover[aria-expanded="true"],
-  :root[data-navi-route-transition] .navi_dialog[aria-expanded="true"],
-  :root[data-navi-route-travel] .navi_popover[aria-expanded="true"],
-  :root[data-navi-route-travel] .navi_dialog[aria-expanded="true"] {
+  :root[data-navi-route-transition] .navi_dialog[aria-expanded="true"] {
     view-transition-class: navi_popup;
   }
 
@@ -75645,9 +75079,7 @@ const popupCss = /* css */ `
     :root[data-navi-route-transition]:not(
         [data-navi-route-transition-target="area"]
       )
-      .navi_dialog[aria-expanded="true"],
-    :root[data-navi-route-travel] .navi_popover[aria-expanded="true"],
-    :root[data-navi-route-travel] .navi_dialog[aria-expanded="true"] {
+      .navi_dialog[aria-expanded="true"] {
       view-transition-name: match-element;
     }
   }
@@ -75659,12 +75091,191 @@ const popupCss = /* css */ `
   :root[data-navi-route-transition]::view-transition-new(.navi_popup) {
     animation-duration: var(--navi-route-transition-duration, 300ms);
   }
-  :root[data-navi-route-travel]::view-transition-group(.navi_popup),
-  :root[data-navi-route-travel]::view-transition-old(.navi_popup),
-  :root[data-navi-route-travel]::view-transition-new(.navi_popup) {
-    animation-duration: var(--navi-route-travel-duration, 300ms);
-  }
 `;
+
+/**
+ * A modal dialog covered by another modal dialog is not in use, so it does not
+ * answer the keyboard: a sheet raising one leaves what is behind it where it
+ * is, under the keyboard like anything else behind that sheet.
+ *
+ * Two things make an open dialog follow the keyboard, and both are held here
+ * for as long as it is covered:
+ * - its ceiling (--dialog-maxmax-height), which CSS keeps tracking
+ *   --navi-app-height. Written back resolved, inline. `freezeSize` cannot do it:
+ *   a max-* wins over the width/height it writes;
+ * - its placement, which reads the live viewport. Deferred, see
+ *   deferPlacementWhileCovered.
+ *
+ * A dialog back on top answers the screen as it is, at once, with one exception:
+ * a keyboard on its way out. It is still counted for a while after the sheet
+ * closes (the browser takes its time, then --navi-vvh waits for the resize to
+ * settle, see responsive.js), and answering that makes the dialog jump up and
+ * back down. A keyboard belongs to a focused field, so the focus says which case
+ * this is: on a field the keyboard stays, anywhere else it is leaving and the
+ * dialog waits for the viewport to change. No timer: how long a keyboard takes
+ * to leave is unknown, and a duration would also delay a keyboard that stays.
+ *
+ * Only modal dialogs stack here. What sits under a non-modal one is still
+ * usable, and keeps following the keyboard.
+ */
+
+
+const CEILING = "--dialog-maxmax-height";
+
+const modalStack = [];
+
+/**
+ * @param {HTMLDialogElement} dialogEl - The modal dialog being shown.
+ * @param {object} params
+ * @param {() => void} params.place - Places the dialog against the viewport as
+ *   it is. Called on a dialog that was held once it answers the viewport again.
+ * @returns {() => void} To call when the dialog closes.
+ */
+const enterModalStack = (dialogEl, { place }) => {
+  const entry = { dialogEl, place, hold: null };
+  const entryBelow = modalStack.at(-1);
+  if (entryBelow) {
+    holdEntry(entryBelow);
+  }
+  modalStack.push(entry);
+  return () => {
+    const index = modalStack.indexOf(entry);
+    const wasOnTop = index === modalStack.length - 1;
+    modalStack.splice(index, 1);
+    dropHold(entry);
+    if (wasOnTop && modalStack.length > 0) {
+      releaseBackOnTop(modalStack.at(-1), { closedDialogEl: dialogEl });
+    }
+  };
+};
+
+/**
+ * Answers true when the dialog must not be placed right now, and remembers to
+ * place it on release.
+ *
+ * Only while the room differs from the one it was covered with: the placement
+ * reads the live viewport whatever triggered it, so with the same room it lands
+ * where the dialog already is, and content growing under the sheet is answered
+ * as usual.
+ */
+const deferPlacementWhileCovered = (dialogEl) => {
+  const entry = modalStack.find((candidate) => candidate.dialogEl === dialogEl);
+  if (!entry || !entry.hold) {
+    return false;
+  }
+  if (readRoom() === entry.hold.room) {
+    return false;
+  }
+  entry.hold.placementOwed = true;
+  return true;
+};
+
+const holdEntry = (entry) => {
+  if (entry.hold) {
+    // Covered again before the keyboard had left: the ceiling it holds is still
+    // the one it had before all of this.
+    entry.hold.stopWaiting?.();
+    entry.hold.stopWaiting = null;
+    return;
+  }
+  const { dialogEl, place } = entry;
+  holdCeiling(dialogEl);
+  entry.hold = {
+    room: readRoom(),
+    placementOwed: false,
+    stopWaiting: null,
+    // The keyboard does not fire this one (see safe_area.md): this is the
+    // window itself changing, a rotation, which a covered dialog has to fit.
+    stopWatchingWindow: subscribeWindowResizeSettled(() => {
+      holdCeiling(dialogEl);
+      entry.hold.room = readRoom();
+      entry.hold.placementOwed = false;
+      place();
+    }),
+  };
+};
+
+const releaseBackOnTop = (entry, { closedDialogEl }) => {
+  const { hold } = entry;
+  if (!hold) {
+    return;
+  }
+  // Nothing taken away, or a keyboard that stays: the room read here is the
+  // screen as it is. A field in the dialog that closed is one still leaving: a
+  // dialog leaving the tree only gives the focus back after the commit.
+  const { activeElement } = document;
+  if (
+    readRoom() >= hold.room ||
+    (isEditableTarget(activeElement) && !closedDialogEl.contains(activeElement))
+  ) {
+    release(entry);
+    return;
+  }
+  // Any change, not the room it was covered with: the bars of a mobile browser
+  // may come back different, and the wait would never end.
+  const roomWithKeyboardLeaving = readRoom();
+  const releaseIfViewportChanged = () => {
+    if (readRoom() !== roomWithKeyboardLeaving) {
+      release(entry);
+    }
+  };
+  // The focus can come back after the close (a popup leaving the tree gives it
+  // back once the commit is over), and the keyboard then stays after all.
+  const releaseIfFieldFocused = () => {
+    if (isEditableTarget(document.activeElement)) {
+      release(entry);
+    }
+  };
+  document.addEventListener("focusin", releaseIfFieldFocused, {
+    capture: true,
+  });
+  const unsubscribes = [
+    visualViewportHeightSignal.subscribe(releaseIfViewportChanged),
+    subscribeVirtualKeyboardGeometryChange(releaseIfViewportChanged),
+  ];
+  hold.stopWaiting = () => {
+    document.removeEventListener("focusin", releaseIfFieldFocused, {
+      capture: true,
+    });
+    for (const unsubscribe of unsubscribes) {
+      unsubscribe();
+    }
+  };
+};
+
+const release = (entry) => {
+  const { placementOwed } = entry.hold;
+  dropHold(entry);
+  if (placementOwed) {
+    entry.place();
+  }
+};
+
+const dropHold = (entry) => {
+  const { hold, dialogEl } = entry;
+  if (!hold) {
+    return;
+  }
+  hold.stopWaiting?.();
+  hold.stopWatchingWindow();
+  dialogEl.style.removeProperty(CEILING);
+  entry.hold = null;
+};
+
+// The declared ceiling rather than the used max-height: it is the one cap that
+// follows the keyboard, and the other caps (maxHeight) keep their say. Its
+// computed value has every var() resolved, so it stops following once written
+// back. Registered with inherits: false, it does not reach a dialog nested
+// inside this one.
+const holdCeiling = (dialogEl) => {
+  dialogEl.style.removeProperty(CEILING);
+  const ceiling = getComputedStyle(dialogEl).getPropertyValue(CEILING);
+  dialogEl.style.setProperty(CEILING, ceiling);
+};
+
+// An overlaying keyboard leaves the viewport alone and arrives on its own.
+const readRoom = () =>
+  visualViewportHeightSignal.peek() - getVirtualKeyboardOverlayHeight();
 
 /**
  * Pushing a popup docked to an edge (a side panel, a bottom sheet) back the way
@@ -75860,12 +75471,11 @@ const clipOf = (side, distance) => {
  * `--navi-close`, which the nearest popup above it answers; the caller only
  * decides where it goes (the right end of a header, most of the time).
  *
- * It is the way out of a popup, so it is the one affordance in there that the
- * surrounding control's read-only and disabled do not reach: a read-only picker
- * still opens (reading changes nothing) and hands its popup that read-only, and
- * a cross wearing it would trap the user in a popup they were invited to read.
- * A close button written by hand inherits it and refuses the press — which is
- * the reason to use this one rather than a `<Button command="--navi-close" />`.
+ * It is the way out of a popup, so the state of the surrounding control does not
+ * reach it, as with any `--navi-close` button that has no action of its own (see
+ * pressOnlyLeaves in control_hooks.jsx): a read-only picker still opens (reading
+ * changes nothing) and hands its popup that read-only, and a cross wearing it
+ * would trap the user in a popup they were invited to read.
  *
  * Exempt from the state around it, never from the popup's own answer: the cross
  * ASKS, and the popup decides — a dialog holding a form mid-send keeps the
@@ -75892,15 +75502,6 @@ const PopupClose = ({
     command: "--navi-close",
     icon: true,
     variant: "discrete"
-    // Dismissing writes nothing to whatever control the popup belongs to, so
-    // that control's read-only and disabled are not about this cross: a
-    // read-only picker still opens to be read (see readonly_constraint.js),
-    // and what is opened has to be closable. Whether closing is allowed at
-    // this instant is the popup's own question, answered by the popup — a
-    // dialog holds the close while an action inside it runs (see
-    // popup_busy.js).
-    ,
-    whenSelfInteractionsBlocked: "ignore"
     // The cross is drawn at the control size, which is a few millimetres
     // wide; the padding is what makes it a target a thumb can hit.
     ,
@@ -78082,6 +77683,9 @@ const useDialogProps = props => {
     const rectEffect = visibleRectEffect(positionedAncestor, (visibleRect, {
       event
     }) => {
+      if (deferPlacementWhileCovered(dialogEl)) {
+        return;
+      }
       positionDialog(event);
       // Only for what can have taken height away from the dialog — a
       // scroll never does, and re-scrolling on one would fight the finger
@@ -78101,6 +77705,17 @@ const useDialogProps = props => {
       freezeSize(dialogEl);
     }
     rectEffect.observeSize(dialogEl);
+    if (isModal) {
+      addCleanup(enterModalStack(dialogEl, {
+        // "resize": what it was held from is a viewport change, and it answers
+        // the way it answers one, animated. Called directly because the
+        // effect's dedup already saw that viewport go by.
+        place: () => {
+          positionDialog(new CustomEvent("resize"));
+          keepFocusedElementVisible(dialogEl);
+        }
+      }));
+    }
     // Content that sizes itself once on screen (a shrink-wrapped BadgeList)
     // says so, after the placement read it: placed again on the spot, where
     // observeSize answers a frame late. Stopped here, since a popup further up
@@ -81599,11 +81214,11 @@ const PickerCustom = props => {
           event: e,
           name: "navi_request_open_event",
           // Showing what the picker already holds, in the shape only the popup
-          // draws it in — nothing of the value is written on the way in, nor on
-          // the way out. Every interaction below says the same, which is what
-          // lets a read-only picker be opened and read while everything that
-          // would write it (paste, cut, the clear cross) stays refused. See
-          // READONLY_CONSTRAINT.
+          // draws it in — nothing of the value is written on the way in. Every
+          // way of opening below says the same, which is what lets a read-only
+          // picker be opened and read while everything that would write it
+          // (paste, cut, the clear cross) stays refused. Every way of closing
+          // says "close". See READONLY_CONSTRAINT.
           intent: "read",
           allowed: () => {
             // What the open said travels with it: a picker opened from
@@ -81628,7 +81243,7 @@ const PickerCustom = props => {
       onnavi_request_close: e => {
         requestInteraction({
           event: e,
-          intent: "read",
+          intent: "close",
           allowed: () => {
             const closing = requestClose(e, {
               isCancel: e.detail.isCancel,
@@ -81735,7 +81350,7 @@ const PickerCustom = props => {
           }
           return {
             name: "escape_to_cancel",
-            intent: "read",
+            intent: "close",
             allowed: () => {
               // Read with escapeEffect by the controller (see above).
               requestClose(e, {
@@ -81812,7 +81427,7 @@ const PickerCustom = props => {
               pressAnsweredAtMouseDownRef.current = readPressCount();
               return {
                 name: "mousedown to close picker",
-                intent: "read",
+                intent: "close",
                 allowed: () => requestClose(e, {
                   isCancel: true
                 })
@@ -81860,7 +81475,7 @@ const PickerCustom = props => {
             if (openController.opened && !openedDuringThisPress(openController)) {
               return {
                 name: "click to close picker",
-                intent: "read",
+                intent: "close",
                 prevented: () => {
                   e.preventDefault();
                 },
@@ -81894,6 +81509,13 @@ const PickerCustom = props => {
             };
           },
           keyDown: e => {
+            // Pressed in a popup this picker holds: the key is that popup's, and
+            // `false` keeps it from the default reaction too, which would refuse
+            // it on a read-only picker and take a Space from the button it was
+            // pressed on.
+            if (isPressOnLayerOver(e.target, e.currentTarget)) {
+              return false;
+            }
             // A shortcut that applies has been through the gate already, under
             // its own name and intent: the key is answered. Handed back as the
             // reaction, its boolean would be asked again, unnamed — as a write,
@@ -84733,7 +84355,8 @@ const SelectableInput = SelectableInputProxy;
  * The `highlight` argument of `useSearchHighlight` (a row's `matchInfo.matchRanges`) can be:
  *   - an array of [start, end] pairs — applied to all text nodes under the root element
  *   - an object { [domSelector]: [[start, end], …] } — applied to each sub-element
- *     matched by the selector (the format produced by createSearch)
+ *     matched by the selector (the format produced by createSearch); a selector
+ *     matching nothing under the root element marks nothing
  */
 
 // Module-level shared Highlight instance — created lazily once.
@@ -84779,10 +84402,12 @@ const applySearchHighlight = (el, highlight) => {
     ? highlight.length === 0
       ? []
       : [{ root: el, ranges: highlight }]
-    : Object.entries(highlight).map(([selector, ranges]) => ({
-        root: el.querySelector(selector) ?? el,
-        ranges,
-      }));
+    : Object.entries(highlight).flatMap(([selector, ranges]) => {
+        // The ranges are offsets into the selected element's text: an item
+        // that doesn't render it has nothing to mark.
+        const root = el.querySelector(selector);
+        return root ? [{ root, ranges }] : [];
+      });
 
   if (entries.length === 0) {
     return undefined;
@@ -85400,7 +85025,7 @@ const css$w = /* css */`@property --list-group-label-height {
 }
 
 @supports (view-transition-group: contain) {
-  :root:not([data-navi-route-transition], [data-navi-route-travel]) .navi_list_container[data-item-transition] {
+  :root:not([data-navi-route-transition]) .navi_list_container[data-item-transition] {
     view-transition-name: match-element;
     view-transition-class: navi_list_transition;
     view-transition-group: contain;
@@ -85491,6 +85116,7 @@ const ListUI = props => {
     scroller = "self",
     hoverWhileScrolling = false,
     scrollResetOnNavigation = false,
+    scrollResetKey,
     lockSize,
     columns,
     itemColumns,
@@ -85609,6 +85235,7 @@ const ListUI = props => {
     scrolled,
     defaultScrolled,
     onScrolledChange,
+    scrollResetKey,
     rememberScroll,
     listId: rest.id,
     scroller,
@@ -85979,6 +85606,7 @@ const useListScrollSync = ({
   scrolled,
   defaultScrolled,
   onScrolledChange,
+  scrollResetKey,
   rememberScroll,
   listId,
   scroller,
@@ -85987,6 +85615,8 @@ const useListScrollSync = ({
   columns
 }) => {
   const debugScroll = useDebugScroll();
+  // The offset a search gives back once emptied (see below).
+  const savedScrollRef = useRef(null);
   // Where the list must be: what the caller holds it at (`scrolled`), or where
   // it opens and then lets go (`defaultScrolled`). A `scrolled` that changes is
   // the caller moving the list, so the hold is armed again — that is what makes
@@ -85995,7 +85625,9 @@ const useListScrollSync = ({
   // one kept from the previous visit): followed for as long as nobody has
   // moved the list, and compared by value, since it is said at every render.
   // Nothing to hold it at (a position not saved yet) is not a position: the
-  // list opens where it opens.
+  // list opens where it opens. A `scrollResetKey` that changes sends it back to
+  // its start ("back_to_start", see placeBackAtStart), unless a `scrolled`
+  // changing in the same render says where it goes.
   const startPlaceRef = useRef(null);
   if (startPlaceRef.current === null) {
     startPlaceRef.current = {
@@ -86003,6 +85635,7 @@ const useListScrollSync = ({
       wanted: scrolled ?? defaultScrolled,
       scrolled,
       defaultScrolled,
+      scrollResetKey,
       way: null,
       arrived: false,
       // Whether the hold's writes glide (--navi-scroll:smooth).
@@ -86010,6 +85643,20 @@ const useListScrollSync = ({
     };
   } else {
     const place = startPlaceRef.current;
+    if (!compareTwoJsValues(place.scrollResetKey, scrollResetKey)) {
+      place.scrollResetKey = scrollResetKey;
+      place.wanted = "back_to_start";
+      place.userTookOver = false;
+      place.way = null;
+      place.arrived = false;
+      place.smooth = false;
+      // What the list said it was reading, and what a search would give back,
+      // are places in what it no longer shows.
+      savedScrollRef.current = null;
+      if (rememberScroll) {
+        forgetScrollerPosition(listId);
+      }
+    }
     if (place.scrolled !== scrolled) {
       place.scrolled = scrolled;
       place.defaultScrolled = defaultScrolled;
@@ -86018,7 +85665,7 @@ const useListScrollSync = ({
       place.smooth = false;
     } else if ((scrolled === undefined || scrolled === null) && !compareTwoJsValues(place.defaultScrolled, defaultScrolled)) {
       place.defaultScrolled = defaultScrolled;
-      if (!place.userTookOver) {
+      if (!place.userTookOver && place.wanted !== "back_to_start") {
         place.wanted = defaultScrolled;
         // Placed again from where it stands: the way to the previous place
         // says nothing about whose the next scrolls are.
@@ -86362,6 +86009,8 @@ const useListScrollSync = ({
       wantedStart = total - windowSize;
     } else if (typeof scrolledWanted === "number") {
       heldItem = scrolledWanted;
+    } else if (scrolledWanted === "back_to_start") {
+      heldItem = 0;
     } else if (scrolledWanted && scrolledWanted.id !== undefined) {
       const itemIndex = listItems.locateItem(scrolledWanted.id);
       if (itemIndex !== null) {
@@ -86597,7 +86246,6 @@ const useListScrollSync = ({
   // Lorsqu'on selectionne quelque chose pendant une recherche, alors ensuite meme si on clear
   // on veut pas revenir a la position scroll précédente car on veut garde l'item qu'on a selectionné visible
   // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
-  const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
   const restoreScrollRafRef = useRef(null);
   useLayoutEffect(() => {
@@ -86707,6 +86355,10 @@ const useListScrollSync = ({
     if (scrolledWanted === "start" || scrolledWanted === undefined || startPlaceRef.current.userTookOver || !ref.current) {
       return;
     }
+    if (scrolledWanted === "back_to_start") {
+      placeBackAtStart();
+      return;
+    }
     if (listItems.totalSignal.peek() === 0 || virtualItemSizeSignal.peek() === 0) {
       return;
     }
@@ -86804,6 +86456,24 @@ const useListScrollSync = ({
       return;
     }
     sendHeldScroll(scrollNow + delta);
+  };
+  // The start of the list, what comes before its first item included, not an
+  // item: a box of its own goes to 0. A box the list is further down of also
+  // shows what stands above it, the control that asked for this among others, so
+  // the list is brought back to the box's start and never sent forward to it.
+  const placeBackAtStart = () => {
+    const scrollerEl = getScroller();
+    if (ref.current.contains(scrollerEl)) {
+      sendHeldScroll(0);
+      return;
+    }
+    const scale = readScrollerScale(scrollerEl, horizontal);
+    const viewportRect = getScrollerViewportRect(scrollerEl);
+    const listRect = ref.current.getBoundingClientRect();
+    const offsetNow = (horizontal ? listRect.left - viewportRect.left : listRect.top - viewportRect.top) / scale;
+    const delta = offsetNow - getItemScrollInset(scrollerEl, ref.current, horizontal);
+    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    sendHeldScroll(delta < 0 ? scrollNow + delta : scrollNow);
   };
   // Every placement goes through here, the ones that find the list in place
   // too: it keeps the way from where the scroller was to where it is sent,
@@ -86929,8 +86599,8 @@ const useListScrollSync = ({
       return undefined;
     }
     return routePage.leavingSignal.subscribe(leaving => {
+      pageLeftRef.current = leaving;
       if (leaving) {
-        pageLeftRef.current = true;
         letGo();
       }
     });
@@ -87027,27 +86697,35 @@ const useListScrollSync = ({
   // landing or resizing — and said again when it reads differently (`ifChanged`):
   // the same scroll, the screen said right.
   const announcedRef = useRef(null);
+  // A scroll landing past everything drawn (a key sending the list to its end,
+  // a hand on the scrollbar) has no item to read a position from: it is said by
+  // that re-read, even when it is the first thing the list has to say.
+  const reportOwedRef = useRef(false);
   const reportPosition = ({
     ifChanged
   } = {}) => {
     if (!ref.current) {
       return;
     }
-    if (ifChanged && !announcedRef.current) {
+    if (ifChanged && !announcedRef.current && !reportOwedRef.current) {
       return;
     }
     const remember = rememberScrollRef.current;
     const onScrolledChange = onScrolledChangeRef.current;
     const position = captureListAnchor(remember || Boolean(onScrolledChange));
     if (!position) {
+      if (!ifChanged) {
+        reportOwedRef.current = true;
+      }
       return;
     }
+    reportOwedRef.current = false;
     positionRef.current = position;
     if (!remember && !onScrolledChange) {
       return;
     }
     const scrolledNow = toScrolledPosition(position);
-    if (ifChanged && isSamePosition(scrolledNow, announcedRef.current)) {
+    if (ifChanged && announcedRef.current && isSamePosition(scrolledNow, announcedRef.current)) {
       return;
     }
     announcedRef.current = scrolledNow;
@@ -87603,10 +87281,9 @@ const useListScrollSync = ({
     // ends the hold like a wheel does — the ones that come with no input event
     // at all: the status bar tap on iOS, find in page, a script.
     // Only once the list has stood where it holds itself, though. Until then
-    // the page is still settling around it, and some of that is written after
-    // the list placed itself: a navigation holding the rendering for its
-    // transition takes the arriving page to its top once the page rendered
-    // (whenRenderingResumes), and the hold puts it back at its next commit.
+    // the page is still settling around it, and what that moves (a document
+    // still too short for the offset clamps it) the hold puts back at its next
+    // commit.
     const letGoUnlessHeldScroll = () => {
       const place = startPlaceRef.current;
       const way = place.way;
@@ -91675,6 +91352,7 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
  *   hoverWhileScrolling?: boolean,
  *   scrollResetOnNavigation?: boolean,
+ *   scrollResetKey?: any,
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
@@ -91919,6 +91597,15 @@ const ListResolved = /*#__PURE__*/createComponentResolver([ListFirstResolver, Li
  *   overwrite each other (see docs/scroll.md). A fresh arrival at the page
  *   opens at `defaultScrolled` either way, and so does a list the caller holds
  *   through `scrolled`.
+ * @param {any} [props.scrollResetKey]
+ *   What the list shows, said as a value: another order, another filter. When
+ *   it changes after mount (compared by value: `[order, filter]` can be written
+ *   at every render) the list goes back to its start before the paint, in
+ *   whichever box `scroller` names, and is held there until the user reaches
+ *   for it. A list whose start is in view in a box that also shows what stands
+ *   above it does not move. A `scrolled` changing in the same render wins. The
+ *   position remembered under the `id` for the address shown is dropped; see
+ *   docs/scroll.md.
  * @param {boolean} [props.deselectable]
  *   A single-select list allowed to hold nothing: the selected item, pressed
  *   again, lets go. Without it the list is a radio group — a choice, once
@@ -92824,7 +92511,7 @@ const Color = ({
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
-    className: "navi_color",
+    baseClassName: "navi_color",
     "navi-color-empty": color ? undefined : ""
     // propsCSSVars={COLOR_PROP_CSS_VAR}
     ,
@@ -97575,7 +97262,7 @@ const InputDuration = props => {
   delete basePseudoState[":-navi-loading"];
   return jsxs(Box, {
     ref: groupRef,
-    className: "navi_input_duration",
+    baseClassName: "navi_input_duration",
     "data-callout-arrow-x": "center",
     width: "fit-content",
     flex: true,
@@ -98089,8 +97776,7 @@ const Select = ({
     as: "span",
     inline: true,
     flex: true,
-    baseClassName: "navi_input",
-    className: "navi_select",
+    baseClassName: "navi_input navi_select",
     ...rootProps,
     basePseudoState: basePseudoState,
     styleCSSVars: InputStyleCSSVars,
@@ -98858,7 +98544,12 @@ const mergeRanges = (ranges) => {
  *
  * Each field config:
  *   - getter(item): string — extracts the text to search
- *   - domSelector: string — CSS selector used by ListItem to find the target element
+ *   - domSelector?: string — CSS selector used by ListItem to find the target element.
+ *                   Without it, the field is searched and scored but highlights
+ *                   nothing: text the item doesn't write (an alias, a civil name
+ *                   under a nickname, tags). One field per selector: the ranges
+ *                   of two fields sharing one are offsets into two different
+ *                   strings, so the last field wins.
  *   - priority?: number — multiplier applied to the field's score (default 1)
  *   - matchFn?: function — custom match function (searchText, fieldValue) => { match, matchScore, matchRanges }
  *                          defaults to applySearch
@@ -98878,7 +98569,9 @@ const createSearch = (fields) => {
       const result = matchFn(searchText, fieldValue);
       if (result.match && result.matchRanges.length > 0) {
         totalScore += result.matchScore * priority;
-        matchRanges[domSelector] = result.matchRanges;
+        if (domSelector) {
+          matchRanges[domSelector] = result.matchRanges;
+        }
       }
     }
     if (totalScore === 0) {
@@ -106007,7 +105700,7 @@ const ButtonCopyToClipboard = ({
   import.meta.css = [css$b, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
   const [copied, copy] = useCopyToClipboard(children);
   return jsxs(Box, {
-    className: "navi_clipboard_container",
+    baseClassName: "navi_clipboard_container",
     ...props,
     children: [jsx(Box, {
       className: "navi_copied_notif",
@@ -108287,7 +107980,7 @@ const css = /* css */`.navi_side_panel {
     --dialog-maxmax-width: var(--navi-app-width);
 
     &[navi-side="left"], &[navi-side="right"] {
-      height: var(--navi-side-panel-height, var(--navi-app-height));
+      height: var(--navi-side-panel-height, var(--dialog-maxmax-height));
     }
 
     &[navi-side="top"], &[navi-side="bottom"] {
@@ -108599,7 +108292,7 @@ const SidePanelHead = props => jsx(Box, {
  * @param {import("preact").ComponentChildren} props.children
  */
 const SidePanelFoot = props => jsx(Box, {
-  className: "navi_side_panel_foot",
+  baseClassName: "navi_side_panel_foot",
   ...props
 });
 SidePanel.Head = SidePanelHead;
@@ -108617,9 +108310,9 @@ SidePanel.Foot = SidePanelFoot;
  * mount, or the first to render into an empty slot; later renders of a
  * `SlotFill` that is not the filler leave the slot alone. A `SlotFill`
  * unmounting empties the slot only while it is still that one, and so does one
- * in a page a route transition keeps while leaving (see keepLeavingPages in
- * nav/route.jsx): still mounted, hidden, it must neither stay in the slot nor
- * take it back from the page arriving.
+ * in or below a page a route transition keeps while leaving (see
+ * keepLeavingPages in nav/route.jsx): still mounted, hidden, it must neither
+ * stay in the slot nor take it back from the page arriving.
  *
  * **One `SlotFill`, rendered where the choice is made.** `isFilled` follows
  * the fills as they mount and unmount, in the order the tree walks them. A
@@ -108684,8 +108377,10 @@ const createSlot = (SlotRenderer = Box) => {
     }, []);
     // In a page kept while leaving: out of the slot as if unmounted, since
     // the page arriving is what the slot must show — or nothing, when it
-    // fills none.
-    if (routePage && routePage.leavingSignal.value) {
+    // fills none. The signal brings the render that steps out; hasLeft() refuses
+    // a fill built in a kept page (a wrapper changing shape rebuilds what it
+    // holds), which renders before that signal is set.
+    if (routePage && (routePage.leavingSignal.value || routePage.hasLeft())) {
       if (filler === fillerRef) {
         filler = null;
         slotPropsSignal.value = null;
@@ -108969,5 +108664,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NetworkPolicyError, NumberSpin, Paragraph, Picker, Popover, Popup, PopupGroup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, SortHeader, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, activeRouteActionsSignal, activeRouteReadsSignal, anyMatchingRouteSignal, applySearch, arraySignalMembership, askPopup, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, enableVirtualKeyboardOverlay, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isNetworkPolicyError, isPressOnControl, isRowSelected, isScrolling, isToday, keepPageOnScreen, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, renderedPageSignal, rerunActions, resource, route, routeAction, routeFallback, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stateSignalGroup, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, todaySignal, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useCopyToClipboard, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useHoldScrollRestoration, useInputGroup, useKeyboardShortcuts, useListItemState, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, usePopupValue, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, CalloutStatusIcon, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, ControlSwap, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, Expandable, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, InfoSvg, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NetworkPolicyError, NumberSpin, Paragraph, Picker, Popover, Popup, PopupGroup, Quantity, RadioGroup, Route, RouteTransitionArea, RouteTravel, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, Select, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, SortHeader, Spin, SpinGroup, SplitButton, StarSvg, Step, StepList, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, TimeRange, TimeRangeSpin, TimeRangeWheel, TimeSpin, TimeWheel, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, activeRouteActionsSignal, activeRouteReadsSignal, anyMatchingRouteSignal, applySearch, arraySignalMembership, askPopup, canNavBackSignal, canNavForwardSignal, coarsePointerSignal, compareTwoJsValues, constraintFromValidityRule, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineInteractionDetector, defineRouteDefaultTransition, defineRouteTransition, detectHorizontalOverflow, dispatchRequestSetUIState, enableDebugActions, enableDebugOnDocumentLoading, enableVirtualKeyboardOverlay, ensureDocumentStartViewTransition, errorIsDisplayed, filterTableSelection, getNowHours, getNowHoursRoundedToStep, isCellSelected, isColumnSelected, isNetworkPolicyError, isPressOnControl, isRowSelected, isScrolling, isToday, keepPageOnScreen, languagesSignal, localStorageSignal, markAsOutsideTextFlow, markErrorAsDisplayedBy, moveArrayItemByIndex, moveFocusTo, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, preloadUrl, rawUrlPart, registerGlobalConstraint, reload, renderedPageSignal, rerunActions, resource, route, routeAction, routeFallback, routeTravelSettledPageSignal, scrollActivitySignal, setBaseUrl, setNetworkPolicy, setPreferredLanguage, setSupportedLanguages, setUrlTargetOptions, setupRoutes, smallTouchScreenSignal, stateSignal, stateSignalGroup, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, todaySignal, triggerNaviCommand, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutElement, useCalloutRequestClose, useCanNavBack, useCanNavForward, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useCopyToClipboard, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useHoldScrollRestoration, useInputGroup, useKeyboardShortcuts, useListItemState, useNavState, useNetworkPolicyReason, useOrderedColumns, usePickerState, usePopupMode, usePopupValue, useRouteStatus, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideContainer, useSlideValue, useStateArray, useTitleLevel, useTransitionCover, useUrlSearchParam, useUrlTargetId, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

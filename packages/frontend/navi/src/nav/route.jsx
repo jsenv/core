@@ -68,7 +68,7 @@
  */
 
 import { computed, signal, untracked } from "@preact/signals";
-import { cloneElement, createRef, h } from "preact";
+import { cloneElement, createContext, createRef, h } from "preact";
 import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
@@ -78,29 +78,6 @@ import { observeRouteRender, publishRouteRender } from "./route_render.js";
 import { RoutePageContext } from "./route_page_context.js";
 
 export { observeRouteRender };
-
-/**
- * Keep every container showing the page it is showing, whatever the routes say.
- *
- * For a caller whose picture of a page is LIVE and must not follow the router:
- * a travel being undone shows the page it is going back to on both sides at
- * once if the router is allowed to swap under it (see route_travel.jsx). Only
- * the pages are held still — the rest of the document goes on rendering, which
- * is the whole reason this lives here rather than in Preact's own scheduler.
- */
-let routeRenderFrozen = false;
-const routeRenderFrozenSignal = signal(0);
-export const freezeRouteRender = () => {
-  routeRenderFrozen = true;
-  return () => {
-    if (!routeRenderFrozen) {
-      return;
-    }
-    routeRenderFrozen = false;
-    // Read during every container's render, so letting go brings them all back.
-    routeRenderFrozenSignal.value++;
-  };
-};
 
 /**
  * Keep the page a container leaves, hidden, until its route transition is over.
@@ -174,8 +151,13 @@ const debug = (...args) => {
  * collectBranches).
  */
 export const Route = (props) => {
+  const inRow = useContext(RouteRowContext);
   if (props.children) {
-    return <RouteContainer {...props} />;
+    return inRow ? (
+      <RouteRowContainer {...props} />
+    ) : (
+      <RouteContainer {...props} />
+    );
   }
   return <RouteLeaf {...props} />;
 };
@@ -228,6 +210,106 @@ export const collectRoutePages = (children) => {
   return pages;
 };
 
+/**
+ * Whether the next container down is a row a hand scrolls: every page has a
+ * place on it from the start, and the browser moves between them (see
+ * RouteTravel's `nativeScroll`). Told to one container, not to the pages it holds.
+ */
+export const RouteRowContext = createContext(false);
+
+// A container as a row: one pane per leaf, in the order they are written. A page
+// still builds when its route first matches, since a route's actions only ask
+// while it does: before that its pane is empty. Once built it stays, with what
+// it holds and where it was scrolled to, so a hand brings back the page itself
+// and the address coming back to it finds it there.
+//
+// A page not on screen is treated as one kept while leaving, except that this
+// can be undone: it does not re-render for what it reads (isShown), and it steps
+// out of whatever it fills outside its pane (leavingSignal).
+const RouteRowContainer = ({ children }) => {
+  const { activeBranch, leaves } = collectBranches(children);
+  const childrenRef = useRef(null);
+  childrenRef.current = children;
+  const readShownBranchRef = useRef(null);
+  if (!readShownBranchRef.current) {
+    readShownBranchRef.current = () =>
+      collectBranches(childrenRef.current).activeBranch;
+  }
+  const parentPage = useContext(RoutePageContext);
+  const pagesRef = useRef(new Map());
+  const pageOf = (branch) => {
+    let page = pagesRef.current.get(branch.id);
+    if (!page) {
+      page = createRoutePage(readShownBranchRef.current, parentPage);
+      pagesRef.current.set(branch.id, page);
+    }
+    page.branchId = branch.id;
+    // Never answering for another pane: two leaves rendering the same element
+    // are two pages here, each in its pane, where a container carries one over.
+    page.element = null;
+    return page;
+  };
+  const shownPage = activeBranch ? pageOf(activeBranch) : null;
+  const containerKey = useRef({}).current;
+  useLayoutEffect(() => {
+    publishRouteRender();
+    reportContainerShows(containerKey, {
+      parentPage,
+      page: shownPage,
+      branchType: activeBranch ? activeBranch.type : null,
+      routePage: branchRoutePage(activeBranch),
+    });
+  });
+  useLayoutEffect(() => {
+    return () => {
+      forgetContainer(containerKey);
+    };
+  }, []);
+  if (activeBranch && activeBranch.type === "fallback") {
+    // An address the row has no place for: nothing to scroll between.
+    return (
+      <RouteRowPane
+        key="fallback"
+        branch={activeBranch}
+        page={shownPage}
+        shown
+      />
+    );
+  }
+  return leaves.map((leaf) => (
+    <RouteRowPane
+      key={leaf.id}
+      branch={leaf}
+      page={pageOf(leaf)}
+      shown={activeBranch !== null && leaf.id === activeBranch.id}
+    />
+  ));
+};
+const RouteRowPane = ({ branch, page, shown }) => {
+  // The very vnode rendered last, while not on screen: Preact does not look into
+  // it, and a page nobody can see costs nothing when the address moves.
+  const contentRef = useRef(null);
+  if (shown) {
+    contentRef.current = h(
+      RouteRowContext.Provider,
+      { value: false },
+      h(RoutePageContext.Provider, { value: page }, branch.node),
+    );
+  }
+  useLayoutEffect(() => {
+    page.ownLeavingSignal.value = !shown;
+  }, [shown]);
+  return (
+    <div
+      data-route-row-pane=""
+      data-built={contentRef.current ? "" : undefined}
+      inert={!shown}
+    >
+      {contentRef.current}
+    </div>
+  );
+};
+
 // RouteContainer: traverses children statically per render, finds the active branch,
 // and renders only that branch — or the fallback if nothing matches.
 // No contexts, no state of its own: it reads the route signals directly, and
@@ -236,15 +318,7 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   const { activeBranch, fallbackBranch, pages } = collectBranches(children);
   const fallbackPage = fallbackBranch ? fallbackBranch.page : null;
 
-  // Told to hold still: what is on screen stays on screen. Kept as the very
-  // vnode that was rendered last time, which is how Preact is told there is
-  // nothing to look at in that subtree.
-  const frozen = routeRenderFrozenSignal.value >= 0 && routeRenderFrozen;
-  const shownBranchRef = useRef(null);
-  if (!frozen) {
-    shownBranchRef.current = activeBranch;
-  }
-  const branch = shownBranchRef.current || activeBranch;
+  const branch = activeBranch;
   // What this container would show if it rendered now, by the same rule as
   // the render above — asked from outside any render (see isShown below).
   const childrenRef = useRef(null);
@@ -252,9 +326,6 @@ const RouteContainer = ({ id, element, elementProps, children }) => {
   const readShownBranchRef = useRef(null);
   if (!readShownBranchRef.current) {
     readShownBranchRef.current = () => {
-      if (routeRenderFrozen) {
-        return shownBranchRef.current;
-      }
       return collectBranches(childrenRef.current).activeBranch;
     };
   }
@@ -532,7 +603,7 @@ const branchRouteNode = (branch) => {
 // Walk JSX children vnodes (without rendering) to build a branch list and
 // find the active one in the same pass. Anything that is not a <Route> is read
 // through and kept around the branch it holds (see below).
-// Returns { matchingBranch, fallbackBranch, activeBranch, pages }.
+// Returns { matchingBranch, fallbackBranch, activeBranch, pages, leaves }.
 //
 // Each branch is given an id from where it is written among the children,
 // which is what tells a container it changed page: the vnodes themselves are
@@ -547,6 +618,8 @@ const collectBranches = (children, path = "") => {
   // matching or a leaf matching under it is enough to select it, and the
   // fallback then stands down.
   const pages = [];
+  // Every leaf, wrappers kept, whichever matches: what a row has a pane for.
+  const leaves = [];
 
   const visit = (child) => {
     if (!child || child === true || child === false) {
@@ -580,9 +653,13 @@ const collectBranches = (children, path = "") => {
         matchingBranch: matchingInside,
         fallbackBranch: fallbackInside,
         pages: pagesInside,
+        leaves: leavesInside,
       } = collectBranches(wrapperChildren, `${id}.`);
       for (const pageInside of pagesInside) {
         pages.push(pageInside);
+      }
+      for (const leafInside of leavesInside) {
+        leaves.push(wrapBranch(leafInside, child));
       }
       if (matchingInside && !matchingBranch) {
         matchingBranch = wrapBranch(matchingInside, child);
@@ -647,6 +724,7 @@ const collectBranches = (children, path = "") => {
       }
     } else {
       const branch = { type: "leaf", id, node: child };
+      leaves.push(branch);
       pages.push({ route, params: routeParams });
       // every signal is read even once a match is found: reading is what
       // subscribes the container to it, and a branch that is skipped today is
@@ -671,7 +749,7 @@ const collectBranches = (children, path = "") => {
 
   visit(children);
   const activeBranch = matchingBranch || fallbackBranch || null;
-  return { matchingBranch, fallbackBranch, activeBranch, pages };
+  return { matchingBranch, fallbackBranch, activeBranch, pages, leaves };
 };
 const describeContainer = ({ props }) => {
   const { element } = props;

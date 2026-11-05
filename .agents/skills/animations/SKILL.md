@@ -157,7 +157,7 @@ so it can only be called by whoever owns the change:
 - **A component that DOES own the change starts it itself**, and that is not an
   exception to the rule above but the same rule read the other way. A component
   that navigates — it is the one calling the router — holds the "before" until
-  it decides to leave it. _Reference: `beginTravel` in route_travel.jsx._
+  it decides to leave it. _Reference: `beginTransition` in route_transition.jsx._
 - **Start it with the function `ensureDocumentStartViewTransition()` returns**
   (navi/src/transition): it installs the API where missing, runs the update
   whatever happens, swallows the rejection a _skipped_ transition produces (two
@@ -172,8 +172,7 @@ so it can only be called by whoever owns the change:
   Opted out, only the named elements are captured and the rest of the page keeps
   answering. Even a transition that slides whole screens past each other does
   not need the root: the travelling box is itself captured, and its two pictures
-  cover its rectangle between them at every moment. _Reference: the
-  `TRAVEL_ATTRIBUTE` CSS in route_travel.jsx._
+  cover its rectangle between them at every moment.
   - **Unless the top layer is part of the movement**: it is painted only through
     the root's picture
     ([view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#the-top-layer-is-painted-through-the-roots-picture)).
@@ -341,7 +340,7 @@ get it, and the choice is not a matter of taste:
 - **The box IS what moves** (its own pictures are bigger than it, the way two
   pages sliding past each other are): clip the box's own group —
   `::view-transition-group(name)` and `::view-transition-image-pair(name)`,
-  `overflow: clip`. _Reference: route_travel.jsx._
+  `overflow: clip`. _Reference: route_transition.jsx._
 - **Things move INSIDE the box** (rows of a list, slides of a container): the
   box needs a picture of its own and the pictures of its contents must be drawn
   inside it. That is a nested group:
@@ -511,8 +510,7 @@ Traps:
   own business, and a count that works today under-waits after the next
   refactor. The component that swaps the DOM is the only one that knows when
   it has — have it say so, and await that. _Reference: `observeRouteRender` in
-  route_render.js, armed by `armRouteRenderWait` and awaited by
-  `whilePageRenders` in route_travel.jsx._
+  route_render.js, armed by `armRouteRenderWait` in route_transition.jsx._
 - **Clip on the pseudo-elements, never on your own box** — see "What moves
   inside a box stays inside the box" above; a travel between pages is the first
   of the two cases described there.
@@ -535,15 +533,10 @@ Traps:
   shows it, a paused animation never does. _Reference: the "rest" wall in
   `transition_furniture.js`._
 - **A press during a transition does not reach a captured element** (see "Keep
-  the page out of it" above). A gesture meant to grab what is still moving is
-  caught at the document and matched against the travelling box's rectangle —
-  how, and why a wheel costs more than a press there, is in the
-  [gestures skill](../gestures/SKILL.md).
+  the page out of it" above).
 
-_Reference: `route_travel.jsx` (whole file), demo
-`src/nav/demos/route_travel/route_travel.html`. The full spec of the travel
-gesture — who owns it, the wheel reading, the retargeting rules — is the
-[gestures skill](../gestures/SKILL.md)._
+_Reference: `route_transition.jsx`. Under a hand, a page is not a picture: a row is a
+scroller (the [gestures skill](../gestures/SKILL.md))._
 
 ## Which tool for which movement
 

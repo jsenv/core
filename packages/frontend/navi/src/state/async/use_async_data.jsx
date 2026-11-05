@@ -658,8 +658,7 @@ const LoadingFallback = ({ loadingRef, fallback }) => {
   // A page that suspends never gets to say it is on screen — its own effects
   // are held with it — so this says it for it: what the document shows of the
   // page arriving is this. Anyone waiting for the page to be there before
-  // moving (a travel about to have its picture taken, see route_travel.jsx)
-  // would otherwise wait for a render that cannot happen until the data does.
+  // moving (a route transition about to have its picture taken) would otherwise wait for a render that cannot happen until the data does.
   useLayoutEffect(() => {
     publishRouteRender();
   });

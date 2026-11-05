@@ -1,80 +1,93 @@
-# Travelling by drag, and who owns the gesture
+# Travelling: a hand, a screen, and who owns the gesture
 
-A travel is a pointer or a wheel pushing a whole screen aside to bring in the
-next one: slides inside a box (`SlideContainer`), pages that are URLs
-(`RouteTravel`), a docked `Dialog` or a `SidePanel` pushed back the way it came
-to close it, a row swiped aside with `interactions`. One module answers what
-such a gesture IS — `drag_to_travel.js` in @jsenv/dom — and all of them read
-it, so a hand never has to learn two sets of numbers.
+A travel is a hand pushing a whole screen aside to bring in the next one. There
+are two families, and they do not work the same way:
+
+- **A row of screens** (`SlideContainer`, `RouteTravel`) is a real scroller with
+  one snap point per screen. The browser reads the hand. See
+  [The browser scrolls the row](#the-browser-scrolls-the-row).
+- **A box pushed aside** (a docked `Dialog` or a `SidePanel` pushed back to close
+  it, a row swiped with `interactions`) has nothing to scroll to, so the press is
+  read by one module, `drag_to_travel.js` in @jsenv/dom. See
+  [A box pushed aside: the press](#a-box-pushed-aside-the-press).
 
 What an application has to know is who gets a press that lands inside such a
-box. It is decided at the press, from the DOM, before anything moves — so read
+box. It is decided before anything moves, so read
 [Who owns a gesture](#who-owns-a-gesture) before putting anything that reads
 the pointer inside a box that travels.
 
-- [What the rules are](#what-the-rules-are)
+- [The browser scrolls the row](#the-browser-scrolls-the-row)
+- [A box pushed aside: the press](#a-box-pushed-aside-the-press)
 - [Who owns a gesture](#who-owns-a-gesture)
   - [Boxes inside boxes](#boxes-inside-boxes)
   - [Something being carried inside a box](#something-being-carried-inside-a-box)
   - [A surface in the top layer](#a-surface-in-the-top-layer)
   - [A navi component that reads the pointer marks ITSELF](#a-navi-component-that-reads-the-pointer-marks-itself)
   - [What is contained, and what still leaks](#what-is-contained-and-what-still-leaks)
-- [The two consumers that travel between screens](#the-two-consumers-that-travel-between-screens)
-  - [One gesture that bar cannot follow](#one-gesture-that-bar-cannot-follow)
+- [The two rows](#the-two-rows)
 
-## What the rules are
+## The browser scrolls the row
+
+A touch pans on the compositor, a trackpad follows the fingers, a wheel is read
+for what it is. So a row answers a hand the way any scroll snap carousel on the
+web does, and these are its rules, not ours:
+
+- **A trackpad or a finger holds the screen.** Let go past half the box, or with
+  momentum, it goes; let go short of that with the hand at rest, it comes back.
+- **One notch of a wheel is one screen**, however small the notch. Only the
+  browser can tell a notch from a trackpad: the page cannot.
+- **A big swipe can cross more than one screen.** `scroll-snap-stop` stops the
+  momentum at the next screen, not a finger still pushing past it. With
+  `mount="near"`, a screen reached ahead of its neighbours is built on the way, so
+  it can show empty for a moment.
+- **A stroke stays on what it started on.** A vertical scroll cannot change
+  screen, whatever it leans towards on the way. The price is the mirror case: a
+  stroke that opens on a sideways crumb is the row's, and the vertical scroll it
+  turns into does nothing until the hand lifts.
+- **A mouse does not drag**, as it does not scroll anything else on the web.
+
+What stays ours:
+
+- **A travel asked for** (a tab, a key, a command, a state) plays in `duration`,
+  one box long whatever the distance, in `SlideContainer`. In `RouteTravel` it is
+  the browser's smooth scroll.
+- **A direction that is refused is the end of the row.** Whatever holds the user
+  where they are (a `<Slide required>` waiting for its answer, a `preventNavNext`)
+  takes what lies beyond off the row, so nothing can be scrolled to. There is no
+  screen walked to and then taken back.
+- **What a box cannot say to a scroller is said per axis.** `travelByDrag` is about
+  a finger, `travelByScroll` about a wheel or a trackpad: off on an axis, that hand
+  is handed on to what scrolls inside, then around.
+
+**`position: sticky` does not stick inside a `RouteTravel` row of two pages or more
+while the document scrolls.** A horizontal scroller cannot let the other axis
+through, so the row is what sticky sticks to, and the row never scrolls vertically.
+A page that scrolls by itself inside the row is not concerned.
+
+## A box pushed aside: the press
 
 - A press is not a gesture until it has wandered 10px with a mouse, 6px with a
-  finger or a pen, and the axis it leans on then is the axis it walks, for good:
-  a diagonal would ask for two travels at once when only one screen can arrive.
-  The reading leans towards the box's own axis — a thumb swiping sideways moves
-  along an arc, and its first pixels lean off-axis far more than the swipe does
-  — so the cross axis takes the press only when it clearly dominates. Where
-  something under the finger scrolls on that axis, the page included, the
-  reading is even, the way the browser's is: a scroll that wobbles stays a
-  scroll, and a swipe whose first pixels are steeper than 45° scrolls too. A
-  finger's 6px is a deadline rather than a feel: the browser commits a touch to
-  its own pan about 8px in, and whatever is read after that is read about a
-  pointer it has already cancelled (see
+  finger or a pen, and the axis it leans on then is the axis it walks, for good.
+  The reading leans towards the box's own axis: a thumb swiping sideways moves
+  along an arc, and its first pixels lean off-axis far more than the swipe does,
+  so the cross axis takes the press only when it clearly dominates. Where
+  something under the finger scrolls on that axis, the page included, the reading
+  is even, the way the browser's is: a scroll that wobbles stays a scroll, and a
+  swipe whose first pixels are steeper than 45° scrolls too. A finger's 6px is a
+  deadline rather than a feel: the browser commits a touch to its own pan about
+  8px in, and whatever is read after that is read about a pointer it has already
+  cancelled (see
   [mobile_touch.md](./mobile_touch.md#the-browser-decides-about-8px-in-and-does-not-wait)).
   Its price is the click of a tap that shook more than 6px.
-- **A page change is asked for a little later than the press is taken.** A
-  `RouteTravel` holds the press at the same 6px, but nothing is asked of the
-  router until the hand has pulled 10px further, 16px in all with a finger: a
-  navigation, a render and the requests of the page arriving are not worth a
-  hand that only shook. Turned around before that, it simply picks the other
-  neighbour. The picture sets off from where it stands rather than jumping those
-  pixels, and let go of before that, nothing has moved.
-- **Letting go asks where the hand is about to put things.** Where the picture
-  stands, plus half a second at the speed the fingertip has as it lifts, against
-  half the box. A flick lands far and goes. A hand thrown back lands short and
-  everything goes back, otherwise a screen caught in flight and thrown back
-  still arrives. A hand that slowed to a stop has no speed left, and the picture
-  answers alone. Speed counts from 25px of finger, a tap that slipped not being
-  a flick, and past 0.4 px/ms it answers on its own, or half a wide box would be
-  out of reach of any flick.
+- **Letting go asks where the hand is about to put things.** Where the box stands,
+  plus half a second at the speed the fingertip has as it lifts, against half the
+  box. A flick lands far and goes. A hand thrown back lands short and everything
+  goes back. A hand that slowed to a stop has no speed left, and the picture
+  answers alone. Speed counts from 25px of finger, a tap that slipped not being a
+  flick, and past 0.4 px/ms it answers on its own, or half a wide box would be out
+  of reach of any flick.
 - Pulling towards nothing follows the finger at a fraction of its distance and
   comes back: a wall one can lean on, never walk through.
-- **A direction that will be refused is one of those walls, and it must be a
-  wall from the first pixel.** Whatever holds the user where they are — a
-  `<Slide required>` waiting for its answer, a `preventNavNext` — is read where
-  the gesture is ARMED, not only when it is let go of. Read at the release
-  alone, the screen one may not reach is walked to, read on the way, and then
-  taken back: a wall that shows what is behind it and pushes you back reads as a
-  bug even when it is a rule. What a lock answers is therefore not "is there a
-  screen that way" but "may I go there".
-- **A hand that walks a whole box and keeps going is asking for the next one**,
-  and the gesture walks on into it without being let go of.
-- **A wheel push moves one screen**, the way an arrow key does — never a
-  distance. It has to be a push, 60px one way: a scroll leaning sideways for an
-  event or two stays a scroll. What keeps arriving after the fingers are gone is
-  momentum and is not counted: a second screen takes a second push, or one that
-  insists.
-- **A press on a travel still moving is the next swipe first.** A step the way
-  it is going asks for the screen after, and the travel goes on there without
-  ever having stopped; only a step against it, or a finger saying nothing for
-  about 100ms, catches it where it stands. Let go before either — a tap — and
-  the travel was never touched.
 
 How to drive a gesture without a device, and why the obvious way hides the race
 that loses swipes on a phone, is
@@ -82,8 +95,10 @@ that loses swipes on a phone, is
 
 ## Who owns a gesture
 
-Five things can claim a pointer that landed on a travelling box, and all five
-are read at the press, before the box moves:
+A row of screens leaves this to the browser, which hands a touch to the innermost
+scroller that can take it. A box pushed aside reads it itself: five things can
+claim a pointer that landed on it, and all five are read at the press, before the
+box moves:
 
 1. **What says so itself.** What the browser already answers the pointer on — a
    field, a `contenteditable`, a `select`, a range; a dedicated drag handle
@@ -120,20 +135,17 @@ is not pushed back at all. A `SidePanel` is pushed from its whole surface.
 ### Boxes inside boxes
 
 A row of slides inside a page that walks between pages, a carousel inside a
-carousel, a `SlideContainer` inside a `RouteTravel`: they all get the same
-press, and the innermost is the one the hand is pointing at. So it takes the
-gesture on the axis it walks, and the boxes above it are left with whatever axis
-it does not — a row swiped sideways inside a column of screens keeps the
-sideways gesture, and the column still answers a finger going down. Nothing has
-to be declared for this: each box says which axes it travels in the DOM
-(`data-travel-by-drag`, `data-travel-by-wheel`), and that is what the boxes above
-read.
+carousel, a `SlideContainer` inside a `RouteTravel`: the innermost is the one the
+hand is pointing at. It takes the gesture on the axis it walks, and the boxes
+around it keep whatever axis it does not, so a row swiped sideways inside a column
+of screens keeps the sideways gesture, and the column still answers a finger going
+down.
 
-Decided at the press, once and for all: from the first pixel the gesture belongs
-to whoever asked the browser for the pointer last, which is the outermost box.
-So an inner box sitting on its last slide does not hand the gesture over
-mid-drag: it leans on its wall, the way it does when it is alone. Travelling the
-box around it means starting the gesture outside it.
+Decided when the stroke starts, once and for all. An inner row sitting on its last
+slide does not hand the gesture over: it leans on its wall, the way it does when
+it is alone. Travelling the box around it means starting the gesture outside it. A
+box pushed aside reads the axes of what is inside it in the DOM
+(`data-travel-by-drag`).
 
 When the boxes say ONE place between them — a row of titles in each slide of a
 column of levels, the address naming a title — they bind one state: see
@@ -201,68 +213,37 @@ than while a finger is down, because a browser decides what a gesture may do
 when the gesture begins; the bounce is refused only while a gesture runs, so a
 page that bounces the rest of the time goes on bouncing.
 
-What still leaks, only on Blink (Chrome, Edge), and only under a box that is not
-a scroll container — a `SlideContainer` (it cuts with `overflow: clip`), a
-`RouteTravel`, a swiped row: a scroller **nobody declared and no tag names** — a
-bare `<div style="overflow: auto">`, a widget from elsewhere. Its leftovers
+What still leaks, only on Blink (Chrome, Edge), and only under a box pushed aside,
+which is not a scroll container: a scroller **nobody declared and no tag names** —
+a bare `<div style="overflow: auto">`, a widget from elsewhere. Its leftovers
 reach the page. Two ways out, per case: give the scroller a `Box` with an
 `overflow` (it is then declared), or contain it by hand
 (`overscroll-behavior-x: contain` under a box travelling sideways). The general
 fix belongs to Blink.
 
-## The two consumers that travel between screens
+A row of screens is a scroll container, and contains itself.
 
-A popup pushed back towards its edge and a swiped row are travels too, the
-simple kind: one box, one direction, no neighbour to bring in. The two below
-carry screens.
+## The two rows
 
-|                         | `SlideContainer`                   | `RouteTravel`                      |
-| ----------------------- | ---------------------------------- | ---------------------------------- |
-| what the screens are    | `<Slide>`s in one box, all mounted | routes — one mounted, ever         |
-| what says which is here | a `signal`, `current` / a command  | the URL                            |
-| what the finger moves   | a translated track                 | the pictures of a view transition  |
-| when the picture moves  | from the press becoming a gesture  | from 10px after that               |
-| letting go too early    | the track comes back               | the transition is played backwards |
-| what says the order     | the layout map                     | the `<Route>` children, in order   |
-| what one wheel push is  | `move(±1)`, as an arrow key        | one travel, as a tab pressed       |
+|                               | `SlideContainer`                  | `RouteTravel`                               |
+| ----------------------------- | --------------------------------- | ------------------------------------------- |
+| what the screens are          | `<Slide>`s in one box             | routes                                      |
+| what says which is here       | a `signal`, `current` / a command | the URL                                     |
+| what a screen not on it shows | itself, built or `mount="near"`   | itself once visited; before that, see below |
+| what says the order           | the layout map                    | the `<Route>` children, or `routes`         |
+| a travel asked for            | plays in `duration`, one box long | the browser's smooth scroll                 |
 
-Both expose how far the travel has come, and the way to read it differs because
-what draws an indicator differs. `SlideContainer` writes
-`--slide-travel-progress` — where the picture stands against the current slide,
-in boxes: 0 on it, +1 a whole box before it, -1 one after — on its box, for
+A `RouteTravel` page not visited yet can only be built by the address moving, since
+a route's actions ask only while it matches. So the address moves once the hand has
+really pulled, 16px, and the page fills in under the finger. See
+[navigation.md](./navigation.md#tabs-that-travel-routetravel).
+
+Both tell what follows them how far the row has come. `SlideContainer` writes
+`--slide-travel-progress` (where the picture stands against the slide it counts
+from, in boxes: 0 on it, +1 a whole box before it, -1 one after) on its box, for
 anything drawn inside it, and on every element marked
-`data-slide-container-follows={id}` outside it (a tab bar above the box). It is
-declared with `@property`, so it interpolates. `RouteTravel` leaves it to the
-browser: give the indicator a `view-transition-name` of its own and it is
-animated from where it was to where it is, even from outside the box (see
-[view_transitions.md](./view_transitions.md#a-name-is-unique-per-document)).
-
-A travel is not a queue: a tab pressed while a page is arriving does not wait
-its turn, and does not start a second travel on top of the first either. The
-travel in flight is aimed there instead. Back where it set off from, it is
-undone — the same pictures, run backwards; further the same way, it costs
-nothing; the other way, the pictures start again from the beginning, and a page
-nearly arrived snaps back first.
-
-A hand that walks a `RouteTravel` page whole and keeps going gets the next page,
-but out of the far end there is a short gap: the page it was leaving is gone,
-the next travel needs pictures of its own (a navigation, a render, a snapshot),
-and over those frames nothing follows the finger before catching up with it.
-Walked back out of the start there is none — the pair in hand is already the
-right one. A `SlideContainer` has every slide mounted and hands over without a
-gap either way.
-
-### One gesture that bar cannot follow
-
-A `RouteTravel` travel that turns around mid-gesture, or is aimed further the
-same way while it plays — a tab pressed two pages along, the next swipe landing
-on a page still arriving — keeps its pages by pointing the router elsewhere
-under the same transition. But everything ELSE the transition carries was
-photographed when it began, on its way to a tab nobody is going to anymore, and
-the thing itself has already moved on in the live page: one would see two bars.
-
-So on those gestures the pictures of everything that is not the pages are
-dropped, and those things are left where they are, live: the bar jumps to the
-tab one is heading for instead of sliding to a tab one is not. A slide would be
-nicer, and it is not available — the browser measured both of its ends before
-the hand changed its mind, and neither can be asked for again.
+`data-slide-container-follows={id}` outside it, a tab bar above the box. It counts
+from the current slide (`data-slide-current`), or once a hand has carried the row
+past it from `data-slide-travel-base`, towards `data-slide-travel-toward`.
+`RouteTravel` needs nothing: a `<Nav currentIndicator>` draws its bar under the hand
+for any row it holds tabs for.

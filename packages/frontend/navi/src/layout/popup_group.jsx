@@ -218,16 +218,14 @@ const css = /* css */ `
      layer, and the page holds nothing but its placeholder. Named here when
      the whole document moves; a movement played on an area names it itself
      (nav/transition_furniture.js). */
-  :root[data-navi-route-transition] .navi_popup_group:modal,
-  :root[data-navi-route-travel] .navi_popup_group:modal {
+  :root[data-navi-route-transition] .navi_popup_group:modal {
     view-transition-class: navi_popup;
   }
   @supports (view-transition-name: match-element) {
     :root[data-navi-route-transition]:not(
         [data-navi-route-transition-target="area"]
       )
-      .navi_popup_group:modal,
-    :root[data-navi-route-travel] .navi_popup_group:modal {
+      .navi_popup_group:modal {
       view-transition-name: match-element;
     }
   }

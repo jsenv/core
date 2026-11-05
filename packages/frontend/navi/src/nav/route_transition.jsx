@@ -13,9 +13,9 @@
  * back, and two pages never written in the same relation play nothing between
  * each other — two tabs of a bottom bar are side by side, neither is before
  * the other, and being animated by the same mechanism does not order them.
- * This is what tells this apart from <RouteTravel>: a travel box is a ROW — a
- * total order, plus a drag gesture that walks it — while this declares
- * individual relations and nothing else.
+ * This is what tells this apart from <RouteTravel>: a travel box is a ROW, a total
+ * order the browser scrolls, while this declares individual relations and nothing
+ * else.
  *
  * A relation is reciprocal by DEFAULT, not by decree: the way back is the same
  * movement run the other way, because that is what lets a user build a map of
@@ -192,12 +192,6 @@ const AREA_NAME = "navi-route-transition";
 // the pages', or the document's own when the pages ARE the document (see
 // findLeadAnimation).
 const LEAD_NAMES = [AREA_NAME, "root"];
-// route_travel.jsx wears this on the root for the length of one of its
-// travels (its TRAVEL_ATTRIBUTE — a comment there mirrors this one). Read by
-// name rather than imported: importing route_travel.jsx would pull the whole
-// travel machinery into an application that only defines transitions.
-const ROUTE_TRAVEL_ATTRIBUTE = "data-navi-route-travel";
-
 // The same movements, written once and played on either target: the document,
 // or the marked area. The guard keeps the two exclusive — with an area marked,
 // the root pictures must NOT move (they carry the whole viewport, blank bands
@@ -1426,7 +1420,7 @@ const rebuildWatcher = () => {
 // What plays when no relation matched (see defineRouteDefaultTransition), what
 // the navigation now landing asked for on its own (see readNavigationRequest),
 // where it goes, and whether it found an answer already — a relation's
-// transition, a "none", a RouteTravel travel. The last three are read at the
+// transition, a "none". The last three are read at the
 // start of every navigation, so they are always about the latest one.
 let defaultTransition = null;
 let navigationRequest = null;
@@ -1661,16 +1655,6 @@ let currentTransition = null;
 const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   navigationAnimated = true;
   const documentElement = document.documentElement;
-  // One navigation, one animator. A RouteTravel box already travelling this
-  // change owns the document's transition — and possibly a finger; starting
-  // one here on top would skip its pictures mid-slide. A pair of routes must
-  // be animated by RouteTravel or by a route transition, never both.
-  if (documentElement.hasAttribute(ROUTE_TRAVEL_ATTRIBUTE)) {
-    console.warn(
-      "A RouteTravel is animating this navigation; the route transition defined between these routes is skipped. Animate a pair of routes with RouteTravel or defineRouteTransition, not both.",
-    );
-    return;
-  }
   navigationDecision = { type, direction, duration };
   // The two ends of the crossing, kept for the length of the movement: they are
   // what lets the navigation after this one be recognised as its way back (see
@@ -2058,7 +2042,7 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
       : " This browser has no nested groups (view-transition-group: contain), so it is not even cut at the pages' edge.";
     warnOnce(
       "names-escaping-area",
-      `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and the page on the other side of the navigation has nothing of that name. A name lifts its element out of the pages' pictures, in every browser: with nothing to morph into, it stands where it was captured and fades on its own while the pages move.${unclipped} Give that name only for the length of the gesture it serves, or drop it while the pages move: :root:is([${TRANSITION_ATTRIBUTE}], [${ROUTE_TRAVEL_ATTRIBUTE}]) <that element> { view-transition-name: none } (with !important over an inline name).`,
+      `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and the page on the other side of the navigation has nothing of that name. A name lifts its element out of the pages' pictures, in every browser: with nothing to morph into, it stands where it was captured and fades on its own while the pages move.${unclipped} Give that name only for the length of the gesture it serves, or drop it while the pages move: :root[${TRANSITION_ATTRIBUTE}] <that element> { view-transition-name: none } (with !important over an inline name).`,
     );
     return;
   }

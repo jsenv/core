@@ -129,6 +129,7 @@ import {
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
+import { deferPlacementWhileCovered, enterModalStack } from "./popup_cover.js";
 import { createSwipeToClose, SWIPE_AXIS_BY_SIDE } from "./swipe_to_close.js";
 import {
   installPopupLiftCss,
@@ -2043,6 +2044,9 @@ const useDialogProps = (props) => {
     const rectEffect = visibleRectEffect(
       positionedAncestor,
       (visibleRect, { event }) => {
+        if (deferPlacementWhileCovered(dialogEl)) {
+          return;
+        }
         positionDialog(event);
         // Only for what can have taken height away from the dialog — a
         // scroll never does, and re-scrolling on one would fight the finger
@@ -2061,6 +2065,19 @@ const useDialogProps = (props) => {
       freezeSize(dialogEl);
     }
     rectEffect.observeSize(dialogEl);
+    if (isModal) {
+      addCleanup(
+        enterModalStack(dialogEl, {
+          // "resize": what it was held from is a viewport change, and it answers
+          // the way it answers one, animated. Called directly because the
+          // effect's dedup already saw that viewport go by.
+          place: () => {
+            positionDialog(new CustomEvent("resize"));
+            keepFocusedElementVisible(dialogEl);
+          },
+        }),
+      );
+    }
     // Content that sizes itself once on screen (a shrink-wrapped BadgeList)
     // says so, after the placement read it: placed again on the spot, where
     // observeSize answers a frame late. Stopped here, since a popup further up

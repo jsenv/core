@@ -109,10 +109,8 @@ import.meta.css = /* css */ `
      wheel — Blink stops at it.
 
      Which leaves, on Blink, a travelling box that is NOT a scroll container:
-     nothing is asked, and the leftovers reach the page. RouteTravel is one,
-     and cannot be made a scroll container — it would become the nearest one
-     for every "position: sticky" inside the pages it holds. SlideContainer is
-     another: overflow clip cuts without making one (see slide_container.jsx).
+     nothing is asked, and the leftovers reach the page. A row a finger swipes is
+     one.
 
      So navi contains what it KNOWS scrolls. [data-scrollable] is worn by a Box
      that ASKED for overflow auto/scroll (see below), never by one that merely

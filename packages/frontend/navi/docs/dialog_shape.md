@@ -49,6 +49,13 @@ screen** for `layer="top"` — the visual viewport minus the app's bands (see
 [`safe_area.md`](./safe_area.md)) — and the positioned ancestor for
 `layer="local"`.
 
+A modal dialog covered by another modal dialog is not in use, so it does not
+follow the keyboard: it stays where it is, and the keyboard covers it as it
+covers anything else behind that sheet. Once back on top it answers the screen
+as it is: at once when the focus landed on a field, since the keyboard stays;
+once the keyboard has left otherwise, so it never jumps up and back down. What
+sits under a non-modal dialog is still usable, and keeps following the keyboard.
+
 ## One dialog, two shapes
 
 `dockedOnSmallTouchScreen` is the whole small-screen story in one prop: on a

@@ -9,6 +9,7 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { CalloutStatusIcon } from "../rules/callout/callout_status_icon.jsx";
+import { isPressOnLayerOver } from "@jsenv/navi/src/control/interaction/press_target.js";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
@@ -1165,6 +1166,13 @@ const PickerCustom = (props) => {
             };
           },
           keyDown: (e) => {
+            // Pressed in a popup this picker holds: the key is that popup's, and
+            // `false` keeps it from the default reaction too, which would refuse
+            // it on a read-only picker and take a Space from the button it was
+            // pressed on.
+            if (isPressOnLayerOver(e.target, e.currentTarget)) {
+              return false;
+            }
             // A shortcut that applies has been through the gate already, under
             // its own name and intent: the key is answered. Handed back as the
             // reaction, its boolean would be asked again, unnamed — as a write,

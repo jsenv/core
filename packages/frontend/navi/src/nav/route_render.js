@@ -6,8 +6,8 @@ import { createPubSub } from "@jsenv/dom";
  * A route matching is a signal changing, and the page it selects reaches the
  * DOM only once Preact has rendered — an unknown number of passes later, in an
  * unknown number of microtasks. Anyone who needs the page as it IS rather than
- * as it has been decided (a travel about to have its picture taken by the
- * browser, see route_travel.jsx) waits for this instead of counting.
+ * as it has been decided (a route transition about to have its picture taken by
+ * the browser) waits for this instead of counting.
  *
  * A page waiting on data is announced too, by the boundary showing its loading
  * state (see Loading in use_async_data.jsx): what the container could put on

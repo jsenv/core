@@ -576,6 +576,13 @@ that must offer a way out that KEEPS what was chosen offers it with a close
 cross, or by letting the click outside close** — not by teaching Escape to say
 something else.
 
+**One Escape closes one popup: the one it was pressed in.** Each popup answers
+Escape itself, and a popup around it never hears the key, so backing out of a
+sheet in a dialog takes two presses. A `popover="manual"` element of your own has
+no Escape to answer with: in a `layer="local"` dialog, the key does nothing while
+the focus is in it. A modal dialog around it still closes, on the browser's own
+close request.
+
 ### What "cancel" actually undoes
 
 Cancelling is not itself an undo: it marks the close, and whoever holds a value

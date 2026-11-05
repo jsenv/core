@@ -17,14 +17,7 @@
  *
  * A control therefore may ask to keep answering, and while a route transition
  * plays the press is caught at the document and handed to it when it fell
- * inside its rectangle — which is where the hand thinks it pressed. The same
- * move route_travel.jsx makes for the box a finger reaches for mid-flight.
- *
- * A `RouteTravel` holds this too, for the bars it leaves live. A control there
- * gets its click on its own except in the first frames of the travel, when a
- * press falls to the document root like any other; the part of a bar photographed
- * for the travel (`data-navi-fixed-bar-overhang`, fixed_bar.jsx) is deaf
- * throughout.
+ * inside its rectangle — which is where the hand thinks it pressed.
  *
  * ASKED FOR, never derived, and that is the whole safety of it: only the
  * application knows the control does not move. One that travels with the pages

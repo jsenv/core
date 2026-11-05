@@ -1054,123 +1054,6 @@
         </SlideContainer>
       );
 
-      // The map, made visible. A slide container shows one slide and hides the
-      // rest — each is already laid out at its own place, and the track slides
-      // the whole map under a window one cell wide. Here the window is made
-      // bigger and the clipping given up, so what is normally out of sight is
-      // drawn faintly around what is being shown: the arrangement one writes in
-      // `layout` IS what one sees, and moving is the map sliding under it.
-      const MAP_SIDE = 6;
-      const MAP_CELL_WIDTH = 64;
-      const MAP_CELL_HEIGHT = 44;
-      // Where it opens: the middle of the map, so there is somewhere to go in
-      // all four directions from the start.
-      const MAP_MIDDLE = 2;
-      const MAP_CELLS = Array.from({ length: MAP_SIDE }, (_, y) =>
-        Array.from({ length: MAP_SIDE }, (_, x) => ({
-          x,
-          y,
-          area: `cell_${x}_${y}`,
-          label: `${String.fromCharCode(97 + x)}${y + 1}`,
-        })),
-      );
-      const MAP_LAYOUT = MAP_CELLS.map((row) =>
-        row.map((cell) => cell.area).join(" "),
-      );
-
-      const MapReveal = () => {
-        // Driven from here (`current` + `onCurrentChange`) rather than left to
-        // the container: knowing which cell is on show is what lets each one be
-        // told how to look, in props, instead of a stylesheet reaching for
-        // [data-current] behind the demo's back.
-        const [current, setCurrent] = useState(
-          `cell_${MAP_MIDDLE}_${MAP_MIDDLE}`,
-        );
-        return (
-          <div>
-            {/* The window: the size of the map itself, 6 cells by 6. The
-                container sits at its centre (the dashed frame) and the map
-                slides UNDER it — going one cell to the right slides the whole
-                grid one cell to the left, and whatever ends up outside the
-                window is cut off. That is the mechanism itself: one thing
-                moves, the track, and an ordinary container is this same window
-                shrunk to a single cell. */}
-            <Box
-              flex
-              alignX="center"
-              alignY="center"
-              width={`${MAP_SIDE * MAP_CELL_WIDTH}px`}
-              height={`${MAP_SIDE * MAP_CELL_HEIGHT}px`}
-              overflow="hidden"
-              borderWidth="1"
-              borderStyle="solid"
-              borderColor="#cfd8e3"
-            >
-              {/* Showing what it would normally hide: `overflow="visible"` is
-                  the whole trick — the container keeps its size (one cell, drawn
-                  here as a dashed frame) and simply stops cutting off the slides
-                  parked around it. */}
-              <SlideContainer
-                id="map_reveal"
-                layout={MAP_LAYOUT}
-                current={current}
-                onCurrentChange={setCurrent}
-                duration={useSlideDuration()}
-                overflow="visible"
-                outline="2px dashed #90caf9"
-                outlineOffset="2px"
-              >
-                {MAP_CELLS.flat().map(({ x, y, area, label }) => {
-                  const isCurrent = area === current;
-                  return (
-                    <Slide
-                      key={area}
-                      id={area}
-                      width={`${MAP_CELL_WIDTH}px`}
-                      height={`${MAP_CELL_HEIGHT}px`}
-                      alignX="center"
-                      alignY="center"
-                      borderWidth="1"
-                      borderStyle="solid"
-                      borderColor={isCurrent ? "#1a237e" : "#b0bec5"}
-                      // One square in two tinted, so a move of one cell reads as
-                      // a move even between two empty cells.
-                      backgroundColor={
-                        isCurrent
-                          ? "#1a237e"
-                          : (x + y) % 2
-                            ? "#e8eef7"
-                            : "white"
-                      }
-                      color={isCurrent ? "white" : "#37474f"}
-                      // Waiting its turn: drawn, but plainly not the one on show.
-                      opacity={isCurrent ? 1 : 0.35}
-                      bold={isCurrent}
-                      fontSize="0.8rem"
-                      fontFamily="ui-monospace, monospace"
-                    >
-                      {label}
-                    </Slide>
-                  );
-                })}
-              </SlideContainer>
-            </Box>
-            {/* Aimed at the container by id: the same four commands its own
-                chevrons use, said from outside it. */}
-            <div class="demo-row" style="margin-top: 12px">
-              <SlideContainer.Left commandFor="map_reveal" />
-              <SlideContainer.Right commandFor="map_reveal" />
-              <SlideContainer.Up commandFor="map_reveal" />
-              <SlideContainer.Down commandFor="map_reveal" />
-              <span class="demo-note">
-                …or click a cell and use the arrow keys. The dashed frame is
-                what a container normally shows.
-              </span>
-            </div>
-          </div>
-        );
-      };
-
       // One box, one state: the same slide shown at rest and showing its focus,
       // so what the ring looks like — and where it is drawn — can be read off
       // the page rather than described.
@@ -2259,8 +2142,8 @@
           <section class="demo-section" id="drag">
             <Heading id="drag">Dragging the slides</Heading>
             <p>
-              Push them with the pointer: a flick travels, a hesitation puts
-              them back.
+              Push them with a finger, a trackpad or a wheel: past half the box
+              or with momentum it travels, short of that it comes back.
             </p>
             <Box flex="y" spacing="l" alignX="start">
               <div class="demo-way">
@@ -2289,7 +2172,7 @@
           <section class="demo-section" id="nested">
             <Heading id="nested">A container inside a container</Heading>
             <p>
-              Both travel up and down, with a drag or with the wheel (
+              Both travel up and down, with a finger or with the wheel (
               <code>travelByScroll="y"</code>): push the photos and the photos
               travel, push anywhere else and the settings do.
             </p>
@@ -2365,12 +2248,12 @@
           </section>
 
           <section class="demo-section" id="selection">
-            <Heading id="selection">Dragging is not selecting</Heading>
+            <Heading id="selection">A mouse selects, a finger travels</Heading>
             <p>
-              A drag across the words travels the slides and leaves no blue
-              trail behind it — but the text is still text. Double click a word,
-              press ctrl+A, or begin a selection in this very paragraph and drag
-              through the box: all of them still select.
+              A mouse drag across the words selects them, as anywhere on the
+              web. The text is still text under a finger too. Double click a
+              word, press ctrl+A, or begin a selection in this very paragraph
+              and drag through the box: all of them still select.
             </p>
             <ThreeWays id="selection" Content={SelectionSlides} />
           </section>
@@ -2477,14 +2360,6 @@
             <h3>Looping</h3>
             <p>→ on the last photo shows the first.</p>
             <CarouselLooping />
-          </section>
-
-          <section class="demo-section" id="the-map">
-            <Heading id="the-map">Seeing the map</Heading>
-            <p>
-              The map, with the frame widened to show what it usually hides.
-            </p>
-            <MapReveal />
           </section>
         </div>
       );

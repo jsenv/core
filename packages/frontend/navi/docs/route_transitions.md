@@ -315,14 +315,7 @@ answering: the click is caught at the document and handed to it when it fell
 inside its rectangle, and a navigation that is the exact way back of the movement
 playing turns that movement round. Only on furniture that stands still: a control
 travelling with the pages has a rectangle where it will be, not where it is seen
-(navi warns about one inside the area). `RouteTravel` is the opposite case — a
-finger is on the box — and leaves the bars live, so its pictures cover what a bar
-paints outside its box, except two things photographed on their own, which stand
-over the pages: the bar's `shadow`, and a child wearing
-`data-navi-fixed-bar-overhang` (a raised button, the notch around it). That child
-is deaf for the length of the travel, and the rest of the bar for its first frames,
-when a press falls to the document whatever it was aimed at;
-`pressableDuringRouteTransition` on a control keeps it answering in both cases.
+(navi warns about one inside the area).
 
 A **modal `Dialog` open on a page** is furniture of the same kind: it travels with
 its page, or holds if both states have it. One the navigation itself opens or
@@ -461,17 +454,14 @@ once in the console, naming both routes.
 
 ## Route transitions and `RouteTravel` — one pair, one system
 
-- **`RouteTravel`** is a ROW: a total order of tabs, plus the drag gesture that
-  walks it. Use it when the pages are genuinely a row the finger should push.
+- **`RouteTravel`** is a ROW: a total order of pages the browser scrolls. Use it
+  when the pages are genuinely a row the finger should push.
 - **`defineRouteTransition`** declares individual relations, with no gesture and
   no order beyond each pair.
 
-A given PAIR of routes must be animated by one of the two, never both: a travel's
-pictures can be under a finger, and a transition starting on top would skip them
-mid-slide — and a page one can drag has promised a translation, which a
-cross-fade would break. A travel in flight wins and the route transition is
-skipped with a console warning: the sign of a misconfiguration to fix, not a
-mechanism to rely on.
+A given PAIR of routes takes one of the two: a page one can push sideways has
+promised a translation, which a cross-fade would break. What a hand does on the row
+asks for no movement, and a tab pressed goes the way its `<Link>` says.
 
 The two DO live together in one app, on different pairs, including a
 `<RouteTravel>` nested inside a `<RouteTransitionArea>` — a row of sections the

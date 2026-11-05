@@ -5326,6 +5326,33 @@ const overflowGoesToViewport = (element) => {
   return rootStyle.overflowX === "visible" && rootStyle.overflowY === "visible";
 };
 
+// The viewport is the scroll container nothing declares: `overflow` computes to
+// `visible` on the document element even while the page scrolls, so it is read
+// from the size it has to go through — and from what a page locks itself with
+// while something is open in front of it.
+const pageScrolls = (document, axis) => {
+  const { documentElement, body, defaultView } = document;
+  if (!documentElement || !defaultView) {
+    return false;
+  }
+  for (const node of [documentElement, body]) {
+    if (!node) {
+      continue;
+    }
+    const style = defaultView.getComputedStyle(node);
+    const overflow = axis === "x" ? style.overflowX : style.overflowY;
+    if (overflow === "hidden" || overflow === "clip") {
+      return false;
+    }
+  }
+  const scroller = getScrollingElement(document) || documentElement;
+  const scrollSize =
+    axis === "x" ? scroller.scrollWidth : scroller.scrollHeight;
+  const clientSize =
+    axis === "x" ? scroller.clientWidth : scroller.clientHeight;
+  return scrollSize - clientSize > 1;
+};
+
 const canHaveVerticalScroll = (element, { includeHidden }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {
@@ -9439,6 +9466,10 @@ const createDragGestureController = (options = {}) => {
       velocityX: 0,
       velocityY: 0,
       velocity: 0,
+      // …and how fast the fingertip was going as it let go, known at the release
+      // (see measureLiftVelocity)
+      liftVelocityX: 0,
+      liftVelocityY: 0,
 
       // metadata about interaction sources
       grabEvent: event,
@@ -9463,7 +9494,11 @@ const createDragGestureController = (options = {}) => {
     // Where the pointer IS is not where it is going: throwing something is a
     // matter of speed, and the gesture is the only place that sees the timing of
     // the events it receives.
-    const measureVelocity = createVelocityMeter(grabX, grabY, event.timeStamp);
+    const { measureVelocity, measureLiftVelocity } = createVelocityMeter(
+      grabX,
+      grabY,
+      event.timeStamp,
+    );
 
     document_interactions: {
       if (documentInteractions === "manual") {
@@ -9767,6 +9802,13 @@ const createDragGestureController = (options = {}) => {
       gestureInfo.velocityX = velocityX;
       gestureInfo.velocityY = velocityY;
       gestureInfo.velocity = Math.hypot(velocityX, velocityY);
+      if (isRelease) {
+        const [liftVelocityX, liftVelocityY] = measureLiftVelocity(
+          event.timeStamp,
+        );
+        gestureInfo.liftVelocityX = liftVelocityX;
+        gestureInfo.liftVelocityY = liftVelocityY;
+      }
       if (gestureInfo.isGoingDown) {
         gestureInfo.intentGoingDown = true;
         gestureInfo.intentGoingUp = false;
@@ -10224,6 +10266,12 @@ const isPrimaryButtonEvent = (event) =>
  * stamped at its creation, which is when it happens.
  */
 const VELOCITY_WINDOW_MS = 100;
+const LIFT_WINDOW_MS = 50;
+// A pointer that has not moved for this long before it lifts has stopped: what
+// Android's VelocityTracker assumes (ASSUME_POINTER_STOPPED_TIME).
+const LIFT_STOPPED_MS = 40;
+// How far a thumb rolls back as it lifts without meaning anything by it.
+const LIFT_ROLL_BACK = 8;
 const createVelocityMeter = (grabX, grabY, grabTime) => {
   const samples = [{ time: grabTime, x: grabX, y: grabY }];
 
@@ -10240,7 +10288,54 @@ const createVelocityMeter = (grabX, grabY, grabTime) => {
     return [(x - oldestSample.x) / elapsed, (y - oldestSample.y) / elapsed];
   };
 
-  return measureVelocity;
+  // The fingertip as it lets go, which the window above cannot say: averaged
+  // over 100ms, a hand slowing down to a stop still reads as moving. Read over
+  // the last moves that went somewhere (a release repeating the last place is
+  // no move), and nothing for a hand that had already stopped. A thumb rolling
+  // back a few pixels as it lifts is not a hand throwing back: its speed is read
+  // up to where it got to.
+  const liftWindowStart = (end) => {
+    let start = end - 1;
+    while (
+      start > 0 &&
+      samples[end].time - samples[start - 1].time <= LIFT_WINDOW_MS
+    ) {
+      start--;
+    }
+    return start;
+  };
+  const speedAtLift = (axis, time) => {
+    let last = samples.length - 1;
+    while (last > 0 && samples[last][axis] === samples[last - 1][axis]) {
+      last--;
+    }
+    if (last === 0 || time - samples[last].time > LIFT_STOPPED_MS) {
+      return 0;
+    }
+    const windowStart = liftWindowStart(last);
+    const way = Math.sign(samples[last][axis] - samples[windowStart][axis]);
+    let end = last;
+    for (let i = last - 1; i > windowStart; i--) {
+      if (way * samples[i][axis] > way * samples[end][axis]) {
+        end = i;
+      }
+    }
+    if (way * (samples[end][axis] - samples[last][axis]) > LIFT_ROLL_BACK) {
+      end = last;
+    }
+    const start = liftWindowStart(end);
+    const elapsed = samples[end].time - samples[start].time;
+    if (elapsed === 0) {
+      return 0;
+    }
+    return (samples[end][axis] - samples[start][axis]) / elapsed;
+  };
+  const measureLiftVelocity = (time) => [
+    speedAtLift("x", time),
+    speedAtLift("y", time),
+  ];
+
+  return { measureVelocity, measureLiftVelocity };
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {
@@ -10526,11 +10621,11 @@ const DRAG_INTENT_THRESHOLD = 5;
 
 // How much the cross axis must dominate the axis a box travels or a source
 // walks, over the first reported pixels, to take the press away from it (see
-// the axis decision of drag_to_travel.js, and crossAxisWins below). Sized
-// against the two hands it separates: a thumb's arc leans up to about twice as
-// far off-axis as along it at the start of a sideways swipe, while a scroll is
-// four or five times purer than that on its own axis. Kept here, below both
-// readers, so a hand learns one number.
+// the axis decision of drag_to_travel.js, which asks less over something that
+// scrolls on the cross axis, and crossAxisWins below). Sized against a thumb's
+// arc, which leans up to about twice as far off-axis as along it at the start
+// of a sideways swipe. Kept here, below both readers, so a hand learns one
+// number.
 const AXIS_CROSS_DOMINANCE = 2;
 
 /**
@@ -10539,9 +10634,9 @@ const AXIS_CROSS_DOMINANCE = 2;
  * @param {PointerEvent} grabEvent
  *   The `pointerdown` event that may become a drag.
  * @param {function} dragGestureInitializer
- *   Called once the intent is established; must create and return the real drag
- *   gesture (typically via `grabViaPointer(grabEvent)`). Returning a falsy value
- *   aborts the gesture.
+ *   Called once the intent is established, with the move that established it
+ *   when one did; must create and return the real drag gesture (typically via
+ *   `grabViaPointer(grabEvent)`). Returning a falsy value aborts the gesture.
  * @param {object} [options]
  * @param {number} [options.threshold=5]
  *   Distance (px) the pointer must travel to start a drag, when the trigger is
@@ -10620,7 +10715,7 @@ const dragAfterIntent = (
 };
 
 const startDragGesture = (dragGestureInitializer, catchUpEvent) => {
-  const dragGesture = dragGestureInitializer();
+  const dragGesture = dragGestureInitializer(catchUpEvent);
   if (!dragGesture) {
     return null;
   }
@@ -12843,35 +12938,25 @@ const DRAG_START_THRESHOLD = 10;
 // went nowhere, and its click is lost (Chrome would click it up to 8px, Safari
 // never once a touchmove is refused).
 const DRAG_START_THRESHOLD_TOUCH = 6;
-// How much of a box has to be pulled for letting go to carry on rather than put
-// things back, when the caller does not say. Under half, because a gesture that
-// has clearly begun is an intention: asking for the box to be dragged all the
-// way across turns a travel into work.
-const DRAG_COMMIT_RATIO = 0.3;
-// A hand still moving towards what it is pulling in when it lets go has said
-// where this goes, however slowly: an intention still being acted on at the
-// lift travels whatever the distance. The bar sits just above stillness —
-// capacitive jitter and a hand settling before it lifts measure under it — so
-// only a release at rest is left to the position alone (the commit ratio).
-// It has to sit that low for another reason too: velocity is averaged over
-// the trailing window (see createVelocityMeter) and the release repeats the
-// last position a moment later, both pulling the measure down from the speed
-// the fingertip actually has. A few pixels of pull are asked besides, to tell
-// a movement from a tap that shook.
-const DRAG_DRIFT_VELOCITY = 0.03;
-const DRAG_DRIFT_DISTANCE = 8;
-// Thrown: a hand moving this fast as it lets go says where things go, whatever
-// the distance already covered. AWAY from what it was bringing in, it asks for
-// it to be put back (travelsAfter); the way a travel it caught in flight was
-// already going, it asks for the one after (see thrownOn). Well above the drift
-// bar, so a hand merely wavering as it lets go does not read as a throw.
-const DRAG_THROW_VELOCITY = 0.3;
-// A hand landing on a travel still playing, and saying nothing for this long —
-// no step its way, none against it — is holding it: the travel stops there.
-// Short enough that what was reached for is still where the eye saw it, long
-// enough for the far likelier hand to have said otherwise: the next swipe lands
-// already moving, and has covered the start threshold well before this.
-const DRAG_CATCH_HOLD_MS = 100;
+// Where the browser reads that same hand for itself, once and for good.
+const BROWSER_PAN_READ_DISTANCE = 8;
+// How much of a box a hand at rest has to have pulled for letting go to carry on
+// rather than put things back, when the caller does not say. Half, as on every
+// platform: the screen showing more is the one the hand put there.
+const DRAG_COMMIT_RATIO = 0.5;
+// Too little of a finger's way for its speed to mean anything, however fast: a
+// tap that slipped. What Android's pagers ask of a fling (MIN_DISTANCE_FOR_FLING,
+// 25dp).
+const DRAG_FLICK_REACH = 25;
+// Where a hand letting go is about to put things: this long at the speed it has
+// at the lift. What UIScrollView's normal deceleration carries (Apple's
+// "Designing Fluid Interfaces": v * rate / (1 - rate) at 0.998).
+const DRAG_LANDING_MS = 500;
+// Past this speed the hand has said where this goes whatever the box measures: a
+// thumb flicks no faster on a tablet than on a phone, and half a wide box is out
+// of reach of any landing. Android's pagers' bar (400dp/s), which is also about
+// what a landing asks of a short flick on a phone.
+const DRAG_FLICK_VELOCITY = 0.4;
 // Pulling towards nothing: what travels follows at a fraction of the finger, so
 // the gesture is answered (something moves) while saying there is nothing that
 // way. Let go and it comes back — a wall one can lean on, never walk through.
@@ -12982,7 +13067,6 @@ const DRAG_EXCLUDED_SELECTOR = [
 // gesture is not its own, and the DOM is the only place where that is knowable
 // from the outside.
 const DRAG_AXES_ATTRIBUTE = "data-travel-by-drag";
-const WHEEL_AXES_ATTRIBUTE = "data-travel-by-wheel";
 // The same thing said by something that is PICKED UP rather than travelled: a
 // row taken out of a list, a card carried across a board (see markDragSource).
 // It holds the pointer from the press exactly as a nested travel does, so it is
@@ -13103,14 +13187,33 @@ const scrollRoomTowards = (fromElement, stopElement, axis, sign) => {
   return false;
 };
 
-// A gesture is over: does it carry on, or does everything go back? The distance
-// pulled says it, and the speed says it too — a short flick means "away" as
-// clearly as half a box does.
+// Whether something under the pointer scrolls on this axis, the page included.
+// Room left is not asked: a thumb still flicking towards the end of a list is
+// scrolling it, the same as anywhere else on that list.
+const somethingScrollsOn = (fromElement, axis) => {
+  let element = fromElement;
+  while (element && element.nodeType === 1) {
+    if (canScroll(element, axis)) {
+      return true;
+    }
+    if (isTopLayer(element)) {
+      // What scrolls behind a surface painted over it is not under the finger.
+      return false;
+    }
+    element = element.parentElement;
+  }
+  return pageScrolls(fromElement.ownerDocument, axis);
+};
+
+// A gesture is over: does it carry on, or does everything go back? Where the
+// hand is about to put things says it, with one question for every hand: thrown
+// back, a screen caught at two thirds lands short and goes back; thrown on, a
+// short flick lands far and goes; at rest, the picture is the only witness left.
 const travelsAfter = ({
   pulled,
-  slack,
+  reach,
   size,
-  velocity,
+  liftVelocity,
   towardsSomething,
   cancelled,
   commitRatio,
@@ -13118,64 +13221,22 @@ const travelsAfter = ({
   if (!towardsSomething) {
     return false;
   }
-  // Caught in flight and let go of again without a word: what was on its way
-  // carries on. Answered on the distance alone, a travel a hand merely touched
-  // is undone BY the touch — it was stopped where it stood, and where it stood
-  // is not far enough to count as an intention. Nobody asked it to stop; it was
-  // asked to wait. A gesture TAKEN AWAY said nothing either (the browser
-  // scrolling something else, a call coming in): its end was decided before
-  // the press, and it is that end it goes on to.
-  if (slack && (cancelled || Math.abs(pulled - slack) < DRAG_START_THRESHOLD)) {
-    return true;
-  }
-  // Taken away from a travel this gesture began: things go back rather than
-  // landing wherever the hand happened to be.
+  // Taken away: things go back rather than landing wherever the hand happened to
+  // be.
   if (cancelled) {
     return false;
   }
+  const distance = Math.abs(pulled);
+  const asked = size * commitRatio;
+  if (reach <= DRAG_FLICK_REACH) {
+    return distance > asked;
+  }
   const sign = pulled > 0 ? 1 : -1;
-  // A hand that is still moving says where it is going, and it says it about
-  // BOTH answers. Going away from what it was bringing in fast is "put it
-  // back", whatever the distance already covered — which is the whole of what
-  // one asks for when catching something in flight and throwing it back the
-  // other way. Without this the picture alone decides, and a screen caught at
-  // two thirds and thrown back still arrives: the gesture was read as the
-  // place it was let go of rather than as a movement.
-  if (
-    Math.abs(velocity) > DRAG_THROW_VELOCITY &&
-    Math.sign(velocity) !== sign
-  ) {
-    return false;
+  const speed = liftVelocity * sign;
+  if (Math.abs(speed) > DRAG_FLICK_VELOCITY) {
+    return speed > 0;
   }
-  // …and going towards it travels, however slowly: see DRAG_DRIFT_VELOCITY.
-  const drifting =
-    Math.abs(velocity) > DRAG_DRIFT_VELOCITY && Math.sign(velocity) === sign;
-  if (drifting && Math.abs(pulled) > DRAG_DRIFT_DISTANCE) {
-    return true;
-  }
-  // At rest: the position is the only witness left.
-  return Math.abs(pulled) > size * commitRatio;
-};
-
-// A travel caught in flight and thrown on the way it was already going: a
-// second push, and it asks for the screen AFTER the one on its way — two
-// gestures, two screens, as a second push over a wheel's tail is. Read as the
-// verdict above, it only confirms what was already arriving: the throw stops
-// the travel at the press and lets it go on to the same place, and what the
-// hand feels is its second swipe swallowed. The hand has to have moved that way
-// by more than a tremor, so a travel merely touched still carries on to where
-// it was going (see the slack rule in travelsAfter).
-const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
-  if (!slack || cancelled || !towardsSomething) {
-    return false;
-  }
-  const way = Math.sign(slack);
-  return (
-    Math.sign(pulled) === way &&
-    (pulled - slack) * way >= DRAG_START_THRESHOLD &&
-    Math.sign(velocity) === way &&
-    Math.abs(velocity) > DRAG_THROW_VELOCITY
-  );
+  return distance + speed * DRAG_LANDING_MS > asked;
 };
 
 /**
@@ -13201,62 +13262,23 @@ const thrownOn = ({ pulled, slack, velocity, towardsSomething, cancelled }) => {
  *   this one travels is not one of them: it is that box's, and this call
  *   returns null when nothing is left (see axesLeftBy). Say so in the DOM with
  *   [data-travel-by-drag] for the boxes above to read.
- * @param {false|{axis: "x"|"y", way: 1|-1}} [options.inFlight=false] - a travel
- *   still playing under the press, on `axis`, going `way` (the sign a pull
- *   going the same way would have). The axis comes from the caller rather than
- *   from the movement: there is nothing to decide, what the press landed on is
- *   travelling on one already. The caller stops nothing at the press: a hand
- *   landing on a moving travel is far more often the next swipe than a catch,
- *   and stopping it at the press is what that swipe feels as a stall. So the
- *   hand is listened to first — with the touch refused from its first pixel
- *   meanwhile, before the browser takes it for a pan:
- *   - a step of the start threshold the travel's way is the next swipe:
- *     `onPushOn` is asked for the screen after, and the gesture is over — the
- *     travel goes on, it is not held. If it has arrived in the meantime
- *     (`onPushOn` answers `false`), the press is a swipe like any other;
- *   - a step against it, or `DRAG_CATCH_HOLD_MS` of saying nothing, is a
- *     catch: `onStart` is asked with `caught: true`, which is when the caller
- *     stops the travel where it stands;
- *   - let go before either, and nothing was touched.
- * @param {(detail: {axis: string, sign: number, event: PointerEvent}) => boolean} [options.onPushOn]
- *   - see `inFlight`: go on to the screen after the one the travel is bringing
- *   in, without stopping it. Answer whether there was a travel to push.
- * @param {number} [options.commitRatio=0.3] - what fraction of the box has to
- *   be pulled for letting go to carry on rather than put things back. A
+ * @param {number} [options.commitRatio=0.5] - what fraction of the box has to
+ *   be pulled for letting go at rest to carry on rather than put things back. A
  *   fraction and never a distance, so the same gesture asks for the same thing
- *   on a phone and on a wide screen. Speed still answers on its own (see
- *   travelsAfter), whatever this says.
- * @param {(detail: {axis: string, sign: number, target: Element, caught: boolean, event: PointerEvent}) => false|{size: number, slack?: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
- *   - the finger has picked its axis. `caught`: the hand has taken hold of the
- *   travel given as `inFlight`, which the caller stops now, where it stands.
- *   Answer `false` to give the gesture up, or
- *   with the geometry it walks: `size` (one box along that axis), `slack` (how
- *   far the box already sits from its resting place, for a travel grabbed
- *   mid-flight) and whether there is anywhere to go each way — `travelBack`
- *   towards the start of the axis, `travelOn` towards its end. A direction with
- *   nothing there is not refused, it resists.
+ *   on a phone and on a wide screen. A hand still moving is read by where it is
+ *   about to land, against that same fraction (see travelsAfter).
+ * @param {(detail: {axis: string, sign: number, target: Element, event: PointerEvent}) => false|{size: number, travelBack?: boolean, travelOn?: boolean}} options.onStart
+ *   - the finger has picked its axis. Answer `false` to give the gesture up, or
+ *   with the geometry it walks: `size` (one box along that axis) and whether
+ *   there is anywhere to go each way, `travelBack` towards the start of the axis,
+ *   `travelOn` towards its end. A direction with nothing there is not refused, it
+ *   resists.
  * @param {(detail: {axis: string, pulled: number, size: number, progress: number, event: PointerEvent}) => void} options.onPull
  *   - the finger has moved. `pulled` is in px from the resting place, `progress`
  *   the same as a fraction of the box, signed the same way.
- * @param {(detail: {axis: string, sign: number, thrown: boolean, event: PointerEvent}) => false|{size: number, travelBack?: boolean, travelOn?: boolean}} [options.onEdge]
- *   - the hand has reached an end of the box it holds and keeps going: `sign`
- *   says which one — the far edge, a box walked whole, or its start, a box
- *   walked back to where it began. Answer with the geometry of the box that
- *   lies that way to hand the gesture over to it: the pixels past the end
- *   become its first ones, so nothing is spent twice and the hand feels one
- *   continuous movement. Answer `false` (or leave it out) for a wall — the
- *   gesture stays on the box it has and leans on it.
- *   `thrown`: the hand did not walk there, it let go throwing a travel it had
- *   caught on the way it was already going (see thrownOn). The box is asked for
- *   at the release, with the picture still short of the end. Answer `false`
- *   when there is no box to hand over from there, and the travel is let go of
- *   as it is: it arrives where it is aimed — which a caller whose travel can
- *   be aimed further without moving has just done, before answering.
  * @param {(detail: {axis: string, pulled: number, size: number, sign: number, travels: boolean, cancelled: boolean, event: PointerEvent}) => void} options.onEnd
  *   - the finger is off. `travels` is the gesture's answer: carry on to what was
- *   being pulled in, or put things back. `sign` is the side of what was being
- *   pulled in — the side `pulled` is on, except after a throw handed over at
- *   the release, where the picture still stands short of the new box.
+ *   being pulled in, or put things back. `sign` is the side `pulled` is on.
  * @param {() => void} [options.onGiveUp] - the press is over without ever
  *   becoming a travel: it stayed still, leaned the wrong way, or `onStart`
  *   refused it. Nothing was painted and nothing has to be put back — this is
@@ -13267,18 +13289,13 @@ const startDragToTravel = (
   {
     element,
     axes = "xy",
-    inFlight = false,
     commitRatio = DRAG_COMMIT_RATIO,
     onStart,
     onPull,
     onEnd,
-    onEdge = () => false,
-    onPushOn = () => false,
     onGiveUp = () => {},
   },
 ) => {
-  // The axis a press landing on something moving is already on.
-  const movingAxis = inFlight && inFlight.axis;
   const target = pointerDownEvent.target;
   if (!target.closest || isPressExcluded(target, element)) {
     return null;
@@ -13305,12 +13322,6 @@ const startDragToTravel = (
   if (!axesLeft) {
     return null;
   }
-  // What was caught in flight travels on an axis of its own, and it is not up
-  // for decision: a box below has taken that axis, so what this press caught it
-  // cannot carry on either.
-  if (movingAxis && !axesLeft.includes(movingAxis)) {
-    return null;
-  }
   // A link and an image are draggable without anyone asking, and the browser
   // starts that drag about 3px in, under the threshold below: it cancels the
   // pointer and keeps the rest of the press, so the travel never forms. Refused
@@ -13323,25 +13334,29 @@ const startDragToTravel = (
     pointerDownEvent.pointerType === "mouse"
       ? DRAG_START_THRESHOLD
       : DRAG_START_THRESHOLD_TOUCH;
+  const crossAxis = axesLeft === "x" ? "y" : axesLeft === "y" ? "x" : null;
+  // Whether this hand is the browser's: read as it reads it, onto something
+  // that scrolls that way. A mouse scrolls with its wheel, so nothing disputes
+  // its drag.
+  const browserPansAcross = (reachX, reachY) => {
+    const axisForTheBrowser = reachY >= reachX ? "y" : "x";
+    return (
+      axisForTheBrowser === crossAxis &&
+      pointerDownEvent.pointerType !== "mouse" &&
+      somethingScrollsOn(target, crossAxis)
+    );
+  };
 
   // The travel in hand: null until the finger has picked an axis and the caller
   // has accepted it.
   let travel = null;
   let dragGesture = null;
   let over = false;
-  // What the hand has said about a travel left playing (see inFlight):
-  // "listening" until it steps one way or the other or holds still, then
-  // "caught", or "arrived" when the travel it would have pushed on is over.
-  let inFlightAnswer = inFlight ? "listening" : null;
-  let holdElapsed = false;
-  let holdTimeout = null;
-
   const finish = () => {
     if (over) {
       return;
     }
     over = true;
-    clearTimeout(holdTimeout);
     document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
     document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
     element.removeEventListener("dragstart", refuseNativeDrag);
@@ -13376,121 +13391,60 @@ const startDragToTravel = (
     axis === "x"
       ? gestureInfo.dragX - gestureInfo.grabX
       : gestureInfo.dragY - gestureInfo.grabY;
-  const pullOf = (gestureInfo) => {
-    const covered = coveredOn(travel.axis, gestureInfo);
-    return travel.slack + (covered - travel.origin);
-  };
-
-  // Another box under the same hand, at either end of the one it holds. The
-  // distance already covered on that side becomes the new box's own, measured
-  // from where the finger IS: nothing is spent twice, and the gesture is one
-  // movement rather than a wall the hand had to let go of to cross.
-  // Returns where the new box stands, or null when there is nothing that way.
-  const relayTo = (sign, distance, gestureInfo, { thrown = false } = {}) => {
-    const next = onEdge({
-      axis: travel.axis,
-      sign,
-      thrown,
-      event: gestureInfo.dragEvent,
-    });
-    if (!next || !next.size) {
-      return null;
-    }
-    travel.size = next.size;
-    travel.travelBack = Boolean(next.travelBack);
-    travel.travelOn = Boolean(next.travelOn);
-    travel.slack = 0;
-    let pulled = distance;
-    if (pulled > next.size) {
-      pulled = next.size;
-    } else if (pulled < -next.size) {
-      pulled = -next.size;
-    }
-    travel.origin = coveredOn(travel.axis, gestureInfo) - pulled;
-    return pulled;
-  };
+  const pullOf = (gestureInfo) =>
+    coveredOn(travel.axis, gestureInfo) - travel.origin;
 
   // What the hand says, read on every report of it: which axis, whether it has
   // become a travel, and where that travel stands.
   const readHand = (gestureInfo) => {
     if (!travel) {
+      // ONE axis, decided by the first movement reported and never revisited: a
+      // diagonal would ask for two travels at once and only one thing can arrive.
+      //
+      // The axis this box travels is favoured in that reading: a thumb swiping a
+      // box sideways moves along an ARC, and its first reported pixels — which are
+      // all this decision ever sees — lean off-axis far more than the gesture does.
+      // Read even, that lean hands the whole gesture to an axis nobody meant (the
+      // press is given up, and the hand's remaining hundred pixels are read by no
+      // one). So the cross axis has to win CLEARLY to take the press.
+      //
+      // Unless a finger is on something that scrolls on that axis: somebody does
+      // mean it there, and these few pixels wobble as much on a scroll as on a
+      // swipe. The press is then read as the browser reads it, and no softer: past
+      // that, the browser has dropped its pan for the whole touch, and a press
+      // given up there belongs to nobody.
       let axis;
-      if (movingAxis) {
-        // The axis is not up for decision: what this press landed on is
-        // already travelling on one, and the caller said which. The first pixel
-        // of a hand landing on something moving is a tremor as often as it is
-        // a direction — read as a lean across the axis, it gives the gesture up
-        // and lets go of what was caught, under a finger that has not asked
-        // for anything yet.
-        axis = movingAxis;
+      const reachX = Math.abs(coveredOn("x", gestureInfo));
+      const reachY = Math.abs(coveredOn("y", gestureInfo));
+      if (!reachX && !reachY) {
+        return;
+      }
+      if (crossAxis) {
+        const along = crossAxis === "y" ? reachX : reachY;
+        const cross = crossAxis === "y" ? reachY : reachX;
+        const crossWins =
+          cross > along * AXIS_CROSS_DOMINANCE ||
+          browserPansAcross(reachX, reachY);
+        axis = crossWins ? crossAxis : axesLeft;
       } else {
-        // ONE axis, decided by the first movement reported and never
-        // revisited: a diagonal would ask for two travels at once and only
-        // one thing can arrive.
-        //
-        // The axis this box travels is favoured in that reading: a thumb
-        // swiping a box sideways moves along an ARC, and its first reported
-        // pixels — which are all this decision ever sees — lean off-axis
-        // far more than the gesture does. Read even, that lean hands the
-        // whole gesture to an axis nobody meant (the press is given up, and
-        // the hand's remaining hundred pixels are read by no one). So the
-        // cross axis has to win CLEARLY to take the press — and a gesture
-        // that is really the page's own (a scroll is near-pure on its axis
-        // from the first pixel) still is, at once, whole.
-        const reachX = Math.abs(coveredOn("x", gestureInfo));
-        const reachY = Math.abs(coveredOn("y", gestureInfo));
-        if (!reachX && !reachY) {
-          return;
-        }
-        const travelsX = axesLeft.includes("x");
-        const travelsY = axesLeft.includes("y");
-        if (travelsX && !travelsY) {
-          axis = reachY > reachX * AXIS_CROSS_DOMINANCE ? "y" : "x";
-        } else if (travelsY && !travelsX) {
-          axis = reachX > reachY * AXIS_CROSS_DOMINANCE ? "x" : "y";
-        } else {
-          axis = reachX >= reachY ? "x" : "y";
-        }
-        if (!axesLeft.includes(axis)) {
-          giveUp();
-          return;
-        }
+        axis = reachX >= reachY ? "x" : "y";
       }
-      const covered = coveredOn(axis, gestureInfo);
-      if (inFlightAnswer === "listening") {
-        const along = covered * inFlight.way;
-        if (along >= startThreshold) {
-          // The travel's way: the next swipe, landed while the last one is
-          // still playing. It asks for a screen more, and the travel carries on
-          // towards it without ever having stopped under the hand.
-          if (
-            onPushOn({ axis, sign: inFlight.way, event: gestureInfo.dragEvent })
-          ) {
-            giveUp();
-            return;
-          }
-          // Nothing left to push: the travel arrived meanwhile, and this is a
-          // swipe on a screen at rest like any other.
-          inFlightAnswer = "arrived";
-        } else if (along <= -startThreshold || holdElapsed) {
-          inFlightAnswer = "caught";
-        } else {
-          return;
-        }
-      }
-      const caught = inFlightAnswer === "caught";
-      if (!covered && !caught) {
-        // Nothing said on that axis: a grab without a movement, or one
-        // straight across it. There is no gesture in that.
+      if (!axesLeft.includes(axis)) {
         giveUp();
         return;
       }
-      const sign = covered ? Math.sign(covered) : inFlight.way;
+      const covered = coveredOn(axis, gestureInfo);
+      if (!covered) {
+        // Nothing said on that axis: a grab without a movement, or one straight
+        // across it. There is no gesture in that.
+        giveUp();
+        return;
+      }
+      const sign = Math.sign(covered);
       const started = onStart({
         axis,
         sign,
         target,
-        caught,
         event: gestureInfo.dragEvent || pointerDownEvent,
       });
       if (!started || !started.size) {
@@ -13502,23 +13456,18 @@ const startDragToTravel = (
         size: started.size,
         travelBack: Boolean(started.travelBack),
         travelOn: Boolean(started.travelOn),
-        slack: started.slack || 0,
-        // Only what the intent threshold cost is withheld, so what travels
-        // does not jump those few pixels at the start — and nothing more:
-        // a fast gesture arrives coalesced, and the first report can carry
-        // most of a flick. Charged whole, the flick would set off with
-        // nothing left of itself to have pulled, move nothing on screen and
-        // be refused at the release for it. Except for a travel caught (see
-        // inFlight): it is stopped where it stands at that moment, and what
-        // the hand did before holding it moved nothing.
-        origin: caught
-          ? covered
-          : covered > startThreshold
+        // Only what the intent threshold cost is withheld, so what travels does
+        // not jump those few pixels at the start, and nothing more: a fast gesture
+        // arrives coalesced, and the first report can carry most of a flick.
+        // Charged whole, the flick would set off with nothing left of itself to
+        // have pulled, move nothing on screen and be refused at the release for it.
+        origin:
+          covered > startThreshold
             ? startThreshold
             : covered < -startThreshold
               ? -startThreshold
               : covered,
-        pulled: started.slack || 0,
+        pulled: 0,
       };
       document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
       // What the first pixels may have started selecting is not a selection:
@@ -13528,50 +13477,23 @@ const startDragToTravel = (
       // followed wherever it goes.
       dragGesture.capturePointer();
     }
-    const { axis } = travel;
+    const { axis, size } = travel;
     let pulled = pullOf(gestureInfo);
-    // Which side is being pulled in: dragging to the right brings in what is
-    // on the left, which is what comes BEFORE.
-    let towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
-    // Past the start of the box in hand, and the caller has a box that way:
-    // the hand is not leaning on a wall, it is walking into the next one
-    // backwards. Asked before the resistance, so what it is handed is the
-    // hand's own distance rather than a damped one.
-    if (!towardsSomething && pulled) {
-      const relayed = relayTo(pulled > 0 ? 1 : -1, pulled, gestureInfo);
-      if (relayed !== null) {
-        pulled = relayed;
-        towardsSomething = true;
-      }
-    }
-    let size = travel.size;
+    // Which side is being pulled in: dragging to the right brings in what is on
+    // the left, which is what comes BEFORE.
+    const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
     if (!towardsSomething) {
       pulled *= DRAG_RESISTANCE;
     }
     if (pulled > size || pulled < -size) {
-      const sign = pulled > 0 ? 1 : -1;
-      // How far past the edge the hand has gone. Its own number, because it
-      // is what the next box is owed if there is one.
-      const overshoot = pulled - sign * size;
-      pulled = sign * size;
+      pulled = pulled > 0 ? size : -size;
       if (towardsSomething) {
-        // A box walked whole, and the finger still going: the caller may have
-        // another one to put under it. Then the gesture WALKS ON — the pixels
-        // past the edge are its first ones, so the hand feels one movement
-        // and not a wall it had to let go of to cross.
-        const relayed = relayTo(sign, overshoot, gestureInfo);
-        if (relayed === null) {
-          // A box travels one box, and the hand can go further than that.
-          // Those extra pixels are not owed back: the gesture is measured
-          // from where the finger IS once it has reached the end, so turning
-          // around moves the picture at once instead of first walking back
-          // over the distance the hand went too far.
-          travel.origin =
-            coveredOn(axis, gestureInfo) - (pulled - travel.slack);
-        } else {
-          pulled = relayed;
-          size = travel.size;
-        }
+        // A box travels one box, and the hand can go further than that. Those
+        // extra pixels are not owed back: the gesture is measured from where the
+        // finger IS once it has reached the end, so turning around moves the
+        // picture at once instead of first walking back over the distance the
+        // hand went too far.
+        travel.origin = coveredOn(axis, gestureInfo) - pulled;
       }
     }
     travel.pulled = pulled;
@@ -13614,43 +13536,12 @@ const startDragToTravel = (
         return;
       }
       finish();
-      const { axis, size, pulled, slack } = travel;
+      const { axis, size, pulled } = travel;
       const towardsSomething = pulled > 0 ? travel.travelBack : travel.travelOn;
-      const velocity =
-        axis === "x" ? gestureInfo.velocityX : gestureInfo.velocityY;
+      const liftVelocity =
+        axis === "x" ? gestureInfo.liftVelocityX : gestureInfo.liftVelocityY;
       const releaseEvent = gestureInfo.releaseEvent || gestureInfo.dragEvent;
       const { cancelled } = gestureInfo;
-      if (thrownOn({ pulled, slack, velocity, towardsSomething, cancelled })) {
-        const sign = pulled > 0 ? 1 : -1;
-        // Where the picture stands, said from the box past the one in hand:
-        // short of it by what is left of the travel that was caught.
-        const relayed = relayTo(sign, pulled - sign * size, gestureInfo, {
-          thrown: true,
-        });
-        if (relayed !== null) {
-          // Nothing moves: the same place, measured from the new box — so the
-          // caller's picture of the gesture agrees with it before it is let go.
-          onPull({
-            axis,
-            pulled: relayed,
-            size: travel.size,
-            progress: relayed / travel.size,
-            event: releaseEvent,
-          });
-          onEnd({
-            axis,
-            pulled: relayed,
-            size: travel.size,
-            // The way it was thrown, not the side the picture stands on: it
-            // still sits short of the box it was bringing in.
-            sign,
-            travels: true,
-            cancelled: false,
-            event: releaseEvent,
-          });
-          return;
-        }
-      }
       onEnd({
         axis,
         pulled,
@@ -13658,9 +13549,9 @@ const startDragToTravel = (
         sign: pulled > 0 ? 1 : -1,
         travels: travelsAfter({
           pulled,
-          slack,
+          reach: Math.abs(coveredOn(axis, gestureInfo)),
           size,
-          velocity,
+          liftVelocity,
           towardsSomething,
           cancelled,
           commitRatio,
@@ -13694,26 +13585,34 @@ const startDragToTravel = (
     });
     return dragGesture;
   };
-  if (inFlight) {
-    // Started from the grab: what this press landed on is moving, and what the
-    // hand means by it is still being listened to (see readHand), but the touch
-    // is refused from its first pixel, before the browser takes it for a pan of
-    // its own.
-    grab()?.start();
-    holdTimeout = setTimeout(() => {
-      if (over || travel || !dragGesture) {
-        return;
+  // A press reading as the browser's pan is not given up before the browser has
+  // read it: a thumb's arc can bend flat in those few pixels, the browser then
+  // drops its pan, and a press already given up is nobody's. It goes on being
+  // measured, with nothing refused, so both read the same report. One reading
+  // as a travel takes the press at once: it needs the margin under the deadline.
+  const grabOnceTheBrowserHasRead = (moveEvent) => {
+    if (moveEvent) {
+      const reachX = Math.abs(moveEvent.clientX - pointerDownEvent.clientX);
+      const reachY = Math.abs(moveEvent.clientY - pointerDownEvent.clientY);
+      if (
+        Math.hypot(reachX, reachY) < BROWSER_PAN_READ_DISTANCE &&
+        browserPansAcross(reachX, reachY)
+      ) {
+        dragAfterIntent(pointerDownEvent, grab, {
+          longPress: false,
+          threshold: BROWSER_PAN_READ_DISTANCE,
+          selection: "manual",
+        });
+        return null;
       }
-      holdElapsed = true;
-      readHand(dragGesture.gestureInfo);
-    }, DRAG_CATCH_HOLD_MS);
-  } else {
-    dragAfterIntent(pointerDownEvent, grab, {
-      longPress: false,
-      threshold: startThreshold,
-      selection: "manual",
-    });
-  }
+    }
+    return grab();
+  };
+  dragAfterIntent(pointerDownEvent, grabOnceTheBrowserHasRead, {
+    longPress: false,
+    threshold: startThreshold,
+    selection: "manual",
+  });
   window.addEventListener("pointerup", onPressOver);
   window.addEventListener("pointercancel", onPressOver);
 
@@ -13722,266 +13621,6 @@ const startDragToTravel = (
       finish();
       dragGesture?.release();
     },
-  };
-};
-
-// What each screen AFTER the first costs inside one gesture. Deliberately
-// steep: reconstructing "how much did that flick mean" from a stream nobody
-// agrees on is guesswork, and a guess that overshoots leaves someone three
-// screens from where they were with no idea how they got there. Under-shooting
-// costs one more push. So the door is open for a gesture that insists, and shut
-// the rest of the time.
-const WHEEL_NEXT_STEP_DELTA = 600;
-// A stream that keeps getting weaker is momentum, not a hand: the system goes
-// on sending long after the fingers are gone. Counted, one flick becomes five
-// slides. Two events in a row are asked for rather than one, because a hand
-// wavers and momentum does not.
-const WHEEL_FADE_RUN = 2;
-// …and the same fact read the other way: momentum only ever weakens, so a
-// stream already recognized as momentum that GROWS twice in a row is a hand
-// pushing again — a second swipe thrown while the tail of the first is still
-// streaming. The browser sees one unbroken burst (the tail never went silent),
-// but to the hand these are two gestures, and the second is answered like a
-// first event: with a screen, now, not with credit towards one.
-const WHEEL_REGROW_RUN = 2;
-
-/**
- * A travel asked for with a wheel, and it asks for a WHOLE ONE.
- *
- * Two fingers swiping sideways on a trackpad, a mouse pushed sideways: the
- * browser sends `wheel` events and, left alone, answers them itself by
- * scrolling the page, bouncing it, or going back in history. Answering them
- * here is what stops that — a gesture is either ours or the browser's, and half
- * of each is what makes a page rock under a travel that is already moving.
- *
- * Read as STEPS and not as a distance, which is where this parts company with a
- * press: a hand on the box holds a screen and says where to put it, so it is
- * owed every pixel; a wheel points at the next screen and says "that one". What
- * travels is a row of slides, not a long strip one stops in the middle of, so
- * one push moves one slide — and the travel that follows plays at its own pace,
- * exactly as it would from a tab pressed or an arrow key.
- *
- * A gesture therefore moves ONE screen the moment it begins, on its first event
- * and whatever that event is worth: a hand that moved and saw nothing happen
- * does not wait, it pushes harder. Everything a threshold there would have
- * bought is bought instead by what the SECOND screen costs, which is a lot —
- * "how much did that flick mean" cannot be reconstructed from a stream nobody
- * agrees on, and a guess that overshoots leaves someone three screens away with
- * no idea how they got there. Under-shooting costs one more push, so that is
- * the side to be wrong on.
- *
- * A burst has no target either — every event lands on whatever is under the
- * pointer at that instant — so it is CLAIMED at its first event and answered to
- * the end wherever the pointer wanders (see wheel_gesture.js). Without that, a
- * hand pushing a nested carousel and drifting off it walks a slide, then walks
- * the box around it, on one push.
- *
- * The rest of the stream is mostly momentum, still arriving with the fingers
- * gone, and it must not be counted. What gives it away is that momentum only
- * ever WEAKENS: a stream that keeps shrinking is a push already answered, and a
- * number that grows again is a hand asking for more.
- *
- * @param {Element} element
- * @param {object} options
- * @param {"x"|"y"|"xy"} [options.axes="xy"] - which ways this box can travel.
- *   The other one is the content's own scrolling and is left alone, and an axis
- *   a box NESTED in this one travels is that box's (see axesLeftBy). Say so in
- *   the DOM with [data-travel-by-wheel] for the boxes above to read.
- * @param {(detail: {axis: string, sign: number, event: WheelEvent}) => void} options.onStep
- *   - one push, one screen. `sign` is positive towards the start of the axis,
- *   which brings in what comes BEFORE — a wheel says how far the CONTENT
- *   scrolls, and pushing content to the right reveals its left.
- * @returns {() => void} stop listening.
- */
-const watchWheelTravel = (element, { axes = "xy", onStep }) => {
-  let gesture = null;
-
-  const forgetGesture = () => {
-    gesture = null;
-    document.documentElement.removeAttribute(GESTURE_ATTRIBUTE);
-    document.documentElement.removeAttribute(WALKING_ATTRIBUTE);
-  };
-
-  // Where the hand thinks it is pushing. Not "what the event landed on":
-  // while a view transition is playing, the browser delivers the wheel to the
-  // document root rather than to the box under the pointer, whatever the
-  // pseudo-elements are told about pointer-events. Heard on the box alone, a
-  // gesture that sets a travel off loses every event after the first — and the
-  // page scrolls behind the travel with everything that was not taken.
-  const isOverElement = (wheelEvent) => {
-    const { target } = wheelEvent;
-    if (element.contains(target)) {
-      return true;
-    }
-    // Something the box is INSIDE, which is what a wheel lands on while a view
-    // transition has taken the box's rendering away: the hit falls through to
-    // the nearest ancestor still being painted. That is the only case worth
-    // measuring for, and asking it this way round costs a walk up the tree
-    // rather than a layout read — a page can hold many travelling boxes, and
-    // every one of them would otherwise measure itself on every wheel event
-    // anywhere.
-    if (!target.contains(element)) {
-      return false;
-    }
-    const { left, right, top, bottom } = element.getBoundingClientRect();
-    const { clientX, clientY } = wheelEvent;
-    return (
-      clientX >= left && clientX <= right && clientY >= top && clientY <= bottom
-    );
-  };
-
-  const onWheel = (wheelEvent) => {
-    // The burst is already somebody else's — the box inside this one, a wheel
-    // picker, whoever answered its first event. It is theirs to the end of it,
-    // wherever the pointer has drifted since (see wheel_gesture.js).
-    if (wheelGestureIsTakenFrom(element)) {
-      return;
-    }
-    const axis =
-      Math.abs(wheelEvent.deltaX) > Math.abs(wheelEvent.deltaY) ? "x" : "y";
-    const delta = axis === "x" ? wheelEvent.deltaX : wheelEvent.deltaY;
-    if (!delta) {
-      return;
-    }
-    // Which way the screens go, said backwards: a wheel says how far the
-    // CONTENT scrolls, and pushing content to the left brings in what is on the
-    // right.
-    const sign = delta > 0 ? -1 : 1;
-    if (!gesture) {
-      // Where the hand is pushing, asked at the START of a burst and never
-      // again: from there on the gesture is this box's, and a pointer that has
-      // wandered off it says nothing about what the hand is pushing.
-      if (!isOverElement(wheelEvent)) {
-        return;
-      }
-      if (!axes.includes(axis)) {
-        // The other axis: the content's own scrolling, left whole to whatever
-        // wants it.
-        return;
-      }
-      // Who owns it, asked once for the gesture rather than for every event of
-      // it — the same claims a press is read against (see the top of this
-      // file), and all of them are answered by giving the gesture up whole:
-      // nothing is prevented and the browser scrolls as it would have.
-      const { target } = wheelEvent;
-      if (
-        (target.closest && isPressExcluded(target, element)) ||
-        scrollRoomTowards(target, element, axis, sign) ||
-        // …plus the third: a box below this one that travels on this axis. Its
-        // watcher hears the same wheel event this one does — they all listen at
-        // the document — so without this both step, and one push moves two
-        // things.
-        !axesLeftBy(axis, target, element, WHEEL_AXES_ATTRIBUTE)
-      ) {
-        return;
-      }
-      gesture = {
-        axis,
-        sign,
-        pushed: 0,
-        lastMagnitude: 0,
-        fadeRun: 0,
-        growRun: 0,
-        faded: false,
-        stepped: false,
-      };
-      document.documentElement.setAttribute(GESTURE_ATTRIBUTE, "");
-      document.documentElement.setAttribute(WALKING_ATTRIBUTE, axis);
-    }
-    // Ours from here, on both axes: what the browser would do with the leftover
-    // — scroll the page behind the box, bounce it, go back in history — is one
-    // gesture answered twice. On the other axis that swallowing is absolute —
-    // there is no per-event reading that tells a scroll's onset from the
-    // tail's own wobble (end-of-fade crumbs land on either axis, and a
-    // diagonal swipe's tail carries hand-sized deltas on both), and a crumb
-    // let through scrolls the slide's own content under the travel, a header
-    // creeping off the edge of the box.
-    wheelEvent.preventDefault();
-    if (axis !== gesture.axis) {
-      // The other axis mid-gesture: a hand is never perfectly straight, and the
-      // axis was decided when the gesture set off. Swallowed, but NOT renewing
-      // the claim below: silence is the only end a wheel gesture has, and it
-      // is silence ON ITS AXIS. Renewed by what it eats, the gesture would
-      // outlive its own stream — a hand starting a scroll over the tail would
-      // extend, event by event, the very deadness it is waiting out. Left to
-      // lapse, the claim dies shortly after our axis goes quiet (and on a
-      // system where touching the surface kills the old momentum, that is
-      // moments after the new scroll begins) — the browser then answers the
-      // rest of the scroll itself.
-      return;
-    }
-    // …and said on every event on our axis, because a claim nobody renews is a
-    // gesture that is over.
-    claimWheelGesture(element, { onEnd: forgetGesture });
-    if (sign !== gesture.sign) {
-      // Turned around: what was adding up was going the other way, so the
-      // ledger starts over — and only the ledger. The burst has been answered
-      // (stepped) and its stream is as much momentum as an event ago (faded):
-      // a flipping sign is the one thing a dying tail and a hand share, and a
-      // tail rocking to zero read as a first event walks a slide per event. A
-      // screen the other way costs what any screen after the first does, and a
-      // counter-push over a tail is heard by the regrow rule below.
-      gesture.sign = sign;
-      gesture.pushed = 0;
-      gesture.lastMagnitude = 0;
-      gesture.fadeRun = 0;
-      gesture.growRun = 0;
-    }
-    if (!gesture.stepped) {
-      // The first event of a gesture moves a screen, whatever it is worth —
-      // a pixel is a hand that moved, and a hand that moved and saw nothing
-      // happen pushes harder rather than waiting. Everything a threshold could
-      // buy here is bought by what a screen AFTER this one costs.
-      gesture.stepped = true;
-      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
-      return;
-    }
-    const magnitude = Math.abs(delta);
-    if (magnitude < gesture.lastMagnitude) {
-      gesture.fadeRun += 1;
-      gesture.growRun = 0;
-      if (gesture.fadeRun >= WHEEL_FADE_RUN) {
-        // Momentum, recognized — and remembered past the next growth: fadeRun
-        // is transient (one louder event resets it), while what the regrow
-        // rule below needs to know is that a tail WAS established at all.
-        gesture.faded = true;
-      }
-    } else if (magnitude > gesture.lastMagnitude) {
-      // Back up again — a hand asking for more. Momentum never does this.
-      gesture.fadeRun = 0;
-      gesture.growRun += 1;
-    }
-    gesture.lastMagnitude = magnitude;
-    // A second push, thrown while the tail of the first still streams (see
-    // WHEEL_REGROW_RUN): a new gesture to the hand, whatever the stream says.
-    if (gesture.faded && gesture.growRun >= WHEEL_REGROW_RUN) {
-      gesture.faded = false;
-      gesture.growRun = 0;
-      gesture.pushed = 0;
-      onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
-      return;
-    }
-    if (gesture.fadeRun >= WHEEL_FADE_RUN) {
-      return;
-    }
-    gesture.pushed += magnitude;
-    if (gesture.pushed < WHEEL_NEXT_STEP_DELTA) {
-      return;
-    }
-    gesture.pushed = 0;
-    onStep({ axis: gesture.axis, sign: gesture.sign, event: wheelEvent });
-  };
-
-  document.addEventListener("wheel", onWheel, {
-    passive: false,
-    capture: true,
-  });
-  return () => {
-    document.removeEventListener("wheel", onWheel, { capture: true });
-    // Handed back rather than left to lapse: a box that is gone must not hold a
-    // gesture the boxes still there are asking about.
-    releaseWheelGesture(element);
-    forgetGesture();
   };
 };
 
@@ -14084,29 +13723,7 @@ const wheelWouldScrollAround = (element) => {
     }
     node = node.parentElement;
   }
-  return pageScrolls(element.ownerDocument);
-};
-
-// The viewport is the scroll container nothing declares: `overflow` computes to
-// `visible` on the document element even while the page scrolls, so it is read
-// from the size it has to go through — and from what a page locks itself with
-// while something is open in front of it.
-const pageScrolls = (document) => {
-  const { documentElement, body, defaultView } = document;
-  if (!documentElement || !defaultView) {
-    return false;
-  }
-  for (const node of [documentElement, body]) {
-    if (!node) {
-      continue;
-    }
-    const { overflowY } = defaultView.getComputedStyle(node);
-    if (overflowY === "hidden" || overflowY === "clip") {
-      return false;
-    }
-  }
-  const scroller = getScrollingElement(document) || documentElement;
-  return scroller.scrollHeight - scroller.clientHeight > 1;
+  return pageScrolls(element.ownerDocument, "y");
 };
 
 // What a press on the surface is NOT for it: what answers the pointer on its own
@@ -23160,4 +22777,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createInternalCustomEvent, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, dragSourceThatStoodDown, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPressDrivenClick, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, overflowGoesToViewport, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, refuseDragTo, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, waitForTap, watchWheelTravel, wheelGestureIsTakenFrom };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, claimWheelGesture, clickIsSuppressed, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createInternalCustomEvent, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterIntent, dragSourceThatStoodDown, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollIntoViewScopedOffsets, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVirtualKeyboardOverlayHeight, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, installPanZoom, isAncestorOpen, isDisplayedDespiteClosedAncestor, isPressDisputedByDrag, isPressDrivenClick, isPrimaryButtonEvent, isSameColor, isScrollable, isTouchDrivenEvent, keepTouchRefusable, markDragSource, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, overflowGoesToViewport, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, refuseDragTo, releaseWheelGesture, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewThroughScrollables, scrollIntoViewWithStickyAwareness, scrollRoomTowards, setAttribute, setAttributes, setPlacementViewportInsets, setStyles, setVirtualKeyboardOverlaysContent, snapToPixel, startDragTo, startDragToResizeGesture, startDragToTravel, stickyAsRelativeCoords, stringifyStyle, subscribeVirtualKeyboardGeometryChange, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, suppressClickAfterGesture, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect, waitForPressHeld, waitForTap, wheelGestureIsTakenFrom };

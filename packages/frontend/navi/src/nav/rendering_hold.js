@@ -17,9 +17,8 @@
  * around Preact's `options.debounceRendering`, and two of them installed
  * independently restore each other in the wrong order when they let go — every
  * render queued in between is then handed to a wrapper nobody will ever
- * release. Everything that photographs a navigation (RouteTravel's box, a
- * route transition) must therefore hold through this module, never through a
- * wrapper of its own.
+ * release. Everything that photographs a navigation must therefore hold through
+ * this module, never through a wrapper of its own.
  */
 
 import { options } from "preact";

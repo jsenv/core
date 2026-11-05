@@ -3,10 +3,10 @@
  *
  * A popup is painted OVER the page and stays a DOM descendant of whatever it
  * was written in — a dialog inside the card that opens it, a callout beside the
- * button it belongs to. Its pointer events therefore bubble through boxes it
- * covers, and a box reading a gesture off one of them answers for something
- * nobody aimed at it: a finger held in a sheet opening the card underneath the
- * sheet, a card the sheet is drawn from and that the finger cannot even reach.
+ * button it belongs to. Its pointer and key events therefore bubble through
+ * boxes it covers, and a box reading a gesture off one of them answers for
+ * something nobody aimed at it: a finger held in a sheet opening the card
+ * underneath the sheet, an arrow pressed in a sheet walking the slides behind it.
  *
  * The same list, read for the same reason, as the drag sources in @jsenv/dom
  * (see DRAG_IGNORED_SELECTOR in drag_to.js) and as the selection rule in

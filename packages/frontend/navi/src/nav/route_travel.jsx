@@ -1,639 +1,209 @@
 /**
- * Dragging from one route to the next, when the tabs of a page are URLs.
+ * Pushing from one route to the next, when the tabs of a page are URLs.
  *
- * A swipe shows two pages at once, and the router shows one: it mounts the
- * branch that matches the URL and nothing else, which is what makes a page
- * shareable, reloadable and findable in the history. Both are right, so the
- * second picture is not taken from the DOM — it is taken from the SCREEN. The
- * browser's view transitions keep a picture of the page being left, and this
- * hands that picture to the finger:
+ * A hand is the browser's: the box holds a row it scrolls, with one snap point per
+ * page, so a touch, a trackpad and a wheel are followed on the compositor and read
+ * by what knows what a page cannot be told. What is left to do here is read where
+ * the row stands and when it has come to rest, and keep the address in step.
  *
- *   the press is a gesture        the touch is taken, and nothing else: a hand
- *                                 that only shook costs nothing (see setOff)
- *   the hand has really pulled    the URL changes (replaced, not pushed) and
- *                                 the browser freezes the page being left
- *   while the finger moves        the two pictures are dragged, the old one a
- *                                 still, the new one live under it
- *   let go                        the movement plays out to the end…
- *   let go too early              …or backwards, and the URL is put back
+ * The router mounts the branch that matches the URL and nothing else, which is
+ * what makes a page shareable and reloadable. A row shows two pages at once, so
+ * something has to give, and what it is depends on what the row is made of:
  *
- * So the URL leads and the picture follows, which is the opposite of what one
- * would write by hand and the only order the router allows: nothing is ever
- * mounted that does not match. The page being pulled in is therefore mounting
- * WHILE it is being dragged in — it arrives as its own loading state and fills
- * in under the finger, which is honest about what is happening (it is being
- * fetched) and is the only thing that can happen without a second router. What
- * reads the URL reads where the hand is heading: where the reader still is, is
- * routeTravelSettledPageSignal.
+ *   <Route> children   one pane per route. A page is built when its route first
+ *                      matches, since a route's actions only ask while it does, and
+ *                      stays once built (RouteRowContainer in route.jsx): a hand
+ *                      brings back the page itself. Its pane is empty before that,
+ *                      so the address moves as soon as the hand has really pulled
+ *                      towards it, and the page fills in under the finger. A pane
+ *                      already built waits for the landing.
+ *   `routes` prop      a window over something longer, where several pages are often
+ *                      one route with other params: the same component, so there
+ *                      can only be one. It stands in the pane of the address, and
+ *                      what the hand leaves behind is a PICTURE of it, a clone in
+ *                      the pane it was in. The address moves as soon as the hand
+ *                      has really pulled, as above.
  *
- * What travels is decided when the hand sets off: a travel brings in ONE
- * neighbour, and turning the hand around mid-drag puts the current page back
- * rather than fetching the other side. A hand that walks a whole page across
- * and keeps going is not turning around though — it is asking for the next one,
- * and the gesture relays into a second travel without being let go of (see
- * onEdge).
+ * What reads the URL may therefore read where the hand is heading. Where the reader
+ * still is, is routeTravelSettledPageSignal.
  *
- * Anything else that must follow the gesture — the trait under a tab bar, a
- * header — follows by being NAMED, not by being told: give it a
- * `view-transition-name` of its own and the browser animates it from where it
- * was to where it is, on the same clock as the pages. That is why the tab row
- * can stay where it is, outside this box, and still move with the finger.
+ * The document goes on scrolling when that is what the page does. A horizontal
+ * scroller cannot let the other axis through (overflow-x: auto makes overflow-y
+ * something else than visible), so the row is a scroll container that never moves
+ * vertically and grows with the page on screen. A page brought in stands where the
+ * reader is looking (see pinning below). The price: `position: sticky` inside the
+ * row sticks to the row, which never scrolls, so it never sticks. A row with fewer
+ * than two pages is not a scroller at all, for that reason.
+ *
+ * A travel nobody's hand is on (a tab pressed, the back button) is the browser's
+ * smooth scroll. Whatever else follows, the trait under a tab bar first, follows the
+ * row through route_row_follow.js.
  */
 
-import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
-import { computed, signal } from "@preact/signals";
+import { useLayoutEffect, useMemo, useReducer, useRef } from "preact/hooks";
+import { signal } from "@preact/signals";
 
-import {
-  getScrollContainer,
-  keepTouchRefusable,
-  scrollRoomTowards,
-  startDragToTravel,
-  watchWheelTravel,
-} from "@jsenv/dom";
-import {
-  observeAfterRouting,
-  observeBeforeRouting,
-} from "./browser_integration/before_routing.js";
+import { getScrollContainer } from "@jsenv/dom";
+import { observeBeforeRouting } from "./browser_integration/before_routing.js";
 import {
   arriveAtScrollPosition,
   suspendScrollRecording,
 } from "./browser_integration/scroll_restoration.js";
-import {
-  holdTransitionDestination,
-  releaseTransitionDestination,
-} from "./transition_destination.js";
-import {
-  holdTransitionPress,
-  releaseTransitionPress,
-} from "./transition_press.js";
-import {
-  holdTransitionWindow,
-  isPointInTransitionBand,
-  measureTransitionWindowState,
-  placeTransitionWindow,
-  releaseTransitionWindow,
-  installTransitionWindowCss,
-} from "./transition_window.js";
-import {
-  holdRenderingForRouting,
-  releaseRoutingRenderingHold,
-  takeoverRoutingRenderingHold,
-} from "./rendering_hold.js";
-import {
-  collectRoutePages,
-  freezeRouteRender,
-  observeRouteRender,
-} from "./route.jsx";
+import { collectRoutePages, RouteRowContext } from "./route.jsx";
 import { notePageChange } from "./page_change.js";
 import { pageIsCurrent } from "./route_page.js";
+import { publishRouteRowMove } from "./route_row_follow.js";
+import {
+  pageAtRest,
+  readRowStretch,
+  restsOn,
+  watchRowScroll,
+} from "../layout/native_row_scroll.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
-import {
-  ensureDocumentStartViewTransition,
-  holdViewTransition,
-} from "../transition/start_view_transition_polyfill.js";
-import {
-  findLeadAnimation,
-  viewTransitionAnimations,
-  walkPicturesHome,
-  whenPicturesArrived,
-} from "../transition/view_transition_revert.js";
-
-// The pictures carrying a travel, among everything else the movement takes
-// along (see findLeadAnimation).
-const TRAVEL_LEAD_NAMES = ["navi-route-travel"];
-
-// A browser with no view transitions of its own has no picture of the page
-// being left, so there is nothing to drag: the gesture is still read (it is how
-// one asks to change tab with a thumb), and the change happens on release, as a
-// press on the tab would have done.
-const CAN_KEEP_PICTURE = Boolean(
-  document.startViewTransition && !document.startViewTransition.isPolyfill,
-);
-const startViewTransition = ensureDocumentStartViewTransition();
-
-// route_transition.js reads this attribute by name (not imported, see its
-// ROUTE_TRAVEL_ATTRIBUTE) to refuse animating a navigation a travel already
-// animates — keep the two in sync.
-const TRAVEL_ATTRIBUTE = "data-navi-route-travel";
-// Which way the pages move, said on the document: the pictures of a transition
-// hang off the root, not off the box that travels, so the box's own `axis` has
-// to be lent to the document for the length of the travel.
-const TRAVEL_AXIS_ATTRIBUTE = "data-navi-route-travel-axis";
-// While a finger holds the travel: the pictures stand still and go exactly
-// where it says (see the CSS, and scrubTravel).
-const HOLD_ATTRIBUTE = "data-navi-route-travel-held";
-// A travel a finger set off, for its whole life — including what plays out
-// after the finger is gone. It moves by another law than one asked for by a
-// press (see the CSS).
-const DRAGGED_ATTRIBUTE = "data-navi-route-travel-dragged";
-// A travel that changed its mind about where it was going (see
-// redirectTravel). Only the pages can be aimed somewhere else: everything the
-// transition carries was measured once, at the start, against a destination
-// this travel is no longer going to.
-const TURNED_ATTRIBUTE = "data-navi-route-travel-turned";
-// The name the box wears while it travels, and only then (see nameForTravel).
-const TRAVEL_NAME = "navi-route-travel";
 
 const css = /* css */ `
-  /* The name that makes the page inside this box a picture of its own during a
-     transition — rather than part of the one big picture the document takes, so
-     the two pages can move past each other while everything else stays where it
-     is — is not written here: it is worn only for the length of a travel (see
-     nameForTravel). A name belongs to ONE element at a time, and a page can hold
-     several of these boxes at once — a section of the url and a search param of
-     the root route are two rows of tabs, both live, and only one of them is ever
-     travelling. */
   .navi_route_travel {
     position: relative;
-
-    /* What a touch may do here — only where a touch travels at all
-       (data-travel-by-drag, set from travelByDrag): the axis the pages travel
-       on is taken, the other one is left to the page, so a list still scrolls
-       under the same finger. A box that takes no gesture takes no axis either:
-       it is a plain box around the page, and everything in it scrolls as it
-       would anywhere else. Same reading as SlideContainer's own. */
-    &[data-travel-by-drag="x"] {
-      touch-action: pan-y;
-    }
-    &[data-travel-by-drag="y"] {
-      touch-action: pan-x;
-    }
   }
 
-  /* Only while a travel of OURS is playing: everything below changes how the
-     document animates, and the document belongs to the application the rest of
-     the time. */
-  :root[data-navi-route-travel] {
-    /* The page around the box is NOT taken as a picture, against the browser's
-       own default: an element that has been captured is not painted where it
-       was and cannot be pointed at either — every press lands on the document
-       root instead. Capturing the whole page therefore freezes it in both
-       senses at once, and a tab row beside a travel is dead for the length of
-       every travel: nothing highlights, the cursor is an arrow, a press on the
-       tab one changed one's mind about goes nowhere.
+  /* A scroller of its own, inside the box: a box may be told what it is by the
+     application around it, which must not decide which way the panes run. */
+  [data-route-travel-row] {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    grid-auto-columns: 100%;
+    grid-auto-flow: column;
+    grid-template-rows: minmax(0, 1fr);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overflow-anchor: none;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
 
-       Left live, the page around answers as it always did, and nothing shows
-       through where the pages are: the box IS captured (it is named below), so
-       it paints nothing of its own, and the two pictures cover its rectangle
-       between them at every moment of the travel. */
-    view-transition-name: none;
-
-    /* The pictures are looked at, never touched: they are drawn in the top
-       layer, above everything, so a hand reaching for a page that is still
-       sliding would land on the picture of it and the box below would never
-       hear the press. Nothing here is interactive — what the finger is
-       reaching for is the travel underneath, and it must reach it. */
-    &::view-transition,
-    &::view-transition-group(*),
-    &::view-transition-image-pair(*),
-    &::view-transition-old(*),
-    &::view-transition-new(*) {
-      pointer-events: none;
-    }
-
-    &::view-transition-old(navi-route-travel),
-    &::view-transition-new(navi-route-travel) {
-      /* Each picture at the size it was taken at: a page is not resized by the
-         page it crosses. Told to fill a box whose height is being animated, a
-         picture is STRETCHED with it — the page leaving is then seen squashing
-         upwards, or zooming, over the length of the travel, when all it is
-         doing is walking off the edge. */
-      height: auto;
-      object-fit: none;
-      object-position: top left;
-      /* The default cross-fade, dropped: two pages sliding past each other are
-         two solid things, and seeing through one to the other says they are the
-         same page changing its mind. */
-      mix-blend-mode: normal;
-    }
-    /* Each picture at the corner its own box stood at, which is not the
-       window's: the window contains both boxes, and the two are at the same
-       place in the layout without being at the same place in the window — one
-       page is scrolled and the other is not, so the box being left starts
-       higher up. Left at the window's own corner the page being left would be
-       seen jumping back to its top before it even begins to leave. Offset here
-       rather than by \`translate\`, which the movement itself uses, and at its
-       own size rather than the group's so that nothing is cut off the far side
-       of the shift (see transition_window.js). */
-    &::view-transition-old(navi-route-travel) {
-      top: calc(
-        var(--navi-transition-window-old-top) - var(
-            --navi-transition-window-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-old-left) - var(
-            --navi-transition-window-left
-          )
-      );
-      width: auto;
-    }
-    &::view-transition-new(navi-route-travel) {
-      top: calc(
-        var(--navi-transition-window-new-top) - var(
-            --navi-transition-window-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-new-left) - var(
-            --navi-transition-window-left
-          )
-      );
-      width: auto;
-    }
-    /* The pages are cut at the edge of the box they travel in. Said HERE and
-       nowhere else: these pictures are drawn in the top layer, so no overflow
-       on any element of the document — not the box's own, not a frame around
-       it — can reach them. Without it a page being pulled in is seen sliding
-       across whatever sits beside the box. */
-    &::view-transition-group(navi-route-travel),
-    &::view-transition-image-pair(navi-route-travel) {
-      overflow: clip;
-    }
-    &::view-transition-group(navi-route-travel) {
-      /* The window the two pictures are seen through, held still for the whole
-         travel at the rectangle that contains both boxes (see
-         transition_window.js): the group is what CLIPS, and the browser
-         animates it from the box being left to the box arriving — so the
-         window moves and shrinks under the pictures, cutting the page leaving
-         from the bottom, progressively. The box does end up at the arriving
-         page's height, and that is right; what must not happen is the user
-         watching it get there.
-
-         Held by dropping the group's animation rather than by winning against
-         it with !important. Until the pictures exist the browser puts the
-         group where the ARRIVING box stands, and it is moved from there back
-         to the window's own corner by a corner read every frame; from then on
-         it is placed by the rule below. */
-      top: calc(
-        var(--navi-transition-window-top) - var(
-            --navi-transition-window-new-top
-          )
-      );
-      left: calc(
-        var(--navi-transition-window-left) - var(
-            --navi-transition-window-new-left
-          )
-      );
-      width: var(--navi-transition-window-width);
-      height: var(--navi-transition-window-height);
-
-      /* Cut at what covers the box, on top of being cut at the box. The
-         pictures are drawn in the top layer, so they cover a fixed bar as
-         easily as anything else — and the box they travel in runs UNDER the
-         bars by design: that is what a fixed bar is for, and what the room it
-         gives back is for. A box scrolled by so much as a pixel therefore
-         starts above the top bar and ends below the bottom one, and the travel
-         would be watched painting over both for its whole length.
-
-         Two bands are left free, and they answer for two different things: the
-         app's own safe area (layout/safe_area.js), everything pinned to the
-         WINDOW's edges, and --navi-transition-cover-* (transition_window.js),
-         what covers the box from inside the document — a sticky row of tabs
-         above the pages covers the top of the box exactly as a fixed bar covers
-         the top of the screen. Both are read rather than asked for, so one that
-         grows, shrinks or unmounts mid-travel is followed without anything
-         being told.
-
-         Read live, though, they describe the state ARRIVING and nothing else,
-         so the cut is taken at the smaller of that and the band the state
-         being left kept free (--navi-transition-old-band-*, photographed while
-         both still existed). Furniture standing in BOTH states is the frame:
-         the pages move behind it and are cut at it. Furniture standing in one
-         of them is part of what changes, and cutting the page being left at a
-         bar it never had shows its own header being sliced instead of
-         leaving. */
-      --navi-route-travel-clip-top: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-top) + var(--navi-transition-cover-top),
-            var(--navi-transition-old-band-top)
-          ) - var(--navi-transition-window-top)
-      );
-      --navi-route-travel-clip-left: max(
-        0px,
-        min(
-            var(--navi-safe-area-inset-left) + var(--navi-transition-cover-left),
-            var(--navi-transition-old-band-left)
-          ) - var(--navi-transition-window-left)
-      );
-      --navi-route-travel-clip-bottom: max(
-        0px,
-        var(--navi-transition-window-top) +
-          var(--navi-transition-window-height) +
-          min(
-            var(--navi-safe-area-inset-bottom) +
-              var(--navi-transition-cover-bottom),
-            var(--navi-transition-old-band-bottom)
-          ) -
-          100dvh
-      );
-      --navi-route-travel-clip-right: max(
-        0px,
-        var(--navi-transition-window-left) +
-          var(--navi-transition-window-width) +
-          min(
-            var(--navi-safe-area-inset-right) +
-              var(--navi-transition-cover-right),
-            var(--navi-transition-old-band-right)
-          ) -
-          100dvw
-      );
-      clip-path: inset(
-        var(--navi-route-travel-clip-top) var(--navi-route-travel-clip-right)
-          var(--navi-route-travel-clip-bottom)
-          var(--navi-route-travel-clip-left)
-      );
-      animation-duration: var(--navi-route-travel-duration, 300ms);
-      animation-name: none;
-    }
-    /* Once the pictures exist the group owes nothing to the live box: the
-       browser paints the group where IT puts the box, which is not always
-       where the box is read, and the page being left would stand off by the
-       difference. So where the viewport stands in the pictures' space is
-       taken once, and the group is held at the window from there (see
-       placeTransitionWindow). */
-    &[data-navi-transition-window-placed]::view-transition-group(
-        navi-route-travel
-      ) {
-      top: calc(
-        var(--navi-transition-window-top) + var(--navi-transition-viewport-top)
-      );
-      left: calc(
-        var(--navi-transition-window-left) +
-          var(--navi-transition-viewport-left)
-      );
-      transform: none;
-    }
-  }
-
-  /* Held by a finger: nothing moves on its own, and where the pictures stand is
-     set by hand (scrubTravel). In CSS rather than paused in JS because JS
-     cannot pause what does not exist yet: a transition is ready several frames
-     after it is asked for — a navigation and a render later — and those frames
-     are the beginning of the gesture. Played at their own pace, a quick swipe
-     would be over before it was ever taken in hand, which is exactly what one
-     sees: the page arriving lands at once instead of following the thumb. */
-  :root[data-navi-route-travel-held] {
-    &::view-transition-group(*),
-    &::view-transition-old(*),
-    &::view-transition-new(*) {
-      animation-play-state: paused;
-    }
-  }
-
-  /* Longhands, never the \`animation\` shorthand: the shorthand also writes
-     animation-play-state, so it would set these back to running and undo the
-     hold above — a finger would then watch the pages travel on their own. */
-  :root[data-navi-route-travel] {
-    &::view-transition-old(navi-route-travel),
-    &::view-transition-new(navi-route-travel) {
-      animation-duration: var(--navi-route-travel-duration, 300ms);
-      animation-timing-function: ease;
-      animation-fill-mode: both;
-    }
-  }
-
-  /* A travel that turned around takes its pages with it and nothing else. Every
-     other thing the transition carries — a bar under a tab row, a header — was
-     PHOTOGRAPHED when the transition began: where it stood, and where it was
-     going to stand. Both are fixed, and the second one is now a place nobody is
-     going to. Worse, the thing itself has moved on in the live page (the bar is
-     already under the tab one is heading for), so the picture and the thing are
-     in two places at once — and two bars is what one sees.
-
-     So the pictures of everything that is not the pages are dropped, and those
-     things are simply left where they are, live. A jump rather than a slide, on
-     the one gesture that cannot have both. */
-  :root[data-navi-route-travel-turned] {
-    &::view-transition-group(*) {
+    &::-webkit-scrollbar {
       display: none;
     }
-    /* …except the pages, which are what a travel is about. Listed after, so it
-       wins on order rather than on a specificity war. */
-    &::view-transition-group(navi-route-travel) {
-      display: block;
+    /* Nobody's hand: it still scrolls when told to, by a tab pressed. */
+    &[data-route-travel-row="code"] {
+      overflow-x: hidden;
     }
-  }
+    /* One page: nothing to scroll between, and no reason to catch what sticks. */
+    &[data-route-travel-row="still"] {
+      overflow: visible;
+    }
 
-  /* Under a finger, the pace IS the finger: an eased travel would run ahead of
-     it in the middle of the gesture and lag behind it at the ends, and what one
-     feels then is the page leaving on its own rather than being pushed. The
-     curve of the movement is the hand's, and it is already in the pull. Kept
-     linear once it is let go of too: changing the curve of an animation that is
-     halfway through moves the picture without anything having moved. */
-  :root[data-navi-route-travel-dragged] {
-    &::view-transition-group(navi-route-travel),
-    &::view-transition-old(navi-route-travel),
-    &::view-transition-new(navi-route-travel) {
-      animation-timing-function: linear;
+    > [data-route-row-pane] {
+      display: flex;
+      min-width: 0;
+      min-height: 0;
+      flex-direction: column;
+      grid-row: 1;
+      scroll-snap-align: start;
+      /* One stroke does not skip a page it can stop on. */
+      scroll-snap-stop: always;
     }
-  }
-  :root[data-navi-route-travel="forward"] {
-    &::view-transition-old(navi-route-travel) {
-      animation-name: navi-route-travel-leave-towards-start;
+    /* A page not on screen paints nothing at rest: what it holds in position:
+       fixed stands over the page shown, whatever scrolls it out of sight. */
+    &:not([data-moving]) > [data-route-row-pane][inert] {
+      visibility: hidden;
     }
-    &::view-transition-new(navi-route-travel) {
-      animation-name: navi-route-travel-enter-from-end;
+    /* A pane brought in stands where the reader is looking, and does not make the
+       document taller than the page on screen does, when the document is what
+       scrolls. Nothing changes for a row that fits a box of its own. */
+    > [data-route-row-pane][inert] {
+      position: relative;
+      top: var(--navi-route-row-pin, 0);
+      max-height: 100dvh;
+      overflow: clip;
     }
-  }
-  :root[data-navi-route-travel="back"] {
-    &::view-transition-old(navi-route-travel) {
-      animation-name: navi-route-travel-leave-towards-end;
-    }
-    &::view-transition-new(navi-route-travel) {
-      animation-name: navi-route-travel-enter-from-start;
-    }
-  }
 
-  /* The same four movements, along the axis the pages are laid out on: the
-     start of a column is its top, so going forward there is the page rising and
-     the next one coming up from below. */
-  :root[data-navi-route-travel-axis="y"] {
-    &[data-navi-route-travel="forward"] {
-      &::view-transition-old(navi-route-travel) {
-        animation-name: navi-route-travel-leave-towards-top;
-      }
-      &::view-transition-new(navi-route-travel) {
-        animation-name: navi-route-travel-enter-from-bottom;
-      }
+    /* The page of a window over something longer, in the pane of the address: a
+       pane only gives the row a place to stop. */
+    > [data-route-row-live] {
+      position: relative;
+      display: flex;
+      min-width: 0;
+      min-height: 0;
+      flex-direction: column;
+      grid-row: 1;
     }
-    &[data-navi-route-travel="back"] {
-      &::view-transition-old(navi-route-travel) {
-        animation-name: navi-route-travel-leave-towards-bottom;
-      }
-      &::view-transition-new(navi-route-travel) {
-        animation-name: navi-route-travel-enter-from-top;
-      }
+    > [data-route-row-pictures] {
+      display: contents;
     }
-  }
-
-  @keyframes navi-route-travel-leave-towards-start {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: -100% 0;
-    }
-  }
-  @keyframes navi-route-travel-enter-from-end {
-    from {
-      translate: 100% 0;
-    }
-    to {
-      translate: 0 0;
-    }
-  }
-  @keyframes navi-route-travel-leave-towards-end {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: 100% 0;
-    }
-  }
-  @keyframes navi-route-travel-enter-from-start {
-    from {
-      translate: -100% 0;
-    }
-    to {
-      translate: 0 0;
-    }
-  }
-  @keyframes navi-route-travel-leave-towards-top {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: 0 -100%;
-    }
-  }
-  @keyframes navi-route-travel-enter-from-bottom {
-    from {
-      translate: 0 100%;
-    }
-    to {
-      translate: 0 0;
-    }
-  }
-  @keyframes navi-route-travel-leave-towards-bottom {
-    from {
-      translate: 0 0;
-    }
-    to {
-      translate: 0 100%;
-    }
-  }
-  @keyframes navi-route-travel-enter-from-top {
-    from {
-      translate: 0 -100%;
-    }
-    to {
-      translate: 0 0;
+    /* What it left behind. contain: what it holds in position: fixed is its own,
+       and does not stand over the page. */
+    > [data-route-row-pictures] > * {
+      contain: layout paint;
+      min-width: 0;
+      grid-row: 1;
+      pointer-events: none;
     }
   }
 `;
 
+// How far a hand must have pulled before the address moves for a page that is not
+// there yet: past what a hand that only shook covers, so that a shake costs
+// neither a navigation nor the requests of a page.
+const SET_OFF_PULL = 16;
+
 /**
- * The page a reader is still on while a hand travels: `{ route, params }`, the
- * page the travel set off from, or `null` when the URL is the truth.
+ * What the URL says while a hand holds the row is where it is heading, for a page
+ * not built yet: it builds by the address moving. A counter, a title or a
+ * breadcrumb around the box must not move for a pull that is let go of: it reads
+ * this first. The page the reader is still on while that lasts, and `null` when
+ * the row has come to rest, which is when `scrollsnapchange` fires and a pager's
+ * `settledPage` changes. A travel no hand set off holds nothing: it goes where it
+ * goes.
  *
- * A travel changes the URL before it arrives, so what reads the URL reads where
- * the hand is heading. A counter, a title or a breadcrumb around the box must
- * not move for a pull that is let go of: it reads this first. It holds for as
- * long as the pictures move, whichever way they end up going, and is back to
- * `null` when they stop, which is when `scrollsnapchange` fires and a pager's
- * `settledPage` changes. A page walked whole under the hand has arrived too. A
- * travel no hand set off (a tab pressed, a wheel) holds nothing: it goes where
- * it goes.
- *
- * One for the document, as there is one view transition at a time. `route` says
- * which row, for a page holding several boxes.
+ * One for the document. `route` says which row, for a page holding several boxes.
  */
 export const routeTravelSettledPageSignal = signal(null);
-// Which travel wrote it, the only one that may clear it: a travel ending after
-// another has taken over leaves that one's answer alone.
-let travelHoldingSettledPage = null;
 
 /**
  * @type {import("preact").FunctionComponent<{
  *   routes?: Array<object|{route: object, params?: object}>,
- *   axis?: "x"|"y",
  *   travelByDrag?: boolean,
  *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
  * }>}
- * @param {Array<object|{route: object, params?: object}>} [props.routes] - the
- *   tabs, in the order they are shown. Read from the <Route> children by
- *   default, in the order they are written: the router already holds that list,
- *   and asking a caller to write it twice is asking for the two to disagree.
- *   Pass it to say another order, when the pages are not children of this box,
- *   or to name a tab the children cannot — the section a <Route fallback> shows
- *   is a tab like the others, and only its params say which one.
+ * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
+ *   over something longer, in order. Read from the <Route> children by default,
+ *   in the order they are written. Given here, the children are one page rendered
+ *   once, whatever the address, and may be anything: use it when the pages are one
+ *   route with other params, or not children of this box. An entry is a route, or
+ *   `{ route, params }`.
+ * @param {boolean} [props.travelByDrag=true] - whether a hand travels. Off where the
+ *   gesture belongs to the content; a tab pressed still does.
+ * @param {(detail: {route: object, params: object|undefined, cause: "drag"}) => void|Promise<void>} [props.onTravel]
+ *   - how to go to a page a hand has brought in. The default REPLACES the current
+ *   history entry rather than pushing one: a swipe is how one browses a page, not a
+ *   place one aimed at, and three swipes back and forth must not bury the way out
+ *   of the page under six entries. A tab pressed goes the way its <Link> says —
+ *   `<Link replace>` for a row of tabs, so a press and a swipe towards the same
+ *   neighbour write the same history.
  *
- *   An entry is a route, or `{ route, params }` when the tabs of the row are a
- *   PARAM of one route rather than routes of their own (the form
- *   `<Route routeParams>` selects a branch on, and the form that lets a link
- *   with no params reopen the section one was looking at). Written as bare
- *   routes, three tabs of one route are the same object three times: there is
- *   then one tab, and nowhere to travel.
- * @param {"x"|"y"} [props.axis="x"] - which way the pages are laid out.
- * @param {boolean} [props.travelByDrag=true] - whether a pointer dragging the
- *   page travels. Off where the gesture belongs to the content.
- * @param {(detail: {route: object, params: object|undefined, cause: "drag"|"wheel"|"revert"}) => void|Promise<void>} [props.onTravel]
- *   - how to go to a tab. The default REPLACES the current history entry
- *   rather than pushing one: a swipe is how one browses a page, not a place one
- *   aimed at, and three swipes back and forth must not bury the way out of the
- *   page under six entries. A tab pressed goes the way its <Link> says —
- *   `<Link replace>` for a row of tabs, so a press and a swipe towards the
- *   same neighbour write the same history.
- *
- * Every other prop lands on the box itself (`id`, `data-testid`, `className`,
- * …), which is how one of these is named: a page can hold several — a row of
- * sections inside the box the whole application travels in — and the class they
- * share plus their axis are not enough to tell them apart from the outside.
- *
- * The pages are cut at the edge of this box while they travel, and at the app's
- * safe area the box runs under, which is written on the transition's own
- * pseudo-elements — no overflow of the document reaches pictures drawn in the
- * top layer. It needs nothing of the browser beyond view transitions
- * themselves: a browser without them navigates without the movement, and the
- * gesture applies its change on release instead of dragging a picture that does
- * not exist.
- *
- * While a travel plays, the rest of the page is NOT taken as a picture: the
- * root's name is dropped for that time (`view-transition-name: none`), so what
- * stands around the box — a tab row beside it — stays live and answers a press
- * mid-travel. The application's own rule for the root applies again the moment
- * the travel is over. What stands out of a `FixedBar` is the exception, when it
- * asks to stay over the pages (see `data-navi-fixed-bar-overhang` there).
+ * Every other prop lands on the box itself (`id`, `data-testid`, `className`, …).
+ * The box has to outlive every page of its row: around those <Route>s, or around
+ * one <Route> whose params are the tabs, never inside one of the pages.
  */
 export const RouteTravel = ({
   routes: routesProp,
-  axis = "x",
   travelByDrag = true,
-  onTravel = ({ route, params }) => route.redirectTo(params),
+  onTravel = ({ route, params }) =>
+    route.navTo(params, { replace: true, routeTransition: "none" }),
   className,
   children,
   ...rest
 }) => {
   import.meta.css = css;
-  installTransitionWindowCss();
-  const elementRef = useRef();
-  const gestureRef = useRef(null);
-  // The travel in hand: the transition keeping the picture of the page being
-  // left, the animations the finger drives, and what to do with them once the
-  // browser has them ready. Null when no page is on its way anywhere.
-  const travelRef = useRef(null);
-  // The page this box has ASKED for and is still waiting to see arrive.
-  // Routing is asynchronous: a travel's own navigation lands well after the
-  // travel decided anything about it — sometimes after the travel was undone —
-  // and read back as "the page changed" it would start a second travel nobody
-  // asked for, over pictures that are already showing something else.
-  const pageAskedForRef = useRef(null);
-  // The latest way to answer a gesture, for a watcher that outlives every
-  // render (see the wheel effect below).
-  const travelHandlersRef = useRef(null);
-  const pointerDownRef = useRef(null);
+  const rowRef = useRef();
+  const liveRef = useRef();
+  const picturesRef = useRef();
+  const windowed = Boolean(routesProp);
+  const [, render] = useReducer((count) => count + 1, 0);
 
   const pagesFromChildren = useMemo(
     () => collectRoutePages(children),
@@ -643,1084 +213,379 @@ export const RouteTravel = ({
     () => routesProp && routesProp.map(normalizePage),
     [routesProp],
   );
-  const pages = pagesFromProp || pagesFromChildren;
-
-  // Which page is on screen, read from the pages themselves: every one of them
-  // is read, so this re-renders when any of them starts or stops matching — and
-  // for a row whose tabs are params of one route, when the params move from one
-  // tab to the next (see pageIsCurrent).
+  // Held while the row moves: a window recentred under a hand would move the very
+  // panes it is pushing. It is taken as soon as the row has stopped.
+  const pagesAsked = pagesFromProp || pagesFromChildren;
+  const movementRef = useRef(null);
+  const pagesRef = useRef(pagesAsked);
+  if (!movementRef.current) {
+    pagesRef.current = pagesAsked;
+  }
+  const pages = pagesRef.current;
   const currentIndex = currentPageIndex(pages);
-  // The page that was on screen when the change now happening was asked for:
-  // a travel is between two of them, and by the time anything renders the first
-  // one is already gone. Written after each render (below), so a subscriber
-  // reading it — they all run before Preact flushes — reads the one being left.
-  // The page and not its place in the row: a row given again around the page
-  // on screen (a window over a list, read anew around it) puts that page at
-  // another index without anything having moved.
-  const currentPage = currentIndex === -1 ? null : pages[currentIndex];
-  const currentPageRef = useRef(currentPage);
+  // Where the page of a window stands: the address, or where it last was for an
+  // address the row has no place for.
+  const liveIndexRef = useRef(0);
+  if (currentIndex !== -1) {
+    liveIndexRef.current = currentIndex;
+  }
+  const liveIndex = liveIndexRef.current;
+  const latestRef = useRef(null);
+  latestRef.current = {
+    pages,
+    currentIndex,
+    liveIndex,
+    onTravel,
+    travelByDrag,
+  };
 
-  // Where a page is asked for, whoever asks: a page is a route AND the params
-  // that say which of its tabs, and a caller told only the route would send the
-  // row back to whichever tab the URL already says (see redirectTo).
-  const travelTo = (page, cause) =>
-    onTravel({ route: page.route, params: page.params, cause });
+  // The page this box asked for: routing lands later, and read back as somebody
+  // changing the address it would send the row where the hand already is.
+  const askedPageRef = useRef(null);
 
-  // One travel, whoever asked for it: a finger, a tab pressed, the browser's
-  // own back button. What differs is only who moves it — the finger drives it
-  // frame by frame (`scrub`), everything else lets it play.
-  const beginTravel = ({ page, fromPage, direction, scrub, change }) => {
-    const travel = {
-      page,
-      // The page this set off from, kept rather than looked up again: the URL
-      // changes as it sets off, so a moment later nothing on screen remembers
-      // where it started.
-      fromPage,
-      direction,
-      scrub,
-      ratio: 0,
-      // The animations of the pictures, once the browser has them. Held still
-      // by CSS until then, so an empty hand here costs nothing: there is
-      // nothing to stop, only nowhere to put them yet.
-      animations: null,
-      ended: false,
-      // The box as it set off, kept rather than read from the ref: the
-      // navigation a travel asks for can take the box down (see the update
-      // callback), and the name it wears is still given back to it.
-      element: elementRef.current,
+  const panesOf = (row) =>
+    Array.from(row.children).filter((child) =>
+      child.hasAttribute("data-route-row-pane"),
+    );
+  const pathOf = ({ route, params }) =>
+    new URL(route.buildUrl(params), window.location.href).pathname;
+
+  // One movement, whoever set it off, from the first thing that moves to the row
+  // at rest. Null when nothing moves.
+  const beginMovement = (fields) => {
+    const row = rowRef.current;
+    if (movementRef.current) {
+      Object.assign(movementRef.current, fields);
+      return movementRef.current;
+    }
+    row.setAttribute("data-moving", "");
+    const movement = {
+      travelling: false,
+      pictures: new Map(),
+      resumeScrollRecording: null,
+      scrollsDocument:
+        getScrollContainer(row.parentElement, { includeHidden: true }) ===
+        document.documentElement,
+      ...fields,
     };
-    travelRef.current = travel;
-    travelHoldingSettledPage = travel;
-    routeTravelSettledPageSignal.value = scrub ? fromPage : null;
-    // A press landing on a playing travel lands on the document root: the box
-    // is captured by the transition and cannot be pointed at, so neither its
-    // touch-action nor its own touchmove listener is on the touch's path. Left
-    // there, the browser takes the finger's first vertical pixels for a scroll
-    // and cancels the pointer under a travel that was just caught. Refusable
-    // from the root for the length of the travel, the gesture that catches it
-    // refuses every touchmove of that press (it is started from the grab), and
-    // the finger's only answer is the travel it landed on.
-    document.documentElement.addEventListener("touchmove", keepTouchRefusable, {
-      passive: false,
+    movementRef.current = movement;
+    if (movement.scrollsDocument) {
+      // Whatever the browser does with the offset meanwhile (clamping it to a page
+      // shorter than the trip) is not the reader scrolling, and the address it
+      // would be written against may already be another page's.
+      movement.resumeScrollRecording = suspendScrollRecording();
+      row.style.setProperty("--navi-route-row-pin", `${pinOf(row)}px`);
+    }
+    return movement;
+  };
+
+  // A clone of the page in the pane it stands in, before anything changes it. In
+  // that pane and the same height: the row keeps its size, so the document its
+  // offset, and the page one looked at is where it was.
+  const leavePictureOfLive = (movement) => {
+    const live = liveRef.current;
+    const index = latestRef.current.liveIndex;
+    const picture = live.cloneNode(true);
+    picture.removeAttribute("data-route-row-live");
+    picture.setAttribute("inert", "");
+    picture.setAttribute("aria-hidden", "true");
+    picture.style.gridColumn = String(index + 1);
+    picture.style.top = "";
+    movement.pictures.get(index)?.remove();
+    movement.pictures.set(index, picture);
+    // After the live page in the document: an id it holds still finds the page.
+    picturesRef.current.append(picture);
+    copyScrollPositions(live, picture);
+    if (movement.scrollsDocument) {
+      live.style.top = `${pinOf(rowRef.current)}px`;
+    }
+  };
+
+  const askFor = (page) => {
+    const { onTravel } = latestRef.current;
+    askedPageRef.current = page;
+    notePageChange();
+    return onTravel({ route: page.route, params: page.params, cause: "drag" });
+  };
+
+  const sayRowMoves = () => {
+    const row = rowRef.current;
+    const panes = panesOf(row);
+    if (panes.length < 2) {
+      return;
+    }
+    const { pages } = latestRef.current;
+    const { base, toward, fraction } = readRowStretch(row, panes, panes[0]);
+    publishRouteRowMove({
+      basePath: pathOf(pages[panes.indexOf(base)]),
+      towardPath: toward ? pathOf(pages[panes.indexOf(toward)]) : null,
+      progress: -fraction,
     });
-    // Whether the document's offset is this row's business at all (see
-    // pagesScrollTheDocument), asked once and before anything is swapped.
-    travel.scrollsDocument = pagesScrollTheDocument(travel.element);
-    if (travel.scrollsDocument) {
-      // One of the tabs is about to be swapped out from under that scrollport,
-      // and whatever the browser does with the offset meanwhile — clamping it
-      // to a page shorter than the trip — is not the reader scrolling. The url
-      // it would be written against is already the arriving tab's, so recorded
-      // it is that tab's own position that the tab being left destroys. Deaf
-      // for the whole travel, which is exactly as long as the offset belongs
-      // to nobody (see endTravel).
-      travel.resumeScrollRecording = suspendScrollRecording();
+  };
+
+  // The row has stopped, on the page of the address: everything held for the
+  // movement is let go of in one go, before anything paints.
+  const endMovement = () => {
+    const row = rowRef.current;
+    const movement = movementRef.current;
+    if (!movement) {
+      return;
     }
-    // Taken before the picture is: the browser reads the name off the DOM as it
-    // stands when the transition starts, and this box is only a picture of its
-    // own for as long as it is the one travelling. Where it travels to is said
-    // at the same moment and for the same reason: whoever names something for
-    // a movement between two pages decides on it now (see
-    // transition_destination.js).
-    nameForTravel(travel.element);
-    holdTransitionDestination(travel, page.route.buildUrl(page.params));
-    // The bars stay live, except what one of them has photographed on its own
-    // (see fixed_bar.jsx), which is deaf like any picture and may have asked to
-    // keep answering.
-    holdTransitionPress(travel, travel.element);
-    document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
-    document.documentElement.setAttribute(TRAVEL_AXIS_ATTRIBUTE, axis);
-    if (scrub) {
-      holdPictures(travel);
-      document.documentElement.setAttribute(DRAGGED_ATTRIBUTE, "");
+    movementRef.current = null;
+    row.removeAttribute("data-moving");
+    publishRouteRowMove(null);
+    routeTravelSettledPageSignal.value = null;
+    if (liveRef.current) {
+      liveRef.current.style.top = "";
     }
-    pageAskedForRef.current = page;
-    // The box as it stands before anything moves, and the band the furniture
-    // around it leaves free: rendering is held, so both are still the page
-    // being left (see transition_window.js).
-    const stateBefore = measureTransitionWindowState(travel.element);
-    // The hold a navigation already took, if this travel is the answer to one:
-    // taking another would be taking a hold on a page that is holding still.
-    const releaseRendering = takeoverRoutingRenderingHold();
-    // The picture the browser is about to take must be of the page that was
-    // asked for, and a route matching is not yet a page rendered. Watched from
-    // here rather than from inside the callback below: the browser calls that
-    // callback a frame later, and a navigation that has already been decided
-    // (what follows a send, a command) renders its page in between. A wait
-    // armed then waits for something that has already happened — until the
-    // browser gives up on the transition, leaving the page it was leaving on
-    // screen and an error nobody asked for.
-    const renderWait = armRouteRenderWait();
-    const viewTransition = startViewTransition(async () => {
-      // Let go of too early before the browser got here, a frame or several on
-      // a slow phone. Skipping a transition does not cancel this callback, and
-      // the router asked from here would take the page anyway, with nobody left
-      // to bring it back.
-      if (travel.reverting) {
-        renderWait.stop();
-        releaseRendering();
-        return;
-      }
-      travel.calledBack = true;
-      // Whatever is awaited here must be able to resolve without the page being
-      // rendered: the document is frozen for the whole of this callback, and a
-      // frame never comes — waiting for one waits until the browser gives up on
-      // the transition. And it stays frozen exactly this long, so this is also
-      // the shortest thing there is to keep short.
-      await whilePageRenders(
-        page,
-        async () => {
-          releaseRendering();
-          if (change) {
-            await change();
-          }
-        },
-        renderWait,
-      );
-      // Where the arriving tab was left, or its top when it has never been
-      // read. A travel is an arrival — the tab pressed is another route, and
-      // the replace it navigates by is the only thing about it that says
-      // otherwise — and this is the one place that knows it. Read from the
-      // travel rather than from the page it set off for: a travel aimed
-      // somewhere else while it waited lands where it is aimed now.
-      if (travel.scrollsDocument) {
-        const { route, params } = travel.page;
+    for (const picture of movement.pictures.values()) {
+      picture.remove();
+    }
+    if (movement.scrollsDocument) {
+      row.style.removeProperty("--navi-route-row-pin");
+      const { pages, currentIndex } = latestRef.current;
+      if (currentIndex !== -1) {
+        const { route, params } = pages[currentIndex];
         arriveAtScrollPosition(route.buildUrl(params));
       }
-      // The box itself may be gone: rendered inside one of the pages of its
-      // row rather than around them, it went down with the page being left,
-      // and there is no box left for the page arriving to be photographed in.
-      // The navigation stands — it is what was asked for — and the movement
-      // is dropped.
-      if (!travel.element.isConnected) {
-        if (import.meta.dev) {
-          warnBoxTakenDown(travel.page);
-        }
-        travel.viewTransition.skipTransition();
-        endTravel(travel);
-        return;
-      }
-      // The page arriving is in the DOM and the transition has not started
-      // playing: the one moment both boxes can be known. After the scroll,
-      // which is what the box is measured through: the two states are at the
-      // same place in the layout without being at the same place in the window
-      // (see transition_window.js).
-      // The bars stay live under the pictures for a travel: only the box is
-      // photographed (see the TRAVEL_ATTRIBUTE css).
-      holdTransitionWindow(travel, travel.element, stateBefore, {
-        furnitureLive: true,
-      });
-    });
-    travel.viewTransition = viewTransition;
-    // Subscribed first, so it reads before the scrub below writes anything.
-    viewTransition.ready.then(() => {
-      placeTransitionWindow(travel, TRAVEL_NAME);
-    }, ignoreSkipped);
-    if (scrub) {
-      // Said only now: the release has to have something to let go of, and the
-      // transition did not exist a line above.
-      travel.dropHold = holdViewTransition(() => {
-        viewTransition.skipTransition();
-        endTravel(travel);
-      });
+      movement.resumeScrollRecording();
     }
-    // Another transition starting SKIPS this one — there is only ever one in a
-    // document. That must end the travel here and now, and above all lift the
-    // hold: the hold is written in CSS against whatever transition is running
-    // (it has to be, so that everything named — a trait under a tab row —
-    // follows the same finger), so left on it would take hold of the transition
-    // that has just replaced ours. Born paused, with nobody holding it, that
-    // one never finishes: its pictures stand over a page that cannot be
-    // touched anymore.
-    viewTransition.finished.catch(() => {
-      // A transition that fails before it ever calls back leaves the page held:
-      // whoever asked for the hold gives it back, here as everywhere else.
-      renderWait.stop();
-      releaseRendering();
-      endTravel(travel);
-    });
-    if (!scrub) {
-      // Nobody is holding it: it plays as any transition does, and is over when
-      // the browser says so.
-      viewTransition.finished.then(() => {
-        endTravel(travel);
-      }, ignoreSkipped);
-      return travel;
-    }
-    // The pictures exist from `ready` on, and the finger may have moved a long
-    // way by then — held at their start meanwhile, so this is where they catch
-    // up with it rather than where they set off.
-    viewTransition.ready.then(() => {
-      if (travel === travelRef.current) {
-        scrubTravel(travel, travel.ratio);
-      }
-    }, ignoreSkipped);
-    return travel;
+    // A window recentred meanwhile is taken now.
+    render();
   };
 
-  // A page change nobody here asked for: a tab pressed, a key, the back button.
-  // The transition is started from what the router SAYS rather than from a
-  // render, because a render is one flush too late — by then the DOM holds the
-  // new page and the picture of the old one cannot be taken anymore.
-  //
-  // Watched as a position in the row rather than route by route. A route
-  // announces its own status, and the row's tabs can all be one route: the
-  // announcement then says a section changed without saying which is on screen,
-  // and it says it about things this row does not move for (a route that has
-  // now been visited, a param of its own that is not a tab of this row). Worse,
-  // a status is published from inside the routing and the params it carries are
-  // the ones known at that instant — a section that lands as a signal settles
-  // is announced late, or not at all. The signals ARE the position, so the
-  // position is read from them: one computed over the whole row, notified once
-  // per move, whichever route moved and whether by matching or by params.
+  // The address and the row, in step. The opening and a row given again around the
+  // page on screen have nothing to show for it; somebody else moving the address
+  // (a tab pressed, the back button) is a travel.
+  const answeredPageRef = useRef(null);
   useLayoutEffect(() => {
-    const currentIndexSignal = computed(() => currentPageIndex(pages));
-    const onRowMove = (index) => {
-      if (index === -1) {
-        return;
+    const row = rowRef.current;
+    const page = currentIndex === -1 ? null : pages[currentIndex];
+    const pane = panesOf(row)[currentIndex];
+    const answered = answeredPageRef.current;
+    if (samePage(answered, page)) {
+      if (pane && !movementRef.current && !restsOn(row, pane)) {
+        row.scrollTo({ left: pane.offsetLeft, behavior: "instant" });
       }
-      const page = pages[index];
-      if (samePage(page, currentPageRef.current)) {
-        // Where the row already was — the first reading of all, a row given
-        // again around the page on screen, and any move this box has already
-        // taken note of (a render writes it too). What it was still waiting
-        // for is here nonetheless, so the wait is called off.
-        if (samePage(pageAskedForRef.current, page)) {
-          pageAskedForRef.current = null;
-        }
-        return;
+      return;
+    }
+    answeredPageRef.current = page;
+    if (!page || !pane) {
+      return;
+    }
+    const asked = askedPageRef.current;
+    if (asked && samePage(asked, page)) {
+      askedPageRef.current = null;
+      // The hand landed before the address did.
+      if (movementRef.current?.landed && restsOn(row, pane)) {
+        Promise.resolve().then(endMovement);
       }
-      // Whoever asked for it: a tab of this row can be a param, and a move
-      // between two of them is a page change the path does not show (see
-      // page_change.js).
-      notePageChange();
-      // A page this box asked for itself — a travel's own navigation, or one
-      // it had given up waiting on: what arrives here is the answer to a
-      // question already answered, not somebody going somewhere.
-      if (samePage(pageAskedForRef.current, page)) {
-        pageAskedForRef.current = null;
-        currentPageRef.current = page;
-        return;
+      return;
+    }
+    if (!answered || restsOn(row, pane)) {
+      if (!restsOn(row, pane)) {
+        row.scrollTo({ left: pane.offsetLeft, behavior: "instant" });
       }
-      // Somewhere else arrived first: whatever this box was still waiting for
-      // is not coming, or no longer means anything. Forgotten here rather
-      // than kept, or the next press on that very tab would be taken for the
-      // late answer to a question nobody remembers asking.
-      pageAskedForRef.current = null;
-      // Asked for a page while one was already on its way: the travel in
-      // flight is the answer, aimed somewhere else. Starting a second one on
-      // top would leave this one's pictures to be dropped mid-slide.
-      if (travelRef.current) {
-        currentPageRef.current = page;
-        retargetTravel(travelRef.current, page);
-        return;
-      }
-      const fromIndex = pageIndexOf(pages, currentPageRef.current);
-      currentPageRef.current = page;
-      if (fromIndex === -1) {
-        // Arriving from outside this row: there is no pair of pages to show,
-        // so there is nothing to travel between.
-        return;
-      }
-      beginTravel({
-        page,
-        fromPage: pages[fromIndex],
-        direction: index > fromIndex ? "forward" : "back",
-        scrub: false,
-      });
-    };
-    // `subscribe` rather than `effect`: it hands the value to a callback that
-    // is NOT being tracked, and what this one does — navigate, ask the router
-    // for another page — reads and writes the very signals the row is watched
-    // through.
-    return currentIndexSignal.subscribe(onRowMove);
-  }, [pages]);
+      return;
+    }
+    beginMovement({ travelling: true });
+    row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+    // In this very commit: the tab pressed already wears its bar, and the first
+    // scroll event is a frame away.
+    sayRowMoves();
+  });
 
-  // Rendering is held for the length of a navigation, so that whatever picture
-  // this box is about to take is of the page being LEFT (see
-  // rendering_hold.js).
+  // Somebody else is about to move the address to another page of a window: its
+  // picture has to be taken now, while it still shows the page being left.
   useLayoutEffect(() => {
-    const stopWatchingStart = observeBeforeRouting(holdRenderingForRouting);
-    // Nobody may have had a picture to take: this navigation is not always one
-    // this box travels. Whoever wanted the hold took it over (beginTravel)
-    // while the change was being applied, and left nothing here.
-    const stopWatchingEnd = observeAfterRouting(releaseRoutingRenderingHold);
-    return () => {
-      stopWatchingStart();
-      stopWatchingEnd();
-    };
-  }, []);
-
-  // What the next announcement will compare itself against: written after the
-  // render that shows it, so it is always the page one is looking at.
-  useLayoutEffect(() => {
-    currentPageRef.current = currentPage;
-  }, [currentPage]);
-
-  // Let go of far enough: the movement carries on from under the finger, at its
-  // own pace, to the end.
-  const finishTravel = (travel) => {
-    // Nobody is driving it anymore. `scrub` is who MOVES the pictures, not what
-    // set them off: left standing after the release, this travel would go on
-    // claiming a hand that is no longer there — and everything that asks
-    // "is somebody holding this?" before touching it (a press on the tab one
-    // came from, a wheel push) would be answered yes and do nothing, while the
-    // pages carry on to a page the router has already left.
-    travel.scrub = false;
-    releaseHold();
-    travel.viewTransition.finished.then(
-      () => endTravel(travel),
-      () => endTravel(travel),
-    );
-  };
-
-  // Let go of too early: the pages go back the way they came, and the URL with
-  // them. The way back is not a travel of its own — the same animations are run
-  // backwards, and the page that was left is put back under the picture BEFORE
-  // the picture is dropped, so the two are the same thing at the moment they
-  // are swapped and nothing is seen changing.
-  const revertTravel = (travel) => {
-    travel.reverting = true;
-    // A revert somebody ASKED for — a press on the tab this travel came from —
-    // has a problem the others do not: that page is already back, and the
-    // picture being brought in is LIVE, so it shows the page one is going back
-    // to. Both sides then show the same thing and the way back is invisible:
-    // one presses, and one is simply there.
-    //
-    // So the pages are held where they are until the pictures have finished
-    // going back. Only the pages: unlike the hold a navigation takes to have
-    // its picture taken, nothing is being photographed here — everything else
-    // may go on rendering, and a tab row beside the box keeps answering.
-    const releaseRendering = freezeRouteRender();
-    const animations = travelAnimations(travel);
-    walkPicturesHome(animations, TRAVEL_LEAD_NAMES);
-    releaseHold(travel);
-    whenPicturesArrived(animations).then(async () => {
-      try {
-        pageAskedForRef.current = travel.fromPage;
-        // The page that was left is put back UNDER the picture before the
-        // picture is dropped, so the two are the same thing at the moment they
-        // are swapped: that only holds once the page is really back.
-        if (pageIsCurrent(travel.fromPage)) {
-          // It never left: the press that set this revert off put it back
-          // there, and the pages have been held where they were until now.
-          // Nothing to ask for, and nothing to wait for — waiting anyway is a
-          // render that never comes and a page frozen under its own pictures.
-          releaseRendering();
-        } else {
-          await whilePageRenders(travel.fromPage, () =>
-            onTravel({
-              route: travel.fromPage.route,
-              params: travel.fromPage.params,
-              cause: "revert",
-            }),
-          );
-        }
-        travel.viewTransition.skipTransition();
-      } finally {
-        // Refused before the browser called back, nothing was swapped: the
-        // offset is still the page's own, and no render is on its way to say so.
-        if (travel.scrollsDocument && travel.calledBack) {
-          // The page coming back was read somewhere else, and the offset
-          // currently on the document is the one the page that came in put
-          // there. Given back once the page is really back — the render is
-          // what makes the document tall enough to hold that offset again —
-          // and the recording stays deaf until then, over the clamp the swap
-          // back makes on the way. Its own deafness rather than the travel's:
-          // the travel ends here, and this outlives it by a render. Written
-          // once the commit that says so has ended, as arriveAtScrollPosition
-          // asks.
-          const resumeScrollRecording = suspendScrollRecording();
-          const stopWatchingRender = observeRouteRender(() => {
-            stopWatchingRender();
-            queueMicrotask(() => {
-              const { route, params } = travel.fromPage;
-              arriveAtScrollPosition(route.buildUrl(params));
-              resumeScrollRecording();
-            });
-          });
-        }
-        releaseRendering();
-        // A travel ENDS, whatever happened on the way back: put the state back,
-        // fail to drop the picture, be interrupted by something else — the one
-        // thing that must not happen is a travel that stays "in flight"
-        // forever. Nothing would lift the hold, the pictures would stand where
-        // they are over a page that cannot be touched, and every gesture after
-        // this one would find the box busy.
-        endTravel(travel);
-      }
-    });
-  };
-
-  // Taken back in hand: the pictures stop where they are and answer the finger
-  // again (see the CSS hold).
-  const holdTravel = (travel) => {
-    if (travel.ended || travel.reverting) {
-      return;
-    }
-    travel.scrub = true;
-    holdPictures(travel);
-    // Whatever asks for a transition next takes ours away (there is one per
-    // document): it must find this one already let go of, or it inherits a hold
-    // nobody is holding.
-    travel.dropHold = holdViewTransition(() => {
-      travel.viewTransition?.skipTransition();
-      endTravel(travel);
-    });
-  };
-
-  // The same travel, aimed at another page. The still it starts from does not
-  // change — only what is being brought in against it, and that one is LIVE:
-  // pointing the router elsewhere is all it takes for the picture to show that
-  // page instead.
-  const redirectTravel = (travel, page, direction) => {
-    travel.page = page;
-    // Everything the transition carries that is NOT the pages was measured
-    // against a destination this travel is no longer going to (see the CSS).
-    document.documentElement.setAttribute(TURNED_ATTRIBUTE, "");
-    if (direction === travel.direction) {
-      // Same way, another page: the pictures in hand are already the right
-      // pair, and nothing has to move.
-      return;
-    }
-    travel.direction = direction;
-    travel.ratio = 0;
-    // The other way round is another pair of keyframes, and naming another
-    // animation builds another Animation: whatever was collected answers to
-    // nobody now. They start again from the beginning, which is where a travel
-    // that turns around is.
-    travel.animations = null;
-    document.documentElement.setAttribute(TRAVEL_ATTRIBUTE, direction);
-  };
-
-  // Somebody asked for a page while one was on its way. Where they asked for
-  // decides what that means.
-  const retargetTravel = (travel, page) => {
-    if (travel.scrub || travel.reverting || travel.ended || travel.noPicture) {
-      // A hand is holding the pages, or they are already on their way back:
-      // either way this travel's end is decided by somebody else.
-      return;
-    }
-    if (samePage(page, travel.page)) {
-      // Already on its way there.
-      return;
-    }
-    if (samePage(page, travel.fromPage)) {
-      // Back where it set off from: that is not another travel, it is this one
-      // undone — the same pictures, run backwards.
-      revertTravel(travel);
-      return;
-    }
-    const fromIndex = pageIndexOf(pages, travel.fromPage);
-    const toIndex = pageIndexOf(pages, page);
-    if (fromIndex === -1 || toIndex === -1) {
-      return;
-    }
-    redirectTravel(travel, page, toIndex > fromIndex ? "forward" : "back");
-  };
-
-  // One page further than the travel in flight is going, the same way: what
-  // a second swipe asks for over a page still arriving. Reached the way a tab
-  // pressed while it plays reaches it — the same pictures, the router pointed
-  // one page further (see redirectTravel) — so nothing restarts and nothing
-  // stops. Past the last page there is nothing to aim at, and the travel
-  // simply arrives where it was going.
-  const aimOnePageFurther = (travel, sign) => {
-    const fromIndex = pageIndexOf(pages, travel.page);
-    const page = sign > 0 ? pages[fromIndex - 1] : pages[fromIndex + 1];
-    if (fromIndex === -1 || !page) {
-      return;
-    }
-    redirectTravel(travel, page, travel.direction);
-    pageAskedForRef.current = page;
-    travelTo(page, "drag");
-  };
-
-  const endTravel = (travel) => {
-    if (travel.ended) {
-      return;
-    }
-    travel.ended = true;
-    travel.dropHold?.();
-    travel.dropHold = null;
-    if (travelHoldingSettledPage === travel) {
-      travelHoldingSettledPage = null;
-      routeTravelSettledPageSignal.value = null;
-    }
-    if (travelRef.current === travel) {
-      document.documentElement.removeEventListener(
-        "touchmove",
-        keepTouchRefusable,
-      );
-    }
-    // The offset on the scrollport belongs to a page again — the one that
-    // arrived, or the one put back. A travel that never got as far as saying
-    // which still has to give the recording back; the gesture's own
-    // pseudo-travel never took it (see noPicture).
-    travel.resumeScrollRecording?.();
-    // Its own hold, always — whether or not this travel is still the current
-    // one. Nobody else will lift it.
-    releaseHold(travel);
-    if (travelRef.current === travel) {
-      travelRef.current = null;
-      // Given back, so another box may wear it: kept, two of them on a page
-      // would both answer to it and the browser refuses the whole transition
-      // rather than pick.
-      unnameAfterTravel(travel.element);
-      document.documentElement.removeAttribute(TRAVEL_ATTRIBUTE);
-      document.documentElement.removeAttribute(TRAVEL_AXIS_ATTRIBUTE);
-      document.documentElement.removeAttribute(DRAGGED_ATTRIBUTE);
-      document.documentElement.removeAttribute(TURNED_ATTRIBUTE);
-      releaseTransitionWindow(travel);
-      releaseTransitionDestination(travel);
-      releaseTransitionPress(travel);
-    }
-  };
-
-  // What a gesture is about, whichever hand made it: a thumb dragging the page
-  // and two fingers pushing it sideways on a trackpad ask for the same travel,
-  // so they are answered by the same three callbacks and only the reading of
-  // the input differs (see drag_to_travel.js).
-  const boxSizeOnAxis = () => {
-    const box = elementRef.current.getBoundingClientRect();
-    return axis === "x" ? box.width : box.height;
-  };
-
-  const travelHandlers = {
-    onStart: ({ sign, target }) => {
-      const size = boxSizeOnAxis();
-      const travelInFlight = travelRef.current;
-      if (travelInFlight) {
-        // A travel is already playing, and a second one cannot be started on
-        // top of it: there is one picture of the page being left, and it is
-        // taken. So the gesture takes over THIS travel instead of asking for
-        // another — which is what a hand reaching for a page still sliding is
-        // asking for anyway. It is refused only when there is nothing to take
-        // over (no picture at all).
-        //
-        // Never given up, even then: a gesture handed back to the browser is a
-        // page that rocks under a travel that is already moving.
-        // A travel being undone is not up for grabs either: it is already on
-        // its way back and its end is decided. Held again mid-revert, its
-        // animations would never finish — and the wait for them never resolves,
-        // so the pictures stay where they are, over a page that cannot be
-        // touched anymore.
-        if (
-          travelInFlight.noPicture ||
-          travelInFlight.ended ||
-          travelInFlight.reverting
-        ) {
-          return { size, travelBack: false, travelOn: false };
-        }
-        // Stopped here, where it stands now: left playing under the press
-        // until the hand said it holds it (see inFlight in onPointerDown).
-        holdTravel(travelInFlight);
-        // Where the pictures stand right now, said as a pull: what the finger
-        // continues from, so nothing jumps when it takes them over.
-        const ratio = ratioOfTravel(travelInFlight);
-        travelInFlight.ratio = ratio;
-        const pulledSign = travelInFlight.direction === "back" ? 1 : -1;
-        return {
-          size,
-          slack: ratio * size * pulledSign,
-          // One box, the one being travelled. Either of its ends can be walked
-          // out of and the hand carries on into the next page, but that is a
-          // travel of its own and the gesture asks for it when it gets there
-          // (see onEdge) — from here there is one page on its way.
-          travelBack: travelInFlight.direction === "back",
-          travelOn: travelInFlight.direction === "forward",
-        };
-      }
-      // Dragging the page towards the end of the axis brings in what is
-      // BEFORE it, the way pushing a sheet to the right reveals its left.
-      const page = sign > 0 ? pages[currentIndex - 1] : pages[currentIndex + 1];
-      if (
-        !page ||
-        !size ||
-        scrollRoomTowards(target, elementRef.current, axis, sign)
-      ) {
-        return false;
-      }
-      if (!CAN_KEEP_PICTURE) {
-        travelRef.current = { page, noPicture: true, ended: false };
-        return {
-          size,
-          travelBack: sign > 0,
-          travelOn: sign < 0,
-        };
-      }
-      return {
-        size,
-        travelBack: sign > 0,
-        travelOn: sign < 0,
-        // A page change costs what a slide does not, whatever the hand does
-        // next: a navigation, a render, the requests of the page arriving, and
-        // those of the page coming back. So nothing is asked of the router
-        // until the hand has really pulled, and the neighbour is read then:
-        // turned around before that, there is nothing to undo.
-        setOff: ({ sign: signNow }) => {
-          const pageThatWay =
-            signNow > 0 ? pages[currentIndex - 1] : pages[currentIndex + 1];
-          if (!pageThatWay || travelRef.current) {
-            return false;
-          }
-          beginTravel({
-            page: pageThatWay,
-            fromPage: pages[currentIndex],
-            direction: signNow > 0 ? "back" : "forward",
-            scrub: true,
-            change: () => travelTo(pageThatWay, "drag"),
-          });
-          return {
-            travelBack: signNow > 0,
-            travelOn: signNow < 0,
-          };
-        },
-      };
-    },
-    onPull: ({ progress }) => {
-      const travel = travelRef.current;
-      if (!travel || travel.noPicture) {
-        return;
-      }
-      // Only what goes the way the gesture set off: a hand turning around
-      // mid-drag is putting the page back, and there is no second picture to
-      // show it anything else.
-      const ratio = travel.direction === "back" ? progress : -progress;
-      travel.ratio = ratio > 0 ? ratio : 0;
-      scrubTravel(travel, travel.ratio);
-    },
-    // A page walked all the way to one of its ends and the finger still going:
-    // what it asks for is the page past that end, and it has said so by not
-    // stopping. Which end decides how it is answered, and the two are not the
-    // same amount of work.
-    onEdge: ({ sign, thrown }) => {
-      const travel = travelRef.current;
-      if (thrown) {
-        // Caught, then thrown on before its end: the page after is reached by
-        // aiming the travel in hand further, and let go of it arrives there.
-        // There is no box to hand over — a new one would mean jumping these
-        // pictures the rest of the way first, a page seen leaping — so none
-        // is answered, and the gesture lets the travel go as it is.
-        if (travel && !travel.noPicture && !travel.ended && !travel.reverting) {
-          aimOnePageFurther(travel, sign);
-        }
-        return false;
-      }
-      if (
-        !travel ||
-        travel.noPicture ||
-        travel.ended ||
-        travel.reverting ||
-        !CAN_KEEP_PICTURE
-      ) {
-        return false;
-      }
-      // Where the page in hand is coming from, said the way the gesture says
-      // it: dragging towards the end of the axis brings in what comes BEFORE.
-      const pulledSign = travel.direction === "back" ? 1 : -1;
-      const direction = sign > 0 ? "back" : "forward";
-      if (sign === pulledSign) {
-        // Walked whole. What the pictures show is the page that has arrived,
-        // and the one leaving is gone: there is no pair left to travel with, so
-        // the next travel needs pictures of its own — a navigation, a render, a
-        // snapshot, and for those few frames the page does not follow the
-        // finger before catching up with it (see `ready` in beginTravel). At
-        // the start of a gesture that gap is invisible, the hand has barely
-        // moved; here the hand is at full speed, and this is what it costs.
-        //
-        // Where we are is what THIS travel was bringing in — the URL changed as
-        // it set off, so `currentIndex` belongs to a render this gesture is
-        // older than.
-        const fromIndex = pageIndexOf(pages, travel.page);
-        const page =
-          direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];
-        if (fromIndex === -1 || !page) {
-          return false;
-        }
-        // At their very end before they are let go of: what ends the travel in
-        // hand is the next transition starting (there is one per document, and
-        // the funnel skips ours), and a picture skipped short of its end is a
-        // page seen jumping the last few pixels.
-        scrubTravel(travel, 1);
-        travel.ratio = 1;
-        beginTravel({
-          page,
-          fromPage: travel.page,
-          direction,
-          scrub: true,
-          change: () => travelTo(page, "drag"),
-        });
-        return {
-          size: boxSizeOnAxis(),
-          travelBack: sign > 0,
-          travelOn: sign < 0,
-        };
-      }
-      // Walked back to where it began, and out the other side. Nothing has to
-      // be built here: the pictures in hand are ALREADY the pair this new
-      // travel needs — the still of the page it starts from is the same one,
-      // and the picture being brought in is live, so pointing the router at the
-      // other neighbour is enough for it to show that one instead. The travel
-      // turns around where it stands, on the same transition and under the same
-      // hand, and there is no gap at all.
-      const fromIndex = pageIndexOf(pages, travel.fromPage);
-      const page =
-        direction === "back" ? pages[fromIndex - 1] : pages[fromIndex + 1];
-      if (fromIndex === -1 || !page) {
-        return false;
-      }
-      redirectTravel(travel, page, direction);
-      pageAskedForRef.current = page;
-      travelTo(page, "drag");
-      return {
-        size: boxSizeOnAxis(),
-        travelBack: sign > 0,
-        travelOn: sign < 0,
-      };
-    },
-    // The next swipe over a page still arriving: the page after it, and the
-    // travel in flight goes there — the same pictures, the router pointed one
-    // page further, exactly what a tab pressed while it plays does (see
-    // retargetTravel). Nothing is held and nothing restarts.
-    onPushOn: ({ sign }) => {
-      const travel = travelRef.current;
-      if (
-        !travel ||
-        travel.noPicture ||
-        travel.ended ||
-        travel.reverting ||
-        travel.scrub
-      ) {
-        return false;
-      }
-      aimOnePageFurther(travel, sign);
-      return true;
-    },
-    onEnd: ({ travels }) => {
-      gestureRef.current = null;
-      const travel = travelRef.current;
-      if (!travel) {
-        // The travel this gesture was holding ended under it. Nothing left to
-        // decide, but the hold is this gesture's own doing and nobody else will
-        // take it off — a hold nobody lifts is a page nobody can touch.
-        releaseHold();
-        return;
-      }
-      if (travel.noPicture) {
-        travelRef.current = null;
-        if (travels) {
-          travelTo(travel.page, "drag");
-        }
-        return;
-      }
-      if (travels) {
-        finishTravel(travel);
-        return;
-      }
-      revertTravel(travel);
-    },
-  };
-
-  const onPointerDown = (pointerDownEvent) => {
-    if (!travelByDrag || gestureRef.current) {
-      return;
-    }
-    // A travel playing under the press is left playing: a hand landing on a
-    // page still sliding is far more often the next swipe than a catch, and
-    // stopping the pages at the press is what that swipe feels as a stall. The
-    // gesture listens to the hand first and says which it was — the next page
-    // (onPushOn) or this one, held (onStart) — see inFlight in
-    // drag_to_travel.js. Either way the press is not refused: a gesture given
-    // back to the browser is a page that rocks under a travel already moving.
-    const travelInFlight = travelRef.current;
-    const leftPlaying =
-      travelInFlight &&
-      !travelInFlight.noPicture &&
-      !travelInFlight.ended &&
-      !travelInFlight.reverting &&
-      !travelInFlight.scrub;
-    if (currentIndex === -1) {
-      return;
-    }
-    const giveUp = () => {
-      gestureRef.current = null;
-    };
-    const gesture = startDragToTravel(pointerDownEvent, {
-      element: elementRef.current,
-      axes: axis,
-      inFlight: leftPlaying
-        ? {
-            axis,
-            // The way a pull bringing in the page on its way would go:
-            // dragging towards the end of the axis brings in what is BEFORE.
-            way: travelInFlight.direction === "back" ? 1 : -1,
-          }
-        : false,
-      ...travelHandlers,
-      onGiveUp: giveUp,
-    });
-    if (!gesture) {
-      // Not a press this box can be about — something that reads the pointer
-      // itself, a box below it that travels the same way.
-      giveUp();
-      return;
-    }
-    gestureRef.current = gesture;
-  };
-
-  // A press aimed at a page while a travel is playing does not always reach the
-  // box: the browser's transition covers the page and the press can be delivered
-  // to the document root instead, whatever the pictures are told about pointer
-  // events. So while a travel plays, the press is caught at the document and
-  // handed to the box when it fell where a page is SEEN, which is where the hand
-  // thinks it pressed.
-  //
-  // Decided by the position and never by the target: in the first frames of a
-  // travel a press on a live bar falls to the root like any other, and what lies
-  // under a picture is not what the hand is aiming at.
-  pointerDownRef.current = onPointerDown;
-  useLayoutEffect(() => {
-    const onDocumentPointerDown = (pointerDownEvent) => {
-      if (!travelRef.current) {
-        return;
-      }
-      const boxElement = elementRef.current;
-      if (!boxElement || boxElement.contains(pointerDownEvent.target)) {
-        // It got there on its own.
-        return;
-      }
-      const { left, right, top, bottom } = boxElement.getBoundingClientRect();
-      const { clientX, clientY } = pointerDownEvent;
-      if (
-        clientX < left ||
-        clientX > right ||
-        clientY < top ||
-        clientY > bottom
-      ) {
-        return;
-      }
-      // A box scrolled under a bar still has the press in its rectangle, but
-      // the pictures are cut at that bar: the press is aimed at the bar.
-      if (isPointInTransitionBand(clientX, clientY)) {
-        return;
-      }
-      pointerDownRef.current(pointerDownEvent);
-    };
-    document.addEventListener("pointerdown", onDocumentPointerDown, true);
-    return () => {
-      document.removeEventListener("pointerdown", onDocumentPointerDown, true);
-    };
-  }, []);
-
-  // A wheel pushing the box sideways asks for a PAGE, not for a place between
-  // two: one push, one neighbour — the same thing a tab pressed asks for, and
-  // it plays at its own pace rather than under a hand (see watchWheelTravel).
-  const travelOneStep = (sign) => {
-    const travelInFlight = travelRef.current;
-    if (travelInFlight?.scrub) {
-      // A hand is holding the pages. They are its until it lets go.
-      return;
-    }
-    // Where the box is going, which is not where it is: a step asked for while
-    // a travel plays is the page after the one on its way.
-    const fromPage = travelInFlight ? travelInFlight.page : pages[currentIndex];
-    const fromIndex = pageIndexOf(pages, fromPage);
-    if (fromIndex === -1) {
-      return;
-    }
-    const page = sign > 0 ? pages[fromIndex - 1] : pages[fromIndex + 1];
-    if (!page) {
-      return;
-    }
-    if (travelInFlight) {
-      // Finished where it stands before the next one sets off: what ends it is
-      // that transition starting, and a picture dropped short of its end is a
-      // page seen jumping the last few pixels.
-      scrubTravel(travelInFlight, 1);
-      travelInFlight.ratio = 1;
-    }
-    beginTravel({
-      page,
-      fromPage,
-      direction: sign > 0 ? "back" : "forward",
-      scrub: false,
-      change: () => travelTo(page, "wheel"),
-    });
-  };
-
-  // Reached through a ref, and the watcher is never rebuilt for it: a travel
-  // CHANGES the current page, so anything listening on `currentIndex` would be
-  // torn down halfway through the very gesture that is moving it.
-  travelHandlersRef.current = travelHandlers;
-  const travelOneStepRef = useRef(null);
-  travelOneStepRef.current = travelOneStep;
-  useLayoutEffect(() => {
-    if (!travelByDrag) {
+    if (!windowed) {
       return undefined;
     }
-    return watchWheelTravel(elementRef.current, {
-      axes: axis,
-      onStep: ({ sign }) => travelOneStepRef.current(sign),
+    return observeBeforeRouting(({ url }) => {
+      const { pages, currentIndex } = latestRef.current;
+      const asked = askedPageRef.current;
+      if (asked || currentIndex === -1) {
+        return;
+      }
+      const path = new URL(url, window.location.href).pathname;
+      if (
+        pathOf(pages[currentIndex]) === path ||
+        !pages.some((page) => pathOf(page) === path)
+      ) {
+        return;
+      }
+      const movement = beginMovement({ travelling: true });
+      leavePictureOfLive(movement);
     });
-  }, [travelByDrag, axis]);
+  }, [windowed]);
 
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    const onScroll = () => {
+      const { pages, currentIndex, travelByDrag } = latestRef.current;
+      const panes = panesOf(row);
+      if (panes.length < 2) {
+        return;
+      }
+      const moving = movementRef.current;
+      const pane = panes[currentIndex];
+      if (!moving && pane && restsOn(row, pane)) {
+        // Written by this box, at rest: nobody is moving anything.
+        return;
+      }
+      const movement = moving || beginMovement({});
+      sayRowMoves();
+      if (movement.travelling || !travelByDrag || !pane) {
+        return;
+      }
+      const pulled = row.scrollLeft - pane.offsetLeft;
+      if (Math.abs(pulled) < SET_OFF_PULL) {
+        return;
+      }
+      const index = pulled > 0 ? currentIndex + 1 : currentIndex - 1;
+      const paneTowards = panes[index];
+      const page = pages[index];
+      if (!paneTowards || samePage(askedPageRef.current, page)) {
+        return;
+      }
+      if (windowed) {
+        if (movement.pictures.has(index)) {
+          return;
+        }
+        leavePictureOfLive(movement);
+      } else if (paneTowards.hasAttribute("data-built")) {
+        return;
+      }
+      if (routeTravelSettledPageSignal.peek() === null) {
+        routeTravelSettledPageSignal.value = pages[currentIndex];
+      }
+      askFor(page);
+    };
+    const onLand = () => {
+      const movement = movementRef.current;
+      if (!movement) {
+        return;
+      }
+      const panes = panesOf(row);
+      const pane = pageAtRest(row, panes);
+      if (!pane) {
+        return;
+      }
+      movement.landed = true;
+      const { pages } = latestRef.current;
+      const page = pages[panes.indexOf(pane)];
+      if (!page || pageIsCurrent(page)) {
+        if (!askedPageRef.current || samePage(askedPageRef.current, page)) {
+          endMovement();
+        }
+        return;
+      }
+      if (samePage(askedPageRef.current, page)) {
+        return;
+      }
+      if (windowed && !movement.pictures.has(panes.indexOf(pane))) {
+        leavePictureOfLive(movement);
+      }
+      Promise.resolve(askFor(page)).then(() => {
+        if (pageIsCurrent(page)) {
+          return;
+        }
+        // Refused, or sent elsewhere: the row says where the address is.
+        askedPageRef.current = null;
+        const { currentIndex } = latestRef.current;
+        const paneCurrent = panesOf(row)[currentIndex];
+        if (paneCurrent) {
+          movement.travelling = true;
+          row.scrollTo({ left: paneCurrent.offsetLeft, behavior: "smooth" });
+        }
+      });
+    };
+    const stopWatching = watchRowScroll(row, { onScroll, onLand });
+    return () => {
+      stopWatching();
+      movementRef.current?.resumeScrollRecording?.();
+      movementRef.current = null;
+      publishRouteRowMove(null);
+    };
+  }, [windowed]);
+
+  // A window's page lands on a pane as soon as the address does. The row has come
+  // to rest on it or will: when it already has, nothing else will say so.
+  useLayoutEffect(() => {
+    const movement = movementRef.current;
+    if (!movement?.landed || currentIndex === -1) {
+      return;
+    }
+    const pane = panesOf(rowRef.current)[currentIndex];
+    if (pane && restsOn(rowRef.current, pane)) {
+      Promise.resolve().then(endMovement);
+    }
+  }, [currentIndex]);
+
+  const rowKind =
+    pages.length < 2 && windowed ? "still" : travelByDrag ? "" : "code";
   return (
     <div
       {...rest}
-      ref={elementRef}
       className={
         className ? `navi_route_travel ${className}` : "navi_route_travel"
       }
-      data-axis={axis}
-      // What travels here, and on which axis: read by the shared gesture
-      // stylesheet, which keeps this box's scrolling from spilling onto the
-      // page (see drag_to_travel.js).
-      data-drag-travel={travelByDrag ? axis : undefined}
-      // The same fact said once per gesture, and for the other question the
-      // DOM answers: a box that travels INSIDE this one — a row of slides in a
-      // page — takes the axis it walks, and these are what it reads to know
-      // this box walks it too.
-      data-travel-by-drag={travelByDrag ? axis : undefined}
-      data-travel-by-wheel={travelByDrag ? axis : undefined}
-      // A touch this box may take has to be refusable before the finger lands,
-      // or the browser can cancel an established travel mid-swipe by scrolling
-      // the axis touch-action leaves it — see keepTouchRefusable for why a JSX
-      // prop is enough (an element-level touchmove listener is non-passive).
-      onTouchMove={travelByDrag ? keepTouchRefusable : undefined}
-      onPointerDown={onPointerDown}
     >
-      {children}
+      <div
+        ref={rowRef}
+        data-route-travel-row={rowKind}
+        // What a box around this one and a control acting on the press read: this
+        // axis is taken here (see drag_to_travel.js).
+        data-travel-by-drag={
+          travelByDrag && rowKind !== "still" ? "x" : undefined
+        }
+      >
+        {windowed ? (
+          <>
+            {pages.map((page, index) => (
+              <div
+                key={index}
+                data-route-row-pane=""
+                style={{ gridColumn: index + 1 }}
+              />
+            ))}
+            <div
+              ref={liveRef}
+              data-route-row-live=""
+              style={{ gridColumn: liveIndex + 1 }}
+            >
+              {children}
+            </div>
+            <div ref={picturesRef} data-route-row-pictures="" />
+          </>
+        ) : (
+          <RouteRowContext.Provider value={true}>
+            {children}
+          </RouteRowContext.Provider>
+        )}
+      </div>
     </div>
   );
 };
 
-// Nobody holds the pictures anymore: whatever they were told (a time to stand
-// at, a direction to run in) is what they carry on from.
-// Which travel is keeping the pictures still, if any. The hold belongs to the
-// travel that took it and only that one may give it back: a travel ending after
-// another has taken over must not lift a hold it no longer owns, and — the way
-// this went wrong — a travel whose end comes once something else has replaced
-// it must still lift its OWN. A hold left behind is a page frozen under
-// pictures nobody is holding.
-let travelHoldingPictures = null;
-const holdPictures = (travel) => {
-  travelHoldingPictures = travel;
-  document.documentElement.setAttribute(HOLD_ATTRIBUTE, "");
-};
-const releaseHold = (travel) => {
-  if (travel && travelHoldingPictures !== travel) {
-    return;
-  }
-  travelHoldingPictures = null;
-  document.documentElement.removeAttribute(HOLD_ATTRIBUTE);
+// How far down the row the reader is looking, for a page brought in: a page on
+// screen scrolls with the document, and one arriving has to start from there.
+const pinOf = (row) => {
+  const { top } = row.getBoundingClientRect();
+  return top < 0 ? -top : 0;
 };
 
-// The animations of the pictures, asked for again until there are some: they
-// come into existence with the transition, several frames after it was asked
-// for, and the gesture has already begun by then. Kept once found — the set
-// does not change for the length of one travel.
-const travelAnimations = (travel) => {
-  if (travel.animations) {
-    return travel.animations;
-  }
-  const animations = viewTransitionAnimations();
-  if (animations.length) {
-    travel.animations = animations;
-  }
-  return animations;
-};
-
-// How far a travel has come, read off the pictures themselves rather than off
-// what the last gesture wrote: one let go of is still moving, and a hand
-// reaching for it must find it where it IS.
-const ratioOfTravel = (travel) => {
-  const animations = travelAnimations(travel);
-  const animation =
-    findLeadAnimation(animations, TRAVEL_LEAD_NAMES) || animations[0];
-  if (!animation) {
-    return travel.ratio;
-  }
-  const timing = animation.effect.getComputedTiming();
-  const duration = timing.delay + timing.activeDuration;
-  if (!duration) {
-    return travel.ratio;
-  }
-  return animation.currentTime / duration;
-};
-
-// Where the two pictures stand, said as a moment in the movement they would
-// have played on their own: the browser knows how they move (it is written in
-// CSS), so the finger only has to say how far in. They are held still by CSS
-// while this lasts, so a time written here is a place they stay at.
-const scrubTravel = (travel, ratio) => {
-  for (const animation of travelAnimations(travel)) {
-    const timing = animation.effect.getComputedTiming();
-    const duration = timing.delay + timing.activeDuration;
-    animation.currentTime = ratio * duration;
-  }
-};
-
-// A page change, carried out and then waited for until the page it selects is
-// really on screen. The container doing the swapping is the only one who knows
-// when that is (observeRouteRender): a route matching is a signal changing, and
-// how many passes Preact takes to answer it is its own business.
-//
-// Nothing is waited for when the change did not take — a route refused, a
-// redirect somewhere else. There is no page on its way then, and this runs
-// inside the callback of a view transition: the browser has stopped rendering
-// and is waiting on this very promise to take its picture, so a wait that never
-// ends is a page frozen under a transition that never became ready.
-// Listening starts before the change, or a render landing while the change is
-// being awaited is a render nobody heard. Armed apart from the wait itself
-// because the two do not always happen at the same moment: a view transition
-// calls its update callback a frame after it is started, and the render can
-// land in that gap — see beginTravel, which arms this the moment the travel is
-// decided and hands it over.
-const armRouteRenderWait = () => {
-  let stopListening;
-  const rendered = new Promise((resolve) => {
-    stopListening = observeRouteRender(resolve);
-  });
-  return { rendered, stop: () => stopListening() };
-};
-
-const whilePageRenders = async (page, change, wait = armRouteRenderWait()) => {
-  try {
-    await change();
-    if (pageIsCurrent(page)) {
-      await wait.rendered;
+// What a clone does not take: where what scrolls inside was left.
+const copyScrollPositions = (from, to) => {
+  const fromElements = from.querySelectorAll("*");
+  const toElements = to.querySelectorAll("*");
+  for (let i = 0; i < fromElements.length; i++) {
+    const { scrollTop, scrollLeft } = fromElements[i];
+    if (scrollTop || scrollLeft) {
+      toElements[i].scrollTop = scrollTop;
+      toElements[i].scrollLeft = scrollLeft;
     }
-  } finally {
-    wait.stop();
   }
-};
-
-// Whether the document's offset belongs to the tabs. The pages of a row scroll
-// the document when nothing between the box and the viewport is a scroll
-// container: the tab on screen is then what makes the document tall, and the
-// offset on it is that tab's — it has to be given back with the tab, and the
-// browser's clamping of it while pages are swapped has to be ignored.
-//
-// A box that lives inside a scroller of its own — a frame in an article, a
-// panel beside other content — shares nothing with the document: the offset
-// there is the surrounding page's, the reader never left it, and a travel has
-// no business moving it. Each of its pages brings its own scrollport, which
-// goes away with the page and has nothing to restore.
-//
-// includeHidden, because an `overflow: hidden` ancestor is one of those
-// scrollers: it shows no scrollbar and still holds an offset of its own, and
-// what is under it never reaches the document. A wrapper that merely clips
-// (`overflow: clip`) holds nothing and is walked straight through — see
-// is_scrollable.js.
-const pagesScrollTheDocument = (element) => {
-  // What window.scrollTo moves. A body whose overflow is the viewport's is
-  // walked through to it (see overflowGoesToViewport in @jsenv/dom); a body
-  // the walk stops on scrolls itself, out of the viewport's reach.
-  return (
-    getScrollContainer(element, { includeHidden: true }) ===
-    document.documentElement
-  );
 };
 
 // A page of the row: a route, and the params that say which of its tabs when
@@ -1741,9 +606,6 @@ const samePage = (a, b) => {
   }
   return a.route === b.route && compareTwoJsValues(a.params, b.params);
 };
-const pageIndexOf = (pages, page) =>
-  pages.findIndex((candidate) => samePage(candidate, page));
-
 // The FIRST page that answers, as with the branches of a <Route>: several
 // routes match at once — a literal one and the parameterized one it is a case of
 // ("/games/new" is also a "/games/:gameId"), a section and the page inside it —
@@ -1762,31 +624,4 @@ const currentPageIndex = (pages) => {
     }
   }
   return currentIndex;
-};
-
-// A transition skipped by another one starting is an outcome, not a failure.
-const ignoreSkipped = () => {};
-
-// Said once, whatever the number of swipes: a box in the wrong place is one
-// fact about the application, and repeating it every time would bury it.
-let boxTakenDownWarned = false;
-const warnBoxTakenDown = (page) => {
-  if (boxTakenDownWarned) {
-    return;
-  }
-  boxTakenDownWarned = true;
-  console.warn(
-    `[navi] RouteTravel: the page ${page.route.buildUrl(page.params)} is not rendered under this box — the navigation took the box down with the page it was in, so the travel is dropped. The box must outlive every page of its row: around those <Route>s (a layout route), or around one <Route> whose params are the tabs, never inside one of the pages.`,
-  );
-};
-
-// The name is lent to the box that is travelling and taken back afterwards.
-// There is one transition in a document at a time, so one box wears it at a
-// time — and the others, unnamed, are simply not captured: they stay live
-// under the pictures rather than being frozen with the page.
-const nameForTravel = (element) => {
-  element.style.viewTransitionName = TRAVEL_NAME;
-};
-const unnameAfterTravel = (element) => {
-  element.style.viewTransitionName = "";
 };

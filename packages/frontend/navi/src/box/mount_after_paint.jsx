@@ -23,8 +23,7 @@
  * it was left, and the bottom arrives under a page that has already jumped. So
  * whoever writes an arrival's offset builds first the boxes that offset shows
  * (buildDeferredBoxesAbove), in the same task — synchronously, since what comes
- * right after it (the offset, a route travel measuring its window) reads the
- * layout.
+ * right after it (the offset) reads the layout.
  */
 
 import { useLayoutEffect, useState } from "preact/hooks";

@@ -387,7 +387,9 @@ other flush, instead of each arriving already inset.
 
 Pass `travelByKeyboard={false}` when the arrow keys belong to the content (a list
 one walks through, a picker whose slides are steps): otherwise the right arrow
-changes screen mid-reading.
+changes screen mid-reading. A popup opened from a slide does not need it: a key
+pressed in the popup never walks the slides behind it (see
+[interactions.md](./interactions.md#things-worth-knowing-before-guessing)).
 
 Reference: `src/layout/slide_container.jsx`, and the "One slide much taller
 than the others" case in `src/layout/demos/8_slide_container_demo.html`.

@@ -34,15 +34,9 @@
  *    under, and a line a page transition paints over. It is a real border,
  *    added to the size asked for exactly like the notch inset is, so the
  *    content still gets the size the prop names.
- * 5. **Its shadow is an element of its own.** A shadow is meant to lie over the
- *    content, and during a route travel the bar stays live while the pages are
- *    pictures drawn above everything the document paints — they cover what the
- *    bar paints outside its box. A `box-shadow` or a `filter` on the bar cannot
- *    be photographed apart from the bar, and photographing the bar would make
- *    it deaf for the length of every travel; a child painting only the shadow
- *    can be, and has no press or hover to lose. Any other child standing out of
- *    the box is covered the same way, but it may have a press to lose, so it is
- *    photographed only when it asks (`data-navi-fixed-bar-overhang`).
+ * 5. **Its shadow is an element of its own**, cut at the bar's box on every side
+ *    but the content's: a `box-shadow` on the bar would spill onto what stands
+ *    beside it.
  */
 
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -163,8 +157,7 @@ const css = /* css */ `
     position: absolute;
     inset: 0;
     /* Under every child of the bar, whatever its place in the bar: what stands
-       out of the box stands over the shadow the box casts. Pictures are stacked
-       in paint order, so this holds during a route travel as well. */
+       out of the box stands over the shadow the box casts. */
     z-index: -1;
     border-radius: inherit;
     box-shadow: var(--navi-fixed-bar-shadow);
@@ -187,29 +180,6 @@ const css = /* css */ `
     clip-path: inset(0 0 0 -100vw);
   }
 
-  /* A picture of its own while a route travel plays (see 5. above): painted
-     inside the bar, it comes after the pages in paint order, so its group
-     stands over theirs. Worn from the moment the travel's attribute is on,
-     which is before the first picture is taken (nav/route_travel.jsx). An
-     identity of its own, never a shared name: two bars can share an edge. A
-     browser with no match-element takes no name, and the pictures cover what
-     stands out of the bar. */
-  @supports (view-transition-name: match-element) {
-    :root[data-navi-route-travel] .navi_fixed_bar_shadow,
-    :root[data-navi-route-travel] [data-navi-fixed-bar-overhang] {
-      view-transition-name: match-element;
-      view-transition-class: navi_fixed_bar_over_pages;
-    }
-  }
-  /* A travel that turned around drops every picture but the pages' — they were
-     measured against a destination nobody is going to anymore. These stand
-     where their bar stands wherever the travel goes, and the elements are still
-     captured: dropped, they would be painted nowhere. */
-  :root[data-navi-route-travel-turned]::view-transition-group(
-      .navi_fixed_bar_over_pages
-    ) {
-    display: block;
-  }
 `;
 
 const FixedBarStyleCSSVars = {
@@ -262,16 +232,7 @@ const FixedBarStyleCSSVars = {
  *   `height`/`width`.
  * @param {string} [props.shadow] - What the bar casts over the content, in
  *   `box-shadow` syntax, cut at the bar's box on every side but the content's.
- *   Takes no room. Prefer it to a `boxShadow` or a `filter` on the bar: those
- *   are covered by the pages while a `RouteTravel` plays, this one stays over
- *   them.
- *
- * A child standing out of the bar's box (a raised button, the notch around it)
- * wears `data-navi-fixed-bar-overhang`: unmarked, the pages of a `RouteTravel`
- * cover it wherever they have paint behind it. Marked, it stays over them, and
- * like anything photographed it is deaf for the length of the travel —
- * `pressableDuringRouteTransition` on a control inside it keeps that control
- * answering. The rest of the bar stays live.
+ *   Takes no room.
  */
 export const FixedBar = ({
   children,

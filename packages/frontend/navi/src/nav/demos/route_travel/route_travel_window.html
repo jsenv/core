@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <title>RouteTravel, a window over a list</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .bar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 1;
+        display: flex;
+        padding: 12px;
+        gap: 12px;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .counter {
+        flex: 1;
+        text-align: center;
+      }
+      .box {
+        min-height: 100dvh;
+        padding-top: 48px;
+      }
+      .card {
+        margin: 8px 12px;
+        padding: 14px 12px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
+      import {
+        Link,
+        Route,
+        RouteTravel,
+        createAction,
+        route,
+        routeAction,
+        routeTravelSettledPageSignal,
+        setupRoutes,
+        useAsyncData,
+      } from "@jsenv/navi";
+
+      const ITEM_ROUTE = route("/item/:id");
+      setupRoutes([ITEM_ROUTE]);
+      const COLORS = ["#e8f0fe", "#fdf0e8", "#eaf7ec", "#f3e8fe", "#fee8ee"];
+      const COUNT = 40;
+      const pageOf = (id) => ({
+        route: ITEM_ROUTE,
+        params: { id: String(id) },
+      });
+
+      const ITEM_ACTION = routeAction(
+        ITEM_ROUTE,
+        createAction(async ({ id }) => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          return Array.from({ length: 30 }, (_, i) => `Item ${id}, line ${i}`);
+        }),
+        () => ({ id: ITEM_ROUTE.paramsSignal.value.id }),
+      );
+
+      const Item = () => {
+        const id = Number(ITEM_ROUTE.paramsSignal.value.id);
+        const [lines, loading] = useAsyncData(ITEM_ACTION, { loading: true });
+        const color = COLORS[id % COLORS.length];
+        if (loading || !lines) {
+          return (
+            <div className="card" style={{ background: color }}>
+              Item {id}…
+            </div>
+          );
+        }
+        return lines.map((line) => (
+          <div key={line} className="card" style={{ background: color }}>
+            {line}
+          </div>
+        ));
+      };
+
+      const Bar = ({ id }) => {
+        const settled = routeTravelSettledPageSignal.value;
+        const shown = settled ? Number(settled.params.id) : id;
+        return (
+          <div className="bar">
+            <Link
+              route={ITEM_ROUTE}
+              routeParams={{ id: String(shown - 1) }}
+              replace
+            >
+              ‹
+            </Link>
+            <span className="counter">
+              {shown + 1}/{COUNT}
+            </span>
+            <Link
+              route={ITEM_ROUTE}
+              routeParams={{ id: String(shown + 1) }}
+              replace
+            >
+              ›
+            </Link>
+          </div>
+        );
+      };
+
+      const Page = () => {
+        const id = Number(ITEM_ROUTE.paramsSignal.value.id);
+        // A window around the page on screen: a long list is read by slices.
+        const pages = [];
+        for (let i = id - 2; i <= id + 2; i++) {
+          if (i >= 0 && i < COUNT) {
+            pages.push(pageOf(i));
+          }
+        }
+        return (
+          <>
+            <Bar id={id} />
+            <RouteTravel className="box" routes={pages}>
+              <Item />
+            </RouteTravel>
+          </>
+        );
+      };
+
+      const OpenFirst = () => {
+        useLayoutEffect(() => {
+          ITEM_ROUTE.redirectTo({ id: "5" });
+        }, []);
+        return null;
+      };
+
+      render(
+        <Route>
+          <Route route={ITEM_ROUTE} element={Page} />
+          <Route fallback element={OpenFirst} />
+        </Route>,
+        document.querySelector("#app"),
+      );
+    </script>
+  </body>
+</html>

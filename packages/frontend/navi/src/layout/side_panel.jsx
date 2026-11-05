@@ -64,8 +64,11 @@ const css = /* css */ `
       &[navi-side="left"],
       &[navi-side="right"] {
         /* An explicit \`height\` prop still wins here (see the base rule
-           above) — only the fallback (no \`height\` given) differs by layer. */
-        height: var(--navi-side-panel-height, var(--navi-app-height));
+           above) — only the fallback (no \`height\` given) differs by layer.
+           The ceiling declared above rather than --navi-app-height, the same
+           value: it is the one held while a modal covers this panel (see
+           popup_cover.js). */
+        height: var(--navi-side-panel-height, var(--dialog-maxmax-height));
       }
       &[navi-side="top"],
       &[navi-side="bottom"] {

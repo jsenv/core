@@ -560,6 +560,12 @@ teardown, so a travelling container above it does not take the gesture (see
   has decided. One gesture cannot mean both. What they leave alone keeps its
   drag: an element inside marked `data-no-drag-travel` reads the pointer itself.
   An element declaring a swipe also gets `draggable={false}`.
+- **A popup is in front of the box it was written in, not part of it.** It stays
+  a DOM descendant of its trigger, so its events bubble through that box, but a
+  hold, a swipe, a counted tap or a `"keyboard:<shortcut>"` pressed in the popup
+  is not read by the box around it. A box inside the popup, or the popup itself,
+  answers as usual. A plain `onKeyDown` still hears the event: it is the
+  browser's, so it asks `event.target` itself if it should not.
 - **A popup can open while the finger is still down** — a menu under a waiting
   finger is the native gesture (see
   [popup_open.md](./popup_open.md#opening-while-the-finger-is-still-down), and

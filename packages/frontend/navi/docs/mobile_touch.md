@@ -55,11 +55,11 @@ intent before about 8px**, and measure it as a distance (`Math.hypot`), not per
 axis: the browser measures its slop as a distance, and a per-axis threshold is
 up to 1.4 times later on a diagonal. Waiting for more evidence is not
 available, because whatever is read after the browser's moment is read about
-a pointer that has already been cancelled. It is why a travel reads a finger at
-6px, before the browser reads the same pixels evenly: leaning towards its own
+a pointer that has already been cancelled. It is why a box pushed aside reads a
+finger at 6px, before the browser reads the same pixels evenly: leaning towards its own
 axis where nothing scrolls on the other one, evenly where something does, and
 waiting for the browser's own pixels when that reading says the pan is the
-browser's (see [drag_to_travel.md](./drag_to_travel.md#what-the-rules-are)).
+browser's (see [drag_to_travel.md](./drag_to_travel.md#a-box-pushed-aside-the-press)).
 
 Whether a `touchmove` can be refused at all is settled even earlier, when the
 finger lands: the non-passive listener that will refuse must already be on the
