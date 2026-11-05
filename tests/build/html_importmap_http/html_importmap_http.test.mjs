@@ -23,18 +23,28 @@ const run = async ({ runtimeCompat, http }) => {
   return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-await snapshotBuildTests(import.meta.url, ({ test }) => {
-  // can use <script type="module">
-  // disabled because for now it would fail as import map gets removed
-  // and there is "preact" raw specifier in the html/preact package
-  test("js_module", () =>
-    run({
-      runtimeCompat: { chrome: "89" },
-    }));
+await snapshotBuildTests(
+  import.meta.url,
+  ({ test }) => {
+    // can use <script type="module">
+    // disabled because for now it would fail as import map gets removed
+    // and there is "preact" raw specifier in the html/preact package
+    test("js_module", () =>
+      run({
+        runtimeCompat: { chrome: "89" },
+      }));
 
-  test("js_module_http_enabled", () =>
-    run({
-      runtimeCompat: { chrome: "89" },
-      http: true,
-    }));
-});
+    test("js_module_http_enabled", () =>
+      run({
+        runtimeCompat: { chrome: "89" },
+        http: true,
+      }));
+  },
+  {
+    filesystemActions: {
+      // esm.sh rebuilds what it serves for a given version, the bytes inlined
+      // into this file are out of our control
+      "**/1_js_module_http_enabled/build/main.html": "compare_presence_only",
+    },
+  },
+);

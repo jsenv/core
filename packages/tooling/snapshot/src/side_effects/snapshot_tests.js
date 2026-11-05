@@ -74,6 +74,9 @@ export const snapshotTests = async (
   } = options;
   filesystemActions = {
     "**": "compare",
+    // Launching a browser can write DEPENDENCIES_VALIDATED in the playwright
+    // cache: once per install, then again every 30 days.
+    "**/ms-playwright/**": "ignore",
     ...options.filesystemActions,
     "**/*.svg": "compare_presence_only",
   };

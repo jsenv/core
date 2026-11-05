@@ -7,9 +7,9 @@ run({
 })
 ```
 
-# 1/2 write 49 files into "../../../../../../../"
+# 1/2 write 48 files into "./output/"
 
-see [./file:///[homedir]/](./file:///[homedir]/)
+see [./output/](./output/)
 
 # 2/2 resolve
 

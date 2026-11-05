@@ -32,7 +32,14 @@ export const jsenvPluginImportAttributes = ({
   ) => {
     reference.mutation = (magicSource) => {
       if (reference.subtype === "import_dynamic") {
-        const { importTypeAttributeNode } = reference.astInfo;
+        const { importNode, importTypeAttributeNode } = reference.astInfo;
+        if (typeIsTheOnlyImportOption(importNode)) {
+          magicSource.remove({
+            start: importNode.source.end,
+            end: importNode.end - ")".length,
+          });
+          return;
+        }
         magicSource.remove({
           start: importTypeAttributeNode.start,
           end: importTypeAttributeNode.end,
@@ -266,4 +273,13 @@ export default inlineContent.text;`,
   });
 
   return [asJsonModule, asCssModule, asTextModule];
+};
+
+const typeIsTheOnlyImportOption = (importNode) => {
+  const [optionsNode] = importNode.arguments;
+  const { properties } = optionsNode;
+  if (properties.length !== 1) {
+    return false;
+  }
+  return properties[0].value.properties.length === 1;
 };
