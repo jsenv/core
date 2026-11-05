@@ -44,6 +44,10 @@ export const SLIDE_TOWARD_ATTRIBUTE = "data-slide-travel-toward";
 // one: a hand on a row the browser scrolls can carry it past several slides, and
 // what follows it goes on between the two it is standing between.
 export const SLIDE_BASE_ATTRIBUTE = "data-slide-travel-base";
+// The slide the row is on its way to while the current one has not changed yet,
+// because that only happens at rest: nothing is rendered and no address is written
+// under a snap, and what says where one is should not wait for it.
+export const SLIDE_HEADING_ATTRIBUTE = "data-slide-heading";
 // Every way out that would DO something right now, in the words the commands
 // use: a direction ("left", "right", "up", "down") when there is a slide that
 // way, plus "first" and "last" when one is not already standing at that end of
@@ -78,9 +82,16 @@ const wordsOf = (element, attribute) => {
   return value ? value.split(" ") : NO_WAYS;
 };
 
+// The slide to say one is on: for whatever tells the reader where they are, as
+// opposed to data-slide-current, which is what a travel departs from.
+export const readSlideOnScreen = (element) =>
+  element.getAttribute(SLIDE_HEADING_ATTRIBUTE) ??
+  element.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ??
+  undefined;
+
 export const readSlideContainerState = (element) => ({
   known: true,
-  current: element.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined,
+  current: readSlideOnScreen(element),
   toward: element.getAttribute(SLIDE_TOWARD_ATTRIBUTE) ?? undefined,
   // In DOM order — which is the order of the WALK for a line, and not
   // necessarily for a map: there the order is the one the areas are written in
@@ -118,11 +129,14 @@ export const sameSlideContainerState = (a, b) =>
  *   can: (wayOut: "left"|"right"|"up"|"down"|"first"|"last") => boolean,
  *   held: (wayOut: "left"|"right"|"up"|"down"|"first"|"last") => boolean,
  * }} where the box stands. `current` is the slide on screen — the one being
- *   travelled TO while a travel plays, because that is what one is looking at;
+ *   travelled TO while a travel plays, and the one the row is going to once a hand
+ *   has let go, because that is what one is looking at. It can come before the
+ *   slide's own signal and `onCurrentChange`, which wait for the row to rest.
  *   `toward` is the other slide in the frame while the picture is between two,
- *   and nothing at rest. `can` is "asking for it would do something", `held` is
- *   "it is there and this slide says no" — a way out is dead in both cases, and
- *   only the second is worth a word to the reader.
+ *   and nothing at rest. `can` is "asking for it would do something", from the
+ *   slide a travel would depart from, `held` is "it is there and this slide says
+ *   no" — a way out is dead in both cases, and only the second is worth a word to
+ *   the reader.
  *   `known` is false until the box has been read: no box was named and none is
  *   above, the id names nothing, or — for one commit — this mounted before the
  *   box had painted. Until then `can` answers YES, because it is the answer that

@@ -153,7 +153,19 @@
               ))}
             </Nav>
           </div>
-          <RouteTravel className="travel_box">
+          <RouteTravel
+            className="travel_box"
+            renderNeighbour={(page) => {
+              const { label, color } = TABS.find(
+                ({ route }) => route === page.route,
+              );
+              return (
+                <div className="page" style={{ background: color }}>
+                  {label}…
+                </div>
+              );
+            }}
+          >
             <Route>
               {TABS.map(({ route, label, color }) => (
                 <Route

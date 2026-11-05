@@ -569,6 +569,29 @@ given again around the page on screen as the reader moves through the list: it i
 taken once the row has come to rest, and nothing is seen moving for it. With fewer
 than two pages, the box is not a scroller at all.
 
+**A neighbour not there yet is empty until the hand has pulled**, a page of a window
+or a tab never visited, and it is the box's background one sees there.
+`renderNeighbour` says what stands in its place: the page's background, its
+skeleton, the name the list already holds.
+
+```jsx
+<RouteTravel
+  routes={players.map(({ id, name }) => ({
+    route: PLAYER_ROUTE,
+    params: { id },
+    name,
+  }))}
+  renderNeighbour={(page) => <PlayerSkeleton name={page.name} />}
+>
+  <PlayerPage />
+</RouteTravel>
+```
+
+It stands on each side of the page on screen, already painted when a finger lands,
+since the browser moves the row whatever the main thread is doing. So it renders
+with the page, and is worth keeping light. It is not the page: its route does not
+match yet, so it asks for nothing.
+
 **The box has a height, or the document scrolls.** Pages may scroll themselves in a
 box the page gives a height to. If the document is what scrolls, it goes on doing
 so, and a page brought in stands where the reader is looking; what is lost is
@@ -1062,6 +1085,33 @@ because they answer two questions — is the layer there, and which of its pages
 is shown. A popup's `value` answers another one, WHICH of several popups is open
 (one sheet per card under a single `?seat=<gameId>`), not what varies inside one
 (see [popup_open.md](./popup_open.md#signal--the-app-holds-it-both-ways)).
+
+**What a tab reads is asked for while the layer is open, not while the tab is
+shown.** Under a hand the signal is only written once the row has landed, and a
+neighbour is on screen from the first pixel. So a read whose params depend on the
+signal asks after the travel, and its slide travels without it. `mount="near"` keeps
+the slide built, not what it reads. Ask from the opening, and let the slide read its
+question, as
+[a popup that loads data](./popup_open.md#a-popup-that-loads-data) does:
+
+```js
+// asked while the layer is open, whichever tab is on screen
+export const LINKED_ACCOUNTS = routeAction(ANY_PAGE, ACCOUNT.GET_MANY, () => {
+  return settingsSignal.value;
+});
+// read by the slide, on screen, sliding away, or with the layer closing
+export const LINKED_ACCOUNTS_SHOWN = ACCOUNT.GET_MANY.bindParams(true);
+```
+
+Read through the route action, a slide loses its data as soon as there is
+[nothing to ask](./actions.md#nothing-to-ask-and-coming-back): while the layer
+closes, or as soon as the tab is left if the params follow it. The question standing,
+reopening finds the answer and sends nothing, unless the action's `keep` says that
+answer is too old.
+
+The cost is one request per read at each first opening, for tabs that may never be
+looked at. navi does not tell an application which slides a hand can bring in, so a
+row too heavy to ask for everything has no finer answer than this.
 
 ### A link inside the layer leads to a page
 

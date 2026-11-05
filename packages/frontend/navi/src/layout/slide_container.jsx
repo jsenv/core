@@ -120,6 +120,7 @@ import {
   readSlideContainerState,
   sameSlideContainerState,
   SLIDE_CURRENT_ATTRIBUTE,
+  SLIDE_HEADING_ATTRIBUTE,
   SLIDE_HELD_ATTRIBUTE,
   SLIDE_STATE_EVENT,
   SLIDE_BASE_ATTRIBUTE,
@@ -1170,6 +1171,24 @@ export const SlideContainer = ({
     containerRef.current?.setAttribute(SLIDE_CURRENT_ATTRIBUTE, area);
   };
 
+  // Where the row is going, for as long as the current slide has not changed:
+  // anything saying where one is reads this first (see readSlideOnScreen). Left to
+  // the caller to announce, a landing having more to say in the same breath.
+  const writeHeading = (headingElement) => {
+    const containerEl = containerRef.current;
+    const area = headingElement ? readArea(headingElement) : null;
+    // A window does not change slide, it rolls: it has nowhere to be heading.
+    if (
+      loop ||
+      area === null ||
+      area === containerEl.getAttribute(SLIDE_CURRENT_ATTRIBUTE)
+    ) {
+      containerEl.removeAttribute(SLIDE_HEADING_ATTRIBUTE);
+      return;
+    }
+    containerEl.setAttribute(SLIDE_HEADING_ATTRIBUTE, area);
+  };
+
   const markAnswered = (area) => {
     const order = readMap().slideElements.map(readArea);
     const rank = order.indexOf(area);
@@ -1363,6 +1382,10 @@ export const SlideContainer = ({
       slideElements[0];
     const currentArea = readArea(currentElement);
     paintCurrentArea(currentArea);
+    // In the commit the slide changes in, so nothing reads the slide left in between.
+    if (!handMovingRef.current) {
+      writeHeading(null);
+    }
     const realPlaceOf = (area) => placeOf.get(area) || { x: 0, y: 0 };
     const durationMs = durationToMs(duration);
     // A change of slide the page changing carries is no travel: the page is
@@ -1402,6 +1425,8 @@ export const SlideContainer = ({
         (slideElement) => readArea(slideElement) === drawnArea,
       );
     if (travelStarts) {
+      // Asked for over a row still snapping: the travel is what one will see.
+      writeHeading(null);
       // Where the slide being left IS — the place the stage gave it if a travel
       // was already playing (a press landing mid-travel departs from where the
       // eye is, not from the map), its own place otherwise.
@@ -2177,7 +2202,7 @@ export const SlideContainer = ({
   // Where a hand has the row, in the terms of --slide-travel-progress: from the
   // current slide while it stands next to it, and past that between the two it
   // stands between, as far as the hand carries it.
-  const paintNativeRow = () => {
+  const paintNativeRow = ({ finger }) => {
     if (trackAnimationRef.current?.playState === "running") {
       return;
     }
@@ -2191,6 +2216,9 @@ export const SlideContainer = ({
     }
     if (restsOn(containerEl, currentElement)) {
       if (handMovingRef.current) {
+        if (!finger) {
+          writeHeading(null);
+        }
         paintTravelProgress(0);
       }
       return;
@@ -2213,10 +2241,42 @@ export const SlideContainer = ({
         forward ? -fraction : fraction,
       );
     }
+    // Nothing will say when a trackpad's fingers leave, and a long stroke would
+    // keep the first tab lit for the whole trip: the nearest slide answers. A finger
+    // has a lift to wait for (headNativeRow), and until then the slide held stands.
+    if (!finger) {
+      writeHeading(fraction >= 0.5 && toward ? toward : base);
+    }
     paintTravelToward(toward ? readArea(toward) : null);
     // What the hand reaches ahead of the neighbours built at rest is asked for on
     // the way: an empty slide goes by otherwise.
     renderNear(baseArea, { alongside: true });
+  };
+
+  // A finger has lifted and the row moves: on past the slide it stands after, or
+  // back to it. Already standing on one, it has arrived, whichever way it came.
+  const headNativeRow = (movedForward) => {
+    if (
+      !handMovingRef.current ||
+      trackAnimationRef.current?.playState === "running"
+    ) {
+      return;
+    }
+    const slideElements = Array.from(trackRef.current.children);
+    const currentElement = slideElements.find((slideElement) =>
+      slideElement.hasAttribute("data-current"),
+    );
+    if (!currentElement) {
+      return;
+    }
+    const { base, toward, fraction, forward } = readRowStretch(
+      containerRef.current,
+      slideElements,
+      currentElement,
+    );
+    const goesOn = fraction > 0 && movedForward === forward;
+    writeHeading(goesOn && toward ? toward : base);
+    announceState();
   };
 
   const landNativeRow = (scrollEndEvent) => {
@@ -2230,13 +2290,15 @@ export const SlideContainer = ({
       return;
     }
     handMovingRef.current = false;
-    paintTravelProgress(0);
     const area = readArea(landedElement);
     const currentArea = containerEl.getAttribute(SLIDE_CURRENT_ATTRIBUTE);
     if (area === currentArea) {
+      writeHeading(null);
+      paintTravelProgress(0);
       settleTravel();
       return;
     }
+    paintTravelProgress(0);
     const event = scrollEndEvent ?? new Event("scrollend");
     if (loop) {
       // A window does not change slide, it rolls: back at rest in the render the
@@ -2258,6 +2320,8 @@ export const SlideContainer = ({
     }
     // Refused: the row is put back in view of the slide that stays.
     handLandedRef.current = null;
+    writeHeading(null);
+    announceState();
     const currentElement = slideElements.find((slideElement) =>
       slideElement.hasAttribute("data-current"),
     );
@@ -2271,10 +2335,16 @@ export const SlideContainer = ({
   // Reached through a ref, and the listeners are never rebuilt for it: a landing
   // changes the current slide, and one is often already on its way when it does.
   const nativeRowHandlersRef = useRef(null);
-  nativeRowHandlersRef.current = { paintNativeRow, landNativeRow };
+  nativeRowHandlersRef.current = {
+    paintNativeRow,
+    headNativeRow,
+    landNativeRow,
+  };
   useLayoutEffect(() => {
     return watchRowScroll(containerRef.current, {
-      onScroll: () => nativeRowHandlersRef.current.paintNativeRow(),
+      onScroll: (move) => nativeRowHandlersRef.current.paintNativeRow(move),
+      onLeftToSnap: (forward) =>
+        nativeRowHandlersRef.current.headNativeRow(forward),
       onLand: (event) => nativeRowHandlersRef.current.landNativeRow(event),
     });
   }, []);

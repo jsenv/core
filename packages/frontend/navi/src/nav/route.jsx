@@ -214,8 +214,18 @@ export const collectRoutePages = (children) => {
  * Whether the next container down is a row a hand scrolls: every page has a
  * place on it from the start, and the browser moves between them (see
  * RouteTravel's `nativeScroll`). Told to one container, not to the pages it holds.
+ * False, or `{ renderNeighbour }`.
  */
 export const RouteRowContext = createContext(false);
+
+/**
+ * What stands in the pane of a neighbour until its page does. A component of its
+ * own: what the application calls in there (a hook, a signal) answers to it, however
+ * many neighbours the row has at that moment.
+ */
+export const RouteRowNeighbour = ({ renderNeighbour, page }) => (
+  <div data-route-row-neighbour="">{renderNeighbour(page)}</div>
+);
 
 // A container as a row: one pane per leaf, in the order they are written. A page
 // still builds when its route first matches, since a route's actions only ask
@@ -227,6 +237,7 @@ export const RouteRowContext = createContext(false);
 // can be undone: it does not re-render for what it reads (isShown), and it steps
 // out of whatever it fills outside its pane (leavingSignal).
 const RouteRowContainer = ({ children }) => {
+  const { renderNeighbour } = useContext(RouteRowContext);
   const { activeBranch, leaves } = collectBranches(children);
   const childrenRef = useRef(null);
   childrenRef.current = children;
@@ -276,16 +287,25 @@ const RouteRowContainer = ({ children }) => {
       />
     );
   }
-  return leaves.map((leaf) => (
+  const shownIndex = activeBranch
+    ? leaves.findIndex((leaf) => leaf.id === activeBranch.id)
+    : -1;
+  return leaves.map((leaf, index) => (
     <RouteRowPane
       key={leaf.id}
       branch={leaf}
       page={pageOf(leaf)}
-      shown={activeBranch !== null && leaf.id === activeBranch.id}
+      shown={index === shownIndex}
+      renderNeighbour={
+        shownIndex !== -1 &&
+        (index === shownIndex - 1 || index === shownIndex + 1)
+          ? renderNeighbour
+          : undefined
+      }
     />
   ));
 };
-const RouteRowPane = ({ branch, page, shown }) => {
+const RouteRowPane = ({ branch, page, shown, renderNeighbour }) => {
   // The very vnode rendered last, while not on screen: Preact does not look into
   // it, and a page nobody can see costs nothing when the address moves.
   const contentRef = useRef(null);
@@ -305,7 +325,13 @@ const RouteRowPane = ({ branch, page, shown }) => {
       data-built={contentRef.current ? "" : undefined}
       inert={!shown}
     >
-      {contentRef.current}
+      {contentRef.current ||
+        (renderNeighbour && (
+          <RouteRowNeighbour
+            renderNeighbour={renderNeighbour}
+            page={branchRoutePage(branch)}
+          />
+        ))}
     </div>
   );
 };

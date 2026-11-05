@@ -93,6 +93,14 @@
         ));
       };
 
+      const ItemSkeleton = ({ id }) => {
+        return (
+          <div style={{ flex: 1, background: COLORS[id % COLORS.length] }}>
+            <div className="card">Item {id}…</div>
+          </div>
+        );
+      };
+
       const Bar = ({ id }) => {
         const settled = routeTravelSettledPageSignal.value;
         const shown = settled ? Number(settled.params.id) : id;
@@ -131,7 +139,13 @@
         return (
           <>
             <Bar id={id} />
-            <RouteTravel className="box" routes={pages}>
+            <RouteTravel
+              className="box"
+              routes={pages}
+              renderNeighbour={(page) => (
+                <ItemSkeleton id={Number(page.params.id)} />
+              )}
+            >
               <Item />
             </RouteTravel>
           </>

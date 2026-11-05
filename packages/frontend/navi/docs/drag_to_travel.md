@@ -235,7 +235,9 @@ A row of screens is a scroll container, and contains itself.
 
 A `RouteTravel` page not visited yet can only be built by the address moving, since
 a route's actions ask only while it matches. So the address moves once the hand has
-really pulled, 16px, and the page fills in under the finger. See
+really pulled, 16px, and the page fills in under the finger. Before that its pane
+is empty and the box's background shows, unless `renderNeighbour` says what stands
+there. See
 [navigation.md](./navigation.md#tabs-that-travel-routetravel).
 
 Both tell what follows them how far the row has come. `SlideContainer` writes

@@ -15,6 +15,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import {
+  readSlideOnScreen,
   SLIDE_BASE_ATTRIBUTE,
   SLIDE_CURRENT_ATTRIBUTE,
   SLIDE_STATE_EVENT,
@@ -990,9 +991,7 @@ export const Nav = ({
     }
     slideContainerElementRef.current = containerElement;
     const readContainer = () => {
-      setCurrentSlideArea(
-        containerElement.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ?? undefined,
-      );
+      setCurrentSlideArea(readSlideOnScreen(containerElement));
       paintIndicatorGeometryRef.current();
       scheduleTabScrollSyncRef.current();
     };

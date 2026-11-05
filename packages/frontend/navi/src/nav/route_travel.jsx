@@ -13,17 +13,19 @@
  *   <Route> children   one pane per route. A page is built when its route first
  *                      matches, since a route's actions only ask while it does, and
  *                      stays once built (RouteRowContainer in route.jsx): a hand
- *                      brings back the page itself. Its pane is empty before that,
- *                      so the address moves as soon as the hand has really pulled
- *                      towards it, and the page fills in under the finger. A pane
- *                      already built waits for the hand to let go, or for the
- *                      landing of a hand no browser says has let go (a trackpad).
+ *                      brings back the page itself. Before that its pane holds only
+ *                      what `renderNeighbour` says, if anything, so the address
+ *                      moves as soon as the hand has really pulled towards it, and
+ *                      the page fills in under the finger. A pane already built
+ *                      waits for the hand to let go, or for the landing of a hand
+ *                      no browser says has let go (a trackpad).
  *   `routes` prop      a window over something longer, where several pages are often
  *                      one route with other params: the same component, so there
  *                      can only be one. It stands in the pane of the address, and
  *                      what the hand leaves behind is a PICTURE of it, a clone in
  *                      the pane it was in. The address moves as soon as the hand
- *                      has really pulled, as above.
+ *                      has really pulled, as above. Until then the pane of a
+ *                      neighbour holds what `renderNeighbour` says, if anything.
  *
  * What reads the URL may therefore read where the hand is heading. Where the reader
  * still is, is routeTravelSettledPageSignal (route_travel_hold.js), which a link
@@ -50,7 +52,11 @@ import {
   arriveAtScrollPosition,
   suspendScrollRecording,
 } from "./browser_integration/scroll_restoration.js";
-import { collectRoutePages, RouteRowContext } from "./route.jsx";
+import {
+  collectRoutePages,
+  RouteRowContext,
+  RouteRowNeighbour,
+} from "./route.jsx";
 import { notePageChange } from "./page_change.js";
 import { pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
@@ -64,8 +70,11 @@ import {
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 const css = /* css */ `
+  /* A column: the height given to the box reaches the row. */
   .navi_route_travel {
     position: relative;
+    display: flex;
+    flex-direction: column;
   }
 
   /* A scroller of its own, inside the box: a box may be told what it is by the
@@ -122,6 +131,19 @@ const css = /* css */ `
       max-height: 100dvh;
       overflow: clip;
     }
+    /* What stands in the pane of a neighbour until its page does. It paints at
+       rest, unlike the pane around it: the compositor moves the row, and what
+       waits for the first scroll event to show comes a frame late. contain: what
+       it holds in position: fixed does not stand over the page. Out of flow: the
+       height of the row stays the page's. */
+    > [data-route-row-pane] > [data-route-row-neighbour] {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      contain: layout paint;
+      flex-direction: column;
+      visibility: visible;
+    }
 
     /* The page of a window over something longer, in the pane of the address: a
        pane only gives the row a place to stop. */
@@ -157,6 +179,7 @@ const SET_OFF_PULL = 16;
  *   routes?: Array<object|{route: object, params?: object}>,
  *   travelByDrag?: boolean,
  *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
+ *   renderNeighbour?: (page: {route: object, params: object|undefined}) => import("preact").ComponentChildren,
  * }>}
  * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
  *   over something longer, in order. Read from the <Route> children by default,
@@ -173,6 +196,13 @@ const SET_OFF_PULL = 16;
  *   of the page under six entries. A tab pressed goes the way its <Link> says —
  *   `<Link replace>` for a row of tabs, so a press and a swipe towards the same
  *   neighbour write the same history.
+ * @param {(page: {route: object, params: object|undefined}) => import("preact").ComponentChildren} [props.renderNeighbour]
+ *   - what stands in the pane of a page next to the one on screen, until the hand
+ *   has pulled far enough to bring that page: its background, its skeleton, what the
+ *   list already knows. A `<Route>` page already built shows itself. Receives
+ *   `{ route, params }`, or the entry of `routes` as it was given, and is a column
+ *   the height of the row, as the page is. Its route does not match while it stands
+ *   there: what it reads is not asked for.
  *
  * Every other prop lands on the box itself (`id`, `data-testid`, `className`, …).
  * The box has to outlive every page of its row: around those <Route>s, or around
@@ -183,6 +213,7 @@ export const RouteTravel = ({
   travelByDrag = true,
   onTravel = ({ route, params }) =>
     route.navTo(params, { replace: true, routeTransition: "none" }),
+  renderNeighbour,
   className,
   children,
   ...rest
@@ -252,9 +283,7 @@ export const RouteTravel = ({
       travelling: false,
       pictures: new Map(),
       resumeScrollRecording: null,
-      scrollsDocument:
-        getScrollContainer(row.parentElement, { includeHidden: true }) ===
-        document.documentElement,
+      scrollsDocument: rowFollowsDocument(row),
       ...fields,
     };
     movementRef.current = movement;
@@ -544,6 +573,26 @@ export const RouteTravel = ({
     }
   }, [currentIndex]);
 
+  // A neighbour shows from the first frame the compositor moves the row, before
+  // any scroll event: a finger landing is the last word before that.
+  const paintsNeighbours = Boolean(renderNeighbour);
+  useLayoutEffect(() => {
+    if (!paintsNeighbours) {
+      return undefined;
+    }
+    const row = rowRef.current;
+    const onTouchStart = () => {
+      if (!movementRef.current && rowFollowsDocument(row)) {
+        row.style.setProperty("--navi-route-row-pin", `${pinOf(row)}px`);
+      }
+    };
+    row.addEventListener("touchstart", onTouchStart, { passive: true });
+    return () => {
+      row.removeEventListener("touchstart", onTouchStart);
+    };
+  }, [paintsNeighbours]);
+
+  const rowContext = useMemo(() => ({ renderNeighbour }), [renderNeighbour]);
   const rowKind =
     pages.length < 2 && windowed ? "still" : travelByDrag ? "" : "code";
   return (
@@ -564,13 +613,26 @@ export const RouteTravel = ({
       >
         {windowed ? (
           <>
-            {pages.map((page, index) => (
-              <div
-                key={index}
-                data-route-row-pane=""
-                style={{ gridColumn: index + 1 }}
-              />
-            ))}
+            {pages.map((page, index) => {
+              const holdsNeighbour =
+                paintsNeighbours &&
+                isNeighbourPane(index, liveIndex, movementRef.current);
+              return (
+                <div
+                  key={index}
+                  data-route-row-pane=""
+                  inert={holdsNeighbour}
+                  style={{ gridColumn: index + 1 }}
+                >
+                  {holdsNeighbour && (
+                    <RouteRowNeighbour
+                      renderNeighbour={renderNeighbour}
+                      page={page}
+                    />
+                  )}
+                </div>
+              );
+            })}
             <div
               ref={liveRef}
               data-route-row-live=""
@@ -581,7 +643,7 @@ export const RouteTravel = ({
             <div ref={picturesRef} data-route-row-pictures="" />
           </>
         ) : (
-          <RouteRowContext.Provider value={true}>
+          <RouteRowContext.Provider value={rowContext}>
             {children}
           </RouteRowContext.Provider>
         )}
@@ -589,6 +651,19 @@ export const RouteTravel = ({
     </div>
   );
 };
+
+// The panes on each side of the live page. Not one holding a picture of the page
+// left there: a page with no background of its own would show it through.
+const isNeighbourPane = (index, liveIndex, movement) => {
+  if (index !== liveIndex - 1 && index !== liveIndex + 1) {
+    return false;
+  }
+  return !movement || !movement.pictures.has(index);
+};
+
+const rowFollowsDocument = (row) =>
+  getScrollContainer(row.parentElement, { includeHidden: true }) ===
+  document.documentElement;
 
 // How far down the row the reader is looking, for a page brought in: a page on
 // screen scrolls with the document, and one arriving has to start from there.
