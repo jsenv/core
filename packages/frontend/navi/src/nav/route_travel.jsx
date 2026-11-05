@@ -16,7 +16,8 @@
  *                      brings back the page itself. Its pane is empty before that,
  *                      so the address moves as soon as the hand has really pulled
  *                      towards it, and the page fills in under the finger. A pane
- *                      already built waits for the landing.
+ *                      already built waits for the hand to let go, or for the
+ *                      landing of a hand no browser says has let go (a trackpad).
  *   `routes` prop      a window over something longer, where several pages are often
  *                      one route with other params: the same component, so there
  *                      can only be one. It stands in the pane of the address, and
@@ -25,7 +26,8 @@
  *                      has really pulled, as above.
  *
  * What reads the URL may therefore read where the hand is heading. Where the reader
- * still is, is routeTravelSettledPageSignal.
+ * still is, is routeTravelSettledPageSignal (route_travel_hold.js), which a link
+ * reads by itself.
  *
  * The document goes on scrolling when that is what the page does. A horizontal
  * scroller cannot let the other axis through (overflow-x: auto makes overflow-y
@@ -41,7 +43,6 @@
  */
 
 import { useLayoutEffect, useMemo, useReducer, useRef } from "preact/hooks";
-import { signal } from "@preact/signals";
 
 import { getScrollContainer } from "@jsenv/dom";
 import { observeBeforeRouting } from "./browser_integration/before_routing.js";
@@ -53,6 +54,7 @@ import { collectRoutePages, RouteRowContext } from "./route.jsx";
 import { notePageChange } from "./page_change.js";
 import { pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
+import { holdPage, releaseHeldPage } from "./route_travel_hold.js";
 import {
   pageAtRest,
   readRowStretch,
@@ -149,19 +151,6 @@ const css = /* css */ `
 // there yet: past what a hand that only shook covers, so that a shake costs
 // neither a navigation nor the requests of a page.
 const SET_OFF_PULL = 16;
-
-/**
- * What the URL says while a hand holds the row is where it is heading, for a page
- * not built yet: it builds by the address moving. A counter, a title or a
- * breadcrumb around the box must not move for a pull that is let go of: it reads
- * this first. The page the reader is still on while that lasts, and `null` when
- * the row has come to rest, which is when `scrollsnapchange` fires and a pager's
- * `settledPage` changes. A travel no hand set off holds nothing: it goes where it
- * goes.
- *
- * One for the document. `route` says which row, for a page holding several boxes.
- */
-export const routeTravelSettledPageSignal = signal(null);
 
 /**
  * @type {import("preact").FunctionComponent<{
@@ -308,6 +297,28 @@ export const RouteTravel = ({
     return onTravel({ route: page.route, params: page.params, cause: "drag" });
   };
 
+  // The page the row goes to, once nothing is left to the hand.
+  const askForPageOfRow = (index, movement) => {
+    const row = rowRef.current;
+    const page = latestRef.current.pages[index];
+    if (windowed && !movement.pictures.has(index)) {
+      leavePictureOfLive(movement);
+    }
+    Promise.resolve(askFor(page)).then(() => {
+      if (pageIsCurrent(page)) {
+        return;
+      }
+      // Refused, or sent elsewhere: the row says where the address is.
+      askedPageRef.current = null;
+      const { currentIndex } = latestRef.current;
+      const paneCurrent = panesOf(row)[currentIndex];
+      if (paneCurrent) {
+        movement.travelling = true;
+        row.scrollTo({ left: paneCurrent.offsetLeft, behavior: "smooth" });
+      }
+    });
+  };
+
   const sayRowMoves = () => {
     const row = rowRef.current;
     const panes = panesOf(row);
@@ -334,7 +345,7 @@ export const RouteTravel = ({
     movementRef.current = null;
     row.removeAttribute("data-moving");
     publishRouteRowMove(null);
-    routeTravelSettledPageSignal.value = null;
+    releaseHeldPage();
     if (liveRef.current) {
       liveRef.current.style.top = "";
     }
@@ -456,10 +467,31 @@ export const RouteTravel = ({
       } else if (paneTowards.hasAttribute("data-built")) {
         return;
       }
-      if (routeTravelSettledPageSignal.peek() === null) {
-        routeTravelSettledPageSignal.value = pages[currentIndex];
-      }
+      holdPage(pages[currentIndex], page);
       askFor(page);
+    };
+    // The address, the tabs and what reads the held page all move here, the way they
+    // do for a tab pressed. If the row ends up elsewhere after all, onLand corrects
+    // the address when it rests.
+    const onLeftToSnap = (forward) => {
+      const movement = movementRef.current;
+      const { pages, travelByDrag } = latestRef.current;
+      if (!movement || movement.travelling || !travelByDrag) {
+        return;
+      }
+      const panes = panesOf(row);
+      const { base, toward } = readRowStretch(row, panes, panes[0]);
+      const index = panes.indexOf(forward && toward ? toward : base);
+      const page = pages[index];
+      if (!page) {
+        return;
+      }
+      if (!pageIsCurrent(page) && !samePage(askedPageRef.current, page)) {
+        askForPageOfRow(index, movement);
+      }
+      // After the address: a pull coming back to its page must not light the tab the
+      // address ran ahead to, even for a render.
+      releaseHeldPage();
     };
     const onLand = () => {
       const movement = movementRef.current;
@@ -483,29 +515,19 @@ export const RouteTravel = ({
       if (samePage(askedPageRef.current, page)) {
         return;
       }
-      if (windowed && !movement.pictures.has(panes.indexOf(pane))) {
-        leavePictureOfLive(movement);
-      }
-      Promise.resolve(askFor(page)).then(() => {
-        if (pageIsCurrent(page)) {
-          return;
-        }
-        // Refused, or sent elsewhere: the row says where the address is.
-        askedPageRef.current = null;
-        const { currentIndex } = latestRef.current;
-        const paneCurrent = panesOf(row)[currentIndex];
-        if (paneCurrent) {
-          movement.travelling = true;
-          row.scrollTo({ left: paneCurrent.offsetLeft, behavior: "smooth" });
-        }
-      });
+      askForPageOfRow(panes.indexOf(pane), movement);
     };
-    const stopWatching = watchRowScroll(row, { onScroll, onLand });
+    const stopWatching = watchRowScroll(row, {
+      onScroll,
+      onLand,
+      onLeftToSnap,
+    });
     return () => {
       stopWatching();
       movementRef.current?.resumeScrollRecording?.();
       movementRef.current = null;
       publishRouteRowMove(null);
+      releaseHeldPage();
     };
   }, [windowed]);
 

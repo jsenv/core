@@ -86,12 +86,21 @@ export const readRowStretch = (scroller, pages, page) => {
  * @param {(event: Event|null) => void} options.onLand - the row may have stopped.
  *   Read `pageAtRest` to know whether it stopped on a page. Heard more than once
  *   for one landing, so what it does must find nothing to do the second time.
+ * @param {(forward: boolean) => void} [options.onLeftToSnap] - a finger has lifted
+ *   and the row moves: snapping plays out what the browser has decided and does not
+ *   turn round, so this is where it is going. Heard once per lift, after `onScroll`.
+ *   A trackpad has no lift, and never says this.
  * @returns {() => void} stop listening.
  */
-export const watchRowScroll = (scroller, { onScroll, onLand }) => {
+export const watchRowScroll = (
+  scroller,
+  { onScroll, onLand, onLeftToSnap },
+) => {
   let stoppedTimeout = null;
   let touching = false;
+  let liftedAt = null;
   const landOnSilence = () => {
+    liftedAt = null;
     // A finger holding the row still: nothing has stopped.
     if (!touching) {
       onLand(null);
@@ -104,14 +113,27 @@ export const watchRowScroll = (scroller, { onScroll, onLand }) => {
   const onScrollEvent = () => {
     onScroll();
     armSilence();
+    if (!liftedAt) {
+      return;
+    }
+    // A map moves along one axis at a time, so the two add up to the one it moves on.
+    const moved =
+      scroller.scrollLeft - liftedAt.left + (scroller.scrollTop - liftedAt.top);
+    if (Math.abs(moved) < AT_REST_DISTANCE) {
+      return;
+    }
+    liftedAt = null;
+    onLeftToSnap?.(moved > 0);
   };
   const onTouchStart = () => {
     touching = true;
+    liftedAt = null;
     clearTimeout(stoppedTimeout);
   };
   const onTouchEnd = (touchEvent) => {
     touching = touchEvent.touches.length > 0;
     if (!touching) {
+      liftedAt = { left: scroller.scrollLeft, top: scroller.scrollTop };
       armSilence();
     }
   };

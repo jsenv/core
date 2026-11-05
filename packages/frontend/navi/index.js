@@ -134,10 +134,8 @@ export {
   defineRouteDefaultTransition,
   defineRouteTransition,
 } from "./src/nav/route_transition.jsx";
-export {
-  RouteTravel,
-  routeTravelSettledPageSignal,
-} from "./src/nav/route_travel.jsx";
+export { RouteTravel } from "./src/nav/route_travel.jsx";
+export { routeTravelSettledPageSignal } from "./src/nav/route_travel_hold.js";
 // What covers the box a route movement plays in from inside the document — a
 // sticky row above the pages — so its pictures are cut at it instead of sliding
 // over it (see src/nav/transition_cover.js).

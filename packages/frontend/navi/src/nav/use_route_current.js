@@ -2,10 +2,12 @@ import { computed } from "@preact/signals";
 import { useMemo } from "preact/hooks";
 
 import { getParamsCacheKey } from "./route.js";
+import { readHeldLinkCurrent } from "./route_travel_hold.js";
 
 /**
  * Whether the page one is on is `route` with `params` — what a link or a button
- * pointing at a route shows as current.
+ * pointing at a route shows as current. While a hand holds a row of routes, the
+ * page one is on is the one held, wherever the address has run ahead to.
  *
  * Read through a computed of that one answer, so the component reading it
  * re-renders when the answer flips, and not whenever the route's status moves:
@@ -56,6 +58,10 @@ const readRouteCurrent = (route, params, exceptRoutes, alsoRoutes) => {
     if (alsoRoute.matchingSignal.value) {
       someAlsoMatching = true;
     }
+  }
+  const heldAnswer = readHeldLinkCurrent(route, params);
+  if (heldAnswer !== undefined) {
+    return heldAnswer;
   }
   if (someExceptMatching) {
     return false;

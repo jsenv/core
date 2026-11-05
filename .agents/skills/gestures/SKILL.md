@@ -44,8 +44,9 @@ contained on the axis it scrolls. Reading it is `layout/native_row_scroll.js`.
 
 **A row is read, never told, under a hand.** A scroll event paints what follows
 (the trait under a tab bar, `--slide-travel-progress`, `route_row_follow.js`), a
-landing changes what is current. A render during a hand must not write the scroll
-position, or the row is taken away from under the finger.
+landing changes what is current (a row of routes moves it earlier, see below). A
+render during a hand must not write the scroll position, or the row is taken away
+from under the finger.
 
 **A landing is not `scrollend`.** Measured on real events (macOS, CGEvent): Firefox
 fires `scrollend` once, when the wheel goes quiet, about 220ms before its snap has
@@ -99,6 +100,14 @@ and a picture (a clone) of what the hand leaves behind. The address leads there:
 `routeTravelSettledPageSignal` tells where the reader still is. A `routes` given
 anew around the page on screen is held while the row moves, then taken at rest
 with the scroll position written in the same commit.
+
+**What is current follows the hand, not the address, and letting go decides.** While
+a hand holds the row nothing is decided, past half the box included: a link to a page
+of the row answers for the page held, even when the address ran ahead to build its
+neighbour. A row moving after a finger has lifted is going where it moves (snapping
+does not turn round, observed in Chrome only), so that first scroll moves the address
+and the tabs. The landing stays as the safety net, and is all a trackpad has: nothing
+says when its fingers leave.
 
 **The document keeps scrolling.** `overflow-x: auto` forces `overflow-y` off
 `visible`, so the row is a scroll container that never moves vertically and grows

@@ -578,19 +578,22 @@ so, and a page brought in stands where the reader is looking; what is lost is
 **The URL can say where the hand is heading, not where the reader is.** For a page
 that is not there yet, a page of a window or a tab never visited, it changes once
 the hand has really pulled, and comes back if the page is let go of. A tab already
-built waits for the landing. So a counter, a title or a breadcrumb around the box
-reads `routeTravelSettledPageSignal` first, or it moves for a pull that goes
-nowhere:
+built waits for the finger to lift. A link to a page of the row answers for the page
+held while the hand holds it, whatever the URL says. A counter, a title or a
+breadcrumb around the box reads `routeTravelSettledPageSignal` first, or it moves
+for a pull that goes nowhere:
 
 ```jsx
 const settledPage = routeTravelSettledPageSignal.value;
 const shownId = settledPage ? settledPage.params.gameId : currentId;
 ```
 
-It holds the `{ route, params }` the hand set off from, and is `null` when the row
-has come to rest, the URL being the truth again. A tab pressed holds nothing, and
-`null` is all it ever reads. One signal for the document: on a page with several
-boxes, `route` says which row it is.
+It holds the `{ route, params }` the hand set off from, and is `null` from the moment
+a lifted finger leaves the row moving, the URL being the truth again: the row is only
+playing out what the browser decided. A trackpad has no lift, so there it lasts until
+the row has come to rest, and a tab already built waits for that too. A tab pressed
+holds nothing, and `null` is all it ever reads. One signal for the document: on a
+page with several boxes, `route` says which row it is.
 
 `RouteTravel` is for pages that form a ROW the finger can push; pages related
 pair by pair are animated with `defineRouteTransition`, and a given pair by one
