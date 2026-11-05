@@ -27,7 +27,7 @@
 import {
   getVirtualKeyboardOverlayHeight,
   subscribeVirtualKeyboardGeometryChange,
-  subscribeWindowResizeSettled,
+  subscribeVisualViewportResizeSettled,
 } from "@jsenv/dom";
 
 import { isEditableTarget } from "../box/pseudo_styles.js";
@@ -97,12 +97,25 @@ const holdEntry = (entry) => {
     room: readRoom(),
     placementOwed: false,
     stopWaiting: null,
-    // The keyboard does not fire this one (see safe_area.md): this is the
-    // window itself changing, a rotation, which a covered dialog has to fit.
-    stopWatchingWindow: subscribeWindowResizeSettled(() => {
+    windowWidth: window.innerWidth,
+    windowHeight: window.innerHeight,
+    // A rotation, which a covered dialog has to fit, is told from a keyboard by
+    // the window's size: the keyboard leaves it alone (see safe_area.md). Read
+    // once the visual viewport settles, not on the window's own resize: that one
+    // can fire first, while --navi-vvh still describes the screen being left.
+    stopWatchingWindow: subscribeVisualViewportResizeSettled(() => {
+      const { hold } = entry;
+      if (
+        window.innerWidth === hold.windowWidth &&
+        window.innerHeight === hold.windowHeight
+      ) {
+        return;
+      }
+      hold.windowWidth = window.innerWidth;
+      hold.windowHeight = window.innerHeight;
       holdCeiling(dialogEl);
-      entry.hold.room = readRoom();
-      entry.hold.placementOwed = false;
+      hold.room = readRoom();
+      hold.placementOwed = false;
       place();
     }),
   };
