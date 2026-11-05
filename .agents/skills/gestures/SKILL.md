@@ -48,6 +48,16 @@ landing changes what is current (a row of routes moves it earlier, see below). A
 render during a hand must not write the scroll position, or the row is taken away
 from under the finger.
 
+**What is shown and offered follows the screen.** While a hand holds the row, one is
+on the current slide, past half the box included. Once it has let go, what says where
+one is and what a press would do read where the row is going, before it gets there:
+tabs, steps, chevrons, `ways` and the gate of a press, all through `readSlideOnScreen`
+(`data-slide-heading`). What the state holds waits for rest: `data-slide-current`, the
+signal, the address, `onCurrentChange`. A trackpad has no lift to wait for, so the
+nearest slide answers. For a reader a `SlideContainer` and a `RouteTravel` are the same
+thing, so what differs is the mechanism and never this: in a row of routes the same
+answers come from the held page (see below).
+
 **A landing is not `scrollend`.** Measured on real events (macOS, CGEvent): Firefox
 fires `scrollend` once, when the wheel goes quiet, about 220ms before its snap has
 finished, and never again; Safari before 26.2 has none. A landing is also heard on
@@ -65,6 +75,42 @@ still and snapping off (Firefox re-snaps under a moving track, and the two cance
 out), and writes the position in one go when it lands. Native smooth scroll has no
 duration and flies past every slide in between. A row's scroll position while a
 travel plays belongs to the travel: a finger landing finishes it first.
+
+**A press over a row still moving wins, at once.** A press is not a hand, and it is
+answered at full strength (the animations skill), so this is the one movement of the
+browser's that navi takes over. The position the row stands at becomes the track's
+first keyframe and what is in the frame stays on stage, so nothing moves on the press.
+The box is `overflow: clip` for the length of that travel (`data-slide-row-taken`):
+it has no scroller left to play the snap on, which is what ends it
+([mobile_touch.md](../../../packages/frontend/navi/docs/mobile_touch.md#a-snap-keeps-running-after-the-finger)).
+The price is on iOS: a swipe during that travel is ignored, because the box has no
+scroll view when the finger lands. The row still ends on the slide pressed, and the
+next swipe works. That is why only this travel clips and an ordinary one keeps its
+scroller. Two things were built and must not come back:
+
+- **A `display` swap for one forced layout.** It stops a Chrome snap, but needs an
+  engine test: WebKit then ignores the next write to the position and loses what a
+  scroller inside the row was scrolled to.
+- **Clip released after two frames**, a scroller at 0 for the rest of the travel. It
+  would keep the swipe above, but with the track still displaced Chrome snaps the next
+  write to places the slides no longer stand at (`scrollTo` to 390 reads 226). Snapping
+  corrects that often enough to look fine: only a row ending early (a slide that holds)
+  and `duration={0}` show it.
+
+**A row of routes takes it the same way, with no track.** Its travel is the browser's
+smooth scroll, which replaces the snap only until it ends: a short trip ends first, the
+snap comes back and the landing overrules the press, so a far tab landed and a near one
+did not. So the snap is ended first: `overflow: clip` for two frames with the panes
+held in place by `left` (a transform would capture what they hold in `position:
+fixed`), and there is no displaced track here to go stale, so the row is a scroller
+again for the smooth scroll. That scroll waits one more frame: WebKit still starts from
+where a box that is no scroller stood, and a smooth scroll to the first page sees
+nothing to do. Snapping stays off until the row rests or a hand comes back.
+
+A press on the page the address is already on says nothing to the router (a state-only
+navigation is announced to nobody, on purpose). A stroke no lift ends leaves the address
+where it was, so that is a real press on the page being left: `RouteTravel` hears it
+itself, by the link's address, the way a `<Nav>` reads which tab is which.
 
 **Places are offsets, not transforms** (`left`/`top` on slides in one grid cell): the
 scroll range and the snap points are laid-out places in every engine, and the box
@@ -106,8 +152,15 @@ a hand holds the row nothing is decided, past half the box included: a link to a
 of the row answers for the page held, even when the address ran ahead to build its
 neighbour. A row moving after a finger has lifted is going where it moves (snapping
 does not turn round, observed in Chrome only), so that first scroll moves the address
-and the tabs. The landing stays as the safety net, and is all a trackpad has: nothing
-says when its fingers leave.
+and the tabs. Nothing says when a trackpad's fingers leave: the page nearest the row
+answers through the same hold (`routeTravelSettledPageSignal`), and the address waits
+for the landing, which stays the safety net. A stroke past three pages does not write
+three addresses.
+
+**The lift is heard on what the finger touched.** A page changing under the finger takes
+that element out of the document, and the end of the touch still goes there and comes up
+to nothing. Heard on the row, it is lost, and everything waiting for the lift waits for
+the landing instead (`watchRowScroll`).
 
 **The document keeps scrolling.** `overflow-x: auto` forces `overflow-y` off
 `visible`, so the row is a scroll container that never moves vertically and grows
@@ -357,7 +410,10 @@ events: `CGEvent(scrollWheelEvent2Source:)` posted at `.cghidEventTap` on macOS,
 `IsContinuous`, `ScrollPhase` and `MomentumPhase` for a trackpad, `FixedPtDelta` for a
 notch (Chromium: 0.1 per slow tick, times 40); guard on the PID of the window under the
 point. Touch in Chrome: `Input.synthesizeScrollGesture` with `gestureSourceType:
-"touch"` under CPU throttling. Sample per frame: the scroll position, what follows it,
+"touch"` under CPU throttling. A press during a movement goes through the two paths
+in [mobile_touch.md](../../../packages/frontend/navi/docs/mobile_touch.md#verifying-without-a-device),
+and is compared against HEAD: a fix measured on its own never shows what it fixed.
+Sample per frame: the scroll position, what follows it,
 what is current.
 
 **A press**: coalesce (a whole flick in one or two moves), arc (first points leaning

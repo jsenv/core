@@ -9,8 +9,8 @@ fixed, they differ between engines, and **none of them shows with a mouse**. A
 gesture can pass a whole session of desktop testing and still fail one swipe
 in three on a phone.
 
-What follows is measured, not remembered: Chromium 153 through its mobile touch
-emulator, and Safari on the iOS 26.5 simulator driven with real touches (see
+What follows is measured, not remembered: Chromium 153 and Chrome 156 through the
+mobile touch emulator, and Safari on the iOS 26.5 simulator driven with real touches (see
 [Verifying without a device](#verifying-without-a-device)). When an engine
 changes, measure again before trusting a number here.
 
@@ -22,6 +22,7 @@ changes, measure again before trusting a number here.
 - [A tap dropped after a touch drag](#a-tap-dropped-after-a-touch-drag)
 - [A finger is captured to what it touched, inside shadow trees too](#a-finger-is-captured-to-what-it-touched-inside-shadow-trees-too)
 - [A finger never makes a wheel event](#a-finger-never-makes-a-wheel-event)
+- [A snap keeps running after the finger](#a-snap-keeps-running-after-the-finger)
 - [Verifying without a device](#verifying-without-a-device)
 
 ## The browser decides about 8px in, and does not wait
@@ -229,6 +230,11 @@ where it lands, never asked for: on a touch press, a capture announced on the
 press's own target (compared from the same tree) is the browser's, and a gesture
 taking the press onto that same element has to say so another way.
 
+The rest of the touch goes there too, **even once that element has left the document**:
+a page re-rendering under the finger takes it out, and its `touchend` is dispatched on
+the detached node and reaches no ancestor. Nothing on the page around it hears the
+lift. What has to hear it listens on `event.target` from the `touchstart`.
+
 Measured in Chromium 153 (`Input.dispatchTouchEvent`: the capture does not
 depend on the slop) and on an Android phone (Chrome 153); not in Safari.
 Reference: `implicitCaptureHolder` and `takePress` in `@jsenv/dom`'s
@@ -242,6 +248,51 @@ the wheel and fails under a finger, the wheel path is not the suspect. The two
 paths differ in timing: a wheel gesture is claimed and refused on its very first
 event, so the browser never gets a moment to decide, while a finger has to
 travel a few pixels before anything can be read.
+
+## A snap keeps running after the finger
+
+A row with `scroll-snap-type: mandatory` goes on moving once the finger has lifted:
+about 600ms in Chrome, about 700ms in Safari, slowing all the way, so the last 300ms
+cover barely 40px of a 390px box. A press on something outside the row arrives during
+that time and gets its click, in Safari too. What it does to the row depends on the
+engine, because neither plays that movement on the main thread:
+
+| Asked of a row mid-snap           | Chrome                                                                | Safari on iOS               |
+| --------------------------------- | --------------------------------------------------------------------- | --------------------------- |
+| Instant `scrollTo`                | Ignored: the snap goes on and overwrites it                           | Stops it                    |
+| Smooth `scrollTo`                 | Replaces it until it ends: a short trip gets the snap back, and loses | Not measured                |
+| `scroll-snap-type: none`          | Ignored                                                               | Jumps to the target at once |
+| `overflow: hidden`, held          | Moves nothing, but the snap resumes when it is taken back             | Stops it                    |
+| `overflow: clip`, held two frames | Stops it: there is no scroller left to play it on                     | Stops it                    |
+| `display` changed for one layout  | Stops it (see below)                                                  | Stops it (see below)        |
+
+A change undone in the same task reaches nothing in Chrome, whatever the property,
+since the compositor never hears of it: only a `display` change acts that fast. It
+rebuilds the box, and it costs: `display: none` starts every CSS animation and
+transition inside over, `display: block` brings a scroller inside back to its top
+unless what the row holds keeps its size for that layout, and WebKit (desktop, under a
+synthetic wheel) then ignores the next write to the position and loses a scroller's
+own position inside.
+
+On Safari the last three rows were measured with a write following them, and a write
+alone is enough, so they say nothing of their own there.
+
+`scrollend` says little here: in Chrome a write gets one at once, with the row still
+moving. A row moved by other means with its snap left running ends worse than late:
+with a track animated over it, tens of pixels off any slide in Chrome, half a box off
+in Safari, and it stays there. Anything that moves a row on a press has to end the snap
+first.
+
+A box given `overflow: clip` is no scroller until it is given back, and that has its
+own cost: **a touch landing meanwhile starts no scroll in Safari**, even when the page
+gives the scroller back on `pointerdown`, since the scroll view does not exist yet when
+the finger lands. Chrome takes that swipe. Given back, the row stands where it stood
+with nothing written, but for the rest of that task WebKit still starts from 0: a smooth
+scroll to 0 sees nothing to do, and the row stays where it is, off any page. Ask a frame
+later.
+
+Firefox is not in this table: Playwright's synthetic wheel never leaves its row
+mid-snap, so it takes real input, events posted through the OS (`CGEvent` on macOS).
 
 ## Verifying without a device
 
@@ -261,6 +312,10 @@ configuration: "mobile" })`, then `Input.dispatchMouseEvent` with
   page receives real touches and pointer events of type `touch`;
 - those calls are **never acknowledged**: send them without awaiting, with a
   sleep between moves (~16ms is a frame).
+
+A tap through this path waits about 300ms for a possible double tap, under
+`isMobile` too, so a press meant for a moment in a movement lands 300ms after it, at
+the end of a snap. `touch-action: manipulation` on what is pressed removes the wait.
 
 `Input.dispatchTouchEvent` — what Playwright's `touchscreen` uses — goes
 through the desktop configuration instead: a 15px slop. Anything deciding at
@@ -304,9 +359,13 @@ its momentum included (over 3 s: flings closer than that add up). The window
 has to be on screen in the current Space: when it is not, activating the
 Simulator does not bring it, and the events land in whatever window is under
 the pointer — check which window is topmost at the points of the drag before
-sending any, and wait for the Space to switch after activating. What the page
-records is read back through a request it sends itself (the page runs on a
-local server), since nothing can query it.
+sending any, and wait for the Space to switch after activating. On screen is not
+on top: behind another app's window, activating does not raise it either, System
+Events does (`set frontmost to true`, then `AXRaise`), and another app can come back
+over it within seconds, so raise it and check right before each gesture, and again
+after any pause inside one. A tap works the same way, and reaches other elements
+during momentum. What the page records is read back through a request it sends itself
+(the page runs on a local server), since nothing can query it.
 
 What to synthesize is the hand's imperfection — a gesture simulated as clean,
 evenly spaced points passes forever and proves nothing: a slow start landing a

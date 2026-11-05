@@ -58,6 +58,7 @@ import { useFocusGroup } from "../utils/focus/use_focus_group.js";
 import {
   SLIDE_CURRENT_ATTRIBUTE,
   SLIDE_STATE_EVENT,
+  readSlideOnScreen,
   SLIDE_TOWARD_ATTRIBUTE,
 } from "./use_slide_container.js";
 
@@ -406,7 +407,9 @@ export const StepList = ({
         SLIDE_CURRENT_ATTRIBUTE,
       );
       const towardArea = containerElement.getAttribute(SLIDE_TOWARD_ATTRIBUTE);
-      setContainerCurrent(currentArea ?? undefined);
+      // Which step is lit follows the screen. The halo counts from the current slide,
+      // which is what the progress it draws with is measured against.
+      setContainerCurrent(readSlideOnScreen(containerElement));
       const currentIdx = currentArea === null ? -1 : indexOf(currentArea);
       if (currentIdx === -1) {
         // A slide no step names (a confirmation screen): the halo is not

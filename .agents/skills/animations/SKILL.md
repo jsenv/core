@@ -67,6 +67,10 @@ it depends on how the movement is driven:
   the added distance equals what a fresh press adds. Nothing extra to write;
   just make sure a press moves the target and never restarts the loop.
   _Reference: `glideTo` in wheel.jsx._
+- **A movement the browser plays** (a snap after a finger) cannot be hurried or
+  re-aimed from here, and waiting it out takes up to 500ms more than a press at rest. So it
+  is taken over: the movement ends where it stands and a travel sets off from there.
+  How it is ended is in the [gestures skill](../gestures/SKILL.md#a-row-the-browser-scrolls).
 
 Whichever mechanism, verify the same two numbers: the speed right after a
 mid-movement press should match the speed right after a first press, and N

@@ -17,8 +17,9 @@ import { signal } from "@preact/signals";
  * itself; a counter, a title or a breadcrumb around the box reads it first.
  *
  * It goes back to `null` as soon as the hand has let go and the row moves. Nothing
- * says when the fingers leave a trackpad: there it lasts until the row has come to
- * rest. A travel no hand set off holds nothing: it goes where it goes.
+ * says when the fingers leave a trackpad: there it is the page nearest the row, until
+ * the row has come to rest. A travel no hand set off holds nothing: it goes where it
+ * goes.
  *
  * One for the document. `route` says which row, for a page holding several boxes.
  */
@@ -34,6 +35,13 @@ export const holdPage = (page, headingPage) => {
   if (routeTravelSettledPageSignal.peek() === null) {
     routeTravelSettledPageSignal.value = page;
   }
+};
+
+// A hand no browser says has let go: the page nearest the row is where the reader is,
+// and the address, wherever it stands, is not.
+export const followPageOnScreen = (page, addressPage) => {
+  headingPageSignal.value = addressPage;
+  routeTravelSettledPageSignal.value = page;
 };
 
 export const releaseHeldPage = () => {

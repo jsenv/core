@@ -613,9 +613,10 @@ const shownId = settledPage ? settledPage.params.gameId : currentId;
 
 It holds the `{ route, params }` the hand set off from, and is `null` from the moment
 a lifted finger leaves the row moving, the URL being the truth again: the row is only
-playing out what the browser decided. A trackpad has no lift, so there it lasts until
-the row has come to rest, and a tab already built waits for that too. A tab pressed
-holds nothing, and `null` is all it ever reads. One signal for the document: on a
+playing out what the browser decided. A trackpad has no lift, so there it holds the
+page nearest the row until the row has come to rest, and the URL of a tab already built
+waits for that too. A tab pressed holds nothing, and `null` is all it ever reads, even
+over a row a hand has left moving: the press wins at once. One signal for the document: on a
 page with several boxes, `route` says which row it is.
 
 `RouteTravel` is for pages that form a ROW the finger can push; pages related

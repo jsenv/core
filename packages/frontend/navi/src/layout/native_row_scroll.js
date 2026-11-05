@@ -129,12 +129,6 @@ export const watchRowScroll = (
     liftedAt = null;
     onLeftToSnap?.(moved > 0);
   };
-  const onTouchStart = () => {
-    touching = true;
-    touchedSinceStop = true;
-    liftedAt = null;
-    clearTimeout(stoppedTimeout);
-  };
   const onTouchEnd = (touchEvent) => {
     touching = touchEvent.touches.length > 0;
     if (!touching) {
@@ -142,17 +136,30 @@ export const watchRowScroll = (
       armSilence();
     }
   };
+  const onTouchStart = (touchEvent) => {
+    touching = true;
+    touchedSinceStop = true;
+    liftedAt = null;
+    clearTimeout(stoppedTimeout);
+    // Listened for on what the finger landed on, where the end of a touch is always
+    // told: a page changing under the finger may have taken it out of the document by
+    // then, and nothing comes up to the row from there.
+    const { target } = touchEvent;
+    const onEnd = (endEvent) => {
+      target.removeEventListener("touchend", onEnd);
+      target.removeEventListener("touchcancel", onEnd);
+      onTouchEnd(endEvent);
+    };
+    target.addEventListener("touchend", onEnd, { passive: true });
+    target.addEventListener("touchcancel", onEnd, { passive: true });
+  };
   scroller.addEventListener("scroll", onScrollEvent, { passive: true });
   scroller.addEventListener("scrollend", onLand);
   scroller.addEventListener("touchstart", onTouchStart, { passive: true });
-  scroller.addEventListener("touchend", onTouchEnd, { passive: true });
-  scroller.addEventListener("touchcancel", onTouchEnd, { passive: true });
   return () => {
     clearTimeout(stoppedTimeout);
     scroller.removeEventListener("scroll", onScrollEvent);
     scroller.removeEventListener("scrollend", onLand);
     scroller.removeEventListener("touchstart", onTouchStart);
-    scroller.removeEventListener("touchend", onTouchEnd);
-    scroller.removeEventListener("touchcancel", onTouchEnd);
   };
 };

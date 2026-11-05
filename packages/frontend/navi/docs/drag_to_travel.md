@@ -51,6 +51,18 @@ What stays ours:
 - **A travel asked for** (a tab, a key, a command, a state) plays in `duration`,
   one box long whatever the distance, in `SlideContainer`. In `RouteTravel` it is
   the browser's smooth scroll.
+- **A press beats a row still moving.** It sets off at once from what is on screen,
+  and the row never lands where the hand was sending it. In `SlideContainer`
+  `onCurrentChange` hears about the slide pressed and not about that one, and on iOS a
+  swipe during that travel is ignored, and the next one works.
+- **What says where one is follows the screen.** While a hand holds the row, one is on
+  the page held. Once it has let go, what reads the row reads where it is going:
+  `useSlideContainer` (`current`, `can`, `held`), a `Nav`'s tabs, a `StepList`'s steps
+  and the chevrons in `SlideContainer`, so Next pressed during a snap counts from there;
+  a link's current state and `routeTravelSettledPageSignal` in `RouteTravel`. A trackpad
+  has no lift, so the nearest page answers. What the state holds waits for rest: the
+  bound signal and `onCurrentChange`, and in `RouteTravel` the address, except where it
+  runs ahead to build a page.
 - **A direction that is refused is the end of the row.** Whatever holds the user
   where they are (a `<Slide required>` waiting for its answer, a `preventNavNext`)
   takes what lies beyond off the row, so nothing can be scrolled to. There is no

@@ -40,8 +40,9 @@
  * than two pages is not a scroller at all, for that reason.
  *
  * A travel nobody's hand is on (a tab pressed, the back button) is the browser's
- * smooth scroll. Whatever else follows, the trait under a tab bar first, follows the
- * row through route_row_follow.js.
+ * smooth scroll, after ending a snap a hand has left running (takeRowFromHand).
+ * Whatever else follows, the trait under a tab bar first, follows the row through
+ * route_row_follow.js.
  */
 
 import { useLayoutEffect, useMemo, useReducer, useRef } from "preact/hooks";
@@ -60,7 +61,11 @@ import {
 import { notePageChange } from "./page_change.js";
 import { pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
-import { holdPage, releaseHeldPage } from "./route_travel_hold.js";
+import {
+  followPageOnScreen,
+  holdPage,
+  releaseHeldPage,
+} from "./route_travel_hold.js";
 import {
   pageAtRest,
   readRowStretch,
@@ -105,6 +110,25 @@ const css = /* css */ `
     /* One page: nothing to scroll between, and no reason to catch what sticks. */
     &[data-route-travel-row="still"] {
       overflow: visible;
+    }
+    /* A tab pressed over a row a hand has left moving (see takeRowFromHand). Snapping
+       stays off for the travel: what it plays is not a place to snap back from. */
+    &[data-route-row-taken] {
+      scroll-snap-type: none;
+    }
+    /* No scroller for the two frames the compositor takes to hear it, which is what
+       ends a snap in Chrome, and the picture held where the scroll position had it.
+       Offsets, for the same reason as the pin below: a transform would capture what a
+       page holds in position: fixed. */
+    &[data-route-row-taken="clip"] {
+      overflow: clip;
+
+      > [data-route-row-pane],
+      > [data-route-row-live],
+      > [data-route-row-pictures] > * {
+        position: relative;
+        left: var(--navi-route-row-stand);
+      }
     }
 
     > [data-route-row-pane] {
@@ -363,6 +387,34 @@ export const RouteTravel = ({
     });
   };
 
+  // A tab pressed over a row a hand has left moving, which the browser plays on and
+  // overwrites a travel with once that travel is over: the snap is ended first. Given
+  // back, the row stands where it stood. A frame later, because until then WebKit still
+  // starts from where a box that is no scroller stood: a smooth scroll to the first page
+  // sees nothing to do.
+  const takeRowFromHand = (movement) => {
+    const row = rowRef.current;
+    const position = row.scrollLeft;
+    movement.rowTaken = true;
+    // A travel no hand set off holds nothing: it goes where it goes.
+    releaseHeldPage();
+    row.style.setProperty("--navi-route-row-stand", `${-position}px`);
+    row.setAttribute("data-route-row-taken", "clip");
+    afterFrames(2, () => {
+      if (movementRef.current !== movement) {
+        return;
+      }
+      row.setAttribute("data-route-row-taken", "");
+      row.style.removeProperty("--navi-route-row-stand");
+      afterFrames(1, () => {
+        const pane = panesOf(row)[latestRef.current.currentIndex];
+        if (movementRef.current === movement && pane) {
+          row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+        }
+      });
+    });
+  };
+
   // The row has stopped, on the page of the address: everything held for the
   // movement is let go of in one go, before anything paints.
   const endMovement = () => {
@@ -373,6 +425,7 @@ export const RouteTravel = ({
     }
     movementRef.current = null;
     row.removeAttribute("data-moving");
+    row.removeAttribute("data-route-row-taken");
     publishRouteRowMove(null);
     releaseHeldPage();
     if (liveRef.current) {
@@ -428,11 +481,18 @@ export const RouteTravel = ({
       }
       return;
     }
-    beginMovement({ travelling: true });
-    row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+    const movementBefore = movementRef.current;
+    const movement = beginMovement({ travelling: true });
     // In this very commit: the tab pressed already wears its bar, and the first
     // scroll event is a frame away.
     sayRowMoves();
+    if (movementBefore?.byHand && !movementBefore.rowTaken) {
+      takeRowFromHand(movement);
+      return;
+    }
+    if (row.getAttribute("data-route-row-taken") !== "clip") {
+      row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+    }
   });
 
   // Somebody else is about to move the address to another page of a window: its
@@ -461,10 +521,11 @@ export const RouteTravel = ({
 
   useLayoutEffect(() => {
     const row = rowRef.current;
-    const onScroll = () => {
+    const isClipped = () => row.getAttribute("data-route-row-taken") === "clip";
+    const onScroll = ({ finger }) => {
       const { pages, currentIndex, travelByDrag } = latestRef.current;
       const panes = panesOf(row);
-      if (panes.length < 2) {
+      if (panes.length < 2 || isClipped()) {
         return;
       }
       const moving = movementRef.current;
@@ -473,10 +534,20 @@ export const RouteTravel = ({
         // Written by this box, at rest: nobody is moving anything.
         return;
       }
-      const movement = moving || beginMovement({});
+      const movement = moving || beginMovement({ byHand: true });
       sayRowMoves();
       if (movement.travelling || !travelByDrag || !pane) {
         return;
+      }
+      // Nothing will say when a trackpad's fingers leave, and a long stroke would keep
+      // the first tab lit for the whole trip: the nearest page answers. A finger has a
+      // lift to wait for (onLeftToSnap), and until then the page held stands.
+      if (!finger) {
+        const { base, toward, fraction } = readRowStretch(row, panes, panes[0]);
+        followPageOnScreen(
+          pages[panes.indexOf(fraction >= 0.5 && toward ? toward : base)],
+          askedPageRef.current || pages[currentIndex],
+        );
       }
       const pulled = row.scrollLeft - pane.offsetLeft;
       if (Math.abs(pulled) < SET_OFF_PULL) {
@@ -524,7 +595,7 @@ export const RouteTravel = ({
     };
     const onLand = () => {
       const movement = movementRef.current;
-      if (!movement) {
+      if (!movement || isClipped()) {
         return;
       }
       const panes = panesOf(row);
@@ -551,8 +622,37 @@ export const RouteTravel = ({
       onLand,
       onLeftToSnap,
     });
+    // A hand back on a row taken from one: it is the hand's again, snapping included.
+    const onHandBack = () => {
+      if (row.getAttribute("data-route-row-taken") === "") {
+        row.removeAttribute("data-route-row-taken");
+      }
+    };
+    // A press for the page the address is already on changes nothing the router can
+    // tell, and a stroke no lift ends leaves the address where it was: it is heard here,
+    // the way a tab says which page it is through its address.
+    const onPress = (clickEvent) => {
+      const movement = movementRef.current;
+      if (!movement?.byHand || movement.rowTaken) {
+        return;
+      }
+      const link = clickEvent.target.closest?.("a[href]");
+      const { pages, currentIndex } = latestRef.current;
+      const page = pages[currentIndex];
+      if (!link || !page || new URL(link.href).pathname !== pathOf(page)) {
+        return;
+      }
+      movement.travelling = true;
+      takeRowFromHand(movement);
+    };
+    row.addEventListener("touchstart", onHandBack, { passive: true });
+    row.addEventListener("wheel", onHandBack, { passive: true });
+    document.addEventListener("click", onPress, { capture: true });
     return () => {
       stopWatching();
+      row.removeEventListener("touchstart", onHandBack);
+      row.removeEventListener("wheel", onHandBack);
+      document.removeEventListener("click", onPress, { capture: true });
       movementRef.current?.resumeScrollRecording?.();
       movementRef.current = null;
       publishRouteRowMove(null);
@@ -688,6 +788,16 @@ const copyScrollPositions = (from, to) => {
 // A page of the row: a route, and the params that say which of its tabs when
 // several of them share it. Written as a bare route by a caller whose tabs are
 // routes of their own — which is the same page with nothing to tell apart.
+const afterFrames = (count, callback) => {
+  if (count === 0) {
+    callback();
+    return;
+  }
+  requestAnimationFrame(() => {
+    afterFrames(count - 1, callback);
+  });
+};
+
 const normalizePage = (page) =>
   page.isRoute ? { route: page, params: undefined } : page;
 

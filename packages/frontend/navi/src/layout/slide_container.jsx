@@ -126,6 +126,7 @@ import {
   SLIDE_BASE_ATTRIBUTE,
   SLIDE_TOWARD_ATTRIBUTE,
   SLIDE_WAYS_ATTRIBUTE,
+  readSlideOnScreen,
   useSlideContainer,
 } from "./use_slide_container.js";
 
@@ -196,6 +197,15 @@ const css = /* css */ `
     &[data-slide-hand*="y"] {
       overflow-y: auto;
       overscroll-behavior-y: contain;
+    }
+    /* A travel asked for over a row a hand has left moving: no scroller for as long
+       as it plays. Chrome plays a snap on its compositor and carries on through a
+       write to the position, scroll-snap-type and overflow: hidden, then overwrites
+       them. A box that is no scroller has nothing left to play it on. Given back
+       earlier, with the track still displaced, Chrome snaps the next write to places
+       the slides do not stand at. */
+    &[data-slide-row-taken] {
+      overflow: clip;
     }
 
     /* The browser's own ring, suppressed in favour of the one below: this box
@@ -296,6 +306,72 @@ const css = /* css */ `
   }
 `;
 
+// What a row left moving shows when a travel is asked for over it, read before the
+// slides are written: the one or two slides in the frame, and how far the track has
+// to stand, in a box that is no scroller, for that frame not to move.
+const readRowStand = (containerEl, slideElements) => {
+  const restElement = slideElements.find((slideElement) =>
+    slideElement.hasAttribute("data-current"),
+  );
+  if (!restElement) {
+    return null;
+  }
+  const { base, toward, fraction } = readRowStretch(
+    containerEl,
+    slideElements,
+    restElement,
+  );
+  return {
+    base: readArea(base),
+    toward: toward && fraction > 0 ? readArea(toward) : null,
+    fraction,
+    offset: `${-containerEl.scrollLeft}px ${-containerEl.scrollTop}px`,
+  };
+};
+// The stage of a travel asked for over a row left moving. What is in the frame stays
+// where it is, and the slide asked for comes one box past it, unless it is already
+// there: then what is left to make is a part of a box.
+const stageOverRow = (rowStand, area, realPlaceOf, stepAsked) => {
+  const { base, toward, fraction } = rowStand;
+  const basePlace = realPlaceOf(base);
+  const placeByArea = new Map([[base, basePlace]]);
+  const towardPlace = toward ? realPlaceOf(toward) : null;
+  if (toward) {
+    placeByArea.set(toward, towardPlace);
+  }
+  if (area === base || area === toward) {
+    const otherArea = area === base ? toward : base;
+    if (!otherArea) {
+      return { placeByArea, leaningArea: null, progress: 0 };
+    }
+    const from = realPlaceOf(otherArea);
+    const to = realPlaceOf(area);
+    const sign = Math.sign(to.x - from.x) || Math.sign(to.y - from.y);
+    return {
+      placeByArea,
+      leaningArea: otherArea,
+      progress: sign * (area === base ? fraction : 1 - fraction),
+    };
+  }
+  const to = realPlaceOf(area);
+  const step = stepAsked || {
+    x: Math.sign(to.x - basePlace.x),
+    y: Math.sign(to.y - basePlace.y),
+  };
+  const pastToward =
+    towardPlace &&
+    (towardPlace.x - basePlace.x) * step.x +
+      (towardPlace.y - basePlace.y) * step.y >
+      0;
+  const side = pastToward ? towardPlace : basePlace;
+  placeByArea.set(area, { x: side.x + step.x, y: side.y + step.y });
+  return {
+    placeByArea,
+    leaningArea: toward && fraction >= 0.5 ? toward : base,
+    progress: step.x || step.y,
+  };
+};
+
 // How much of a travel is left to make, as a fraction of the travel that was
 // asked for: 1 for a move starting from rest, less for one picked up while the
 // track was already moving. Everything is measured in px against the track's
@@ -310,6 +386,18 @@ const ratioOfOneTravel = (track, from, to, targetBefore) => {
   }
   const left = distance(offsetToPx(from, box), target);
   const ratio = left / asked;
+  return ratio > 1 ? 1 : ratio;
+};
+// The same for a travel taken over a row, which nobody asked for from anywhere in
+// particular: what is left, in boxes. Laid out sizes, like the scroll position that
+// `from` is read off: a row inside a popup still growing is not its transformed size.
+const ratioOfOneBox = (track, from, to) => {
+  const box = { width: track.offsetWidth, height: track.offsetHeight };
+  const start = offsetToPx(from, box);
+  const end = offsetToPx(to, box);
+  const ratio =
+    Math.abs(end.x - start.x) / box.width +
+    Math.abs(end.y - start.y) / box.height;
   return ratio > 1 ? 1 : ratio;
 };
 
@@ -921,6 +1009,10 @@ export const SlideContainer = ({
   // The slide a hand has just landed on, for the render it asks for: it is
   // already there, so there is nothing to play.
   const handLandedRef = useRef(null);
+  // The slide a row is being carried away from, pressed: it stays current, so only
+  // a render says the row has to come back to it (see goToArea).
+  const rowBackAskedRef = useRef(false);
+  const [, askRowBack] = useState(0);
   // Where the box rests on the row, and what the row starts from: a slide that
   // holds on to the user ends the row on that side, and a scroll range starts at
   // its first reachable slide (see writeRowAtRest).
@@ -1172,21 +1264,28 @@ export const SlideContainer = ({
   };
 
   // Where the row is going, for as long as the current slide has not changed:
-  // anything saying where one is reads this first (see readSlideOnScreen). Left to
-  // the caller to announce, a landing having more to say in the same breath.
+  // anything saying where one is reads this first, and so does what a press would
+  // do from there (see readSlideOnScreen). Left to the caller to announce, a landing
+  // having more to say in the same breath.
   const writeHeading = (headingElement) => {
     const containerEl = containerRef.current;
     const area = headingElement ? readArea(headingElement) : null;
     // A window does not change slide, it rolls: it has nowhere to be heading.
-    if (
+    const heading =
       loop ||
       area === null ||
       area === containerEl.getAttribute(SLIDE_CURRENT_ATTRIBUTE)
-    ) {
-      containerEl.removeAttribute(SLIDE_HEADING_ATTRIBUTE);
+        ? null
+        : area;
+    if (heading === containerEl.getAttribute(SLIDE_HEADING_ATTRIBUTE)) {
       return;
     }
-    containerEl.setAttribute(SLIDE_HEADING_ATTRIBUTE, area);
+    if (heading === null) {
+      containerEl.removeAttribute(SLIDE_HEADING_ATTRIBUTE);
+    } else {
+      containerEl.setAttribute(SLIDE_HEADING_ATTRIBUTE, heading);
+    }
+    paintWays();
   };
 
   const markAnswered = (area) => {
@@ -1343,6 +1442,7 @@ export const SlideContainer = ({
     offsetRef.current = "0% 0%";
     track.style.setProperty("--slide-container-offset", "0% 0%");
     containerRef.current.removeAttribute("data-slide-travelling");
+    containerRef.current.removeAttribute("data-slide-row-taken");
     sendRowToRest(currentElement);
     renderNear(currentArea, { alongside: true });
     // Arrived, so the change can be told (commit="rest"): the picture is at
@@ -1416,17 +1516,43 @@ export const SlideContainer = ({
     // between the picture and the slide arriving, on the axis it walks.
     let travelStep = null;
     const drawnArea = stage ? stage.area : drawnAreaRef.current;
+    const rowBackAsked = rowBackAskedRef.current;
+    rowBackAskedRef.current = false;
+    // Asked for over a row a hand has left moving: the row belongs to what was asked
+    // for, and where the hand's snap would have ended decides nothing.
+    const rowTaken =
+      handMovingRef.current &&
+      !handLanded &&
+      (drawnArea !== currentArea || rowBackAsked);
+    const rowStand = rowTaken
+      ? readRowStand(containerRef.current, slideElements)
+      : null;
+    if (rowTaken) {
+      handMovingRef.current = false;
+      writeHeading(null);
+      paintTravelProgress(0);
+    }
     const travelStarts =
       !still &&
       durationMs > 0 &&
       drawnArea !== undefined &&
-      drawnArea !== currentArea &&
+      (drawnArea !== currentArea || rowTaken) &&
       slideElements.some(
         (slideElement) => readArea(slideElement) === drawnArea,
       );
-    if (travelStarts) {
-      // Asked for over a row still snapping: the travel is what one will see.
-      writeHeading(null);
+    let overRow = null;
+    if (travelStarts && rowStand) {
+      overRow = stageOverRow(
+        rowStand,
+        currentArea,
+        realPlaceOf,
+        travelStepRef.current,
+      );
+      stage = stageRef.current = {
+        placeByArea: overRow.placeByArea,
+        area: currentArea,
+      };
+    } else if (travelStarts) {
       // Where the slide being left IS — the place the stage gave it if a travel
       // was already playing (a press landing mid-travel departs from where the
       // eye is, not from the map), its own place otherwise.
@@ -1528,9 +1654,15 @@ export const SlideContainer = ({
       "data-slide-travelling",
       Boolean(stage),
     );
-    // How far the track stands from where the scroll position rests: none at rest.
+    if (rowTaken) {
+      containerRef.current.setAttribute("data-slide-row-taken", "");
+    }
+    // How far the track stands from where the scroll position rests: none at rest. A
+    // box that is no scroller has no position, and the track says it all.
     const rowPlace = onRow(currentPlace);
-    const restPlace = restPlaceRef.current;
+    const restPlace = containerRef.current.hasAttribute("data-slide-row-taken")
+      ? { x: 0, y: 0 }
+      : restPlaceRef.current;
     const offset = `${(restPlace.x - rowPlace.x) * 100}% ${(restPlace.y - rowPlace.y) * 100}%`;
     // The travel that was ASKED for is still one box, whatever is left of it to
     // cover: what is left takes what is left of the duration.
@@ -1552,6 +1684,9 @@ export const SlideContainer = ({
     if (travelInFlight) {
       const onScreenPx = trackOffsetPx(track, containerRef.current);
       offsetOnScreen = `${onScreenPx.x}px ${onScreenPx.y}px`;
+    }
+    if (overRow) {
+      offsetOnScreen = rowStand.offset;
     }
     const offsetBefore = offsetOnScreen ?? offsetRef.current;
     offsetRef.current = offset;
@@ -1576,31 +1711,32 @@ export const SlideContainer = ({
       // short distance for a full duration. One box in `duration` is the pace;
       // this only ever shortens it (a longer travel is not made slower, which
       // would make a two-box move drag).
-      const travelRatio = ratioOfOneTravel(
-        track,
-        offsetBefore,
-        offset,
-        offsetTargetBefore,
-      );
+      const travelRatio = overRow
+        ? ratioOfOneBox(track, offsetBefore, offset)
+        : ratioOfOneTravel(track, offsetBefore, offset, offsetTargetBefore);
       // Already moving, so there is no ease-in to play: it would stall the track
       // for an instant right where the eye is following it.
-      const easing = travelInFlight ? "ease-out" : "ease";
+      const easing = travelInFlight || overRow ? "ease-out" : "ease";
       // Cancelled rather than layered: two animations on the same property
       // would blend, and what one sees then is neither of the two moves.
       trackAnimationRef.current?.cancel();
       trackAnimationRef.current = track.animate(
         [{ translate: offsetBefore }, { translate: offset }],
-        { duration: durationMs * travelRatio, easing },
+        // Backwards: the first frame's clock can read a fraction of a millisecond
+        // before the start time Chrome gives the animation, which would show the
+        // travel already over.
+        { duration: durationMs * travelRatio, easing, fill: "backwards" },
       );
       // The trait travels with the slides, from a whole box away.
-      const progressFrom = travelStep ? travelStep.x || travelStep.y : 0;
+      const stepProgress = travelStep ? travelStep.x || travelStep.y : 0;
+      const progressFrom = overRow ? overRow.progress : stepProgress;
       // The slide the picture leans on for the length of it is the one being
       // LEFT: it is the second one in the frame until the travel is over.
       animateTravelProgress(
         progressFrom,
         durationMs * travelRatio,
         easing,
-        drawnArea,
+        overRow ? overRow.leaningArea : drawnArea,
       );
       // Presses still waiting behind this one: it is already late, so it is
       // sent home at once rather than played out at the pace of someone who
@@ -1621,6 +1757,20 @@ export const SlideContainer = ({
       // between the two). Struck at once rather than left standing, since the
       // thing it was standing for is over.
       settleTravel();
+    }
+    // The row taken with nothing playing to give it back (no duration, a page change
+    // carrying the slide): no scroller for as long as the compositor takes to hear it.
+    if (
+      !stageRef.current &&
+      containerRef.current.hasAttribute("data-slide-row-taken")
+    ) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (trackAnimationRef.current?.playState !== "running") {
+            settleTravel();
+          }
+        });
+      });
     }
     // A window waiting for its travel to be over (see goToArea's own loop
     // branch): the animation says when, and says it about the move that just
@@ -1694,9 +1844,9 @@ export const SlideContainer = ({
       sendRowToRest(currentElement);
     }
     // Said last, and after data-current has been written: what a travel would do
-    // is read off the map from the slide that is now current, and off the locks
-    // that slide is wearing in this very commit.
-    paintWays(currentElement);
+    // is read off the map from the slide on screen, and off the locks that slide is
+    // wearing in this very commit.
+    paintWays();
     // …and once everything this commit had to write is written, the box says so
     // — a single announcement for a render that may have changed several of the
     // facts at once.
@@ -1738,14 +1888,23 @@ export const SlideContainer = ({
       slideElements.find((slideElement) =>
         slideElement.hasAttribute("data-current"),
       ) || slideElements[0];
-    if (!area || area === readArea(currentElement)) {
+    if (!area) {
       return false;
     }
+    // What a press leaves is the slide on screen, which is what paintWays offers from.
+    // A landing is the row arriving there, and what it leaves is the current one.
+    const areaLeft = landed
+      ? readArea(currentElement)
+      : (readSlideOnScreen(containerRef.current) ?? readArea(currentElement));
+    const elementLeft =
+      slideElements.find(
+        (slideElement) => readArea(slideElement) === areaLeft,
+      ) || currentElement;
     if (forward === undefined) {
       // Asked for by name (--navi-go-to-slide, --navi-back) rather than by a
       // direction: which way it is is still a fact, read off the map, and it is
       // what says which of the two locks below applies.
-      const from = placeOf.get(readArea(currentElement)) || { x: 0, y: 0 };
+      const from = placeOf.get(areaLeft) || { x: 0, y: 0 };
       const to = placeOf.get(area) || { x: 0, y: 0 };
       forward = to.y === from.y ? to.x > from.x : to.y > from.y;
     }
@@ -1758,11 +1917,21 @@ export const SlideContainer = ({
     // by dropping the attribute, which stays the render's to write — a hold
     // meant to stay (an explicit preventNavNext) is still there on the way back.
     if (
-      forward
-        ? !released && currentElement?.hasAttribute("data-prevent-nav-next")
-        : currentElement?.hasAttribute("data-prevent-nav-previous")
+      area !== areaLeft &&
+      (forward
+        ? !released && elementLeft.hasAttribute("data-prevent-nav-next")
+        : elementLeft.hasAttribute("data-prevent-nav-previous"))
     ) {
       return false;
+    }
+    if (area === readArea(currentElement)) {
+      // Nowhere to go, unless a hand has left the row on its way off this slide.
+      if (!handMovingRef.current) {
+        return false;
+      }
+      rowBackAskedRef.current = true;
+      askRowBack((count) => count + 1);
+      return true;
     }
     // The focus moves here, while the event that asked for it is still in hand:
     // who pressed what, and whether they were on the keyboard, is knowable now
@@ -2117,7 +2286,7 @@ export const SlideContainer = ({
     }
   };
   const move = (dx, dy, event, { value, released } = {}) =>
-    goToArea(areaTowards(dx, dy), {
+    goToArea(areaTowards(dx, dy, readSlideOnScreen(containerRef.current)), {
       forward: dx > 0 || dy > 0,
       event,
       value,
@@ -2203,10 +2372,13 @@ export const SlideContainer = ({
   // current slide while it stands next to it, and past that between the two it
   // stands between, as far as the hand carries it.
   const paintNativeRow = ({ finger }) => {
-    if (trackAnimationRef.current?.playState === "running") {
+    const containerEl = containerRef.current;
+    if (
+      trackAnimationRef.current?.playState === "running" ||
+      containerEl.hasAttribute("data-slide-row-taken")
+    ) {
       return;
     }
-    const containerEl = containerRef.current;
     const slideElements = Array.from(trackRef.current.children);
     const currentElement = slideElements.find((slideElement) =>
       slideElement.hasAttribute("data-current"),
@@ -2431,14 +2603,19 @@ export const SlideContainer = ({
   // ([data-slide-ways~="right"]), or through useSlideContainer, which watches
   // them. Nothing is told, everything is read: it is what lets them sit
   // anywhere, and what lets a container nobody drives still be followed.
-  const paintWays = (currentElement) => {
+  const paintWays = () => {
     const ways = [];
     const held = [];
+    const { slideElements, order } = readMap();
+    const areaOnScreen = readSlideOnScreen(containerRef.current);
+    const elementOnScreen = slideElements.find(
+      (slideElement) => readArea(slideElement) === areaOnScreen,
+    );
     // Whether the slide being left says no, this way. The one gate again, read
     // exactly as goToArea reads it at the moment of the travel — so what is
     // published here and what would happen cannot disagree.
     const holdsTowards = (forward) =>
-      currentElement?.hasAttribute(
+      elementOnScreen?.hasAttribute(
         forward ? "data-prevent-nav-next" : "data-prevent-nav-previous",
       );
     const say = (name, offered, forward) => {
@@ -2454,18 +2631,20 @@ export const SlideContainer = ({
         // would be saying it about every row on the page.
         continue;
       }
-      say(direction, Boolean(areaTowards(dx, dy)), dx > 0 || dy > 0);
+      say(
+        direction,
+        Boolean(areaTowards(dx, dy, areaOnScreen)),
+        dx > 0 || dy > 0,
+      );
     }
     // The two ends are ways out like the others — "all the way that way", said
     // by the map's own order rather than by a direction (see goToEnd, and
     // SlideContainer.First / .Last). Offered while one is not already standing
     // there, and held by the same lock the direction they lie in would be.
-    const { order } = readMap();
-    const currentArea = currentElement ? readArea(currentElement) : undefined;
-    say("first", order.length > 0 && order[0] !== currentArea, false);
+    say("first", order.length > 0 && order[0] !== areaOnScreen, false);
     say(
       "last",
-      order.length > 0 && order[order.length - 1] !== currentArea,
+      order.length > 0 && order[order.length - 1] !== areaOnScreen,
       true,
     );
     for (const element of travelPainters()) {
@@ -2558,7 +2737,7 @@ export const SlideContainer = ({
     progressAnimationsRef.current = painters.map((element) =>
       element.animate(
         [{ "--slide-travel-progress": from }, { "--slide-travel-progress": 0 }],
-        { duration: durationMs, easing },
+        { duration: durationMs, easing, fill: "backwards" },
       ),
     );
     progressAnimationsRef.current[0].finished.then(

@@ -82,8 +82,9 @@ const wordsOf = (element, attribute) => {
   return value ? value.split(" ") : NO_WAYS;
 };
 
-// The slide to say one is on: for whatever tells the reader where they are, as
-// opposed to data-slide-current, which is what a travel departs from.
+// The slide one is on, for whatever tells the reader where they are or what a press
+// would do: the current one while a hand holds the row, where the row is going once
+// it has let go. data-slide-current only changes at rest.
 export const readSlideOnScreen = (element) =>
   element.getAttribute(SLIDE_HEADING_ATTRIBUTE) ??
   element.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ??
@@ -133,10 +134,9 @@ export const sameSlideContainerState = (a, b) =>
  *   has let go, because that is what one is looking at. It can come before the
  *   slide's own signal and `onCurrentChange`, which wait for the row to rest.
  *   `toward` is the other slide in the frame while the picture is between two,
- *   and nothing at rest. `can` is "asking for it would do something", from the
- *   slide a travel would depart from, `held` is "it is there and this slide says
- *   no" — a way out is dead in both cases, and only the second is worth a word to
- *   the reader.
+ *   and nothing at rest. `can` is "asking for it would do something", from that
+ *   same slide, `held` is "it is there and this slide says no" — a way out is dead
+ *   in both cases, and only the second is worth a word to the reader.
  *   `known` is false until the box has been read: no box was named and none is
  *   above, the id names nothing, or — for one commit — this mounted before the
  *   box had painted. Until then `can` answers YES, because it is the answer that
