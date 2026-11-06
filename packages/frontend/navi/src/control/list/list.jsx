@@ -2738,10 +2738,13 @@ const useListScrollSync = ({
   };
   // Items that came in at another size than what stood in for them (a
   // skeleton becoming its item) leave the window short of the screen, or past
-  // it, and nothing scrolled to say so. Asked on the next frame, not inside
-  // the resize delivery: the window it frames is a render, which resizes what
-  // is observed once more, and the browser gives up on the loop
-  // ("ResizeObserver loop completed with undelivered notifications").
+  // it, and nothing scrolled to say so. A held list too: its hold places it but
+  // leaves the window to the screen (see holdWindow), and a placement that
+  // moves nothing — a document too short to scroll — fires no scroll that
+  // would size it. Asked on the next frame, not inside the resize delivery:
+  // the window it frames is a render, which resizes what is observed once
+  // more, and the browser gives up on the loop ("ResizeObserver loop
+  // completed with undelivered notifications").
   const onItemsResizedRef = useRef(null);
   onItemsResizedRef.current = () => {
     settleWindow();
@@ -2910,9 +2913,7 @@ const useListScrollSync = ({
     const putTopItemBack = (entries) => {
       const listResized = entries.some((entry) => entry.target === listEl);
       if (listResized) {
-        if (onGeometryChangeRef.current()) {
-          return;
-        }
+        const placed = onGeometryChangeRef.current();
         cancelAnimationFrame(itemsResizedFrame);
         itemsResizedFrame = requestAnimationFrame(() => {
           if (pageLeftRef.current) {
@@ -2920,6 +2921,9 @@ const useListScrollSync = ({
           }
           onItemsResizedRef.current();
         });
+        if (placed) {
+          return;
+        }
       }
       if (!entries.some((entry) => entry.target === scrollerEl)) {
         return;
