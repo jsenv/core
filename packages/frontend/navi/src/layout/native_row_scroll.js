@@ -89,9 +89,11 @@ export const readRowStretch = (scroller, pages, page, { sideways } = {}) => {
 /**
  * @param {Element} scroller
  * @param {object} options
- * @param {(move: {finger: boolean}) => void} options.onScroll - the row moved.
- *   `finger`: a touch has come since the row last stopped, so a lift will say where
- *   it goes (`onLeftToSnap`). Without one (a trackpad, a wheel) nothing will.
+ * @param {(move: {finger: boolean, lifted: boolean}) => void} options.onScroll - the
+ *   row moved. `finger`: a touch has come since the row last stopped, so a lift will
+ *   say where it goes (`onLeftToSnap`). Without one (a trackpad, a wheel) nothing
+ *   will. `lifted`: that finger has lifted and none has landed since: no hand moves
+ *   the row, the snap the lift left running does.
  * @param {(event: Event|null) => void} options.onLand - the row may have stopped.
  *   Read `pageAtRest` to know whether it stopped on a page. Heard more than once
  *   for one landing, so what it does must find nothing to do the second time.
@@ -122,7 +124,10 @@ export const watchRowScroll = (
     stoppedTimeout = setTimeout(landOnSilence, STOPPED_SILENCE);
   };
   const onScrollEvent = () => {
-    onScroll({ finger: touchedSinceStop });
+    onScroll({
+      finger: touchedSinceStop,
+      lifted: touchedSinceStop && !touching,
+    });
     armSilence();
     if (!liftedAt) {
       return;

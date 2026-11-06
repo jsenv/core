@@ -591,7 +591,7 @@ export const RouteTravel = ({
   useLayoutEffect(() => {
     const row = rowRef.current;
     const isClipped = () => row.getAttribute("data-route-row-taken") === "clip";
-    const onScroll = ({ finger }) => {
+    const onScroll = ({ finger, lifted }) => {
       const { pages, currentIndex, travelByDrag } = latestRef.current;
       const panes = panesOf(row);
       if (panes.length < 2 || isClipped()) {
@@ -617,6 +617,12 @@ export const RouteTravel = ({
           pages[panes.indexOf(fraction >= 0.5 && toward ? toward : base)],
           askedPageRef.current || pages[currentIndex],
         );
+      }
+      // The pull is read from the pane of the address. Once the finger has lifted,
+      // the address is where the snap goes (onLeftToSnap), and what still lies
+      // between is the snap playing out, not a hand pulling towards the neighbour.
+      if (lifted) {
+        return;
       }
       const pulled = row.scrollLeft - pane.offsetLeft;
       if (Math.abs(pulled) < SET_OFF_PULL) {
