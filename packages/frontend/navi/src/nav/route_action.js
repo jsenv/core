@@ -1,7 +1,8 @@
-import { computed, signal, untracked } from "@preact/signals";
+import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { getActionPrivateProperties } from "../action/action_private_properties.js";
 import { actionRunEffect } from "../action/action_run_effect.js";
+import { IDLE, RUNNING } from "../action/action_run_states.js";
 import { createAction } from "../action/actions.js";
 import { addKeptValueSource } from "../action/kept_values.js";
 import { prerunUnwatched } from "../action/run_unwatched.js";
@@ -58,6 +59,35 @@ export const activeRouteActionsSignal = computed(() => {
   activeRouteActionsPrevious = active;
   return active;
 });
+
+/**
+ * Calls back once every route action asking something for the page on screen
+ * has answered, none running and none about to: what is asked on behalf of
+ * another page waits for it, and never competes with the page's own reads.
+ *
+ * @param {() => void} callback
+ * @returns {() => void} cancel
+ */
+export const whenPageReadsAnswered = (callback) => {
+  let cancelled = false;
+  const stop = effect(function () {
+    for (const routeAction of activeRouteActionsSignal.value) {
+      const runningState = routeAction.runningStateSignal.value;
+      // IDLE: asking, and run by an effect of the same batch that has not run yet.
+      if (runningState === RUNNING || runningState === IDLE) {
+        return;
+      }
+    }
+    this.dispose();
+    if (!cancelled) {
+      untracked(callback);
+    }
+  });
+  return () => {
+    cancelled = true;
+    stop();
+  };
+};
 
 /**
  * Whether a route action of the page on screen waits for app state to ask: its
@@ -147,7 +177,9 @@ const ROUTE_ACTION_BINDING_OPTIONS = new Set([
  *   come from the address is not prefetched by a link — a link's prefetch has
  *   no address. It is by the press that opens a popup bound to a state these
  *   params read: that address is the current one with the state set to the
- *   popup's value (see `prefetch` on Button).
+ *   popup's value (see `prefetch` on Button). And by `route.preload(params)`,
+ *   which names the address: what a `<RouteTravel prefetch>` asks of the pages
+ *   on each side of the one on screen.
  * @param {object} [options]
  * @param {() => any} [options.when] - a condition on app state the action
  *   asks under, read off signals like the params: falsy, it runs nothing.
@@ -231,7 +263,7 @@ export const routeAction = (
     for (const route of routes) {
       if (paramsEffect) {
         registerRouteStatePreload(route, (values) => {
-          prefetchAsIf(action, readParams, values);
+          prefetchAsIf(action, readParams, readParamsAsked, values);
         });
       } else {
         registerRoutePreload(route, () => {
@@ -247,15 +279,17 @@ export const routeAction = (
 };
 
 // The params as they will read once the states hold what they are about to
-// (see readStateAsIf), prerun only when that changes them: params the state
-// leaves alone are the ones the action already runs on — or is meant not to,
-// and a prerun would retry a FAILED one behind the screen's back.
-const prefetchAsIf = (action, readParams, values) => {
+// (see readStateAsIf), prerun only when they differ from what the action asks
+// now: params the states leave alone are the ones it already runs on — or is
+// meant not to, and a prerun would retry a FAILED one behind the screen's back.
+// An action whose route does not match asks nothing: whatever its params read,
+// the arrival runs it on them.
+const prefetchAsIf = (action, readParams, readParamsAsked, values) => {
   const params = readStateAsIf(values, readParams);
   if (!params) {
     return;
   }
-  if (compareTwoJsValues(params, untracked(readParams))) {
+  if (compareTwoJsValues(params, untracked(readParamsAsked))) {
     return;
   }
   prerunAhead(action.bindParams(params));

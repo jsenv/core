@@ -592,6 +592,26 @@ since the browser moves the row whatever the main thread is doing. So it renders
 with the page, and is worth keeping light. It is not the page: its route does not
 match yet, so it asks for nothing.
 
+**What a neighbour reads can be asked for ahead**, with `prefetch`. At rest, once
+the page on screen has its answers and has painted them, the box asks what the
+route actions of the next page will ask, then those of the previous one. The page
+is still built under the finger, but from answers already there: no wait shows.
+Off by default, since every page one stops on then costs the reads of two more.
+
+```jsx
+<RouteTravel routes={pages} renderNeighbour={renderNeighbour} prefetch>
+  <PlayerPage />
+</RouteTravel>
+```
+
+It is `route.preload(params)` for each of them: every route action of the route
+reads its params as if the address were `route.buildUrl(params)` (a weak state not
+given reads its default, any other one not given keeps what it holds), and the
+instance prerun is the one the arrival runs. A row driven by hand calls it the same
+way. Don't prerun the actions yourself: their params getters would then be written
+twice, and once one of them changes, the prefetch asks for an instance the arrival
+does not run.
+
 **The box has a height, or the document scrolls.** Pages may scroll themselves in a
 box the page gives a height to. If the document is what scrolls, it goes on doing
 so, and a page brought in stands where the reader is looking; what is lost is

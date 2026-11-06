@@ -250,7 +250,9 @@ A `RouteTravel` page not visited yet can only be built by the address moving, si
 a route's actions ask only while it matches. So the address moves once the hand has
 really pulled, 16px, and the page fills in under the finger. Before that its pane
 is empty and the box's background shows, unless `renderNeighbour` says what stands
-there. See
+there. What the page reads can be asked for before the hand arrives
+(`<RouteTravel prefetch>`, or `route.preload(params)`): it is still built under the
+finger, but from answers already there, so it shows no wait. See
 [navigation.md](./navigation.md#tabs-that-travel-routetravel).
 
 Both tell what follows them how far the row has come. `SlideContainer` writes

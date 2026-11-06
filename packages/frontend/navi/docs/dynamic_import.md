@@ -172,6 +172,7 @@ stays on the action, and a failed action is run again by whatever asks next — 
 arrival, which shows its own failure, and every later hover alike.
 
 From code: `route.preload()` for a route about to be navigated to,
+`route.preload(params)` to also ask the reads its params decide,
 `preloadUrl(url)` for an address. A press that computes its destination has
 nothing to preload — the navigation itself asks.
 

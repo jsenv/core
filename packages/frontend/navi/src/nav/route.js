@@ -159,17 +159,35 @@ export const route = (pattern, options = {}) => {
       return `route "${cleanPattern}"`;
     },
   };
-  // Asks ahead of the arrival for what this route's actions ask without the
-  // address — a page's code, a read without params (see routeAction). An
-  // action keyed by a param waits for the arrival: a prefetch has no address
-  // (preloadState is the one that has one).
-  route.preload = () => {
+  /**
+   * Asks ahead of the arrival for what this route's actions will ask: the
+   * instances the arrival promotes to runs (see prerunAhead in route_action.js).
+   *
+   * Without params, only what asks nothing of the address: the page's code, a
+   * read without params — what a link preloads, since it has no state to read
+   * the params of. Given params, `{}` included, the address `buildUrl(params)`
+   * leads to: every route action of this route reads its params as if the
+   * route matched there (see statesAt).
+   *
+   * @param {object} [params]
+   */
+  route.preload = (params) => {
     const preloadSet = routePreloadMap.get(route);
-    if (!preloadSet) {
+    if (preloadSet) {
+      for (const preload of preloadSet) {
+        preload();
+      }
+    }
+    if (params === undefined) {
       return;
     }
-    for (const preload of preloadSet) {
-      preload();
+    const statePreloadSet = routeStatePreloadMap.get(route);
+    if (!statePreloadSet) {
+      return;
+    }
+    const values = statesAt(route, params);
+    for (const preload of statePreloadSet) {
+      preload(values);
     }
   };
   Object.preventExtensions(route);
@@ -814,6 +832,42 @@ export const preloadState = (signal, value) => {
       preload(values);
     }
   }
+};
+// What the states of a route will hold once the address is `route.buildUrl(params)`,
+// as the routing pass will write them (see sync_routes_with_url): a param given is
+// what its state holds there; a weak one not given is back to its default, a url
+// built for another visit never carries it (readSignalForUrlBuild); any other one
+// is carried over by that url and keeps what it holds, so it is left out.
+const statesAt = (route, params) => {
+  const values = new Map();
+  for (const connection of getRoutePrivateProperties(route).routePattern
+    .connections) {
+    const { paramName, signal } = connection;
+    if (!signal) {
+      continue;
+    }
+    if (!(paramName in params)) {
+      if (connection.weak) {
+        values.set(signal, connection.getDefaultValue());
+      }
+      continue;
+    }
+    const value = params[paramName];
+    if (value !== undefined) {
+      values.set(signal, value);
+      continue;
+    }
+    // An address silent about a persisted search param leaves it alone.
+    if (
+      connection.persists &&
+      connection.paramType === "query" &&
+      connection.history !== "push"
+    ) {
+      continue;
+    }
+    values.set(signal, connection.getDefaultValue());
+  }
+  return values;
 };
 let activeCleanup = null;
 export const setupRoutes = (routes) => {

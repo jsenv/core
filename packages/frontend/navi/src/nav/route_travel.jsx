@@ -27,6 +27,10 @@
  *                      has really pulled, as above. Until then the pane of a
  *                      neighbour holds what `renderNeighbour` says, if anything.
  *
+ * Either way a page the hand brings is built under the finger. What it reads can be
+ * asked for before (`prefetch`); the page itself cannot be built before: its state
+ * reads the address, and a second one built ahead would read the page on screen.
+ *
  * What reads the URL may therefore read where the hand is heading. Where the reader
  * still is, is routeTravelSettledPageSignal (route_travel_hold.js), which a link
  * reads by itself.
@@ -59,6 +63,7 @@ import {
   RouteRowNeighbour,
 } from "./route.jsx";
 import { notePageChange } from "./page_change.js";
+import { whenPageReadsAnswered } from "./route_action.js";
 import { pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
 import {
@@ -72,6 +77,7 @@ import {
   restsOn,
   watchRowScroll,
 } from "../layout/native_row_scroll.js";
+import { afterPaint } from "../utils/after_paint.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 const css = /* css */ `
@@ -207,6 +213,7 @@ const ROW_READING = { sideways: true };
  *   travelByDrag?: boolean,
  *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
  *   renderNeighbour?: (page: {route: object, params: object|undefined}) => import("preact").ComponentChildren,
+ *   prefetch?: boolean,
  * }>}
  * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
  *   over something longer, in order. Read from the <Route> children by default,
@@ -230,6 +237,12 @@ const ROW_READING = { sideways: true };
  *   `{ route, params }`, or the entry of `routes` as it was given, and is a column
  *   the height of the row, as the page is. Its route does not match while it stands
  *   there: what it reads is not asked for.
+ * @param {boolean} [props.prefetch=false] - whether the pages on each side of the one
+ *   on screen have their reads asked for ahead of the hand: at rest, once the page on
+ *   screen has its answers and has painted them, the next page first, each with
+ *   `route.preload(params)`. A swipe then builds a page whose answers are already
+ *   there, with no wait to show. Off by default: every page one stops on costs the
+ *   reads of two more.
  *
  * Every other prop lands on the box itself (`id`, `data-testid`, `className`, …).
  * The box has to outlive every page of its row: around those <Route>s, or around
@@ -241,6 +254,7 @@ export const RouteTravel = ({
   onTravel = ({ route, params }) =>
     route.navTo(params, { replace: true, routeTransition: "none" }),
   renderNeighbour,
+  prefetch = false,
   className,
   children,
   ...rest
@@ -250,7 +264,8 @@ export const RouteTravel = ({
   const liveRef = useRef();
   const picturesRef = useRef();
   const windowed = Boolean(routesProp);
-  const [, render] = useReducer((count) => count + 1, 0);
+  // Counts the movements ended: endMovement renders through it.
+  const [restCount, render] = useReducer((count) => count + 1, 0);
 
   const pagesFromChildren = useMemo(
     () => collectRoutePages(children),
@@ -761,6 +776,49 @@ export const RouteTravel = ({
       Promise.resolve().then(endMovement);
     }
   }, [currentIndex]);
+
+  // What a hand can bring is asked for at rest, the next page first: never before
+  // the page on screen has its answers and has painted them. A row in movement is
+  // not at rest; the render that ends the movement asks again. Read as pages, not as
+  // entries: the pages of <Route> children are collected again at every render.
+  const neighboursRef = useRef([null, null]);
+  const nextPage = currentIndex === -1 ? null : pages[currentIndex + 1] || null;
+  const previousPage =
+    currentIndex === -1 ? null : pages[currentIndex - 1] || null;
+  if (
+    !samePage(neighboursRef.current[0], nextPage) ||
+    !samePage(neighboursRef.current[1], previousPage)
+  ) {
+    neighboursRef.current = [nextPage, previousPage];
+  }
+  const neighbours = neighboursRef.current;
+  useLayoutEffect(() => {
+    if (!prefetch || movementRef.current) {
+      return undefined;
+    }
+    if (!neighbours[0] && !neighbours[1]) {
+      return undefined;
+    }
+    let cancelPaint = null;
+    const cancelWait = whenPageReadsAnswered(() => {
+      cancelPaint = afterPaint(() => {
+        if (movementRef.current) {
+          return;
+        }
+        for (const page of neighbours) {
+          if (page) {
+            page.route.preload(page.params || {});
+          }
+        }
+      });
+    });
+    return () => {
+      cancelWait();
+      if (cancelPaint) {
+        cancelPaint();
+      }
+    };
+  }, [prefetch, neighbours, restCount]);
 
   // A neighbour shows from the first frame the compositor moves the row, before
   // any scroll event: a finger landing is the last word before that.
