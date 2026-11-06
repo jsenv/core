@@ -1433,9 +1433,10 @@ export const createAction = (callback, rootOptions = {}) => {
             }
           }
           runningStateSignal.value = RUNNING;
-          if (!isPrerun) {
-            isPrerunSignal.value = false;
-          }
+          // What fills the instance says what it holds: an answer only a
+          // prerun asked for is one nothing on screen has read yet, and the
+          // run that asks for it next is promoted onto it (see updateActions).
+          isPrerunSignal.value = isPrerun;
         });
 
         const args = [];

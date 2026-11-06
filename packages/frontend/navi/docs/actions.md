@@ -277,8 +277,9 @@ at best, a gesture late in a popup. It is for a parameter chosen inside the
 component and dying with it. Outside a component,
 `actionRunEffect(action, () => …)` is that same run declared once — it runs on
 the first truthy params, reruns when they change (unless the action declared
-`keep` and still holds the answer for the new ones), aborts when they go
-false — and the machinery `routeAction` is built on.
+`keep` and still holds the answer for the new ones, or only a prerun asked for
+them: that answer was read ahead for this arrival and is taken as it is), aborts
+when they go false — and the machinery `routeAction` is built on.
 
 **Which of the two it is, is decided by the parameter, not by what draws it.**
 If the parameter is in the address — a path param, a search param bound to a
@@ -311,6 +312,8 @@ It needs no `<Loading>`, and its failure reaches no boundary: nothing on screen
 asked for a prerun, so the owner's `{ run: true }` asks again, once, when it
 reads it. A failure of the owner's own run is shown, and asked again by a
 `rerun()`, never by a render. A head start still running is the owner's wait.
+A write that would ask a read again drops a head start instead: the owner
+finds it idle and asks for itself.
 
 `{ onLoad }` is what the screen does with the data **once, when it becomes
 known** — seed the fields someone is about to edit, focus something, remember

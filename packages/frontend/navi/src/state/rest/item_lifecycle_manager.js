@@ -585,6 +585,16 @@ export const createResourceLifecycleManager = () => {
       }
     }
 
+    // A head start the write made stale is dropped, not asked again: nothing
+    // on screen reads it, and its owner, finding it idle, asks on arriving
+    // instead of promoting what left before the write.
+    for (const action of actionsToRerun) {
+      if (action.isPrerunSignal.peek()) {
+        actionsToRerun.delete(action);
+        actionsToReset.add(action);
+      }
+    }
+
     return {
       actionsToRerun,
       actionsToReset,
@@ -672,9 +682,8 @@ export const createResourceLifecycleManager = () => {
 // A read to ask again after a write: answered before it landed, or still out —
 // an answer that left before the write is as stale as a completed one, and
 // would replace what the write put in the store (a rerun aborts it and asks
-// again). A head start is its owner's to ask.
+// again). A head start is its owner's to ask (findEffectOnActions resets it).
 const isAnsweredOrAsking = (action, triggeringAction) =>
-  !action.isPrerun &&
   (action.completed || action.runningState === RUNNING) &&
   action !== triggeringAction;
 // A write named in `writes` says for itself which reads of its own resource it

@@ -110,10 +110,16 @@ export const actionRunEffect = (
           runUnwatched(() =>
             actionTarget.run({ reason: "params restored from falsy state" }),
           );
-        } else if (getActionPrivateProperties(actionTarget).keepsAnswers) {
+        } else if (
+          getActionPrivateProperties(actionTarget).keepsAnswers ||
+          actionTarget.isPrerunSignal.peek()
+        ) {
           // The lookup that moved the binding here already reset an answer
           // older than its `keep`: what the instance holds is still good, and
-          // a prerun still out is joined rather than asked again.
+          // a prerun still out is joined rather than asked again. So is an
+          // answer only a prerun asked for, kept or not: asked ahead for this
+          // very arrival (a <RouteTravel prefetch> neighbour), nothing has read
+          // it yet, and the run promotes it.
           runUnwatched(() => actionTarget.run({ reason: "params modified" }));
         } else {
           runUnwatched(() => actionTarget.rerun({ reason: "params modified" }));
