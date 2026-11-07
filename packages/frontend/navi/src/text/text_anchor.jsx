@@ -23,6 +23,7 @@
 //
 // `topOffset = desiredChildTopY - childNaturalTop` is applied as `position:relative; top:`.
 
+import { signal } from "@preact/signals";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { scheduleLayoutRead } from "../utils/layout_batch.js";
@@ -68,6 +69,7 @@ export const TextAnchor = ({
   lineLayout,
 }) => {
   import.meta.css = css;
+  const fontArrival = fontArrivalSignal.value;
 
   const anchorRef = useRef();
   // The correction reads the layout, with the other reads of the commit (see
@@ -151,6 +153,7 @@ export const TextAnchor = ({
       textSize,
       lineLayout?.size,
       lineLayout?.verticalAlign,
+      fontArrival,
     ],
   );
 
@@ -245,3 +248,20 @@ const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
 };
 
 const charTopCanvas = document.createElement("canvas");
+
+// Bumped each time the document finishes loading fonts. A correction measured
+// while a web font is still loading is made of the fallback face's line box,
+// baseline and capitals, and every one of them moves when the font arrives.
+// One listener for every anchor, held while one is mounted: the anchors re-render
+// together and their reads join the same layout round.
+const onFontsLoaded = () => {
+  fontArrivalSignal.value++;
+};
+const fontArrivalSignal = /*#__PURE__*/ signal(0, {
+  watched: () => {
+    document.fonts.addEventListener("loadingdone", onFontsLoaded);
+  },
+  unwatched: () => {
+    document.fonts.removeEventListener("loadingdone", onFontsLoaded);
+  },
+});
