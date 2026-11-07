@@ -9,7 +9,7 @@ import.meta.css =           [`body {
   background-color: #00f;
   background-image: url(/other/jsenv.png);
 }
-`, "@jsenv/core/tests/dev_and_build/import_meta_css_static/client/main.js"];
+`, "import_meta_css_static/main.js"];
 
 
 
@@ -17,7 +17,7 @@ export const setBodyColor = (color) => {
   import.meta.css =           [`body {
   color: ${color};
 }
-`, "@jsenv/core/tests/dev_and_build/import_meta_css_static/client/main.js"];
+`, "import_meta_css_static/main.js"];
 };
 
 
@@ -28,5 +28,5 @@ export const setSelectorColor = (selector) => {
     ${selector} {
       color: red;
     }
-  `, "@jsenv/core/tests/dev_and_build/import_meta_css_static/client/main.js"];
+  `, "import_meta_css_static/main.js"];
 };

@@ -8,6 +8,6 @@ const css =           `.constant {
   color: red;
 }
 `;
-import.meta.css = [css, "@jsenv/core/tests/dev_and_build/import_meta_css_static/client/constant.js"];
+import.meta.css = [css, "import_meta_css_static/constant.js"];
 
 export const constantCss = css;

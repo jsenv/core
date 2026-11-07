@@ -26,9 +26,9 @@ write "jsenv-css-opaque" in a css comment inside that template
 </details>
 
 
-# 2/3 write 6 files into "../../../"
+# 2/3 write 5 files into "./build/"
 
-see [./@jsenv/core/](./@jsenv/core/)
+see [./build/](./build/)
 
 # 3/3 resolve
 
