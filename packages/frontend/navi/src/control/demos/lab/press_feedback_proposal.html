@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>PROPAL: appui sur la barre du bas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        color: #111827;
+        font-family: "PT Sans", sans-serif;
+        background: #fff;
+      }
+      .page {
+        box-sizing: border-box;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 16px 16px calc(64px + env(safe-area-inset-bottom, 0px) + 24px);
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 1.15rem;
+      }
+      fieldset {
+        display: flex;
+        margin: 0 0 14px;
+        padding: 0;
+        border: none;
+        gap: 6px;
+      }
+      legend {
+        margin: 0 0 6px;
+        padding: 0;
+        color: #4b5563;
+        font-size: 0.9rem;
+      }
+      .options {
+        flex-direction: column;
+      }
+      .option {
+        display: flex;
+        align-items: flex-start;
+        padding: 8px 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        gap: 10px;
+      }
+      .option:has(input:checked) {
+        background: #eff6ff;
+        border-color: #2563eb;
+      }
+      .option input {
+        margin: 3px 0 0;
+      }
+      .option_label {
+        display: block;
+        font-weight: bold;
+      }
+      .option_caption {
+        display: block;
+        color: #4b5563;
+        font-size: 0.9rem;
+      }
+      .load {
+        flex-wrap: wrap;
+      }
+      .load label {
+        padding: 6px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+      }
+      .load label:has(input:checked) {
+        background: #eff6ff;
+        border-color: #2563eb;
+      }
+      .load input {
+        position: absolute;
+        opacity: 0;
+      }
+      .last_tap {
+        min-height: 1.4em;
+        margin: 0;
+        color: #4b5563;
+        font-variant-numeric: tabular-nums;
+      }
+      .page_title {
+        margin: 20px 0 12px;
+        font-size: 1.6rem;
+      }
+      .card {
+        height: 72px;
+        margin: 0 0 10px;
+        background: #f3f4f6;
+        border-radius: 12px;
+      }
+
+      /* 2v2's bottom_nav.jsx: the four other entries greyed, the current one
+         bold. */
+      .app_nav_item:not([data-href-current]) {
+        --button-color: #6b7280;
+      }
+      .app_nav_item[data-href-current] .app_nav_label {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { Button, FixedBar, Icon, Nav, Text } from "@jsenv/navi";
+
+      // Every option but the first draws the press itself, on the entry's
+      // content, with the Web Animations API: navi's own shrink is turned off
+      // for them (pressEffect="none"). The way back up is decided at release,
+      // delay included, so it plays on the compositor even when the page being
+      // built holds the main thread.
+      const PRESSED = "scale(0.9)";
+      const EASE_OUT = "cubic-bezier(0.2, 0, 0, 1)";
+      const backUp = (duration) => ({
+        duration,
+        keyframes: [
+          { transform: PRESSED, easing: EASE_OUT },
+          { transform: "none" },
+        ],
+      });
+      const bounceUp = (duration) => ({
+        duration,
+        keyframes: [
+          { transform: PRESSED, easing: "cubic-bezier(0.3, 0, 0.3, 1)" },
+          {
+            transform: "scale(1.08)",
+            offset: 0.45,
+            easing: "cubic-bezier(0.4, 0, 0.3, 1)",
+          },
+          { transform: "none" },
+        ],
+      });
+      const VARIANTS = [
+        {
+          id: "navi",
+          label: "navi aujourd'hui",
+          caption:
+            "le vrai navi : descend en 100 ms, tenu 140 ms au moins, remonte en 250 ms",
+        },
+        {
+          id: "hold",
+          label: "Tenu plus longtemps",
+          caption: "0,9 dès l'appui, tenu 150 ms au moins, remonte en 200 ms",
+          down: { duration: 0 },
+          downAtLeast: 150,
+          up: backUp(200),
+        },
+        {
+          id: "round_trip",
+          label: "Aller-retour entier",
+          caption:
+            "descend en 100 ms, reste 40 ms, remonte en 250 ms, même sous un appui éclair",
+          down: { duration: 100, easing: EASE_OUT },
+          downAtLeast: 140,
+          up: backUp(250),
+        },
+        {
+          id: "bounce",
+          label: "Rebond",
+          caption:
+            "l'aller-retour, qui remonte au-delà (1,08) avant de se poser",
+          down: { duration: 100, easing: EASE_OUT },
+          downAtLeast: 140,
+          up: bounceUp(420),
+        },
+        {
+          id: "bounce_on_arrival",
+          label: "Rebond à l'arrivée",
+          caption:
+            "rebond sur l'entrée qu'on rejoint, aller-retour simple sur celle où l'on est déjà",
+          down: { duration: 100, easing: EASE_OUT },
+          downAtLeast: 140,
+          up: backUp(250),
+          upOnArrival: bounceUp(420),
+        },
+      ];
+      const getVariant = (id) => {
+        for (const variant of VARIANTS) {
+          if (variant.id === id) {
+            return variant;
+          }
+        }
+        return VARIANTS[0];
+      };
+      const LOADS = [0, 150, 400];
+
+      const readStored = (key, fallback) => {
+        try {
+          const value = localStorage.getItem(key);
+          return value === null ? fallback : value;
+        } catch {
+          return fallback;
+        }
+      };
+      const store = (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch {
+          // a private window: the choice lasts until reload
+        }
+      };
+
+      const variantIdSignal = signal(
+        getVariant(readStored("press_board_variant", "navi")).id,
+      );
+      const loadSignal = signal(Number(readStored("press_board_load", "0")));
+      const currentSignal = signal("my_games");
+      const lastTapSignal = signal(null);
+
+      const select = (id) => {
+        if (currentSignal.peek() === id) {
+          return;
+        }
+        currentSignal.value = id;
+        // The page the entry opens, being built in the same task as the click.
+        const load = loadSignal.peek();
+        if (load) {
+          const end = performance.now() + load;
+          while (performance.now() < end) {
+            // busy
+          }
+        }
+      };
+
+      // content element → the press drawing it
+      const pressWeakMap = new WeakMap();
+      const pressContent = (content, variant, { arriving }) => {
+        const pressBefore = pressWeakMap.get(content);
+        if (pressBefore) {
+          pressBefore.stopListening();
+        }
+        const from = getComputedStyle(content).transform;
+        for (const animation of content.getAnimations()) {
+          animation.cancel();
+        }
+        content.animate(
+          [
+            { transform: from, easing: variant.down.easing || "linear" },
+            { transform: PRESSED },
+          ],
+          { duration: variant.down.duration, fill: "forwards" },
+        );
+        let shownAt = null;
+        let released = false;
+        requestAnimationFrame(() => {
+          shownAt = performance.now();
+          if (released) {
+            goUp();
+          }
+        });
+        const goUp = () => {
+          let downFor = variant.downAtLeast;
+          if (variant.down.duration > downFor) {
+            downFor = variant.down.duration;
+          }
+          const remaining = shownAt + downFor - performance.now();
+          const up =
+            arriving && variant.upOnArrival ? variant.upOnArrival : variant.up;
+          const upAnimation = content.animate(up.keyframes, {
+            duration: up.duration,
+            delay: remaining > 0 ? remaining : 0,
+            fill: "forwards",
+          });
+          upAnimation.onfinish = () => {
+            if (pressWeakMap.get(content) !== press) {
+              return;
+            }
+            for (const animation of content.getAnimations()) {
+              animation.cancel();
+            }
+          };
+        };
+        const stopListening = () => {
+          document.removeEventListener("pointerup", onRelease, true);
+          document.removeEventListener("pointercancel", onCancel, true);
+        };
+        const onRelease = () => {
+          stopListening();
+          released = true;
+          if (shownAt !== null) {
+            goUp();
+          }
+        };
+        const onCancel = () => {
+          stopListening();
+          const at = getComputedStyle(content).transform;
+          for (const animation of content.getAnimations()) {
+            animation.cancel();
+          }
+          content.animate(
+            [{ transform: at, easing: EASE_OUT }, { transform: "none" }],
+            { duration: 150 },
+          );
+        };
+        const press = { stopListening };
+        pressWeakMap.set(content, press);
+        document.addEventListener("pointerup", onRelease, true);
+        document.addEventListener("pointercancel", onCancel, true);
+      };
+
+      let tapDownAt = null;
+      document.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (e.button !== 0) {
+            return;
+          }
+          const button = e.target.closest(".app_nav_item");
+          if (!button) {
+            return;
+          }
+          tapDownAt = e.timeStamp;
+          const variant = getVariant(variantIdSignal.peek());
+          if (!variant.down) {
+            return;
+          }
+          pressContent(
+            button.querySelector(".app_nav_item_content"),
+            variant,
+            { arriving: !button.hasAttribute("data-href-current") },
+          );
+        },
+        true,
+      );
+      document.addEventListener(
+        "pointerup",
+        (e) => {
+          if (tapDownAt === null) {
+            return;
+          }
+          lastTapSignal.value = Math.round(e.timeStamp - tapDownAt);
+          tapDownAt = null;
+        },
+        true,
+      );
+      document.addEventListener(
+        "pointercancel",
+        () => {
+          tapDownAt = null;
+        },
+        true,
+      );
+
+      const Options = () => (
+        <fieldset className="options">
+          <legend>Option</legend>
+          {VARIANTS.map((variant) => (
+            <label key={variant.id} className="option">
+              <input
+                type="radio"
+                name="variant"
+                checked={variantIdSignal.value === variant.id}
+                onChange={() => {
+                  variantIdSignal.value = variant.id;
+                  store("press_board_variant", variant.id);
+                }}
+              />
+              <span>
+                <span className="option_label">{variant.label}</span>
+                <span className="option_caption">{variant.caption}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      );
+
+      const Load = () => (
+        <fieldset className="load">
+          <legend>Page à construire après l'appui</legend>
+          {LOADS.map((load) => (
+            <label key={load}>
+              <input
+                type="radio"
+                name="load"
+                checked={loadSignal.value === load}
+                onChange={() => {
+                  loadSignal.value = load;
+                  store("press_board_load", String(load));
+                }}
+              />
+              {load ? `${load} ms` : "rien"}
+            </label>
+          ))}
+        </fieldset>
+      );
+
+      const LastTap = () => (
+        <p className="last_tap">
+          {lastTapSignal.value === null
+            ? ""
+            : `Dernier appui : ${lastTapSignal.value} ms`}
+        </p>
+      );
+
+      const ENTRIES = [
+        { id: "tournaments", label: "Tournois", cards: 3 },
+        { id: "parties", label: "Parties", cards: 5 },
+        { id: "players", label: "Carnet", cards: 4 },
+        { id: "my_games", label: "Planning", cards: 6 },
+        { id: "profile", label: "Moi", cards: 2 },
+      ];
+
+      const PageBody = () => {
+        const entry = ENTRIES.find(({ id }) => id === currentSignal.value);
+        return (
+          <>
+            <h2 className="page_title">{entry.label}</h2>
+            {Array.from({ length: entry.cards }, (_, index) => (
+              <div key={index} className="card" />
+            ))}
+          </>
+        );
+      };
+
+      const NavItem = ({ id, label, children }) => {
+        const variant = getVariant(variantIdSignal.value);
+        return (
+          <Button
+            className="app_nav_item"
+            variant="discrete"
+            pressEffect={variant.down ? "none" : undefined}
+            pseudoState={{
+              ":-navi-href-current": currentSignal.value === id,
+            }}
+            expand={1}
+            flex
+            alignX="center"
+            alignY="center"
+            borderRadius="0"
+            paddingY="0"
+            onClick={() => select(id)}
+          >
+            <Text
+              className="app_nav_item_content"
+              flex="y"
+              align="center"
+              spacing="xxs"
+            >
+              <Icon size="l">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  {children}
+                </svg>
+              </Icon>
+              <Text className="app_nav_label" size="s" lineHeight="1.2">
+                {label}
+              </Text>
+            </Text>
+          </Button>
+        );
+      };
+
+      const NAV_SHADOW =
+        "0 -1px 4px rgba(12, 23, 44, 0.2), 0 -3px 16px rgba(12, 23, 44, 0.18)";
+
+      const BottomBar = () => (
+        <FixedBar
+          area="bottom"
+          height="64px"
+          maxWidth="600px"
+          background="#fff"
+          border={false}
+          shadow={NAV_SHADOW}
+          padding="0"
+        >
+          <Nav
+            aria-label="Navigation principale"
+            expand
+            alignY="center"
+            spacing="0"
+          >
+            <NavItem id="tournaments" label="Tournois">
+              <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
+            </NavItem>
+            <NavItem id="parties" label="Parties">
+              <g transform="translate(12 12) rotate(45) scale(0.94) translate(-12 -12)">
+                <path
+                  fillRule="evenodd"
+                  d="M12 2c4.14 0 7.5 3.36 7.5 7.5 0 3.63-2.58 6.66-6 7.35V19h1a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1v-2.15c-3.42-.69-6-3.72-6-7.35C4.5 5.36 7.86 2 12 2zm-2.5 4.75a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-5 4.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM12 8.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"
+                />
+              </g>
+            </NavItem>
+            <NavItem id="players" label="Carnet">
+              <path
+                fillRule="evenodd"
+                d="M7 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3.25 4.5a.75.75 0 0 0-.75.75v1.5c0 .41.34.75.75.75h5.5c.41 0 .75-.34.75-.75v-1.5a.75.75 0 0 0-.75-.75z"
+              />
+              <path d="M5 6.25H3.75a.75.75 0 0 0 0 1.5H5zm0 5H3.75a.75.75 0 0 0 0 1.5H5zm0 5H3.75a.75.75 0 0 0 0 1.5H5z" />
+            </NavItem>
+            <NavItem id="my_games" label="Planning">
+              <path d="M7 1.75a1 1 0 0 1 1 1V4h8V2.75a1 1 0 1 1 2 0V4h1a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V2.75a1 1 0 0 1 1-1zM6.75 10a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5zm3.75 0a.75.75 0 0 0 0 1.5h6.75a.75.75 0 0 0 0-1.5zm-3.75 3.5a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5zm3.75 0a.75.75 0 0 0 0 1.5h6.75a.75.75 0 0 0 0-1.5zm-3.75 3.5a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5zm3.75 0a.75.75 0 0 0 0 1.5h4.25a.75.75 0 0 0 0-1.5z" />
+            </NavItem>
+            <NavItem id="profile" label="Moi">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </NavItem>
+          </Nav>
+        </FixedBar>
+      );
+
+      const App = () => (
+        <>
+          <div className="page">
+            <h1>Appui sur la barre du bas</h1>
+            <Options />
+            <Load />
+            <LastTap />
+            <PageBody />
+          </div>
+          <BottomBar />
+        </>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

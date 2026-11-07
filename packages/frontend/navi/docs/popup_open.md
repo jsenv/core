@@ -266,8 +266,8 @@ So a dialog whose content is seeded once — an uncontrolled field on a
 very first render, instead of mounting on the previous subject and being
 corrected (a flicker at best, stale fields at worst). Only
 `mount="while-opened"` makes it true every time: content kept from an earlier
-opening, or warmed by a hover, is already built when `onOpen` runs (see
-[what the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)).
+opening, or warmed by a press or a hover, is already built when `onOpen` runs
+(see [what the popup holds while it is closed](#what-the-popup-holds-while-it-is-closed)).
 A `Picker`'s `onOpen` is not this moment: it runs once its popup is built and
 shown.
 
@@ -1069,14 +1069,15 @@ the gesture that opens the popup; `useAsyncData` reads it (see
 and aborts of a screen left ([network_policy.md](./network_policy.md)) apply; a
 reload keeps the open state, so it keeps the request too.
 
-**The request leaves at the press, the content is built at the hover.** A press
+**The request leaves at the press, the content is built during it.** A press
 on what opens the popup — a `--navi-open` or `--navi-toggle` button — preruns
 the route actions its opening changes, read as if the popup were already open:
 the request leaves at the pointerdown, not when the open state is written. The
-content may be built earlier: a `Picker`, or a popup given an `anchor`, builds
-it when the pointer rests there (see `mount`, below). On a computer the rows
-therefore arrive a press later than the content they fill. That is the price of
-a read keyed by the popup — one sheet per card, one request per card: a pointer
+content is built later in that press, its reads finding their request in
+flight, or earlier: a `Picker`, or a popup given an `anchor`, builds it when the
+pointer rests there (see `mount`, below). On a computer the rows therefore
+arrive a press later than the content they fill. That is the price of a read
+keyed by the popup — one sheet per card, one request per card: a pointer
 crossing a list of cards has chosen none of them, and a hover that asked would
 ask for each card it crossed.
 
@@ -1100,10 +1101,11 @@ A `Dialog` or a `Popover` nobody has asked for yet is not even built — nor a
 `Popup` or a `SidePanel`, which render one of the two. It stands in as one bare
 element (a `<dialog>`, a `<div>`) — the id a command finds, the element a press
 announces itself on — and the popup proper is built at the first request: an
-open, a press on what opens it, its `signal` or `open` saying open. From then on
-it stays built. So a list whose rows each hold a few popups (a sheet per seat, a
-share sheet per card) pays one element per closed popup at every mount, not a
-popup: a row may carry the popups of its own actions. It is built at once when
+open, a press on what opens it (its content with it), its `signal` or `open`
+saying open. From then on it stays built. So a list whose rows each hold a few
+popups (a sheet per seat, a share sheet per card) pays one element per closed
+popup at every mount, not a popup: a row may carry the popups of its own
+actions. It is built at once when
 something needs it from the start — open at mount, a `navState`, an `anchor` (a
 hover builds the content ahead of the click), or a `mount` other than the
 default. A `Picker`'s popup is the picker's own, built with it: it is anchored
@@ -1128,24 +1130,32 @@ yet, and hands them once they are
 ([control_object.md](./control_object.md#a-control-that-is-not-there)).
 `"idle"` is `"always"` minus the cost on the render that draws the page.
 
-Whatever the value but `"while-opened"`, intent on what opens the popup builds
-the content ahead of the click, `onOpen` or not: a pointer over its anchor, or
-focus landing in it. The anchor only says where the popup is placed, so what
-counts is the control that intent is aimed at: the anchor itself when it is a
-control, or the one the popup is written in (a picker's trigger). Any other
-control inside the anchor keeps the intent for itself. A player's own picker,
-inside a card that another picker opens from, warms the player's callout and
-never the card's sheet; tiles anchored on the whole bar they sit in warm only
-the menu of the tile under the pointer. A pointer on a trigger that a press does
-not open — a picker with `openOn={[]}`, or one opened by a hold — warms nothing:
-the card it draws is pressed all day for what it holds. Focus on it still warms,
-since the keyboard opens it.
+Whatever the value, a press on what opens the popup (a `--navi-open` or
+`--navi-toggle` button, a picker's trigger when a press opens it, an
+expandable's UI part) builds the content ahead of the click: two frames after
+the pointerdown, or under a finger once the touch has been held 40ms without
+the browser taking it for a scroll. A tap released sooner builds at the open.
+A press that ends without opening keeps what it built, and the next one finds
+it there (`"while-opened"` is the exception, below). A popup with no anchor — a
+sheet, a side panel opened by a button — is warmed by nothing else.
 
-A `"while-opened"` popup is warmed only by a press on what opens it (a
-`--navi-open` button, a picker's trigger when a press opens it, an expandable's
-UI part), throws that content away when the press ends without opening it — one
-content at a time — and is never warmed on a `Dialog`/`Popover` with an
-`onOpen`: the one value where the content is always built after `onOpen`.
+Whatever the value but `"while-opened"`, intent on the anchor warms the content
+too: a pointer over it, or focus landing in it. The press, the pointer and the
+focus all warm it `onOpen` or not. The anchor only says where the popup is
+placed, so what counts is the control that intent is aimed at: the anchor
+itself when it is a control, or the one the popup is written in (a picker's
+trigger). Any other control inside the anchor keeps the intent for itself. A
+player's own picker, inside a card that another picker opens from, warms the
+player's callout and never the card's sheet; tiles anchored on the whole bar
+they sit in warm only the menu of the tile under the pointer. A pointer on a
+trigger that a press does not open — a picker with `openOn={[]}`, or one opened
+by a hold — warms nothing: the card it draws is pressed all day for what it
+holds. Focus on it still warms, since the keyboard opens it.
+
+A `"while-opened"` popup is warmed only by that press, throws that content away
+when the press ends without opening it — one content at a time — and is never
+warmed on a `Dialog`/`Popover` with an `onOpen`: the one value where the content
+is always built after `onOpen`.
 
 `"while-opened"` is for content whose fresh state is its initial state. An
 untouched field does not need it to show a new `defaultValue`: it follows one

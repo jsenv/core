@@ -389,8 +389,8 @@ const css = /* css */ `
       outline-color: var(--button-outline-color);
       outline-offset: var(--button-outline-offset);
       transition-property: transform;
-      transition-duration: 0.15s;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      transition-duration: 0.25s;
+      transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 
       .navi_button_shadow {
         position: absolute;
@@ -434,11 +434,12 @@ const css = /* css */ `
     &[data-pressed] {
       .navi_button_content {
         transform: scale(0.9);
-        /* A transition runs with the duration of the state it goes to: the
-           press lands on the next frame, only the release eases back. Eased in
-           as well, a tap released within 50ms would end before the shrink
-           had visibly started. */
-        transition-duration: 0s;
+        /* A transition runs with the duration of the state it goes to: 100ms
+           down, 250ms back up. The press is drawn 140ms at least
+           (PRESS_SHOWN_AT_LEAST in pseudo_styles.js), so the shrink lands and
+           rests 40ms before going back: a quick tap plays the whole way down
+           and up, never a shrink cut short. */
+        transition-duration: 0.1s;
       }
     }
     &[data-pressed] {

@@ -189,12 +189,18 @@ export const setupBrowserIntegrationViaHistory = ({
       url !== readAddress()
     ) {
       const delta = adjacentEntryDelta(url);
-      if (delta === -1) {
-        window.history.back();
-        return undefined;
-      }
-      if (delta === 1) {
-        window.history.forward();
+      if (delta !== 0) {
+        // The press is still the press: what it asks of a route transition is
+        // about this crossing, and the traversal is announced with it.
+        elidedPressPending = {
+          element: options.element,
+          routeTransition: options.routeTransition,
+        };
+        if (delta === -1) {
+          window.history.back();
+        } else {
+          window.history.forward();
+        }
         return undefined;
       }
     }
@@ -582,6 +588,8 @@ export const setupBrowserIntegrationViaHistory = ({
     const state = popstateEvent.state;
     const landOn = landOnPending;
     landOnPending = null;
+    const elidedPress = elidedPressPending;
+    elidedPressPending = null;
     if (landOn) {
       handleRoutingTask(landOn.url, {
         reason: `"popstate" event for ${url}, landing on ${landOn.url}`,
@@ -595,6 +603,7 @@ export const setupBrowserIntegrationViaHistory = ({
       reason: `"popstate" event for ${url}`,
       navigationType: "traverse",
       state,
+      ...elidedPress,
     });
   });
 
@@ -662,6 +671,10 @@ export const setupBrowserIntegrationViaHistory = ({
   // asked for it (see navBack's `landOn`). Read by the popstate listener,
   // which is the one place the landing is applied.
   let landOnPending = null;
+  // The press a push to the entry next door was made by, when it was taken as
+  // a traversal (see handleRoutingTask): announced with the "popstate" that
+  // answers it, which has no press of its own.
+  let elidedPressPending = null;
   // The back navBack asked for, from history.back() to the "popstate" that
   // answers it. Meanwhile the document still reads the entry being left (see
   // whenBackLanded).

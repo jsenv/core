@@ -1,4 +1,4 @@
-import { computed, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
@@ -25,7 +25,9 @@ export const arraySignalStore = (
     name,
   };
 
-  const createItemFromProps = (props) => {
+  // `answer`: the props come from an answer, see upsertAnswer. createItem
+  // hands it to the relations, which write the children inside the props.
+  const createItemFromProps = (props, answer) => {
     if (props === null || typeof props !== "object") {
       return props;
     }
@@ -37,7 +39,7 @@ export const arraySignalStore = (
         `${name || "store"}: an item arrived without "${idKey}" (it has ${Object.keys(props).join(", ")}) — declare its key with idKey, or give a single item an id of its own ({ id: "me", … })`,
       );
     }
-    const item = createItem(props);
+    const item = createItem(props, answer);
     return item;
   };
 
@@ -263,7 +265,12 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   const valueChangedByWrite = (newValue, oldValue) => newValue !== oldValue;
   const valueChangedByAnswer = (newValue, oldValue) =>
     newValue !== oldValue && !compareTwoJsValues(newValue, oldValue);
-  const upsertWith = (args, valueChanged) => {
+  // One write, however many stores its relations reach: an effect reading the
+  // rows (a render, the page kept for the next document) runs once the whole
+  // write is in, rather than once per child written, half of it still to come.
+  const upsertWith = (args, answer) => batch(() => upsertWithNow(args, answer));
+  const upsertWithNow = (args, answer) => {
+    const valueChanged = answer ? valueChangedByAnswer : valueChangedByWrite;
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
       for (const itemPropertiesObserver of itemPropertiesObserverSet) {
@@ -332,11 +339,12 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
             // A relation (.one(), .many() and their scoped forms in
             // resource_graph.js): the row holds which children it points to,
             // the children live in their own store, and whoever reads them
-            // follows them there. Its setter writes them and says whether the
-            // row points elsewhere now. Compared as a value instead, the
-            // children received are never the object the row hands out, and
-            // every write naming the relation would replace the row.
-            if (set.call(itemWithProps, newValue)) {
+            // follows them there. Its setter writes them, compared as this
+            // write compares (`answer`), and says whether the row points
+            // elsewhere now. Compared as a value instead, the children
+            // received are never the object the row hands out, and every
+            // write naming the relation would replace the row.
+            if (set.call(itemWithProps, newValue, answer)) {
               hasChanges = true;
               propertyMutations[key] = {
                 oldValue,
@@ -384,7 +392,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       if (array.length === 0) {
         const arrayAllCreated = [];
         for (const props of propsArray) {
-          const item = createItemFromProps(props);
+          const item = createItemFromProps(props, answer);
           arrayAllCreated.push(item);
         }
         arraySignal.value = arrayAllCreated;
@@ -421,7 +429,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
           arrayWithOnlyAffectedItems.push(itemWithPropsOrItem);
         } else {
           hasNew = true;
-          const item = createItemFromProps(props);
+          const item = createItemFromProps(props, answer);
           arraySomeUpdated.push(item);
           arrayWithOnlyAffectedItems.push(item);
         }
@@ -493,23 +501,24 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       triggerPropertyMutations();
       return updatedItem;
     }
-    const item = createItemFromProps(props);
+    const item = createItemFromProps(props, answer);
     arraySomeUpdated.push(item);
     arraySignal.value = arraySomeUpdated;
     triggerPropertyMutations();
     return item;
   };
-  const upsert = (...args) => upsertWith(args, valueChangedByWrite);
+  const upsert = (...args) => upsertWith(args, false);
   /**
    * Writes what the server sent — a callback's answer, a pushed message (a
    * websocket's, a server-sent event's) — into the store. Takes what `upsert`
    * takes and returns the same: a row equal in depth to the one held stays
    * the one held, and its readers stay still, where `upsert` compares by
-   * reference and JSON makes every nested object a new one. A new row joins no
+   * reference and JSON makes every nested object a new one. The children its
+   * relations carry into their own stores are compared the same way. A new row joins no
    * `GET_MANY` and no `GET_RANGE` composition: read again what it belongs to
    * (docs/resource.md).
    */
-  const upsertAnswer = (...args) => upsertWith(args, valueChangedByAnswer);
+  const upsertAnswer = (...args) => upsertWith(args, true);
   const drop = (...args) => {
     const removedItemArray = [];
     const triggerRemovedMutations = () => {

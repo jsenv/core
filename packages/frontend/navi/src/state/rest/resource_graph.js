@@ -9,7 +9,10 @@ import {
   peekNetworkPolicy,
 } from "../../action/network_policy.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../../action/symbol_object_signal.js";
-import { SYMBOL_IDENTITY } from "../../utils/compare_two_js_values.js";
+import {
+  compareTwoJsValues,
+  SYMBOL_IDENTITY,
+} from "../../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../../utils/get_caller_info.js";
 import { warnUnknownOptions } from "../../utils/warn_unknown_options.js";
 import {
@@ -298,7 +301,7 @@ export const resource = (name, restCallbacks = {}) => {
   const store = arraySignalStore([], idKey, {
     uniqueKeys,
     name: `${name} store`,
-    createItem: (props) => {
+    createItem: (props, answer) => {
       const item = Object.create(itemPrototype);
       Object.assign(item, props);
       Object.defineProperty(item, SYMBOL_IDENTITY, {
@@ -308,7 +311,7 @@ export const resource = (name, restCallbacks = {}) => {
         configurable: false,
       });
       for (const setupCallback of setupCallbackSet) {
-        setupCallback(item);
+        setupCallback(item, answer);
       }
       return item;
     },
@@ -638,9 +641,9 @@ const createResource = (
     const childName = `${name}.${propertyName}`;
     const childIdKey = childResource.idKey;
     const childStore = childResource.store;
-    addItemSetup((item) => {
+    addItemSetup((item, answer) => {
       const childItemIdSignal = signal();
-      const updateChildItemId = (value) => {
+      const updateChildItemId = (value, answer) => {
         const currentChildItemId = childItemIdSignal.peek();
         let childItemProps;
         if (isProps(value)) {
@@ -654,7 +657,9 @@ const createResource = (
           childItemIdSignal.value = undefined;
           return true;
         }
-        const childItem = childStore.upsert(childItemProps);
+        const childItem = answer
+          ? childStore.upsertAnswer(childItemProps)
+          : childStore.upsert(childItemProps);
         const childItemId = childItem[childIdKey];
         if (currentChildItemId === childItemId) {
           return false;
@@ -662,7 +667,7 @@ const createResource = (
         childItemIdSignal.value = childItemId;
         return true;
       };
-      updateChildItemId(item[propertyName]);
+      updateChildItemId(item[propertyName], answer);
       const childItemSignal = computed(() =>
         childStore.select(childItemIdSignal.value),
       );
@@ -847,14 +852,14 @@ Return the child alone, and "${propertyName}" embedded in what the "${name}" cal
 ${name}.many("${propertyName}") source location: ${declarationSite}`,
       );
     };
-    addItemSetup((item) => {
+    addItemSetup((item, answer) => {
       const childItemIdArraySignal = signal([]);
       const updateChildItemIdArray = createChildIdArrayUpdater(
         childStore,
         childIdKey,
         childItemIdArraySignal,
       );
-      updateChildItemIdArray(item[propertyName]);
+      updateChildItemIdArray(item[propertyName], answer);
       const childItemArraySignal = computed(() => {
         const idArray = childItemIdArraySignal.value;
         const arr = childStore.selectAll(idArray);
@@ -1199,7 +1204,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     const childSetupCallbackSet = new Set();
     const childAddItemSetup = (callback) => childSetupCallbackSet.add(callback);
     const applyPropsMap = new Map(); // ownerId → applyProps(props | null)
-    addItemSetup((ownerItem) => {
+    addItemSetup((ownerItem, answer) => {
       const ownerId = ownerItem[idKey];
       // A stable child object, mutated in place: reactive getters/setters from
       // chained .one() etc. are defined on it once and survive prop updates.
@@ -1217,8 +1222,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       // relation, `owner[propertyName] = …` — whoever reads the child sees it.
       const childVersionSignal = signal(0);
       // Returns whether the child changed — what the store asks a relation
-      // (see assign in array_signal_store.js).
-      const applyProps = (props) => {
+      // (see assign in array_signal_store.js). `answer`: the props come from
+      // an answer, and a value equal in depth to the one held is no change
+      // (see upsertAnswer).
+      const applyProps = (props, answer) => {
         if (props === undefined) {
           return false;
         }
@@ -1235,13 +1242,20 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         for (const [key, value] of Object.entries(props)) {
           const descriptor = Object.getOwnPropertyDescriptor(childItem, key);
           if (descriptor && descriptor.set) {
-            if (descriptor.set.call(childItem, value)) {
+            if (descriptor.set.call(childItem, value, answer)) {
               changed = true;
             }
-          } else if (childItem[key] !== value) {
-            childItem[key] = value;
-            changed = true;
+            continue;
           }
+          const held = childItem[key];
+          if (held === value) {
+            continue;
+          }
+          if (answer && compareTwoJsValues(held, value)) {
+            continue;
+          }
+          childItem[key] = value;
+          changed = true;
         }
         if (childSignal.peek() !== childItem) {
           childSignal.value = childItem; // first activation
@@ -1259,7 +1273,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         applyPropsMap.set(ownerId, applyProps);
       }
 
-      applyProps(ownerItem[propertyName]);
+      applyProps(ownerItem[propertyName], answer);
 
       Object.defineProperty(ownerItem, propertyName, {
         get: () => {
@@ -1302,7 +1316,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           // brings its child.
           const applyProps = applyPropsMap.get(ownerId);
           if (applyProps) {
-            applyProps(props);
+            applyProps(props, true);
           }
           return [ownerId, props];
         },
@@ -1435,18 +1449,18 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     const createScope = (ownerKey) => {
       const childStore = arraySignalStore([], childIdKey, {
         name: `${childName}#${ownerKey} store`,
-        createItem: (props) => {
+        createItem: (props, answer) => {
           const childItem = {};
           Object.assign(childItem, props);
           for (const childSetup of childSetupCallbackSet) {
-            childSetup(childItem);
+            childSetup(childItem, answer);
           }
           return childItem;
         },
       });
       return { childStore, idArraySignal: signal([]) };
     };
-    addItemSetup((item) => {
+    addItemSetup((item, answer) => {
       const ownerId = item[idKey];
       let scope;
       if (ownerName) {
@@ -1493,7 +1507,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       // untouched — children may have been fetched by uniqueKey before the
       // parent was loaded. Only an explicit value replaces the collection.
       if (item[propertyName] !== undefined) {
-        updateChildItemIdArray(item[propertyName]);
+        updateChildItemIdArray(item[propertyName], answer);
       }
 
       // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
@@ -2117,7 +2131,8 @@ ${relationLabel} source location: ${declarationSite}`,
 // child ids, upserting each entry into the child store. The id array signal is
 // only touched when the resulting ids actually differ.
 // Returns whether the children the row points to changed — what the store asks
-// a relation (see assign in array_signal_store.js).
+// a relation (see assign in array_signal_store.js). `answer`: the children come
+// from an answer, and are written as one (see upsertAnswer).
 // `wholeChildren` (.scopedMany()): each child received is the whole child, see
 // toWholeScopedChild.
 const createChildIdArrayUpdater = (
@@ -2126,7 +2141,7 @@ const createChildIdArrayUpdater = (
   idArraySignal,
   { wholeChildren = false } = {},
 ) => {
-  return (valueArray) => {
+  return (valueArray, answer) => {
     const currentIdArray = idArraySignal.peek();
     if (!Array.isArray(valueArray)) {
       if (currentIdArray.length > 0) {
@@ -2148,7 +2163,9 @@ const createChildIdArrayUpdater = (
       } else {
         continue;
       }
-      const childItem = childStore.upsert(childItemProps);
+      const childItem = answer
+        ? childStore.upsertAnswer(childItemProps)
+        : childStore.upsert(childItemProps);
       const childItemId = childItem[childIdKey];
       if (currentIdArray[idArray.length] !== childItemId) {
         modified = true;

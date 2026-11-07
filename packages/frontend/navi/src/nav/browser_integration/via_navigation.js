@@ -607,7 +607,17 @@ export const setupBrowserIntegrationViaNavigation = ({
       const key = adjacentEntryKey(url);
       if (key !== null) {
         event.preventDefault();
-        navigation.traverseTo(key);
+        // The press is still the press: what it asks of a route transition is
+        // about this crossing, and the traversal's navigate event reads it
+        // from `info` like any re-asked navigation's.
+        navigation.traverseTo(key, {
+          info: {
+            element: pressElement,
+            routeTransition: event.info
+              ? event.info.routeTransition
+              : undefined,
+          },
+        });
         return;
       }
     }

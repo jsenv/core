@@ -48,15 +48,16 @@
  * follows a new `defaultValue` on its own (see followDefaultValue in
  * ui_state_controller.js) — and this is what throws that edit away.
  *
- * On top of whichever value is picked, intent on the anchor warms the content:
- * a pointer entering the popup's anchor, or focus landing in it, builds the
- * content ahead of the click that will open it. Deferring the build to the
- * opening puts its whole cost in the frame right after the click — the frame
- * where a delay is felt hardest — while the ~100-300ms between hovering a
- * trigger and pressing it are free. The warming render starts at the frame
- * after the one that follows the intent: nothing here needs the content in the
- * DOM before the click, only before the open that follows it, and a build
- * started at once would hold back the frame that shows the hover or the focus.
+ * On top of whichever value is picked, intent warms the content: a press on
+ * what opens the popup, and but for "while-opened" a pointer entering the
+ * popup's anchor or focus landing in it, builds the content ahead of the click
+ * that will open it. Deferring the build to the opening puts its whole cost in
+ * the frame right after the click — the frame where a delay is felt hardest —
+ * while the ~100-300ms between hovering a trigger and pressing it are free.
+ * The warming render starts at the frame after the one that follows the
+ * intent: nothing here needs the content in the DOM before the click, only
+ * before the open that follows it, and a build started at once would hold
+ * back the frame that shows the hover or the focus.
  *
  * Under a finger, `pointerover` is not an intent yet: it arrives with the
  * `pointerdown` of every touch, the ones starting a scroll included, and at
@@ -76,7 +77,12 @@
  * press does not open (`data-open-on`: a picker opened by a hold, or only by a
  * command) says nothing; the keyboard still opens it, so focus there warms.
  *
- * "while-opened" content is warmed by an opening press, never by a hover or a
+ * An opening press warms whatever the value. A popup with no anchor — a sheet,
+ * a side panel, a layer opened by a button — has nothing else saying it is
+ * about to open, and under a finger the ~100ms a tap is held are as free as a
+ * hover.
+ *
+ * "while-opened" content is warmed by that press only, never by a hover or a
  * focus. That mode promises content built fresh for the gesture that opens
  * it, and mounted only while that gesture and its opening last: callers lean
  * on it (several pickers sharing one set of content ids, because only one
@@ -93,15 +99,16 @@
  * The press builds the content when it starts, a touch once it has been held
  * as above: the announcement carries the pointerdown that made it. A press
  * released before its build leaves the building to the open its click asks
- * for. The press ending without an open throws the content away — its click
- * reaching the document with the popup still closed, no
+ * for. A press ending without an open keeps what it built, as a hover does:
+ * the next press finds it there. Under "while-opened" it throws the content
+ * away — its click reaching the document with the popup still closed, no
  * click coming after the release, the browser taking the gesture
  * (`pointercancel`), or the next press starting, before any of its own
  * handlers run: one press at a time holds a content. A keyboard opening builds
  * at open time. A "while-opened" popup with an `onOpen` is not warmed by the
  * press: that callback runs before the content is built (see
  * open_controller.js), and a content seeding itself from what it writes must
- * be built after it. Hover and focus warming, for the other values, builds
+ * be built after it. For the other values, a press, a hover and a focus build
  * ahead of `onOpen` all the same.
  */
 
@@ -143,11 +150,14 @@ const cancelIdle = (id) =>
     ? cancelIdleCallback(id)
     : clearTimeout(id);
 
-// How long a finger rests on an anchor before it warms it: past the ~35ms at
-// which the browser takes a touch moving at reading speed for a scroll, short
-// of the ~100ms a tap is held, so a deliberate tap is warmed before its
-// release.
-const TOUCH_WARM_HOLD_MS = 80;
+// How long a finger rests on an anchor or an opener before it warms it: just
+// past the ~35ms at which the browser takes a touch moving at reading speed
+// for a scroll. A tap is held ~100ms, and the hold ends at a frame, which a
+// phone's busy main thread runs late: at 80ms a 100ms tap on 2v2's settings
+// wheel (CPU 6x) lifted before that frame 5 times out of 7 and was warmed by
+// nothing. The price is a scroll that starts slowly enough to be taken past
+// 40ms: it builds what the open would have built.
+const TOUCH_WARM_HOLD_MS = 40;
 
 export const usePopupContentMount = (
   openController,
@@ -310,9 +320,9 @@ export const usePopupContentMount = (
       anchorElement.removeEventListener("focusin", onFocusIn);
     };
   }, [contentMounted, anchor, mount]);
-  // Warm on an opening press, for "while-opened" (see the top comment). Told
-  // by the popup's own element, which hears the announcement where it hears
-  // the opening request: `onnavi_open_press` beside each `onnavi_request_open`.
+  // Warm on an opening press (see the top comment). Told by the popup's own
+  // element, which hears the announcement where it hears the opening request:
+  // `onnavi_open_press` beside each `onnavi_request_open`.
   const stopPressWarmRef = useRef(null);
   openController.onOpeningPress =
     mount === "while-opened"
@@ -338,7 +348,21 @@ export const usePopupContentMount = (
             stopWatching();
           };
         }
-      : null;
+      : (openPressEvent) => {
+          // Two fingers on two of its openers are one build.
+          if (contentMountedRef.current || stopPressWarmRef.current) {
+            return;
+          }
+          stopPressWarmRef.current = requestBuildOnPress(openPressEvent, {
+            onBuild: () => {
+              stopPressWarmRef.current = null;
+              setContentMounted(true);
+            },
+            onGiveUp: () => {
+              stopPressWarmRef.current = null;
+            },
+          });
+        };
   useEffect(() => {
     return () => {
       stopPressWarmRef.current?.();

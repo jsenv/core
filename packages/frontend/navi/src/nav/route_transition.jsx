@@ -59,8 +59,8 @@
  *
  * A history traversal is none of these: it RETRACES a crossing. The entry a
  * push creates remembers the crossing that created it — what played, which
- * way, from where — and a back onto the page it came from plays that crossing
- * reversed, a forward onto it plays it again as it was (see
+ * way, from which entry — and a back onto the entry it came from plays that
+ * crossing reversed, a forward onto it plays it again as it was (see
  * readTraversalReplay). That outranks everything the registry DEDUCES — the
  * reverse of a pair, a page written from anywhere, the default — so the way
  * back does not depend on how the table orders the two pages, and what a
@@ -185,7 +185,8 @@ const TRANSITION_COVERED_ATTRIBUTE = "data-navi-route-transition-covered";
 const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
 const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 // What a history entry remembers of the crossing that created it, in the
-// entry's own state: `{ from, type, direction, duration }` (see recordCrossing).
+// entry's own state: `{ fromDepth, type, direction, duration }` (see
+// recordCrossing).
 const CROSSING_STATE_KEY = "jsenv_route_transition";
 const AREA_NAME = "navi-route-transition";
 // The pictures carrying the movement, among everything else it takes along —
@@ -1190,45 +1191,35 @@ const normalizeRequest = (transition) => {
  * What a TRAVERSAL asks for: the crossing it retraces.
  *
  * The entry a push creates remembers the crossing that created it (see
- * recordCrossing). A back onto the page that crossing came from undoes it —
+ * recordCrossing). A back onto the entry that crossing came from undoes it —
  * the same movement, the other way — and a forward onto an entry whose
- * crossing came from the page being left plays it again as it was. Both
+ * crossing came from the entry being left plays it again as it was. Both
  * entries are read because each side is the only one that knows its case: the
  * entry being LEFT says how it was reached (a back), the entry being REACHED
  * says how it was reached (a forward).
  *
- * Both can be true at once — A, B, A again: leaving the second A for B is the
- * way back of A → B and the way in of B → A. The entries' depths in the stack
- * tell them apart; without a depth on both, a back is assumed, the traversal
- * by far the most often made.
+ * An entry is named by its depth in the stack, never by its url: a replace
+ * keeps the entry and its state while it rewrites the address — a param of
+ * the page settling, a list writing where it stands — and the crossing is
+ * still between the same two entries. A crossing always comes from below the
+ * entry it is recorded on, so at most one of the two cases matches.
  *
  * Answers in the shape of readNavigationRequest, with every field said, so
- * that the relations have nothing left to answer for — and marked as a replay,
- * because one relation still outranks it: the one written for the exact way
- * travelled (see the watcher's onMove).
+ * that the relations have nothing left to answer for — except the one written
+ * for the exact way travelled, which outranks it (see the watcher's onMove).
  */
-const readTraversalReplay = ({ url, state }, { fromUrl, fromState }) => {
-  const to = absoluteUrl(url);
-  const from = absoluteUrl(fromUrl);
-  if (!to || !from) {
+const readTraversalReplay = (state, fromState) => {
+  const depthIn = navDepthOf(state);
+  const depthOut = navDepthOf(fromState);
+  if (depthIn === undefined || depthOut === undefined) {
     return null;
   }
   const crossingIn = crossingRecordedOn(state);
-  const crossingOut = crossingRecordedOn(fromState);
-  const isForward = crossingIn !== null && crossingIn.from === from;
-  const isBack = crossingOut !== null && crossingOut.from === to;
-  if (isForward && isBack) {
-    const depthIn = navDepthOf(state);
-    const depthOut = navDepthOf(fromState);
-    if (depthIn !== undefined && depthOut !== undefined && depthIn > depthOut) {
-      return replayOf(crossingIn);
-    }
-    return replayOf(reverseCrossing(crossingOut));
-  }
-  if (isForward) {
+  if (crossingIn !== null && crossingIn.fromDepth === depthOut) {
     return replayOf(crossingIn);
   }
-  if (isBack) {
+  const crossingOut = crossingRecordedOn(fromState);
+  if (crossingOut !== null && crossingOut.fromDepth === depthIn) {
     return replayOf(reverseCrossing(crossingOut));
   }
   return null;
@@ -1239,7 +1230,7 @@ const crossingRecordedOn = (state) => {
     return null;
   }
   const crossing = state[CROSSING_STATE_KEY];
-  if (!crossing || typeof crossing.from !== "string") {
+  if (!crossing || typeof crossing.fromDepth !== "number") {
     return null;
   }
   return crossing;
@@ -1249,8 +1240,7 @@ const crossingRecordedOn = (state) => {
  * Which way the history says a navigation goes, for a default that reads it
  * (see defineRouteDefaultTransition): a push is one level deeper, a traversal
  * goes where the depth of the entry it lands on puts it — back when that is
- * not known, as in readTraversalReplay —, and anything else (a replace) stays
- * on its level: null.
+ * not known —, and anything else (a replace) stays on its level: null.
  */
 const readHistoryDirection = (navigationType, { state, fromState }) => {
   if (navigationType === "push") {
@@ -1290,7 +1280,27 @@ const reverseDirection = (direction) => {
 };
 
 const replayOf = ({ type, direction, duration }) => {
-  return { type, typeSaid: true, duration, direction, replay: true };
+  return { type, typeSaid: true, duration, direction };
+};
+
+// What a press asked, field by field, over the crossing its traversal
+// retraces: a press naming only a direction keeps the movement retraced and
+// turns it round, as it would a relation's (see readNavigationRequest).
+const layerRequest = (request, replay) => {
+  if (!replay) {
+    return request;
+  }
+  if (!request) {
+    return replay;
+  }
+  return {
+    type: request.typeSaid ? request.type : replay.type,
+    typeSaid: true,
+    duration:
+      request.duration === undefined ? replay.duration : request.duration,
+    direction:
+      request.direction === undefined ? replay.direction : request.direction,
+  };
 };
 
 // The request first, field by field, then what was defined for this pair (or
@@ -1369,12 +1379,13 @@ const rebuildWatcher = () => {
     // reverse of a pair, a page from anywhere — and not over a relation
     // written for this exact way: that line is the author's one tool for
     // breaking reciprocity, and the back button is the way back it has to
-    // reach. A request made by a link or a navTo() is never dropped: it is
-    // about this one crossing, and a written relation is about every one.
-    const request =
-      navigationRequest && navigationRequest.replay && found && found.written
-        ? null
-        : navigationRequest;
+    // reach. A request made by a link or a navTo() is never dropped, not even
+    // when its push was taken as a traversal: it is about this one crossing,
+    // and a written relation is about every one.
+    const request = layerRequest(
+      navigationRequest,
+      found && found.written ? null : navigationReplay,
+    );
     if (!found && !request) {
       // No relation says anything about these two and this navigation asked
       // for nothing: they are side by side, and silence is the fact — not a
@@ -1424,6 +1435,10 @@ const rebuildWatcher = () => {
 // start of every navigation, so they are always about the latest one.
 let defaultTransition = null;
 let navigationRequest = null;
+// The crossing a traversal retraces (see readTraversalReplay), kept apart from
+// what was asked: a relation written for the exact way drops the one and never
+// the other.
+let navigationReplay = null;
 let navigationUrl = null;
 // Where the document stands as the navigation begins — the other end of the
 // crossing, and what lets the NEXT navigation be recognised as this one's way
@@ -1431,6 +1446,9 @@ let navigationUrl = null;
 // on a browser without the Navigation API is announced from "popstate", where
 // the address has already moved and location would answer with the destination.
 let navigationFromUrl = null;
+// Where the entry being left stands in the stack: what a push's crossing names
+// as the entry it came from (see recordCrossing).
+let navigationFromDepth;
 let navigationAnimated = false;
 // "push", "replace", "traverse", … — a push is the one navigation that creates
 // the entry a crossing is recorded on.
@@ -1459,15 +1477,16 @@ observeBeforeRouting((details) => {
   // Read before the document state moves, so the state peeked is the entry
   // being left.
   const fromState = documentStateSignal.peek();
-  // A traversal has no element and no call to ask anything: what it asks is
-  // the crossing it retraces — reversed for a back, as it was for a forward.
-  navigationRequest =
+  navigationFromDepth = navDepthOf(fromState);
+  // A traversal is asked something only when a push to the entry next door
+  // was taken as one, and then carries its press (see the integrations). What
+  // else it asks is the crossing it retraces — reversed for a back, as it was
+  // for a forward.
+  navigationRequest = readNavigationRequest(details);
+  navigationReplay =
     navigationType === "traverse"
-      ? readTraversalReplay(details, {
-          fromUrl: navigationFromUrl,
-          fromState,
-        })
-      : readNavigationRequest(details);
+      ? readTraversalReplay(details.state, fromState)
+      : null;
   navigationHistoryDirection =
     defaultTransition && defaultTransition.readsHistory
       ? readHistoryDirection(navigationType, {
@@ -1475,7 +1494,12 @@ observeBeforeRouting((details) => {
           fromState,
         })
       : undefined;
-  if (relations.length === 0 && !defaultTransition && !navigationRequest) {
+  if (
+    relations.length === 0 &&
+    !defaultTransition &&
+    !navigationRequest &&
+    !navigationReplay
+  ) {
     return;
   }
   holdRenderingForRouting();
@@ -1488,16 +1512,19 @@ observeBeforeRouting((details) => {
   }
 });
 observeAfterRouting(() => {
-  const request = navigationRequest;
+  const request = layerRequest(navigationRequest, navigationReplay);
   const url = navigationUrl;
   const fromUrl = navigationFromUrl;
+  const fromDepth = navigationFromDepth;
   const type = navigationType;
   const historyDirection = navigationHistoryDirection;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
+  navigationReplay = null;
   navigationUrl = null;
   navigationFromUrl = null;
+  navigationFromDepth = undefined;
   navigationType = null;
   navigationHistoryDirection = undefined;
   // A default reading the history plays between two pages a level apart: not
@@ -1541,7 +1568,7 @@ observeAfterRouting(() => {
     }
   }
   if (type === "push") {
-    recordCrossing({ url, fromUrl, decision: navigationDecision });
+    recordCrossing({ url, fromDepth, decision: navigationDecision });
   }
   navigationDecision = null;
   releaseRoutingRenderingHold();
@@ -1555,20 +1582,19 @@ observeAfterRouting(() => {
 // written when nothing was decided: the silence between two unrelated pages is
 // not a crossing to remember. A replace keeps its entry's state, so an entry
 // reached by one keeps the crossing that led to where it stands.
-const recordCrossing = ({ url, fromUrl, decision }) => {
-  if (!decision) {
+const recordCrossing = ({ url, fromDepth, decision }) => {
+  if (!decision || fromDepth === undefined) {
     return;
   }
   const to = absoluteUrl(url);
-  const from = absoluteUrl(fromUrl);
-  if (!to || !from) {
+  if (!to) {
     return;
   }
   if (documentUrlSignal.peek() !== to) {
     // Superseded before it landed: the entry now current is another one's.
     return;
   }
-  const crossing = { from };
+  const crossing = { fromDepth };
   if (decision.type !== undefined) {
     crossing.type = decision.type;
   }

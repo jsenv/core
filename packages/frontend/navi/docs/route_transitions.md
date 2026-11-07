@@ -217,9 +217,10 @@ wears its request as an attribute, so a plain `<a>` says it too:
 
 The back button, `navBack()`, `history.back()`, the browser's "next": a traversal
 is not a walk on the map, it undoes one (or redoes one). The entry a push creates
-remembers the crossing that created it — what played, which way, from which url
-— so a back onto the page that crossing came from plays it reversed, and a
-forward plays it again as it was.
+remembers the crossing that created it — what played, which way, from which
+entry — so a back onto the entry that crossing came from plays it reversed, and a
+forward plays it again as it was. An entry keeps its crossing when a replace
+rewrites its address (a param settling, a list writing where it stands).
 
 That replay outranks everything the relations **deduce**, and nothing the author
 **wrote** for that exact way:
@@ -246,7 +247,8 @@ place.
 The relations alone answer a traversal that retraces no remembered crossing:
 several entries at once, or an entry another document wrote. A link to the page
 one just came from is a traversal too, where the browser exposes its stack (see
-[navigation.md](./navigation.md#where-a-navigation-lands-the-scroll)).
+[navigation.md](./navigation.md#where-a-navigation-lands-the-scroll)), and what
+that link asks for still holds, field by field, over the crossing it retraces.
 
 ## Pages between fixed bars: the transition area
 

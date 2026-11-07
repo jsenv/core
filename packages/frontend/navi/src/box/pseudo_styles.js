@@ -799,11 +799,12 @@ PSEUDO_CLASSES[":-navi-has-value"] = {
 };
 navi_pressed: {
   // How long a press stays drawn, at least, from the frame that first painted
-  // it (Android's PRESSED_STATE_DURATION). An ordinary tap lasts 30 to 80ms,
-  // and its pointerup can be handled right after its pointerdown when the main
-  // thread was busy: released at once, a press shows on 0 to 3 frames, which
-  // is no press at all to the eye.
-  const PRESS_SHOWN_AT_LEAST = 64;
+  // it. An ordinary tap lasts 30 to 80ms, and its pointerup can be handled
+  // right after its pointerdown when the main thread was busy: released at
+  // once, a press shows on 0 to 3 frames, which is no press at all to the eye.
+  // 140ms is the Button's shrink (button_ui.jsx): 100ms down, then 40ms at
+  // the bottom before it goes back up, whatever the length of the tap.
+  const PRESS_SHOWN_AT_LEAST = 140;
   // element → the press going on there, until the element stops being drawn
   // pressed. Keyed by the element, not held by its tracker: Box re-runs its
   // tracking whenever the element's state changes, which is what pressing it

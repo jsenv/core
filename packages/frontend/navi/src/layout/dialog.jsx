@@ -1162,6 +1162,10 @@ const DialogStandIn = (props) => {
         defaultOpen={
           builtReason === "interaction" ? "interaction" : props.defaultOpen
         }
+        // Built by a press on what opens it: the content comes with it, and
+        // stays, as a "from-first-open" content does once built (see
+        // popup_stand_in.js).
+        mount={builtReason === "press" ? "always" : props.mount}
       />
     );
   }

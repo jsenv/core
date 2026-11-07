@@ -6,10 +6,12 @@
  * itself on it (navi_open_press), --navi-toggle reads its aria-expanded. The
  * popup proper — its open controller, its box, its backdrop, its focus and
  * pseudo-class wiring — is built at the first request: an open, a press about
- * to open it, its signal or its `open` saying open. A list whose rows each hold
- * a few popups mounts hundreds of them, and would pay for every one at every
- * mount, for openings that mostly never come. Built once, the popup stays: the
- * next opening finds it there.
+ * to open it, its signal or its `open` saying open. A press builds what the
+ * popup holds along with it, as it warms the content of a popup already built
+ * (see popup_content_mount.js): the click that follows only opens. A list
+ * whose rows each hold a few popups mounts hundreds of them, and would pay for
+ * every one at every mount, for openings that mostly never come. Built once,
+ * the popup stays: the next opening finds it there.
  *
  * Nothing about where the popup goes is needed at rest: a popover reads its
  * anchor at the opening, from the request.
