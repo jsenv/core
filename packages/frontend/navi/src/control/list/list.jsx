@@ -875,12 +875,18 @@ const css = /* css */ `
     /* A label in the flow (groupLabelSticky={false}) scrolls away with what
        is above the group: only the item right under it has it to keep in
        view. A window cutting the group hides it rather than laying it over an
-       item, which only a label that sticks has a reason to accept. */
+       item, which only a label that sticks has a reason to accept.
+       In a group the window cuts, the first item drawn does not open the
+       group and has no label above it. Its inset stays the spacing alone, so
+       that it does not change with where the window starts: a kept position
+       is measured from that inset. */
     &[data-label-in-flow] {
       .navi_list_item_group_list .navi_list_item {
         scroll-margin-top: var(--x-list-scroll-spacing-top);
       }
-      .navi_list_item_group_list > .navi_list_item:first-child {
+      &:not([data-continued])
+        .navi_list_item_group_list
+        > .navi_list_item:first-child {
         scroll-margin-top: calc(
           var(--x-list-scroll-spacing-top) + var(--list-group-label-height)
         );

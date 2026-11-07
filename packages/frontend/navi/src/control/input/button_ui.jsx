@@ -434,6 +434,11 @@ const css = /* css */ `
     &[data-pressed] {
       .navi_button_content {
         transform: scale(0.9);
+        /* A transition runs with the duration of the state it goes to: the
+           press lands on the next frame, only the release eases back. Eased in
+           as well, a tap released within 50ms would end before the shrink
+           had visibly started. */
+        transition-duration: 0s;
       }
     }
     &[data-pressed] {

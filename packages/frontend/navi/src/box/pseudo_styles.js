@@ -798,7 +798,91 @@ PSEUDO_CLASSES[":-navi-has-value"] = {
   },
 };
 navi_pressed: {
-  const pressedElements = new WeakSet();
+  // How long a press stays drawn, at least, from the frame that first painted
+  // it (Android's PRESSED_STATE_DURATION). An ordinary tap lasts 30 to 80ms,
+  // and its pointerup can be handled right after its pointerdown when the main
+  // thread was busy: released at once, a press shows on 0 to 3 frames, which
+  // is no press at all to the eye.
+  const PRESS_SHOWN_AT_LEAST = 64;
+  // element → the press going on there, until the element stops being drawn
+  // pressed. Keyed by the element, not held by its tracker: Box re-runs its
+  // tracking whenever the element's state changes, which is what pressing it
+  // often does (a nav entry becoming current), and the press, finger down or
+  // held on screen, goes on across that re-run.
+  const pressWeakMap = new WeakMap();
+  const startPress = (el) => {
+    const pressBefore = pressWeakMap.get(el);
+    if (pressBefore) {
+      // Released, still held on screen: the new press takes over the drawing.
+      pressBefore.abandon();
+    }
+    // When the frame painting the press began.
+    let shownAt = null;
+    let released = false;
+    let timeout = null;
+    let frame = requestAnimationFrame(() => {
+      frame = null;
+      shownAt = performance.now();
+      if (released) {
+        endOnceShown();
+      }
+    });
+    const end = () => {
+      pressWeakMap.delete(el);
+      // Asked of the element rather than of the tracker that saw the press go
+      // down: that one may have been torn down since.
+      dispatchInternalCustomEvent(el, "navi_pseudo_state_request_check");
+    };
+    const endOnceShown = () => {
+      const remaining = shownAt + PRESS_SHOWN_AT_LEAST - performance.now();
+      if (remaining <= 0) {
+        end();
+        return;
+      }
+      timeout = setTimeout(end, remaining);
+    };
+    const stopListening = () => {
+      document.removeEventListener("pointercancel", onCancel, true);
+      document.removeEventListener("pointerup", onRelease, true);
+      document.removeEventListener("contextmenu", onContextMenu, true);
+    };
+    const onRelease = () => {
+      stopListening();
+      released = true;
+      if (shownAt === null) {
+        // No frame has painted it yet: the first one ends it.
+        return;
+      }
+      endOnceShown();
+    };
+    // Not an activation (a scroll took the touch, a context menu opened): no
+    // press to make seen, it ends at once.
+    const onCancel = () => {
+      stopListening();
+      cancelAnimationFrame(frame);
+      end();
+    };
+    const onContextMenu = (e) => {
+      // On touch devices, a long-press triggers the context menu.
+      // If the context menu is not prevented, it means it will open and the
+      // pointer events (pointerup, lostpointercapture) won't fire normally,
+      // leaving the element stuck in pressed state. We clear it manually.
+      // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
+      if (e.button === -1 && !e.defaultPrevented) {
+        onCancel();
+      }
+    };
+    document.addEventListener("pointercancel", onCancel, true);
+    document.addEventListener("pointerup", onRelease, true);
+    document.addEventListener("contextmenu", onContextMenu, true);
+    pressWeakMap.set(el, {
+      abandon: () => {
+        stopListening();
+        cancelAnimationFrame(frame);
+        clearTimeout(timeout);
+      },
+    });
+  };
   PSEUDO_CLASSES[":-navi-pressed"] = {
     attribute: "data-pressed",
     setup: (el, callback) => {
@@ -825,40 +909,15 @@ navi_pressed: {
           // only left pointer (mouse left click, touch, pen)
           return;
         }
-        pressedElements.add(el);
-        const onRelease = () => {
-          pressedElements.delete(el);
-          document.removeEventListener("pointercancel", onRelease, true);
-          document.removeEventListener("pointerup", onRelease, true);
-          document.removeEventListener("contextmenu", onContextMenu, true);
-          callback();
-        };
-        const onContextMenu = (e) => {
-          // On touch devices, a long-press triggers the context menu.
-          // If the context menu is not prevented, it means it will open and the
-          // pointer events (pointerup, lostpointercapture) won't fire normally,
-          // leaving the element stuck in pressed state. We clear it manually.
-          // e.button === -1 means the event was synthesized from a long-press (not a real mouse click).
-          if (e.button === -1 && !e.defaultPrevented) {
-            pressedElements.delete(el);
-            document.removeEventListener("pointercancel", onRelease, true);
-            document.removeEventListener("pointerup", onRelease, true);
-            document.removeEventListener("contextmenu", onContextMenu, true);
-            callback();
-          }
-        };
-        document.addEventListener("pointercancel", onRelease, true);
-        document.addEventListener("pointerup", onRelease, true);
-        document.addEventListener("contextmenu", onContextMenu, true);
+        startPress(el);
         callback();
       };
       el.addEventListener("pointerdown", onPointerDown);
       return () => {
         el.removeEventListener("pointerdown", onPointerDown);
-        pressedElements.delete(el);
       };
     },
-    test: (el) => pressedElements.has(el),
+    test: (el) => pressWeakMap.has(el),
   };
 }
 
