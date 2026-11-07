@@ -905,6 +905,10 @@ const css = /* css */ `
        the edge of the window, off screen, it covers the first item drawn. */
     &[data-continued] {
       display: grid;
+      /* The group's width, never its content's: an implicit (auto) column
+         grows to the widest item's min-content and every item follows it,
+         where the same items in a block box stay at the list's width. */
+      grid-template-columns: minmax(0, 1fr);
       margin-top: calc(-1 * var(--x-list-gap, 0px));
 
       > .navi_list_item_group_label,
