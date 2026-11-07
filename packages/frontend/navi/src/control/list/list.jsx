@@ -6421,6 +6421,19 @@ const useRunItems = (
     if (askEnd > runEnd - 1) {
       askEnd = runEnd - 1;
     }
+    // Only the item before the window's first one says whether that one opens
+    // its group (see whereGroupContinues). Asked for with it, the first item
+    // lands with its group known, not guessed: a wrong guess changes the room
+    // above it, label and scroll inset, once the item before comes.
+    if (
+      groupBy &&
+      askStart === windowFrom &&
+      windowFrom > runStart &&
+      !store.holds(rankOf(windowFrom - 1)) &&
+      (!groupOfMissing || groupOfMissing(windowFrom - 1) === undefined)
+    ) {
+      askStart = windowFrom - 1;
+    }
   }
   // The item the missing ones hang from, when there is one: a source paginating
   // by cursor ("the 50 before this one") needs an item to count from, and an
