@@ -16,9 +16,9 @@ run({
 })
 ```
 
-# 1/2 write 4 files into "../../"
+# 1/2 write 3 files into "./build/"
 
-see [./@jsenv/core/packages/internal/plugin-bundling/](./@jsenv/core/packages/internal/plugin-bundling/)
+see [./build/](./build/)
 
 # 2/2 resolve
 

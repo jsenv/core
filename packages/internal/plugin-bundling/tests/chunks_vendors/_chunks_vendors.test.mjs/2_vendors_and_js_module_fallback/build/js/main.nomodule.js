@@ -7,6 +7,7 @@ System.register([__v__("/vendors.js")], function (_export, _context) {
       answer = _buildVendorsJs.answer;
     }],
     execute: function () {
+      console.log("b.js");
       window.resolveResultPromise(answer);
     }
   };
