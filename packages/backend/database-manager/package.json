@@ -29,7 +29,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/database": "0.0.30",
+    "@jsenv/database": "0.0.31",
     "@jsenv/server": "17.7.3",
     "@jsenv/urls": "2.9.22",
     "@tanstack/table-core": "9.3.1",

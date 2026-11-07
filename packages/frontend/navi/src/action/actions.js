@@ -848,6 +848,7 @@ const actionWeakMap = new WeakMap();
  *   long is this still true?" belongs to the question: a court list is good for
  *   the session, a count of people watching grows on its own and is worth a few
  *   minutes, a payment status is worth nothing at all.
+ *   A resource declares it for its reads: `resource()`'s `keep`.
  * @param {Array<Object | { resource: Object, on: string[] }> | (() => Array<Object | { resource: Object, on: string[] }>)} [rootOptions.dependencies] -
  *   the resources whose writes make the answer out of date — a count, a
  *   summary, anything read that is no row of a resource. After a listed write

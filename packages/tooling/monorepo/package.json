@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/monorepo",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "type": "module",
   "description": "Helpers to manage packages in a monorepo",
   "repository": {
@@ -23,9 +23,9 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.33",
+    "@jsenv/filesystem": "4.15.34",
     "@jsenv/humanize": "1.8.11",
-    "@jsenv/package-publish": "1.12.5",
+    "@jsenv/package-publish": "1.12.6",
     "@jsenv/urls": "2.9.22",
     "semver": "7.8.5"
   },

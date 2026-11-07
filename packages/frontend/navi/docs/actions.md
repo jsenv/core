@@ -197,6 +197,9 @@ back may find it or ask again, and neither is something to build on.
 good for `ms` from the moment it landed, and the first screen asking for those
 params after that asks again: a read worth asking at each visit — a
 measurement, a quota — declares a short one.
+A resource's reads declare it on the resource,
+`resource(name, { keep: { GET: { ms } } })`; left out, coming back asks again,
+while the store draws the row it already holds.
 
 ### The in-between states of a gesture are real params
 

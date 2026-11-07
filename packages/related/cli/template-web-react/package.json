@@ -21,9 +21,9 @@
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "8.0.1",
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.5.51",
-    "@jsenv/plugin-react": "1.9.23",
-    "@jsenv/plugin-bundling": "2.10.38",
+    "@jsenv/core": "41.5.52",
+    "@jsenv/plugin-react": "1.9.24",
+    "@jsenv/plugin-bundling": "2.10.39",
     "@jsenv/plugin-minification": "1.7.33",
     "@jsenv/eslint-config-relax": "2.0.15",
     "@jsenv/test": "3.7.59",

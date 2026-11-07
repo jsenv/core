@@ -93,6 +93,7 @@ const RESOURCE_OPTIONS = new Set([
   "idKey",
   "uniqueKeys",
   "rerunOn",
+  "keep",
   "dependencies",
   "persist",
   "writes",
@@ -166,7 +167,7 @@ const SCOPED_MANY_OPTIONS = new Set([
  * "What a read shows while its params move").
  *
  * @param {string} name - resource name, used in action names and error messages
- * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, keep, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
  * @param {Array<Object | { resource: Object, on?: string[], reads?: Array<"GET" | "GET_MANY" | "GET_RANGE"> }> | (() => Array<Object | { resource: Object, on?: string[], reads?: Array<"GET" | "GET_MANY" | "GET_RANGE"> }>)} [restCallbacks.dependencies] -
@@ -190,6 +191,22 @@ const SCOPED_MANY_OPTIONS = new Set([
  *   follows `rerunOn` for its verb. A name a verb takes, or one the resource
  *   already exposes (`withParams`, `store`…), throws. A `.scopedOne()` or
  *   `.scopedMany()` takes `writes` too, `.scopedMany()` with the plural verbs.
+ * @param {{ GET?: { ms?: number, max?: number }, GET_MANY?: { ms?: number, max?: number } }} [restCallbacks.keep] -
+ *   how long an answer of a read is trusted, coming back to the same params
+ *   within `ms` asking nothing. Left out, coming back asks again: the right
+ *   default for anything that moves on its own (a count of registrations), and
+ *   worth declaring for what barely does (a description, a finished
+ *   tournament). The store keeps the rows either way, and a `GET` draws the row
+ *   it holds while its request is out, so a kept answer and a fresh one look
+ *   alike: what `keep` saves is the request. Keyed by read, so a list can be
+ *   trusted for less time than an item. The rules are createAction's `keep`:
+ *   `ms` counts from the moment the answer landed, `max` caps the answers held
+ *   at once (the least recently looked-at going first), and past either the
+ *   read is asked again. A write that reruns the read (`rerunOn`,
+ *   `dependencies`) reruns a kept answer too, and the new one counts its `ms`
+ *   again. A `withParams()` scope keeps as its resource does, `max` counted per
+ *   scope; the reads of a relation are questions of their own and keep
+ *   nothing. `GET_RANGE` throws: a range reader holds no answer to keep.
  * @param {{ signal: import("@preact/signals").Signal, when?: () => boolean }} [restCallbacks.persist] -
  *   mirrors the rows `GET` lands with into `signal` — a `stateSignal` with
  *   `persists: true` and `type: "object"` keeps them across a reload, whose
@@ -230,6 +247,7 @@ export const resource = (name, restCallbacks = {}) => {
     idKey = "id",
     uniqueKeys = [],
     rerunOn,
+    keep,
     dependencies,
     persist,
     writes,
@@ -248,6 +266,9 @@ export const resource = (name, restCallbacks = {}) => {
   } = restCallbacks;
   if (import.meta.dev) {
     warnUnknownOptions(`resource(${name})`, restCallbacks, RESOURCE_OPTIONS);
+  }
+  if (keep) {
+    assertKeepNamesReads(name, keep);
   }
   const declarationSite = getDeclarationSite();
   const setupCallbackSet = new Set();
@@ -373,6 +394,7 @@ export const resource = (name, restCallbacks = {}) => {
     findItemForGet,
     persistence,
     declarationSite,
+    keep,
   });
   return createResource(name, {
     idKey,
@@ -1712,6 +1734,7 @@ const createRestActionFactoryForRoot = (
     findItemForGet,
     persistence,
     declarationSite,
+    keep = {},
   },
 ) => {
   const createActionForRoot = (
@@ -1813,6 +1836,7 @@ const createRestActionFactoryForRoot = (
           : undefined,
       // Another params' answer is another row.
       inheritData: verb !== "GET",
+      keep: verb === "GET" ? keep.GET : undefined,
       completeSideEffect: onActionComplete,
     });
     if (verb === "GET") {
@@ -1844,6 +1868,7 @@ const createRestActionFactoryForRoot = (
       // A binding moving to new params hands over the previous answer: a list
       // standing in for the next one beats a skeleton.
       inheritData: true,
+      keep: verb === "GET" ? keep.GET_MANY : undefined,
       // The rows the page kept from the previous document (kept_reads.js),
       // drawn while the request is out when nothing was handed over.
       provisionalValue:
@@ -1924,6 +1949,24 @@ const applyNetworkPolicy = (
     }
     throw new NetworkPolicyError(policy.reason);
   };
+};
+
+// What can never be kept throws, as a rerunOn that never fires does: a range
+// reader holds no answer, its lists ask again for the window they draw.
+const KEEP_READS = ["GET", "GET_MANY"];
+const assertKeepNamesReads = (name, keep) => {
+  for (const read of Object.keys(keep)) {
+    if (read === "GET_RANGE") {
+      throw new Error(
+        `resource(${name}): keep.GET_RANGE keeps nothing — a range reader holds no answer, its lists ask again for the window they draw`,
+      );
+    }
+    if (!KEEP_READS.includes(read)) {
+      throw new Error(
+        `resource(${name}): keep.${read} is not a read that keeps an answer — keep takes GET and GET_MANY`,
+      );
+    }
+  }
 };
 
 // A `dependencies` given as a function is read before the first request

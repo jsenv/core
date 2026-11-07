@@ -117,7 +117,10 @@ export const registerDirectoryLifecycle = (
         e.code === "ENOENT" ||
         e.code === "EACCES" ||
         e.code === "EPERM" ||
-        e.code === "ENOTDIR" // happens on mac12 sometimes
+        e.code === "ENOTDIR" || // happens on mac12 sometimes
+        // macOS 26 answers EINVAL when stat races an entry being replaced
+        // (a symlink swapped for a file/directory, seen on GitHub runners)
+        e.code === "EINVAL"
       ) {
         return {
           type: null,
