@@ -85,6 +85,7 @@ const STATE_SIGNAL_OPTIONS = new Set([
   "history",
   "debounceUrl",
   "version",
+  "owner",
 ]);
 /**
  * Creates an advanced signal with dynamic default value, local storage persistence, and validation.
@@ -110,11 +111,25 @@ const STATE_SIGNAL_OPTIONS = new Set([
  * @param {Object} [options={}] - Configuration options
  * @param {string|number} [options.id] - Custom ID for the signal. If not provided, an auto-generated ID will be used. Used for localStorage key and route pattern detection.
  * @param {any} [options.default] - Static fallback value used when defaultValue is a signal and that signal's value is undefined
- * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key
+ * @param {boolean} [options.persists=false] - Whether to persist the signal value in localStorage using the signal ID as key.
+ *   The copy is the device's: every account signed in on this browser reads and writes the same one,
+ *   unless `owner` says whose it is.
  * @param {string} [options.version] - What makes a stored copy unusable — the deployed version, a schema
  *   number. The value is persisted under `${id}@${version}`, and at creation the copies of every other
  *   version of this id (and the one stored under the bare id) are removed: a device that opened ten
  *   deploys holds one copy, not ten. Only the storage key changes, the id the url reads stays `id`.
+ * @param {import("@preact/signals").ReadonlySignal<string | number | null | undefined> | (() => string | number | null | undefined)} [options.owner] -
+ *   Whose copy this is, for a state kept per account on a device several accounts share (search
+ *   criteria, a last choice): a signal, or a function read like a `computed`, naming the owner. The
+ *   value is persisted under `${id}#${owner}` (`${id}@${version}#${owner}` with a version).
+ *   When the owner changes, the state starts again as at creation, for that owner: what the address
+ *   says when it carries the param, otherwise that owner's copy, otherwise the default. The previous
+ *   owner's value is never carried across.
+ *   `undefined` or `null` is an owner not known yet: nothing is read and nothing is kept, the state
+ *   holds its default and what is written lives in memory until an owner is known.
+ *   At creation the copy kept under the bare id (from before the state had an owner) is removed, as
+ *   `version` does; the copies of the other owners are kept. Those of an owner that is gone for good
+ *   are removed by `forgetOwner(owner)`. Requires `persists`.
  * @param {string} [options.type] - Type the value is coerced to, and read back as from localStorage and the url:
  *   any @jsenv/validity type (`"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"integer"`, `"date"`,
  *   `"time"`…). Without it the value is not coerced. On a type that is not text (`"string"`, `"email"`,
@@ -236,6 +251,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     history = "replace",
     debounceUrl = 0,
     version,
+    owner,
   } = options;
   if (import.meta.dev) {
     warnUnknownOptions(`stateSignal "${id}"`, options, STATE_SIGNAL_OPTIONS);
@@ -258,11 +274,7 @@ export const stateSignal = (defaultValue, options = {}) => {
   }
 
   // Check if defaultValue is a signal (dynamic default) or static value
-  const isDynamicDefault =
-    defaultValue &&
-    typeof defaultValue === "object" &&
-    "value" in defaultValue &&
-    "peek" in defaultValue;
+  const isDynamicDefault = isSignal(defaultValue);
   const dynamicDefaultSignal = isDynamicDefault ? defaultValue : null;
   const staticDefaultValue = isDynamicDefault ? staticFallback : defaultValue;
   const signalId = id || generateSignalId();
@@ -286,14 +298,54 @@ export const stateSignal = (defaultValue, options = {}) => {
     globalSignalRegistry.delete(signalIdString);
   }
 
-  const localStorageKey =
+  let ownerSignal = null;
+  if (owner !== undefined) {
+    if (isSignal(owner)) {
+      ownerSignal = owner;
+    } else if (typeof owner === "function") {
+      ownerSignal = computed(owner);
+    } else {
+      // `owner: me.id` is read once: the owner of the first page, for good.
+      throw new TypeError(
+        `stateSignal "${signalIdString}": owner must be a signal or a function naming the owner, got ${typeof owner} ${String(owner)}.`,
+      );
+    }
+  }
+  const versionKey =
     version === undefined ? signalIdString : `${signalIdString}@${version}`;
-  if (persists && version !== undefined) {
-    removeOtherVersions(signalIdString, localStorageKey);
-  } else if (import.meta.dev && version !== undefined) {
-    console.warn(
-      `stateSignal "${signalIdString}": version names the copy kept in localStorage, and without persists nothing is kept.`,
-    );
+  const storageKeyOf = (ownerValue) => {
+    if (!ownerSignal) {
+      return versionKey;
+    }
+    if (ownerValue === undefined || ownerValue === null) {
+      return undefined;
+    }
+    if (typeof ownerValue !== "string" && typeof ownerValue !== "number") {
+      // an object would be "[object Object]": one copy shared by every owner
+      throw new TypeError(
+        `stateSignal "${signalIdString}": owner names the owner with a string or a number, got ${typeof ownerValue}.`,
+      );
+    }
+    return `${versionKey}#${ownerValue}`;
+  };
+  // The key the value is kept under. Undefined while the owner is not known:
+  // what is written then belongs to no one, and is not kept.
+  const storageKeySignal = signal(storageKeyOf(ownerSignal?.peek()));
+  if (persists) {
+    if (version !== undefined || ownerSignal) {
+      removeStaleCopies(signalIdString, versionKey, Boolean(ownerSignal));
+    }
+  } else if (import.meta.dev) {
+    if (version !== undefined) {
+      console.warn(
+        `stateSignal "${signalIdString}": version names the copy kept in localStorage, and without persists nothing is kept.`,
+      );
+    }
+    if (ownerSignal) {
+      console.warn(
+        `stateSignal "${signalIdString}": owner says whose copy is kept in localStorage, and without persists nothing is kept.`,
+      );
+    }
   }
   const [validity, updateValidity, clearValidity] = createValidity({
     type,
@@ -323,22 +375,16 @@ export const stateSignal = (defaultValue, options = {}) => {
       );
     }
   }
-  const readFromLocalStorage = persists
-    ? () => readLocalStorage(localStorageKey)
-    : () => undefined;
-  const updateLocalStorage = persists
-    ? () => {
-        writeLocalStorage(
-          localStorageKey,
-          validity.representations.localStorage.value,
-        );
-      }
-    : () => {};
-  const removeFromLocalStorage = persists
-    ? () => {
-        writeLocalStorage(localStorageKey, undefined);
-      }
-    : () => {};
+  const readFromLocalStorage = () => {
+    const storageKey = storageKeySignal.peek();
+    if (storageKey === undefined) {
+      return undefined;
+    }
+    return readLocalStorage(storageKey);
+  };
+  const keepInLocalStorage = (storageKey) => {
+    writeLocalStorage(storageKey, validity.representations.localStorage.value);
+  };
 
   /**
    * Returns the current default value from code logic only (static or dynamic).
@@ -387,7 +433,7 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (valueFromLocalStorage !== undefined) {
         if (debug) {
           console.debug(
-            `[stateSignal:${signalIdString}] using value from localStorage "${localStorageKey}"=${valueFromLocalStorage}`,
+            `[stateSignal:${signalIdString}] using value from localStorage "${storageKeySignal.peek()}"=${valueFromLocalStorage}`,
           );
         }
         return valueFromLocalStorage;
@@ -587,11 +633,17 @@ export const stateSignal = (defaultValue, options = {}) => {
     });
   }
   persist_in_local_storage: {
-    if (!localStorageKey) {
+    if (!persists) {
       break persist_in_local_storage;
     }
     effect(() => {
+      // The key and the value are read together: an owner switch writes both
+      // in one batch (below), so a value is never kept under another owner.
+      const storageKey = storageKeySignal.value;
       const value = preactSignal.value;
+      if (storageKey === undefined) {
+        return;
+      }
 
       if (dynamicDefaultSignal) {
         // With dynamic defaults: always persist to preserve user intent
@@ -599,10 +651,10 @@ export const stateSignal = (defaultValue, options = {}) => {
         if (value !== undefined) {
           if (debug) {
             console.debug(
-              `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${localStorageKey}"=${value}`,
+              `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${storageKey}"=${value}`,
             );
           }
-          updateLocalStorage();
+          keepInLocalStorage(storageKey);
         }
         return;
       }
@@ -610,18 +662,57 @@ export const stateSignal = (defaultValue, options = {}) => {
       if (isCustomValue(value)) {
         if (debug) {
           console.debug(
-            `[stateSignal:${signalIdString}] writing into localStorage "${localStorageKey}"=${value}`,
+            `[stateSignal:${signalIdString}] writing into localStorage "${storageKey}"=${value}`,
           );
         }
-        updateLocalStorage();
+        keepInLocalStorage(storageKey);
       } else {
         if (debug) {
           console.debug(
-            `[stateSignal:${signalIdString}] removing "${localStorageKey}" from localStorage (value=${value})`,
+            `[stateSignal:${signalIdString}] removing "${storageKey}" from localStorage (value=${value})`,
           );
         }
-        removeFromLocalStorage();
+        writeLocalStorage(storageKey, undefined);
       }
+    });
+  }
+  // What the address says this state holds, one reader per route binding it
+  // (see route.js): an owner switch starts the state again as creation does,
+  // and at creation the routing pass applies the address after the storage.
+  const addressReaderSet = new Set();
+  owner_switch: {
+    if (!ownerSignal || !persists) {
+      break owner_switch;
+    }
+    effect(() => {
+      const storageKey = storageKeyOf(ownerSignal.value);
+      if (storageKey === storageKeySignal.peek()) {
+        return;
+      }
+      untracked(() => {
+        let valueFromAddress;
+        for (const readAddress of addressReaderSet) {
+          valueFromAddress = readAddress();
+          if (valueFromAddress) {
+            break;
+          }
+        }
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] owner changed, kept under "${storageKey}"`,
+          );
+        }
+        batch(() => {
+          storageKeySignal.value = storageKey;
+          if (valueFromAddress) {
+            // eslint-disable-next-line signals/no-conditional-value-read -- a plain { value } from an address reader, not a signal
+            facadeSignal.value = valueFromAddress.value;
+          } else {
+            // read once the key is the new owner's
+            facadeSignal.value = getFallbackValue();
+          }
+        });
+      });
     });
   }
   // Create isDefaultValue function for this signal
@@ -642,7 +733,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     min,
     max,
     persists,
-    localStorageKey,
+    addressReaderSet: ownerSignal && persists ? addressReaderSet : undefined,
     debug,
     ...options,
     history,
@@ -663,7 +754,7 @@ export const stateSignal = (defaultValue, options = {}) => {
         hasDynamicDefault: Boolean(dynamicDefaultSignal),
         hasStoredValue: persists && readFromLocalStorage() !== undefined,
         persists,
-        localStorageKey: persists ? localStorageKey : undefined,
+        localStorageKey: persists ? storageKeySignal.peek() : undefined,
       },
     );
   }
@@ -701,17 +792,56 @@ const takeHistoryOfWriteAsOne = () => {
   return writeAsOne.history;
 };
 
-// The copies an older deploy left: under `${id}@<another version>`, or under the
-// bare id from before the signal declared a version. Read once, at creation:
-// they are what a previous document wrote, nothing of this one writes there.
-const removeOtherVersions = (id, keyKept) => {
-  const versionPrefix = `${id}@`;
+/**
+ * Removes every copy kept for `owner` by the states declaring an `owner`: an
+ * account erased, a trial account that ended. Each state keeps one copy per
+ * owner it has met, and only the app knows when an owner is gone for good.
+ *
+ * Only the storage is emptied: a state whose owner is `owner` right now keeps
+ * what it holds, and keeps it again at its next write. Call it once the app
+ * has left that owner.
+ *
+ * @param {string | number} owner
+ */
+export const forgetOwner = (owner) => {
+  const ownerSuffix = `#${owner}`;
   for (const key of listLocalStorageKeys()) {
-    if (key === keyKept) {
-      continue;
-    }
-    if (key === id || key.startsWith(versionPrefix)) {
+    if (key.endsWith(ownerSuffix)) {
       writeLocalStorage(key, undefined);
     }
   }
 };
+
+// The copies an older deploy or an older declaration left: under
+// `${id}@<another version>`, under the bare id from before the signal declared
+// a version or an owner, under the owners of another version. Read once, at
+// creation: they are what a previous document wrote, nothing of this one writes
+// there. With an owner, every owner's copy of this version stays: another
+// owner's copy is not stale, it is someone else's.
+const removeStaleCopies = (id, versionKey, byOwner) => {
+  const versionPrefix = `${id}@`;
+  const ownerPrefix = `${id}#`;
+  const ownersOfVersionPrefix = `${versionKey}#`;
+  for (const key of listLocalStorageKeys()) {
+    const isCopyOfId =
+      key === id ||
+      key.startsWith(versionPrefix) ||
+      key.startsWith(ownerPrefix);
+    if (!isCopyOfId) {
+      continue;
+    }
+    const kept = byOwner
+      ? key.startsWith(ownersOfVersionPrefix)
+      : key === versionKey;
+    if (kept) {
+      continue;
+    }
+    writeLocalStorage(key, undefined);
+  }
+};
+
+const isSignal = (value) =>
+  Boolean(value) &&
+  typeof value === "object" &&
+  "value" in value &&
+  "peek" in value;

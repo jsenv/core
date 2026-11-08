@@ -65,7 +65,7 @@ export {
   syncOwnedResourceToSignals,
   syncResourceToSignals,
 } from "./src/state/rest/resource_graph.js";
-export { stateSignal } from "./src/state/state_signal.js";
+export { forgetOwner, stateSignal } from "./src/state/state_signal.js";
 export { stateSignalGroup } from "./src/state/state_signal_group.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";

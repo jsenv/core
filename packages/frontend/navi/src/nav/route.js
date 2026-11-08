@@ -471,7 +471,7 @@ export const route = (pattern, options = {}) => {
   // Signal -> URL sync: When signal changes, update URL to reflect meaningful state
   // Only sync non-default values to keep URLs clean (static fallbacks stay invisible)
   registerSetup(({ routeSet }) => {
-    const cleanupSignalUrlEffectSet = new Set();
+    const cleanupSet = new Set();
     // important: read connections at setup time so it includes query connections
     // inherited from ancestor patterns
     const { connections } = routePattern;
@@ -596,11 +596,37 @@ export const route = (pattern, options = {}) => {
         // entry when the write pushes.
         untracked(() => writeValueInUrl(value));
       });
-      cleanupSignalUrlEffectSet.add(cleanupSignalUrlEffect);
+      cleanupSet.add(cleanupSignalUrlEffect);
+      // A state kept per owner starts again when the owner changes, as at
+      // creation: the address has the last word, as the routing pass gives it
+      // (see sync_routes_with_url). Null when the address leaves it to storage.
+      const { addressReaderSet } = connection;
+      if (addressReaderSet) {
+        const readAddress = () => {
+          if (!route.matchingSignal.peek()) {
+            return null;
+          }
+          const urlParamValue = route.rawParamsSignal.peek()[paramName];
+          if (urlParamValue !== undefined) {
+            return { value: urlParamValue };
+          }
+          if (
+            connection.paramType === "query" &&
+            connection.history !== "push"
+          ) {
+            return null;
+          }
+          return { value: connection.getDefaultValue() };
+        };
+        addressReaderSet.add(readAddress);
+        cleanupSet.add(() => {
+          addressReaderSet.delete(readAddress);
+        });
+      }
     }
     return () => {
-      for (const cleanupSignalUrlEffect of cleanupSignalUrlEffectSet) {
-        cleanupSignalUrlEffect();
+      for (const cleanup of cleanupSet) {
+        cleanup();
       }
     };
   });
