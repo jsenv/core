@@ -1441,6 +1441,15 @@ export const SlideContainer = ({
     drawnAreaRef.current = currentArea;
     offsetRef.current = "0% 0%";
     track.style.setProperty("--slide-container-offset", "0% 0%");
+    // The scroll range counts the track's translate, and Chrome drops it when a
+    // translate change lands in the same update as a layout elsewhere in the page
+    // (a tab indicator following the travel): the range keeps a mid-travel value
+    // until the box is laid out again, clamping the write below and any swipe.
+    // Chrome's alone (Firefox and WebKit are right): laying the track out fixes it.
+    track.style.minWidth = "1px";
+    // eslint-disable-next-line no-void -- a read for its side effect: the layout
+    void track.offsetWidth;
+    track.style.minWidth = "";
     containerRef.current.removeAttribute("data-slide-travelling");
     containerRef.current.removeAttribute("data-slide-row-taken");
     sendRowToRest(currentElement);

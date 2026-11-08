@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "version": "1.6.74",
+  "version": "1.6.75",
   "type": "module",
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
   ],
   "dependencies": {
     "@jsenv/js-module-fallback": "1.6.20",
-    "@jsenv/plugin-bundling": "2.10.39",
+    "@jsenv/plugin-bundling": "2.10.40",
     "@jsenv/urls": "2.9.22"
   },
   "devDependencies": {
