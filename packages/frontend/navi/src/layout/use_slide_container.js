@@ -72,6 +72,7 @@ const NOTHING = {
   known: false,
   current: undefined,
   toward: undefined,
+  base: undefined,
   areas: NO_WAYS,
   ways: NO_WAYS,
   held: NO_WAYS,
@@ -94,6 +95,14 @@ export const readSlideContainerState = (element) => ({
   known: true,
   current: readSlideOnScreen(element),
   toward: element.getAttribute(SLIDE_TOWARD_ATTRIBUTE) ?? undefined,
+  // The slide --slide-travel-progress counts from, which is what a follower
+  // drawing the travel measures from (a Nav's bar, a StepList's halo). Not the
+  // slide on screen: a landing changes it after the heading has already said
+  // where the row was going.
+  base:
+    element.getAttribute(SLIDE_BASE_ATTRIBUTE) ??
+    element.getAttribute(SLIDE_CURRENT_ATTRIBUTE) ??
+    undefined,
   // In DOM order — which is the order of the WALK for a line, and not
   // necessarily for a map: there the order is the one the areas are written in
   // (see parseAreas). Ask `can("first")` / `can("last")` about the ends rather
@@ -111,6 +120,7 @@ export const sameSlideContainerState = (a, b) =>
   a.known === b.known &&
   a.current === b.current &&
   a.toward === b.toward &&
+  a.base === b.base &&
   a.areas.join(" ") === b.areas.join(" ") &&
   a.ways.join(" ") === b.ways.join(" ") &&
   a.held.join(" ") === b.held.join(" ");
@@ -173,7 +183,12 @@ export const useSlideContainer = (target) => {
     // (the box was already standing somewhere when this mounted), and one way
     // of reading is one thing that can be wrong.
     const read = () => {
-      const nextState = readSlideContainerState(element);
+      // Without the base, which this does not return: a landing changes it
+      // alone, and that is no reason to render the readers.
+      const nextState = {
+        ...readSlideContainerState(element),
+        base: undefined,
+      };
       setState((previous) =>
         sameSlideContainerState(previous, nextState) ? previous : nextState,
       );
