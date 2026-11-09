@@ -1673,7 +1673,13 @@ const pickerHasSomethingToClear = ({ interactive, value }) => {
   if (!interactive) {
     return false;
   }
-  return value !== undefined && value !== "";
+  // Holding what a clear leaves behind — "" for a scalar, the [] or {} of a
+  // list or a group (resolveClearedUIState) — there is nothing to take out.
+  // The same reading as the placeholder on the face.
+  if (value === "") {
+    return false;
+  }
+  return !uiStateHoldsNothing(value);
 };
 let clearOutsidePickerWarned = false;
 const warnOnClearOutsidePicker = () => {
