@@ -138,10 +138,9 @@ export const Separator = ({
   import.meta.css = css;
 
   // Written straight into style rather than declared through Box's own
-  // styleCSSVars: `size`, `margin` and `spacing` are names Box already owns (a
-  // font size, real margins, a gap) and it resolves those before it ever looks
-  // at styleCSSVars — so size="4px" would set a font size and leave the line
-  // as thin as it was. Last, so a caller's own style still wins.
+  // styleCSSVars: `spacing` is a name Box owns, and on a box that is neither
+  // flex nor grid it writes nothing for it, variable included. Last, so a
+  // caller's own style still wins.
   const innerStyle = {
     ...cssVars({
       "--size": lengthValue(size),

@@ -83,10 +83,12 @@ const css = /* css */ `
          the auto margins re-center it. */
       max-width: var(--navi-fixed-bar-max-width);
       padding-right: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-right)
+        var(--navi-fixed-bar-padding-right, var(--navi-fixed-bar-padding)) +
+          env(safe-area-inset-right)
       );
       padding-left: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-left)
+        var(--navi-fixed-bar-padding-left, var(--navi-fixed-bar-padding)) +
+          env(safe-area-inset-left)
       );
     }
     &[data-area="left"],
@@ -94,10 +96,12 @@ const css = /* css */ `
       top: var(--navi-app-inset-top);
       bottom: var(--navi-app-inset-bottom);
       padding-top: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-top)
+        var(--navi-fixed-bar-padding-top, var(--navi-fixed-bar-padding)) +
+          env(safe-area-inset-top)
       );
       padding-bottom: calc(
-        var(--navi-fixed-bar-padding) + env(safe-area-inset-bottom)
+        var(--navi-fixed-bar-padding-bottom, var(--navi-fixed-bar-padding)) +
+          env(safe-area-inset-bottom)
       );
       flex-direction: column;
     }
@@ -179,7 +183,6 @@ const css = /* css */ `
     left: calc(-1 * var(--navi-fixed-bar-border-width));
     clip-path: inset(0 0 0 -100vw);
   }
-
 `;
 
 const FixedBarStyleCSSVars = {
@@ -189,7 +192,14 @@ const FixedBarStyleCSSVars = {
   width: "--navi-fixed-bar-width",
   height: "--navi-fixed-bar-height",
   maxWidth: "--navi-fixed-bar-max-width",
+  // Every side goes through a variable too: written inline, it would replace
+  // the safe-area inset the stylesheet adds to it. A side across the bar is
+  // read by no rule — that direction is the width/height.
   padding: "--navi-fixed-bar-padding",
+  paddingTop: "--navi-fixed-bar-padding-top",
+  paddingRight: "--navi-fixed-bar-padding-right",
+  paddingBottom: "--navi-fixed-bar-padding-bottom",
+  paddingLeft: "--navi-fixed-bar-padding-left",
   background: "--navi-fixed-bar-background",
   borderWidth: "--navi-fixed-bar-border-width",
   borderColor: "--navi-fixed-bar-border-color",
@@ -203,6 +213,12 @@ const FixedBarStyleCSSVars = {
  *   height?: string|number,
  *   maxWidth?: string|number,
  *   padding?: string|number,
+ *   paddingX?: string|number,
+ *   paddingY?: string|number,
+ *   paddingTop?: string|number,
+ *   paddingRight?: string|number,
+ *   paddingBottom?: string|number,
+ *   paddingLeft?: string|number,
  *   background?: string,
  *   border?: boolean,
  *   borderWidth?: string|number,
@@ -229,7 +245,9 @@ const FixedBarStyleCSSVars = {
  *   content column narrower than the window (it stays centered).
  * @param {string|number} [props.padding=0] - Along the bar only: left/right on
  *   a top or bottom bar, top/bottom on a side one. Across it, the size is
- *   `height`/`width`.
+ *   `height`/`width`. The same holds for `paddingX`/`paddingY` and each side:
+ *   a side across the bar is ignored. Along the bar, the safe-area inset is
+ *   added to it.
  * @param {string} [props.shadow] - What the bar casts over the content, in
  *   `box-shadow` syntax, cut at the bar's box on every side but the content's.
  *   Takes no room.

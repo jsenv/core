@@ -272,8 +272,8 @@ const BinderStyleCSSVars = {
   tabBackgroundHover: "--binder-tab-background-hover",
   tabBorderColor: "--binder-tab-border-color",
   tabColor: "--binder-tab-color",
-  paddingX: "--binder-padding-x",
-  paddingY: "--binder-padding-y",
+  paddingX: ["--binder-padding-x", "padding"],
+  paddingY: ["--binder-padding-y", "padding"],
   pagePadding: ["--binder-page-padding", "padding"],
 };
 

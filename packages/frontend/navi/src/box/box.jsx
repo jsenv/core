@@ -362,6 +362,9 @@ const STYLE_CSS_VARS_DEFAULT = {};
 // An entry of styleCSSVars is the css variable the prop writes into, alone when
 // the prop is named after a css style — Box then already knows how to read its
 // value — or paired with the style whose values it borrows when it is not.
+// A prop Box expands (padding into its four sides, alignX into
+// justify-content…) is looked up by the styles it expands into, and by its own
+// name only when the component maps none of them.
 const readCSSVarEntry = (entry) => {
   if (Array.isArray(entry)) {
     return entry;
@@ -1033,6 +1036,24 @@ const computeBox = (props, parentBoxFlow) => {
         }
         const cssValues = getStyle(value, styleContext);
         if (!cssValues) {
+          return;
+        }
+        const ownCSSVarEntry = styleContext.styleCSSVars[name];
+        if (
+          ownCSSVarEntry &&
+          !Object.keys(cssValues).some(
+            (styleName) => styleContext.styleCSSVars[styleName],
+          )
+        ) {
+          // Written as the styles it expands into, the prop would land inline
+          // and beat what the component's stylesheet does with its variable
+          // (Switch sizes its thumb from its padding).
+          const [cssVarName, valueStyleName] = readCSSVarEntry(ownCSSVarEntry);
+          addCSSVar(
+            stringifyStyleValue(value, valueStyleName || name, styleContext),
+            cssVarName,
+            boxStylesTarget,
+          );
           return;
         }
         let needForwarding = false;
