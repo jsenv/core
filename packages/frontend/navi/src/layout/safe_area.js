@@ -31,7 +31,8 @@
  * JS placement answers to the level-1 rectangle too: getAppInsets
  * (layout/responsive.js) reads these same bands back off the computed style,
  * and hands them to pickPositionRelativeTo via setPlacementViewportInsets (see
- * navi_css_vars.js).
+ * navi_css_vars.js). A Popover with container="safe-area" is placed in level 2
+ * instead (getSafeAreaInsets, passed per placement).
  */
 
 const SAFE_AREA_CSS = /* css */ `
@@ -42,7 +43,8 @@ const SAFE_AREA_CSS = /* css */ `
      by popup placement, which must keep to the same rectangle as the CSS
      whether the bands are centered or written by the app (getAppInsets in
      layout/responsive.js); level 2 by a route transition, to keep the band the
-     page being left had (nav/transition_window.js). */
+     page being left had (nav/transition_window.js), and by a popover placed in
+     the safe area (getSafeAreaInsets). */
   @property --navi-app-inset-top {
     syntax: "<length>";
     inherits: true;

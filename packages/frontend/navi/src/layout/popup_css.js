@@ -72,8 +72,9 @@
  * (measured by wematch, 2026-09-06: no panel at all for 120ms, then a panel
  * with its head missing, then the head arriving from below). So the cut is
  * taken only where it hides something the screen would otherwise show — the
- * band of glass beside an app narrowed with --navi-app-max-width — and is a
- * constant everywhere else: at layer="top" the viewport's own edge cuts the
+ * band of glass beside an app narrowed with --navi-app-max-width, the fixed
+ * bars beside a popover placed in the safe area — and is a constant
+ * everywhere else: at layer="top" the viewport's own edge cuts the
  * travel on the compositor for free, and at layer="local" the clip wrapper
  * (a static ancestor, overflow: hidden) does. Where a band exists the cut
  * still animates and still can drift under load; the full answer there is a
@@ -205,22 +206,34 @@ export const popupCss = /* css */ `
        0 for a 0 band and 100vmax for any other, a step written without a
        branch. See this file's top comment for why an animated cut has to be
        that rare. */
+    --x-popup-area-inset-top: var(--navi-app-inset-top, 0px);
+    --x-popup-area-inset-right: var(--navi-app-inset-right, 0px);
+    --x-popup-area-inset-bottom: var(--navi-app-inset-bottom, 0px);
+    --x-popup-area-inset-left: var(--navi-app-inset-left, 0px);
     --x-popup-cut-top-at-area: calc(
       -1 * var(--container-position-room-top, 100vmax) - 100vmax +
-        min(100vmax, var(--navi-app-inset-top, 0px) * 1000000)
+        min(100vmax, var(--x-popup-area-inset-top) * 1000000)
     );
     --x-popup-cut-right-at-area: calc(
       -1 * var(--container-position-room-right, 100vmax) - 100vmax +
-        min(100vmax, var(--navi-app-inset-right, 0px) * 1000000)
+        min(100vmax, var(--x-popup-area-inset-right) * 1000000)
     );
     --x-popup-cut-bottom-at-area: calc(
       -1 * var(--container-position-room-bottom, 100vmax) - 100vmax +
-        min(100vmax, var(--navi-app-inset-bottom, 0px) * 1000000)
+        min(100vmax, var(--x-popup-area-inset-bottom) * 1000000)
     );
     --x-popup-cut-left-at-area: calc(
       -1 * var(--container-position-room-left, 100vmax) - 100vmax +
-        min(100vmax, var(--navi-app-inset-left, 0px) * 1000000)
+        min(100vmax, var(--x-popup-area-inset-left) * 1000000)
     );
+    /* Placed in the safe area (Popover's container="safe-area"): past its edge
+       lie the fixed bars, and a popup sliding in comes out from behind them. */
+    &[data-container="safe-area"] {
+      --x-popup-area-inset-top: var(--navi-safe-area-inset-top);
+      --x-popup-area-inset-right: var(--navi-safe-area-inset-right);
+      --x-popup-area-inset-bottom: var(--navi-safe-area-inset-bottom);
+      --x-popup-area-inset-left: var(--navi-safe-area-inset-left);
+    }
     /* The translate property is deliberately absent from this list — it
        carries where the popup stands, and applyNewPosition (visible_rect.js)
        owns it and drives its own transition through the Web Animations API

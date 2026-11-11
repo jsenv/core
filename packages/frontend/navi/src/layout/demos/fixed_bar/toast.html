@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>FixedBar — a toast over the page</title>
+    <link rel="stylesheet" href="./_shell.css" />
+  </head>
+  <body>
+    <div id="app" data-navi-safe-area></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import { Box, Button, FixedBar, Popover } from "@jsenv/navi";
+      import { rows } from "./_page.jsx";
+
+      const searchParams = new URL(window.location).searchParams;
+      const CONTAINER = searchParams.get("container") || "safe-area";
+
+      const toastSignal = signal(undefined);
+
+      const App = () => {
+        const [withBottomBar, setWithBottomBar] = useState(true);
+        return (
+          <>
+            <div className="page">
+              <Box flex="y" spacing="s" marginBottom="m">
+                <Button
+                  onClick={() => {
+                    toastSignal.value = "paused";
+                  }}
+                >
+                  Show the toast
+                </Button>
+                <Button onClick={() => setWithBottomBar(!withBottomBar)}>
+                  {withBottomBar
+                    ? "Remove the bottom bar"
+                    : "Add the bottom bar"}
+                </Button>
+              </Box>
+              {rows()}
+            </div>
+            {withBottomBar && (
+              <FixedBar area="bottom">
+                <Box flex alignX="center" spacing="s" expandX>
+                  <Button>Parties</Button>
+                  <Button>Profil</Button>
+                </Box>
+              </FixedBar>
+            )}
+            <Popover
+              signal={toastSignal}
+              positionArea="bottom"
+              container={CONTAINER}
+              marginWithContainer={12}
+              expandX
+              maxWidth="28rem"
+              animation="slide-from-bottom"
+              autoFocus={false}
+              backgroundColor="#002853"
+              color="white"
+              borderWidth="0"
+            >
+              <Box flex alignY="center" spacing="s" padding="s">
+                <Box expandX>Partie mise en pause</Box>
+                <Button variant="bare" command="--navi-close">
+                  OK
+                </Button>
+              </Box>
+            </Popover>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

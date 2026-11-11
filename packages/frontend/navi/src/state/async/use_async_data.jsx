@@ -18,6 +18,12 @@ import {
   takePrerunFailure,
 } from "../../action/action_error_report.js";
 import {
+  addActionAsker,
+  isCalledOffForWantOfAskers,
+  removeActionAsker,
+} from "../../action/action_askers.js";
+import {
+  ABORTED,
   COMPLETED,
   FAILED,
   IDLE,
@@ -102,6 +108,11 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *   it in a loop while the network is down — that is `rerun()`'s job. Except a
  *   failure a prerun left (a `prerun: true` head start, a press that preran
  *   it): nothing on screen asked for that run, so this asks again, once.
+ *
+ *   While mounted, it asks for that instance as a route action does: a route
+ *   action reading the same thing with the same params does not call the run
+ *   off under it when its route is left. A run called off that way before
+ *   this component was there to ask is asked again.
  *
  *   Prefer a `routeAction` wherever the parameter is one the address holds (a
  *   path param, a search param bound to a `stateSignal`), popup included: it is
@@ -248,6 +259,20 @@ const useActionAsyncData = (
   }
   useOnLoad(action, onLoad);
   usePoll(action, poll);
+  const routePage = useContext(RoutePageContext);
+
+  // `run: true` asks for the instance as long as this reader is mounted: a
+  // binding sharing it whose route is left does not call the run off under it
+  // (see action_askers.js). Asked through the binding itself, whose target
+  // moves before this renders again.
+  const askedRef = useRef(null);
+  askedRef.current = run ? action : null;
+  useLayoutEffect(() => {
+    const asker = addActionAsker(() => askedRef.current);
+    return () => {
+      removeActionAsker(asker);
+    };
+  }, []);
 
   // The instance the binding points at, remembered from one render to the
   // next: a binding that comes back to params whose instance failed — a search
@@ -264,6 +289,12 @@ const useActionAsyncData = (
     instanceRef.current !== instance &&
     action.runningStateSignal.peek() === FAILED;
   instanceRef.current = instance;
+  // A run called off because nothing asked for it any more, before this reader
+  // was there to ask (mounting after, or suspended before its first commit):
+  // nobody else will run it again. Not from a page the address has left, whose
+  // own route action is what called it off.
+  const calledOffBeforeThisReader =
+    isCalledOffForWantOfAskers(action) && !(routePage && !routePage.isShown());
   // `run: true` — this component owns the request, so it is what starts it, and
   // it starts it from the render rather than from an effect: a component that
   // suspends has no effects, so a run written in one would be waiting for
@@ -274,7 +305,7 @@ const useActionAsyncData = (
   if (
     run &&
     action.paramsSignal.peek() !== undefined &&
-    (runIsOwed(action) || backOnFailure)
+    (runIsOwed(action) || backOnFailure || calledOffBeforeThisReader)
   ) {
     // Nothing waits on this run: the failure is held by the action, and this
     // hook is what reads it back.
@@ -300,7 +331,6 @@ const useActionAsyncData = (
   // has already processed the settlement and the detached DOM is discarded.
   const runningState = action.runningStateSignal.peek();
   const [, setTick] = useState(0);
-  const routePage = useContext(RoutePageContext);
   // What this render read of the action, for the subscriptions below to tell
   // a change that came between the render and them from none at all.
   const readRef = useRef(null);
@@ -520,6 +550,13 @@ const useActionAsyncData = (
           resolve();
         } else if (reason === "idle" && state === RUNNING) {
           // idle→running: unblock so loadingRef reason updates to "loading"
+          actionPendingPromiseWeakMap.delete(action);
+          unsubscribe();
+          resolve();
+        } else if (reason === "loading" && state === ABORTED) {
+          // The run waited on was called off: drawn again, this reader asks
+          // for it again when nothing else will (calledOffBeforeThisReader),
+          // or waits for the next run as idle.
           actionPendingPromiseWeakMap.delete(action);
           unsubscribe();
           resolve();

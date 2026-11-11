@@ -1146,6 +1146,11 @@ const toContainerAlignedPosition = (value) => {
  *   by CSS). Its box is then derived from the container rather than measured: reading
  *   offsetWidth/offsetHeight forces a layout of everything the element holds, for a number
  *   the caller already knows. Only meaningful without an `anchor`.
+ * @param {{ left: number, top: number, right: number, bottom: number }} [options.viewportInsets]
+ *   - Insets from the window's edges (px) of the rectangle this one call places
+ *   against, in place of the embedder's (`setPlacementViewportInsets`). For an
+ *   element that keeps to a smaller rectangle than everything else the embedder
+ *   places — one kept clear of the app's own fixed bars, say.
  * @param {HTMLElement|null} [options.container] - The container `element` is genuinely
  *   `position: absolute` relative to (its own containing block) — decoupled from whether
  *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
@@ -1187,6 +1192,7 @@ export const pickPositionRelativeTo = (
     alignToAnchorBox = "border-box",
     marginWithContainer = 0,
     fill = false,
+    viewportInsets,
     container,
   } = {},
 ) => {
@@ -1197,13 +1203,15 @@ export const pickPositionRelativeTo = (
     width: viewportWidth,
     height: viewportHeight,
   } = getVisibleViewportRect();
-  // Narrowed to the embedder's own rectangle (see setPlacementViewportInsets)
-  // before anything reads it: the available area, the flip decisions, the
-  // clamps and the viewport-as-anchor rect below all follow, so an element
-  // docked to an edge lands flush against the app's edge rather than the
-  // window's.
-  if (getPlacementViewportInsets) {
-    const placementInsets = getPlacementViewportInsets();
+  // Narrowed to the embedder's own rectangle (see setPlacementViewportInsets),
+  // or to the one this call was given, before anything reads it: the
+  // available area, the flip decisions, the clamps and the viewport-as-anchor
+  // rect below all follow, so an element docked to an edge lands flush against
+  // the app's edge rather than the window's.
+  const placementInsets =
+    viewportInsets ||
+    (getPlacementViewportInsets ? getPlacementViewportInsets() : null);
+  if (placementInsets) {
     viewportLeft += placementInsets.left;
     viewportTop += placementInsets.top;
     viewportWidth -= placementInsets.left + placementInsets.right;

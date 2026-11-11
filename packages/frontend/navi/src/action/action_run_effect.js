@@ -1,9 +1,12 @@
 import { computed } from "@preact/signals";
 
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
+import { addActionAsker, callOffUnlessAsked } from "./action_askers.js";
 import { getActionPrivateProperties } from "./action_private_properties.js";
 import { createAction } from "./actions.js";
 import { runUnwatched } from "./run_unwatched.js";
+
+const askerByBindingWeakMap = new WeakMap();
 
 /**
  * Reactively runs an action whenever the params derived from signals change.
@@ -101,8 +104,9 @@ export const actionRunEffect = (
       if (actionTargetPrevious && actionTarget) {
         // params changed
         if (!asking) {
-          // falsy params, don't run
-          actionTargetPrevious.abort("abortOnFalsyParams");
+          // falsy params, don't run; the instance is shared by params, and
+          // something else may still ask for it (see action_askers.js)
+          callOffUnlessAsked(actionTargetPrevious, "abortOnFalsyParams");
           return;
         }
         if (!askingBefore) {
@@ -128,6 +132,11 @@ export const actionRunEffect = (
     },
     ...options,
   });
+  // Held by the binding, as long as it lives: askers are held weakly.
+  askerByBindingWeakMap.set(
+    actionRunnedByThisEffect,
+    addActionAsker(() => (asking ? actionRunnedByThisEffect : null)),
+  );
   if (asking) {
     runUnwatched(() =>
       actionRunnedByThisEffect.run({ reason: "initial truthy params" }),

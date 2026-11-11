@@ -153,8 +153,10 @@ const ROUTE_ACTION_BINDING_OPTIONS = new Set([
 /**
  * Binds an action to a route: it runs when the route matches, with the params
  * the effect reads off the address, runs again on a `reload()`, and is aborted
- * when the route is left. Its data, its wait and its failure are read by the
- * page through `useAsyncData`.
+ * when the route is left, unless something else still asks for the same read
+ * with the same params: another route action, a mounted `useAsyncData` with
+ * `run: true`. Its data, its wait and its failure are read by the page through
+ * `useAsyncData`.
  *
  * A page's CODE is declared the same way — the import is one more thing the
  * address asks for, started with the data rather than after it:

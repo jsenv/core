@@ -196,8 +196,9 @@ start when unsure which export solves a problem.
   `import.meta.css` and what a `${}` costs; browser support. Before overriding a
   component style or writing `import.meta.css`.
 - `safe_area.md` — the app's rectangle and the band left free inside it, an app
-  narrower than the window (`--navi-app-max-width`), `data-navi-safe-area`, the
-  viewport under a virtual keyboard, a document wider than the screen. Before
+  narrower than the window (`--navi-app-max-width`), `data-navi-safe-area`, a
+  popup kept clear of the bars (`container="safe-area"`, a toast), the viewport
+  under a virtual keyboard, a document wider than the screen. Before
   hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, a `List`'s
   `scroller`, where a list opens (a position handed back whole, `visibleCount`

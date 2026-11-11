@@ -177,6 +177,31 @@ free band leaves room for it ([above](#a-page-that-fits-the-free-band)). An anch
 `scroll-margin` adds only what `:root`'s `scroll-padding` does not hold already
 — the strip's own height, a few pixels of air — never the bar or the band.
 
+### Something docked over the page, clear of the bars
+
+A popup in the top layer is placed in the app's own screen, the bars included,
+and covers them: right for a sheet or a menu, which are what the hand is on for
+the moment. A toast is not: it says what a gesture just did while the page,
+and the bar under it, stay in use. It is placed in the safe area instead:
+
+```jsx
+<Popover
+  signal={toastSignal}
+  positionArea="bottom"
+  container="safe-area"
+  marginWithContainer={12}
+>
+```
+
+On a page with a bottom bar it sits 12px above it; on a page without one, 12px
+above the device's own band, and it follows a bar coming or going while it is
+open. A sliding entrance is cut at that edge, so it comes out from behind the
+bar.
+
+Not a fixed box carrying the insets with a `layer="local"` popover in it: that
+box is a second copy of the rectangle, and its popover is under the top layer,
+so a sheet open at the time hides it.
+
 ### Reading it yourself
 
 `var(--navi-safe-area-inset-bottom)` in any rule. It is always declared, whether

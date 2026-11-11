@@ -99,6 +99,8 @@ import {
   resolveNamedLiftAnchor,
 } from "./popup_lift.js";
 import { usePopupStandIn } from "./popup_stand_in.js";
+import { onFixedBarSpaceChange } from "./fixed_bar/fixed_bar_space.js";
+import { getSafeAreaInsets } from "./responsive.js";
 import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
@@ -562,6 +564,14 @@ const css = /* css */ `
  *   (`"3appw"`) or a container length (`"3cqw"`).
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
  *   between the popover and the edges of its anchor, written the same way.
+ * @param {"app"|"safe-area"} [props.container="app"] - The rectangle a
+ *   `layer="top"` popover is placed in: docked against with no anchor,
+ *   flipped and clamped within with one. `"app"`: the app's own screen, its
+ *   fixed bars included — the popover covers them. `"safe-area"`: that screen
+ *   less the bars and the device's own bands (`--navi-safe-area-inset-*`), for
+ *   something docked over the page that must leave the bars uncovered, a
+ *   toast. Followed live as a bar comes or goes. Still in the top layer, so
+ *   above what the page holds. See docs/safe_area.md.
  * @param {boolean} [props.backdrop=true] - Whether anything is laid between
  *   the popover and the page at all — asked before what an outside press does
  *   and before how the backdrop is painted. `false` leaves the page
@@ -998,6 +1008,7 @@ const usePopoverProps = (props) => {
     // "center" default.
     positionAreaWhenAnchorIsInvalid,
     marginWithContainer = 0,
+    container = "app",
     // "close"  → pointer press outside closes (a plain close = commit)
     // "cancel" → pointer press outside closes AS A CANCEL (revert)
     // "capture"→ absorb the press, stay open
@@ -1089,6 +1100,12 @@ const usePopoverProps = (props) => {
     </PopupValueContext.Provider>
   ) : null;
   const isTopLayer = layer === "top";
+  if (import.meta.dev && !isTopLayer && container !== "app") {
+    console.warn(
+      `Popover: container="${container}" is for layer="top". A layer="local" popover is placed in its positioned ancestor; put that ancestor where it should be.`,
+    );
+  }
+  const placesInSafeArea = isTopLayer && container === "safe-area";
   const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
@@ -1154,6 +1171,7 @@ const usePopoverProps = (props) => {
     positionAreaWhenAnchorIsInvalid,
     marginWithAnchor,
     marginWithContainer,
+    placesInSafeArea,
   };
   const repositionRef = useRef(null);
   useEffect(() => {
@@ -1166,6 +1184,7 @@ const usePopoverProps = (props) => {
     positionAreaWhenAnchorIsInvalid,
     marginWithAnchor,
     marginWithContainer,
+    placesInSafeArea,
   ]);
   // The freeze is taken where the value changes, not only at open time: a
   // popover showing skeletons first says sizing="auto" until its content is
@@ -1445,7 +1464,10 @@ const usePopoverProps = (props) => {
         positionAreaWhenAnchorIsInvalid,
         marginWithAnchor,
         marginWithContainer,
+        placesInSafeArea,
       } = positionPropsRef.current;
+      // undefined keeps the app's own screen (setPlacementViewportInsets).
+      const viewportInsets = placesInSafeArea ? getSafeAreaInsets() : undefined;
       let position;
 
       if (hasAnchorElement) {
@@ -1500,6 +1522,7 @@ const usePopoverProps = (props) => {
           // renderer, same as omitting `container` entirely would resolve
           // to on its own.
           container: positionedAncestor,
+          viewportInsets,
           minLeft,
           event: positionEvent,
         };
@@ -1551,6 +1574,7 @@ const usePopoverProps = (props) => {
         const pickOptions = {
           positionArea,
           container: positionedAncestor,
+          viewportInsets,
           marginWithContainer: resolveMarginInPixels(
             marginWithContainer,
             "marginWithContainer",
@@ -1690,6 +1714,22 @@ const usePopoverProps = (props) => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // A bar mounting or leaving moves the safe area and leaves the viewport as
+    // it was, so rectEffect.check() would find nothing changed: placed
+    // directly. "resize", so the popover glides to its new place.
+    if (isTopLayer) {
+      addCleanup(
+        onFixedBarSpaceChange(() => {
+          if (!positionPropsRef.current.placesInSafeArea) {
+            return;
+          }
+          if (deferPlacementWhileCovered(popoverEl)) {
+            return;
+          }
+          placeUnlessAnchorOutOfView(new CustomEvent("resize"));
+        }),
+      );
+    }
     // Whatever its own backdrop: a modal dialog above leaves all of the page
     // inert, a popover without a wall included. layer="local" is left out, its
     // ceiling answers to its container.
@@ -2061,6 +2101,7 @@ const usePopoverProps = (props) => {
     id,
     tabIndex,
     "data-layer": layer,
+    "data-container": placesInSafeArea ? "safe-area" : undefined,
     "data-expand-x": expand || expandX ? "" : undefined,
     "data-expand-y": expand || expandY ? "" : undefined,
     "navi-animation": isAutoAnimation ? undefined : animation,

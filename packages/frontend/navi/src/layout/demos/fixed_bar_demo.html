@@ -191,6 +191,24 @@
           </div>
 
           <div className="demo-section">
+            <Heading id="toast">A toast over the page</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/toast.html?container=app"
+                caption='container="app" (default): over the bar'
+                height={420}
+                scale={0.75}
+              />
+              <Screen
+                src="./fixed_bar/toast.html"
+                caption='container="safe-area": above the bar, wherever the bar is'
+                height={420}
+                scale={0.75}
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
             <Heading id="keyboard">A field taking focus</Heading>
             <div className="screens">
               <Screen

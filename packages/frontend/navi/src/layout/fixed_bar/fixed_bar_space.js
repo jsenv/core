@@ -15,6 +15,8 @@
  * never seen under a bar, and after every read of the commit that queued them.
  */
 
+import { createPubSub } from "@jsenv/dom";
+
 // Several bars can share an edge — during a page transition the outgoing and
 // the incoming one are both mounted. They are all pinned to that same edge, so
 // they overlap: the room to give back is the largest of them, not their sum,
@@ -31,6 +33,12 @@ const writtenValueByArea = new Map();
 const pendingSizeMapByArea = new Map();
 let flushMicrotaskQueued = false;
 let flushFrame = null;
+
+// The safe area moves with these writes and no resize comes with them: what is
+// placed in it (a Popover with container="safe-area") is told here.
+const [publishFixedBarSpaceChange, subscribeFixedBarSpaceChange] =
+  createPubSub();
+export const onFixedBarSpaceChange = subscribeFixedBarSpaceChange;
 
 // A size a render produced: a prop, the children or a theme variable changed
 // the bar, and the room it takes is given back before that commit is painted.
@@ -82,13 +90,19 @@ const queueSize = (area, barElement, size) => {
 };
 
 const flushPendingSizes = () => {
+  let written = false;
   for (const [area, pendingSizeMap] of pendingSizeMapByArea) {
     for (const [barElement, size] of pendingSizeMap) {
       storeSize(area, barElement, size);
     }
-    writeSpace(area);
+    if (writeSpace(area)) {
+      written = true;
+    }
   }
   pendingSizeMapByArea.clear();
+  if (written) {
+    publishFixedBarSpaceChange();
+  }
 };
 
 const storeSize = (area, barElement, size) => {
@@ -115,16 +129,18 @@ const writeSpace = (area) => {
   const property = `--navi-fixed-bar-space-${area}`;
   const { style } = document.documentElement;
   if (sizeMap.size === 0) {
-    if (writtenValueByArea.has(area)) {
-      writtenValueByArea.delete(area);
-      style.removeProperty(property);
+    if (!writtenValueByArea.has(area)) {
+      return false;
     }
-    return;
+    writtenValueByArea.delete(area);
+    style.removeProperty(property);
+    return true;
   }
   const value = `${largestSize}px`;
   if (writtenValueByArea.get(area) === value) {
-    return;
+    return false;
   }
   writtenValueByArea.set(area, value);
   style.setProperty(property, value);
+  return true;
 };
