@@ -229,6 +229,10 @@ delay to hide it:
 
 A "check now" wired to `run()` therefore checks nothing, silently.
 
+`run()`, `rerun()` and `prerun()` answer the way the callback does: a promise when it is asynchronous, even
+when `run()` joins an answer the instance already holds, so `ACTION.run().catch(…)`
+holds in every state; the data itself, synchronously, when it is synchronous.
+
 ### Aborting saves resources, it does not undo
 
 `abort()` cancels what can still be cancelled — a `fetch` wired to the

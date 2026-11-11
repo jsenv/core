@@ -112,6 +112,24 @@ render.**
    };
    ```
 
+   The binding `actionRunEffect` returns holds the state's question: while the
+   state says no, it has nothing to ask, and a reader on it waits forever. That
+   is right when the state is the only thing that asks. When something else asks
+   too (a reader with `run: true` that does not follow that state, the code of a
+   section every profile with cups draws, asked ahead because mine has some),
+   the effect runs the action and the readers read the question that always
+   stands, `true` for a param-less action. Both are the same instance, so the
+   code is fetched once:
+
+   ```jsx
+   const PALMARES_CODE_ACTION = createAction(() =>
+     import("./palmares.jsx").then((m) => m.Palmares),
+   );
+   actionRunEffect(PALMARES_CODE_ACTION, () => myCupsSignal.value.length > 0);
+   const PALMARES_CODE = PALMARES_CODE_ACTION.bindParams(true);
+   // useAsyncData(PALMARES_CODE, { run: hasPalmares, loading: true })
+   ```
+
 3. **Nothing above the component asks** → `useAsyncData` with a function, the
    fallback: the component's own existence is the only thing that asks, so the
    request is its own, for the life of the instance.

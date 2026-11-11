@@ -623,6 +623,7 @@ ${lines.join("\n")}`);
 
       const actionToRunPrivateProperties =
         getActionPrivateProperties(actionToPrerunOrRun);
+      actionToRunPrivateProperties.answeredAsync = false;
       let performRunResult;
       try {
         performRunResult = actionToRunPrivateProperties.performRun({
@@ -647,6 +648,7 @@ ${lines.join("\n")}`);
       activationWeakSet.add(actionToPrerunOrRun);
 
       if (performRunResult && typeof performRunResult.then === "function") {
+        actionToRunPrivateProperties.answeredAsync = true;
         actionPromiseMap.set(actionToPrerunOrRun, performRunResult);
         allThenableArray.push(performRunResult);
         hasAsync = true;
@@ -676,7 +678,9 @@ ${lines.join("\n")}`);
 
     // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
-      actionToPromote.isPrerunSignal.value = false;
+      writeActionState(() => {
+        actionToPromote.isPrerunSignal.value = false;
+      });
     }
   }
 
@@ -685,13 +689,21 @@ ${lines.join("\n")}`);
   // that IS carrying it. `await action.run()` then means the same thing to
   // every caller: the second one waits for the first one's request and reads
   // the same data, instead of being handed `undefined` before the network has
-  // said anything. See the run() JSDoc.
+  // said anything. It answers in the tense of that run: the answer of a run
+  // that answered with a promise comes back as one, so `run().catch()` holds
+  // whatever state the instance is in. See the run() JSDoc.
   join_active_runs: {
     for (const actionToJoin of willJoinSet) {
       const runningPromise = actionPromiseMap.get(actionToJoin);
       if (runningPromise) {
         hasAsync = true;
         resultArray.push({ type: "async", promise: runningPromise });
+      } else if (getActionPrivateProperties(actionToJoin).answeredAsync) {
+        hasAsync = true;
+        resultArray.push({
+          type: "async",
+          promise: Promise.resolve(actionToJoin.dataSignal.peek()),
+        });
       } else {
         resultArray.push({
           type: "sync",
@@ -936,6 +948,10 @@ export const createAction = (callback, rootOptions = {}) => {
      * the one that asked first or the one that arrived while the request was
      * out. Use `rerun()` to force a fresh run ("refresh", "check now", any
      * explicit user intent to go back to the network).
+     *
+     * An asynchronous callback answers with a promise, joined or not:
+     * `ACTION.run().catch(…)` holds in every state. A synchronous one answers
+     * synchronously, and throws its failure.
      */
     const run = (options) => {
       action.debug(`${action}.run(${stringifyForDisplay(options)})`);
@@ -1395,7 +1411,9 @@ export const createAction = (callback, rootOptions = {}) => {
             // another run's, or idle.
             return;
           }
-          runningStateSignal.value = ABORTED;
+          writeActionState(() => {
+            runningStateSignal.value = ABORTED;
+          });
           internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
           if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
@@ -1422,7 +1440,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
         actionAbortMap.set(action, abort);
 
-        batch(() => {
+        writeActionState(() => {
           if (valueSignal.peek() === undefined) {
             // An action saying nothing of its own may still have a value the
             // page kept from the previous document (see kept_values.js).
@@ -1501,7 +1519,7 @@ export const createAction = (callback, rootOptions = {}) => {
            * before the UI attempts to render the now-missing resource.
            */
 
-          batch(() => {
+          writeActionState(() => {
             const value = resultToValue
               ? resultToValue(runResult, action)
               : runResult;
@@ -1533,7 +1551,9 @@ export const createAction = (callback, rootOptions = {}) => {
               error === internalAbortSignal.reason) ||
             error.name === "AbortError";
           if (isAbort) {
-            runningStateSignal.value = ABORTED;
+            writeActionState(() => {
+              runningStateSignal.value = ABORTED;
+            });
             if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
@@ -1547,7 +1567,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (isPrerun) {
             markErrorAsPrerunFailure(error);
           }
-          batch(() => {
+          writeActionState(() => {
             errorSignal.value = error;
             runningStateSignal.value = FAILED;
             onError?.(error, { event, action, args });
@@ -1642,7 +1662,7 @@ export const createAction = (callback, rootOptions = {}) => {
         }
 
         actionPromiseMap.delete(action);
-        batch(() => {
+        writeActionState(() => {
           if (!willRunOrPrerun) {
             errorSignal.value = undefined;
             valueSignal.value = valueInitial;
@@ -1660,6 +1680,9 @@ export const createAction = (callback, rootOptions = {}) => {
         provisionalValue,
         inheritData,
         keepsAnswers: keptAnswerRegistry !== null,
+        // Whether the last run answered with a promise, written by
+        // updateActions: the tense a run joining this instance answers in.
+        answeredAsync: false,
 
         performRun,
         performReset,
@@ -2141,6 +2164,35 @@ const isPlainObject = (obj) => {
   return (
     Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null
   );
+};
+
+// Every state write of a run (start, end, failure, abort, reset), batched. At
+// the end of the batch preact runs the effects those writes woke up, anywhere
+// in the app, and rethrows the first one that threw: from there it would fail
+// this run, or leave it RUNNING, or stop the update half way. That throw is
+// the effect's, so it is reported on its own, as action_error_report.js
+// reports an error (thrown from a timer), and the action carries on. What
+// `write` throws (resultToValue, onComplete…) is the run's, and goes on.
+const writeActionState = (write) => {
+  let writeThrew = false;
+  let writeError;
+  try {
+    batch(() => {
+      try {
+        write();
+      } catch (e) {
+        writeThrew = true;
+        writeError = e;
+      }
+    });
+  } catch (effectError) {
+    setTimeout(() => {
+      throw effectError;
+    });
+  }
+  if (writeThrew) {
+    throw writeError;
+  }
 };
 
 if (import.meta.hot) {
