@@ -1,6 +1,6 @@
 import { createIterableWeakSet } from "@jsenv/dom";
 
-import { RUNNING } from "../../action/action_run_states.js";
+import { FAILED, RUNNING } from "../../action/action_run_states.js";
 import { getActionDispatcher } from "../../action/actions.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
@@ -394,7 +394,7 @@ export const createResourceLifecycleManager = () => {
 
       for (const restAction of config.restActionSet) {
         const actionCandidateArray = restAction.matchAllSelfOrDescendant(
-          (action) => isAnsweredOrAsking(action, triggeringAction),
+          (action) => shouldAskAgain(action, triggeringAction),
         );
 
         for (const actionCandidate of actionCandidateArray) {
@@ -434,7 +434,7 @@ export const createResourceLifecycleManager = () => {
               break delete_effect;
             }
             if (candidateIsPlural) {
-              if (!shouldRerunGetMany) {
+              if (candidateVerb !== "GET" || !shouldRerunGetMany) {
                 break delete_effect;
               }
               actionsToRerun.add(actionCandidate);
@@ -576,7 +576,7 @@ export const createResourceLifecycleManager = () => {
           continue;
         }
         const instanceArray = dependentAction.matchAllSelfOrDescendant(
-          (action) => isAnsweredOrAsking(action, triggeringAction),
+          (action) => shouldAskAgain(action, triggeringAction),
         );
         for (const instance of instanceArray) {
           actionsToRerun.add(instance);
@@ -679,12 +679,16 @@ export const createResourceLifecycleManager = () => {
   };
 };
 
-// A read to ask again after a write: answered before it landed, or still out —
-// an answer that left before the write is as stale as a completed one, and
-// would replace what the write put in the store (a rerun aborts it and asks
-// again). A head start is its owner's to ask (findEffectOnActions resets it).
-const isAnsweredOrAsking = (action, triggeringAction) =>
-  (action.completed || action.runningState === RUNNING) &&
+// A read to ask again after a write: answered before it landed, still out, or
+// failed. An answer that left before the write is as stale as a completed one,
+// and would replace what the write put in the store (a rerun aborts it and asks
+// again). A failed read has no other way back: only a write asks it again.
+// A head start is its owner's to ask: findEffectOnActions resets one holding an
+// answer, and one that failed stays FAILED (see prerunAhead in route_action.js).
+const shouldAskAgain = (action, triggeringAction) =>
+  (action.completed ||
+    action.runningState === RUNNING ||
+    (action.runningState === FAILED && !action.isPrerunSignal.peek())) &&
   action !== triggeringAction;
 // A write named in `writes` says for itself which reads of its own resource it
 // reruns (`rerunOn: { GET_RANGE: true }`); a read it leaves out, and every read
