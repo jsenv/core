@@ -596,6 +596,15 @@ const createResource = (
    * The property is reactive: updating the child item anywhere propagates immediately.
    * The child resource exists independently — it is not owned by, nor deleted with, the parent.
    *
+   * The other way round is declared with `onDelete`. Left out, a parent outlives its
+   * child: once the child leaves its store, the property reads an empty object (truthy,
+   * `valueOf()` is `null`, no fields) until the parent is read again — a game whose
+   * organizer is deleted is still a game. `onDelete: "cascade"` is for a parent that is
+   * nothing without its child (an address-book row, the person in it): when the child
+   * leaves its store, the parents pointing at it leave theirs in the same write, and
+   * with them every list holding them. Which one a relation needs is decided in
+   * docs/resource.md, "When the child is deleted".
+   *
    * Use it when the child is a first-class entity with its own store, shared across
    * parents (a user referenced by many games). When the child only exists inside its
    * owner, use `.scopedOne()` instead.
@@ -615,7 +624,12 @@ const createResource = (
    *
    * @param {string} propertyName - property holding the child on each parent item
    * @param {Object} childResource - the independent resource created by `resource()`
-   * @param {Object} [restCallbacks] - `{ rerunOn, dependencies, GET, PUT, DELETE }`
+   * @param {Object} [restCallbacks] - `{ rerunOn, dependencies, onDelete, GET, PUT, DELETE }`
+   * @param {"cascade"} [restCallbacks.onDelete] - `"cascade"`: a parent leaves its store
+   *   when its child leaves the child's (the child's `DELETE`, `DELETE_MANY`, a write
+   *   named with verb `DELETE`, a cascade of its own). Not the relation's own `DELETE`,
+   *   which unlinks: the property becomes `null` and the parent stays. Throws on a
+   *   relation declared on a scoped child.
    * @see docs/resource.md
    */
   stateFacade.one = (
@@ -624,6 +638,7 @@ const createResource = (
     {
       rerunOn: oneRerunOn,
       dependencies: oneDependencies,
+      onDelete,
 
       GET,
       PUT,
@@ -631,16 +646,54 @@ const createResource = (
     } = {},
   ) => {
     const declarationSite = getDeclarationSite();
+    const relationLabel = `${name}.one("${propertyName}")`;
     if (ownerName) {
       refuseCallbacksNamingScopedItem(
-        `${name}.one("${propertyName}")`,
+        relationLabel,
         { GET, PUT, DELETE },
         { name, ownerName, propertyName, declarationSite },
+      );
+    }
+    if (onDelete !== undefined && onDelete !== "cascade") {
+      throw new TypeError(
+        `${relationLabel}: onDelete must be "cascade" or left out, got ${onDelete}.
+${relationLabel} source location: ${declarationSite}`,
+      );
+    }
+    const cascade = onDelete === "cascade";
+    if (cascade && ownerName) {
+      // A scoped item lives in its owner's collection, not in a store this
+      // relation could drop it from.
+      throw new Error(
+        `${relationLabel} cannot declare onDelete: "cascade": a "${name}" item exists only inside its "${ownerName}", and leaves through the "${ownerName}" callbacks.
+Read the "${ownerName}" again after the "${childResource.name}" is deleted (dependencies).
+${relationLabel} source location: ${declarationSite}`,
       );
     }
     const childName = `${name}.${propertyName}`;
     const childIdKey = childResource.idKey;
     const childStore = childResource.store;
+    // The id each parent points at, carried by the parent row (copies of a row
+    // keep it, a spread does not): a removal is matched against the parents
+    // the store holds at that moment, under the ids they have then.
+    const childIdSymbol = cascade ? Symbol(`${childName} id`) : undefined;
+    if (cascade) {
+      childStore.observeRemovals((removedChildArray) => {
+        const removedChildIdSet = new Set();
+        for (const removedChild of removedChildArray) {
+          removedChildIdSet.add(removedChild[childIdKey]);
+        }
+        const orphanIdArray = [];
+        for (const parentItem of store.arraySignal.peek()) {
+          if (removedChildIdSet.has(parentItem[childIdSymbol])) {
+            orphanIdArray.push(parentItem[idKey]);
+          }
+        }
+        if (orphanIdArray.length > 0) {
+          store.drop(orphanIdArray);
+        }
+      });
+    }
     addItemSetup((item, answer) => {
       const childItemIdSignal = signal();
       const updateChildItemId = (value, answer) => {
@@ -695,6 +748,11 @@ const createResource = (
         get: () => childItemFacadeSignal.value,
         set: updateChildItemId,
       });
+      if (cascade) {
+        Object.defineProperty(item, childIdSymbol, {
+          get: () => childItemIdSignal.peek(),
+        });
+      }
       debug(
         `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
       );

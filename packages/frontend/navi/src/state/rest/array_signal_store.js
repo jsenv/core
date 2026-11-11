@@ -519,7 +519,11 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
    * (docs/resource.md).
    */
   const upsertAnswer = (...args) => upsertWith(args, true);
-  const drop = (...args) => {
+  // Batched like upsertWith: a removal observer may drop rows of another
+  // store (a `.one()` declared with `onDelete: "cascade"`), and an effect
+  // reading both runs once, never between the child leaving and its parents.
+  const drop = (...args) => batch(() => dropNow(...args));
+  const dropNow = (...args) => {
     const removedItemArray = [];
     const triggerRemovedMutations = () => {
       if (removedItemArray.length === 0) {
@@ -554,6 +558,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
           hasFound = true;
           idToRemoveSet.delete(existingItemId);
           idRemovedArray.push(existingItemId);
+          removedItemArray.push(existingItem);
         } else {
           arrayWithoutDroppedItems.push(existingItem);
         }

@@ -69,7 +69,8 @@
  * it paints outside its box (a button standing up out of a tab bar) as much as
  * anywhere, and a rectangle laid there dims the page a second time, over the
  * area's own stand-in — no rectangle is right, whatever its size. The filter
- * floods the wall's colour atop the bar's own pixels, keeping their alpha. It
+ * floods the wall's colour atop the bar's own pixels, keeping their alpha, and
+ * blurs the bar within its own shape, which it never paints past. It
  * is worn by the bar, not written on its pictures, for the frames the live
  * document is shown (the first and the last, see the CSS). A bar the two
  * states share is one group with two pictures — dimmed on the side that has a
@@ -521,10 +522,12 @@ const barsOutside = (areaElement) => {
 };
 
 // Room around what a bar's picture holds for what paints past every box — a
-// shadow, the blur of a wall — which no API measures: a filter cuts whatever
+// shadow, the bar's own filter — which no API measures: a filter cuts whatever
 // falls outside its region.
 const WALL_FILTER_INK_ROOM = 100;
 const SVG_NS = "http://www.w3.org/2000/svg";
+// A blur() in a computed filter, its radius in px.
+const BLUR_FUNCTION_REGEXP = /blur\(([^)]*)\)/g;
 
 // The bar's picture dimmed, not a rectangle over it: each wall's colour is
 // flooded atop the bar's own pixels (Porter-Duff source-atop, which no blend
@@ -552,11 +555,17 @@ const dimBarPicture = (bar, sources) => {
   const ownFilter = getComputedStyle(bar).filter;
   const chain = ownFilter === "none" ? [] : [ownFilter];
   for (const source of sources) {
-    const backdropFilter = getComputedStyle(source)
-      .getPropertyValue("--backdrop-filter")
-      .trim();
-    if (backdropFilter && backdropFilter !== "none") {
-      chain.push(backdropFilter);
+    const backdropFilter = readBackdropFilter(source);
+    if (backdropFilter !== "none") {
+      // Blurred alone, the bar would fade to transparent over its edges and
+      // show the live document through them: its blur stays inside its shape.
+      chain.push(
+        backdropFilter.replace(
+          BLUR_FUNCTION_REGEXP,
+          (_, radius) =>
+            `url(#${createShapeBlurFilter(parseFloat(radius), region).id})`,
+        ),
+      );
     }
     chain.push(`url(#${createWallFilter(source, region).id})`);
   }
@@ -565,7 +574,59 @@ const dimBarPicture = (bar, sources) => {
   dimmedBars.push(bar);
 };
 
+// The wall's backdrop-filter as computed, so a blur radius written in em or
+// rem reads in px, as the wall resolves it where it paints.
+const readBackdropFilter = (source) => {
+  const sourceStyle = getComputedStyle(source);
+  const backdropFilter = sourceStyle
+    .getPropertyValue("--backdrop-filter")
+    .trim();
+  if (!backdropFilter || backdropFilter === "none") {
+    return "none";
+  }
+  const probe = document.createElement("div");
+  probe.style.fontSize = sourceStyle.fontSize;
+  probe.style.filter = backdropFilter;
+  document.body.append(probe);
+  const filter = getComputedStyle(probe).filter;
+  probe.remove();
+  return filter;
+};
+
 const createWallFilter = (source, region) => {
+  const filter = createFilter(region);
+  const flood = document.createElementNS(SVG_NS, "feFlood");
+  flood.setAttribute("flood-color", readBackdropColor(source));
+  const composite = document.createElementNS(SVG_NS, "feComposite");
+  composite.setAttribute("in2", "SourceGraphic");
+  composite.setAttribute("operator", "atop");
+  filter.append(flood, composite);
+  return filter;
+};
+
+// Colour kept, alpha set to 1.
+const OPAQUE_MATRIX = "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1";
+
+// The wall's blur kept inside the bar. At rest the window is blurred as one
+// image; a CSS blur() on the bar sees only the bar, so its edges go half
+// transparent and its colour spreads past its box. Made opaque, each pixel is
+// the mean of the bar's own pixels around it (feColorMatrix works on
+// unpremultiplied colours), then cut back to the bar's own alpha.
+const createShapeBlurFilter = (stdDeviation, region) => {
+  const filter = createFilter(region);
+  const blur = document.createElementNS(SVG_NS, "feGaussianBlur");
+  blur.setAttribute("stdDeviation", stdDeviation);
+  const opaque = document.createElementNS(SVG_NS, "feColorMatrix");
+  opaque.setAttribute("type", "matrix");
+  opaque.setAttribute("values", OPAQUE_MATRIX);
+  const clip = document.createElementNS(SVG_NS, "feComposite");
+  clip.setAttribute("in2", "SourceAlpha");
+  clip.setAttribute("operator", "in");
+  filter.append(blur, opaque, clip);
+  return filter;
+};
+
+const createFilter = (region) => {
   if (!wallFilterSvg) {
     wallFilterSvg = document.createElementNS(SVG_NS, "svg");
     wallFilterSvg.setAttribute(WALL_FILTERS_ATTRIBUTE, "");
@@ -575,18 +636,13 @@ const createWallFilter = (source, region) => {
   wallFilterCount++;
   const filter = document.createElementNS(SVG_NS, "filter");
   filter.id = `navi-transition-wall-${wallFilterCount}`;
-  // linearRGB, the default, floods another colour than the wall's.
+  // linearRGB, the default, floods another colour than the wall's and blurs
+  // in another space than its backdrop-filter.
   filter.setAttribute("color-interpolation-filters", "sRGB");
   filter.setAttribute("x", region.x);
   filter.setAttribute("y", region.y);
   filter.setAttribute("width", region.width);
   filter.setAttribute("height", region.height);
-  const flood = document.createElementNS(SVG_NS, "feFlood");
-  flood.setAttribute("flood-color", readBackdropColor(source));
-  const composite = document.createElementNS(SVG_NS, "feComposite");
-  composite.setAttribute("in2", "SourceGraphic");
-  composite.setAttribute("operator", "atop");
-  filter.append(flood, composite);
   wallFilterSvg.appendChild(filter);
   return filter;
 };

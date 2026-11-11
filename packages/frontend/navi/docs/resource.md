@@ -43,6 +43,7 @@ Actions are read in components through the action system (`useAsyncData`,
 - [When the backend answers a sub-route with the whole parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)
 - [Relations and autorerun](#relations-and-autorerun)
 - [Reading a relation](#reading-a-relation)
+- [When the child is deleted](#when-the-child-is-deleted)
 - [What a read shows while its params move](#what-a-read-shows-while-its-params-move)
 - [`withParams()`: a scope with reruns of its own](#withparams-a-scope-with-reruns-of-its-own)
   - [`dependencies`: rerun after another resource writes](#dependencies-rerun-after-another-resource-writes)
@@ -484,8 +485,11 @@ store holds (a club's members). The person goes under `.one()`:
 ```js
 // GET /me/contacts → [{ key: "user:12", contact: { … }, user: { id: 12, … } }, …]
 const CONTACT = resource("contact", { idKey: "key", GET_MANY });
-CONTACT.one("user", USER);
+CONTACT.one("user", USER, { onDelete: "cascade" });
 ```
+
+The row is nothing without the person, so it leaves when they are deleted
+(`onDelete: "cascade"`, see [When the child is deleted](#when-the-child-is-deleted)).
 
 Spread into the row (`{ ...user, key, contact }`), the person is a second copy
 in another store. Their profile read again, a write on them, a search that finds
@@ -674,7 +678,9 @@ Relationship mutations do **not** invalidate their parent by default. The rules:
 - `.scopedOne` mutations rerun nothing, ever — the result is the new value,
   and whoever reads the property is drawn again with it.
 - `.one` / `.many` children live in an independent store; mutating them never
-  reruns the parent. A `.many()` write changes the parent's array only through
+  reruns the parent. Deleting a `.one()` child removes its parents only when
+  the relation says so ([When the child is deleted](#when-the-child-is-deleted)).
+  A `.many()` write changes the parent's array only through
   the answers naming it (`[parentId, …]`, see
   [Callback return contracts](#callback-return-contracts)); otherwise declare
   it with [`dependencies`](#dependencies-rerun-after-another-resource-writes)
@@ -711,6 +717,64 @@ Read the relation where it is drawn. A derivation that has to flatten the rows
 (`{ ...contact.user, contact: contact.contact }`) reads the children at render
 and is keyed on them: a `.one()` child is the same object until it is written,
 and a new one after.
+
+## When the child is deleted
+
+A `.one()` child leaves its store when it is deleted: its `DELETE`, its
+`DELETE_MANY`, or a write named in `writes` with verb `DELETE` (a profile merged
+into another account). Whether its parents leave with it is declared on the
+relation. Declared wrong, the screen draws dead rows: a parent with nothing in
+it, until the parent is read again. A `.many()` needs nothing: a deleted child
+leaves every array holding it. Decide it for every `.one()` by asking what the
+parent is without its child:
+
+| The parent without its child                                                                       | Declare               | Once the child is deleted                                                                  |
+| -------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------ |
+| Still something: a game whose organizer deleted their account, a message whose author left         | nothing               | the parent stays, and its property reads an empty object until the parent is read again    |
+| Nothing: a row of my contacts (the person), a favourite (the place), a notification about one game | `onDelete: "cascade"` | the parent leaves its store in the same write, and with it every list and range holding it |
+
+The server answers the same question with its foreign key: `ON DELETE CASCADE`
+on the parent's table is `onDelete: "cascade"` here, and `SET NULL` (or a row
+kept pointing at nothing) is the default.
+
+**`onDelete: "cascade"`.** The parent leaves as on a `DELETE` of its own,
+without the action:
+
+- a `GET_MANY` or a `GET_RANGE` holding it stops drawing it, and a `GET` of that
+  row has nothing left to show;
+- nothing listening to the parent's own writes hears it (its `rerunOn`, a
+  `dependencies` naming it): the parent wrote nothing;
+- the parent leaving is a deletion too: a resource pointing at it through a
+  cascading `.one()` of its own loses its rows in turn;
+- a read of the parent that answers the row again brings it back: the server
+  has the last word.
+
+Keep a [`dependencies`](#dependencies-rerun-after-another-resource-writes)
+entry on the child's delete when that delete changes other parents too (a
+merge moves my links onto the account it merged into): the cascade takes away
+at once what is gone, the reread brings what moved. The relation's own `DELETE`
+is not a deletion of the child. It unlinks: the property becomes `null` and the
+parent stays. On a `.one()` declared on a scoped child, `onDelete` throws: a
+scoped item leaves through its owner's callbacks, so the owner is read again
+after the child's delete (`dependencies`), and the item reads an empty object
+until that read answers.
+
+**Left out: the empty object.** A parent outliving its child reads its property
+as an object with no fields, whose `valueOf()` is `null`. A relation that is
+`null` reads the same. It is an object on purpose: `game.organizer.name` reads
+`undefined` rather than throwing, and a binding handed `game.organizer` follows
+the relation, a child arriving later included. But it is **truthy**, and that is
+where screens draw dead things:
+
+- `game.organizer ? <Avatar user={game.organizer} /> : null` draws an avatar of
+  nobody;
+- `{ ...contact.user, key }` spreads into a row holding a key and nothing else,
+  which a name component fills with its fallback ("Anonymous").
+
+Test the child by a field it always has, its id:
+`game.organizer.id ? … : …`. A list that must never draw a parent without its
+child needs the cascade, not a filter in the screen: the filter guesses what the
+store knows, and every other list reading the relation needs the same filter.
 
 ## What a read shows while its params move
 

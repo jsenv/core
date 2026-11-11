@@ -90,7 +90,9 @@ start when unsure which export solves a problem.
   command on one press. Before running an action from a component.
 - `resource.md` — `resource()` and its relations (never an `op` discriminator),
   a row pairing an entity with fields of its own (the entity under `.one()`,
-  never spread in), what a copy of a relation keeps, what each read shows while
+  never spread in), what a copy of a relation keeps, what a parent shows once
+  its `.one()` child is deleted (`onDelete: "cascade"` for a parent that is
+  nothing without it), what each read shows while
   its params move, `GET_RANGE` (its inclusive `end`,
   the count for the screen around the list, a question following a search
   field), a search as the same `GET_MANY`, `withParams()` scopes and
