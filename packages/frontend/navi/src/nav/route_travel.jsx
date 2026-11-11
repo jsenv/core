@@ -286,10 +286,14 @@ export const RouteTravel = ({
   const pages = pagesRef.current;
   const currentIndex = currentPageIndex(pages);
   // Where the page of a window stands: the address, or where it last was for an
-  // address the row has no place for.
+  // address the row has no place for, while the row still has that column.
   const liveIndexRef = useRef(0);
   if (currentIndex !== -1) {
     liveIndexRef.current = currentIndex;
+  } else if (liveIndexRef.current >= pages.length) {
+    // Past the row's end the page stands in a column of its own, off screen: a
+    // still row does not scroll, and nothing scrolls a row to an address it lacks.
+    liveIndexRef.current = pages.length === 0 ? 0 : pages.length - 1;
   }
   const liveIndex = liveIndexRef.current;
   const latestRef = useRef(null);
