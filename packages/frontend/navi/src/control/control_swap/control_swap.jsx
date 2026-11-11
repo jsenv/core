@@ -1,8 +1,8 @@
 /**
  * ControlSwap: two controls taking turns on one line.
  *
- *     [👥] [ Le dimanche matin     ▾ ]                     [🔍]
- *     [👥]                           [ Rechercher…       ] [🔍]
+ *     [👥| Le dimanche matin     ▾ ]  [🔍]
+ *     [👥]  [ Rechercher…          |🔍]
  *
  * Four boxes on a row that is never wide enough for both controls — a phone
  * answering "what do I search IN" then "what am I looking for". The two end
@@ -25,6 +25,12 @@
  * The control without the floor is off the middle rather than gone: `inert`,
  * so no finger and no Tab reaches it, and holding what was typed in it for the
  * round trip back.
+ *
+ * The side holding the floor reads as one framed thing: its cap and the window
+ * share a border, as the members of a Group do, and the other cap stands alone
+ * across the row's gap. The seam changes ends with the floor, so the window
+ * moves by a gap and a border, a transform next to the track's: its width is
+ * the same on both sides and nothing is laid out during the swap.
  *
  * The row has ONE height, and everything in it is that tall: the caps are
  * squares of it, the controls are given it. Nothing is measured — a height
@@ -70,10 +76,17 @@ const css = /* css */ `
       )
     );
 
-    /* One spacing for the row: between a cap and the control beside it, and
-       between the two controls on the track — the second one is only ever seen
-       crossing the window mid-slide, and it reads as the first. */
+    /* One spacing for the row: between the window and the cap it is not joined
+       to, and between the two controls on the track — the second one is only
+       ever seen crossing the window mid-slide, and it reads as the first. */
     --x-control-swap-gap: var(--navi-control-swap-gap, var(--navi-xs));
+
+    /* The window lies over the cap of the side holding the floor by one
+       border, so the two borders are one line, and the swap carries it the
+       same length onto the other cap. */
+    --x-control-swap-seam-travel: calc(
+      var(--x-control-swap-gap) + var(--navi-control-border-width)
+    );
 
     height: var(--x-control-swap-size);
     align-items: stretch;
@@ -101,6 +114,25 @@ const css = /* css */ `
       flex: 0 0 auto;
       align-items: center;
       justify-content: center;
+
+      /* The corners facing the window, on the cap holding the floor. Read off
+         the stage rather than :first-child/:last-child: a callout on a cap is
+         appended to the row. */
+      &:has(~ .navi_control_swap_stage)[aria-expanded="true"] {
+        --x-corner-top-right-radius: 0;
+        --x-corner-bottom-right-radius: 0;
+      }
+      .navi_control_swap_stage ~ &[aria-expanded="true"] {
+        --x-corner-top-left-radius: 0;
+        --x-corner-bottom-left-radius: 0;
+      }
+
+      /* A cap is positioned, so it paints over the window along the seam
+         unless the window is raised (see the stage). */
+      &:focus-visible,
+      &[data-focus-visible] {
+        z-index: var(--navi-z-index-control-focused);
+      }
     }
 
     /* The window on the track: exactly the room the two controls share, and
@@ -111,6 +143,7 @@ const css = /* css */ `
       display: flex;
       container-type: inline-size;
       min-width: 0;
+      margin-left: calc(-1 * var(--x-control-swap-seam-travel));
       flex: 1 1 0;
       /* clip, not hidden: hidden makes a scroll container, and the browser
          scrolls it to reveal the control taking the focus while the track is
@@ -118,10 +151,26 @@ const css = /* css */ `
          is nothing to scroll in something merely clipped.
          The margin is for the focus ring: a control draws it straddling its
          own edge, and the control in the window fills the window exactly, so
-         a seam right on the edge would shave the outer half of the ring off.
+         a clip right on the edge would shave the outer half of the ring off.
          The control out of the window is a whole window away and stays out. */
       overflow: clip;
       overflow-clip-margin: var(--navi-focus-outline-width);
+
+      /* Whichever side the user is on paints in front along the seam, so its
+         border color and its focus ring go all the way around (see group.jsx
+         for the three states). */
+      &:hover {
+        position: relative;
+        z-index: var(--navi-z-index-control-hovered);
+      }
+      &:has(:focus-visible, [data-focus-visible]) {
+        position: relative;
+        z-index: var(--navi-z-index-control-focused);
+      }
+      &:has([aria-expanded="true"]) {
+        position: relative;
+        z-index: var(--navi-z-index-control-expanded);
+      }
     }
 
     /* Both controls, side by side, each the whole width of the window: the
@@ -154,7 +203,29 @@ const css = /* css */ `
           width: 100%;
           height: 100%;
         }
+
+        /* A control is only ever seen on its own side of the row, so the
+           corners facing its cap are square for good. Asked both ways, as a
+           Group asks (group.jsx): the child can be a wrapper around the control
+           carrying the frame, or a box with a radius of its own. */
+        &:first-child > *:not([navi-out-of-flow]) {
+          --x-corner-top-left-radius: 0;
+          --x-corner-bottom-left-radius: 0;
+
+          border-top-left-radius: 0 !important;
+          border-bottom-left-radius: 0 !important;
+        }
+        &:last-child > *:not([navi-out-of-flow]) {
+          --x-corner-top-right-radius: 0;
+          --x-corner-bottom-right-radius: 0;
+
+          border-top-right-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
       }
+    }
+    &[data-active-index="1"] > .navi_control_swap_stage {
+      transform: translateX(var(--x-control-swap-seam-travel));
     }
     &[data-active-index="1"]
       > .navi_control_swap_stage
@@ -162,12 +233,24 @@ const css = /* css */ `
       transform: translateX(calc(-100cqw - var(--x-control-swap-gap)));
     }
 
+    &[data-animation] > .navi_control_swap_stage,
     &[data-animation] > .navi_control_swap_stage > .navi_control_swap_track {
       transition: transform var(--navi-control-swap-animation-duration, 0.22s)
         ease;
     }
+    /* On the cap alone: its frame inherits the radius, and a transition of the
+       frame's own would restart on every frame of this one. The radius is
+       painted next to a composited window, so on a busy frame it trails the
+       window, which is still better than a corner snapping square a gap away
+       from what it joins. */
+    &[data-animation] > .navi_control_swap_cap {
+      transition: border-radius
+        var(--navi-control-swap-animation-duration, 0.22s) ease;
+    }
     @media (prefers-reduced-motion: reduce) {
-      &[data-animation] > .navi_control_swap_stage > .navi_control_swap_track {
+      &[data-animation] > .navi_control_swap_stage,
+      &[data-animation] > .navi_control_swap_stage > .navi_control_swap_track,
+      &[data-animation] > .navi_control_swap_cap {
         transition: none;
       }
     }
@@ -198,8 +281,9 @@ const css = /* css */ `
  *
  * The row is one length tall — `--navi-control-swap-size`, a line of text
  * between two `s` paddings — and everything in it is that tall: the caps are
- * squares of it, the control holding the floor fills it. `--navi-control-swap-gap`
- * is the space between the boxes.
+ * squares of it, the control holding the floor fills it. The control is joined
+ * to its cap by a shared border; `--navi-control-swap-gap` is the space between
+ * it and the other cap.
  */
 export const ControlSwap = (props) => {
   import.meta.css = css;

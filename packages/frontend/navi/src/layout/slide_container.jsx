@@ -2110,6 +2110,12 @@ export const SlideContainer = ({
     const areaOnScreen = containerRef.current.getAttribute(
       SLIDE_CURRENT_ATTRIBUTE,
     );
+    // Standing on the first slide by default holds a rank, and the slide at
+    // that rank changes with their order. Someone outside is naming slides, so
+    // the one on screen is held by its name from this answer on.
+    if (current !== areaOnScreen) {
+      setCurrentAreaState(areaOnScreen);
+    }
     if (areaAsked === areaOnScreen) {
       return;
     }
