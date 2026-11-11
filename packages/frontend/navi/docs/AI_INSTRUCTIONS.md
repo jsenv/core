@@ -89,7 +89,9 @@ start when unsure which export solves a problem.
   (`{ run: true }` is the fallback), `action` versus `uiAction`, an action and a
   command on one press. Before running an action from a component.
 - `resource.md` — `resource()` and its relations (never an `op` discriminator),
-  what each read shows while its params move, `GET_RANGE` (its inclusive `end`,
+  a row pairing an entity with fields of its own (the entity under `.one()`,
+  never spread in), what a copy of a relation keeps, what each read shows while
+  its params move, `GET_RANGE` (its inclusive `end`,
   the count for the screen around the list, a question following a search
   field), a search as the same `GET_MANY`, `withParams()` scopes and
   `dependencies`, `persist` (and `keepPageOnScreen` for the page on screen), a

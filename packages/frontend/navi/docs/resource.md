@@ -42,6 +42,7 @@ Actions are read in components through the action system (`useAsyncData`,
 - [Callback return contracts](#callback-return-contracts)
 - [When the backend answers a sub-route with the whole parent](#when-the-backend-answers-a-sub-route-with-the-whole-parent)
 - [Relations and autorerun](#relations-and-autorerun)
+- [Reading a relation](#reading-a-relation)
 - [What a read shows while its params move](#what-a-read-shows-while-its-params-move)
 - [`withParams()`: a scope with reruns of its own](#withparams-a-scope-with-reruns-of-its-own)
   - [`dependencies`: rerun after another resource writes](#dependencies-rerun-after-another-resource-writes)
@@ -434,7 +435,7 @@ A row counts as written only when something in it changed:
 - **A relation** changes its row when the row points at other children; the
   children themselves are followed through the relation — `game.place.label`
   read in a render re-renders it when the place is written, and the game row
-  stays the one it was.
+  stays the one it was ([what a copy of it keeps](#reading-a-relation)).
 - **A value written with `store.upsert()`** is compared by reference: a new
   object is a change, whatever it holds.
 
@@ -461,17 +462,41 @@ second coat: a verb on one relation carrying an id from a **different** relation
 people — is two relations spelled as one, and the one the gesture is about
 (game × group) ends up with no rows and nothing for its row on screen to read.
 
-| Situation                                                                                                     | Use                                                                                                                                 |
-| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| The child is a first-class entity with its own store, shared across parents (a user referenced by many games) | `.one()` / `.many()`                                                                                                                |
-| The child only exists inside its owner, with no identity outside it (a game's candidates, a table's columns)  | `.scopedOne()` / `.scopedMany()`                                                                                                    |
-| The relation itself carries fields (`candidate_since`, `seen_at`, `slot`)                                     | `.scopedMany()` — those fields belong to the pair; putting them in a shared child store corrupts that entity for every other reader |
-| The backend answers every sub-route with the whole refreshed parent                                           | still model the relation; absorb the response with a plural callback (see below)                                                    |
-| A genuine partial update of the parent itself (cancel a game)                                                 | plain `PATCH` on the parent                                                                                                         |
-| Several writes on the item itself, none of them a sub-object (cancel, archive, mark as seen)                  | one named in [`writes`](#several-writes-on-one-item-writes) each                                                                    |
+| Situation                                                                                                                                | Use                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| The child is a first-class entity with its own store, shared across parents (a user referenced by many games)                            | `.one()` / `.many()`                                                                                                                |
+| The child only exists inside its owner, with no identity outside it (a game's candidates, a table's columns)                             | `.scopedOne()` / `.scopedMany()`                                                                                                    |
+| The relation itself carries fields (`candidate_since`, `seen_at`, `slot`)                                                                | `.scopedMany()` — those fields belong to the pair; putting them in a shared child store corrupts that entity for every other reader |
+| A list whose items pair another resource's entity with fields of their own (my contacts, a club's members, a tournament's registrations) | the pair is the row, under a key of its own, and the entity goes under `.one()` on it; never spread into the row (see below)        |
+| The backend answers every sub-route with the whole refreshed parent                                                                      | still model the relation; absorb the response with a plural callback (see below)                                                    |
+| A genuine partial update of the parent itself (cancel a game)                                                                            | plain `PATCH` on the parent                                                                                                         |
+| Several writes on the item itself, none of them a sub-object (cancel, archive, mark as seen)                                             | one named in [`writes`](#several-writes-on-one-item-writes) each                                                                    |
 
 Singular vs plural is about the relation, not the verb: `.one`/`.scopedOne` for a
 single sub-object, `.many`/`.scopedMany` for a collection.
+
+**A row pairing an entity with fields of its own holds the entity as a
+relation.** One of my contacts is what links me to someone (games together,
+favourite) and that someone, the same user their profile shows. The row is the
+pair, keyed by it: a resource of its own, or a `.scopedMany()` of an owner the
+store holds (a club's members). The person goes under `.one()`:
+
+```js
+// GET /me/contacts → [{ key: "user:12", contact: { … }, user: { id: 12, … } }, …]
+const CONTACT = resource("contact", { idKey: "key", GET_MANY });
+CONTACT.one("user", USER);
+```
+
+Spread into the row (`{ ...user, key, contact }`), the person is a second copy
+in another store. Their profile read again, a write on them, a search that finds
+them: none of these reach the row, and the list shows the old person until it is
+read again. A [`dependency`](#dependencies-rerun-after-another-resource-writes)
+rereading the list after every write that might change the person is the same
+copy, refreshed by hand, and it misses the writes nobody listed. A backend
+answering the row flat is reshaped in the callback
+(`({ key, contact, ...user }) => ({ key, contact, user })`). It is the mirror of
+the row above it: the pair's fields written into the entity's store corrupt it
+for every reader, the entity's fields written into the pair's row go stale.
 
 **A write whose effect the response does not carry is a modelling bug, not a
 case for the client to remember.** The row on screen claiming "this happened"
@@ -666,6 +691,26 @@ graph: a parent field the parent's own response kept fresh is, once the relation
 is a resource of its own, refreshed only by these rules. When a parent field
 depends on a child mutation, say so with `dependencies` rather than relying on a
 rerun that will not happen.
+
+## Reading a relation
+
+`contact.user` is read through the relation each time: in a render, it is the
+child as the store holds it, and the render that read it is drawn again when the
+child is written. The row, and the list holding it, stay the objects they were
+when only a child changes
+([a row counts as written only when something in it changed](#searching-the-same-collection)).
+So anything taken out of a row is a snapshot of that moment, and stays as it
+was:
+
+- `{ ...contact }`, which holds the child the spread found;
+- a child kept in a variable;
+- a value derived in `useMemo(…, [contacts])`: the list does not move when a
+  child does, so the derivation never runs again.
+
+Read the relation where it is drawn. A derivation that has to flatten the rows
+(`{ ...contact.user, contact: contact.contact }`) reads the children at render
+and is keyed on them: a `.one()` child is the same object until it is written,
+and a new one after.
 
 ## What a read shows while its params move
 
