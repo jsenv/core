@@ -236,6 +236,14 @@ changes what re-reads the slices and nothing else — `GET_MANY` still reruns af
 `POST`. `false` turns a key off. A `withParams()` scope or a relation reads its
 own `rerunOn` the same way, against the resource it is declared on.
 
+A write asks again every read that answered, is still out, or failed. A failed
+read has nothing else to bring it back: left out, one bad answer during a deploy
+would keep a count on its old value until the page reloads. The status does not
+matter, since a write can change what a `403` or a `404` answers, so a read that
+keeps failing costs one request and one error per write, and never a retry loop.
+Two reads stay out: an aborted or never-run one, which nobody is waiting for,
+and a head start that failed, which the screen arriving asks for itself.
+
 Adding `PUT`/`PATCH` to `GET_MANY` is the usual over-correction: it costs a
 request and a `loading` pass to obtain something the response already contained.
 When a `PATCH` "doesn't show", the fix is almost always server-side — return the

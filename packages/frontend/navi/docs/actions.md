@@ -554,8 +554,8 @@ const SUMMARY = createAction(fetchSummary, {
 });
 ```
 
-After a listed write, its instances that answered, or are still asking, ask
-again; `on` is read as a resource's is
+After a listed write, its instances that answered, are still asking, or failed
+ask again; `on` is read as a resource's is
 ([resource.md](./resource.md#dependencies-rerun-after-another-resource-writes)).
 
 What the server moves on its own — an email that may bounce, an account being

@@ -708,7 +708,7 @@ another collection, drawn from its first item
 
 A resource reruns its own reads after its own writes (`rerunOn`, see
 [list_refresh.md](./list_refresh.md#rerunon-verb-by-verb)), and it does so for
-every read of the resource: a `POST` reruns every `GET_MANY` that completed,
+every read of the resource: a `POST` reruns every `GET_MANY` already asked,
 whatever params each one was bound to. Right for one collection, wrong for a
 resource read under several fixed questions at once — the admins and the guests
 of one `USER`, each list on its own screen. A guest created should not send the
@@ -767,8 +767,9 @@ const ROLE_WITH_OWNERS = ROLE.withParams(
 ```
 
 Any write on a listed resource (`POST`, `PUT`, `PATCH`, `DELETE`) reruns the
-completed `GET` and `GET_MANY` of the resource that declared it, and invalidates
-its `GET_RANGE` readers: its own `rerunOn` is about its own writes. A
+`GET` and `GET_MANY` of the resource that declared it, those that failed included
+([which ones](./list_refresh.md#rerunon-verb-by-verb)), and invalidates its
+`GET_RANGE` readers: its own `rerunOn` is about its own writes. A
 dependency is a facade: `DATABASE` and `DATABASE.withParams(…)` are two of them,
 and only writes on the one listed count. Nothing goes the other way, and nothing
 is inferred — a relation that really is a sub-route of the parent is modelled
