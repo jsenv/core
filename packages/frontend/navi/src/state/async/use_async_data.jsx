@@ -453,6 +453,16 @@ const useActionAsyncData = (
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
   }
+  // Called off (abort(), a route left with nothing else asking for it): nothing
+  // is on its way until something runs it again. What it held stays drawn and
+  // no wait is claimed. A delegated wait holding nothing has nothing to draw,
+  // and suspends below until the next run.
+  if (runningState === ABORTED) {
+    const dataHeld = action.dataSignal.peek();
+    if (dataHeld !== undefined || loadingEffect === "use") {
+      return [dataHeld, false, undefined];
+    }
+  }
   if (runningState === FAILED) {
     if (prerun) {
       // Neither shown nor reported from a head start: the failure is the
@@ -528,8 +538,7 @@ const useActionAsyncData = (
 
   // `loading: true` says the component draws its own wait, so this hook never
   // suspends: running, or holding params nobody has started yet — a debounced
-  // binding that just retargeted, an aborted run, a run this very render is
-  // about to issue. Either way what is on screen is not the current answer,
+  // binding that just retargeted, a run this very render is about to issue. Either way what is on screen is not the current answer,
   // which is what `loading` says. Suspending would not draw a spinner: it swaps
   // the subtree for the boundary, and everything under it remounts — a dialog
   // open inside it is then closed, by a hook the caller told to stay out of it.
@@ -537,7 +546,8 @@ const useActionAsyncData = (
     return [action.dataSignal.peek(), true, undefined];
   }
 
-  // IDLE or RUNNING with loadingEffect: "delegate" — suspend
+  // IDLE, RUNNING, or called off holding nothing, with loadingEffect:
+  // "delegate" — suspend
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = { reason, action };
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
@@ -556,7 +566,7 @@ const useActionAsyncData = (
         } else if (reason === "loading" && state === ABORTED) {
           // The run waited on was called off: drawn again, this reader asks
           // for it again when nothing else will (calledOffBeforeThisReader),
-          // or waits for the next run as idle.
+          // draws what the instance held, or waits for the next run as idle.
           actionPendingPromiseWeakMap.delete(action);
           unsubscribe();
           resolve();

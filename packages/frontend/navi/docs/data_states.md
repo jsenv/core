@@ -123,8 +123,10 @@ return <ItemList items={items} busy={loading} />;
 ```
 
 `loading` is not proof that a request is out, either: an action holding params
-that nothing started — idle, or aborted — reads `loading: true`, so a skeleton
-told it shimmers until something runs that action.
+that nothing started yet (idle) reads `loading: true`, so a skeleton told it
+shimmers until something runs that action. An aborted one reads `false`: it was
+called off, nothing is on its way until something runs it again, and what it
+held stays drawn.
 
 navi's own placeholders take that flag rather than inventing it: `<Text loading>`
 shimmers, `<Text skeleton>` is the same bar held still, and
