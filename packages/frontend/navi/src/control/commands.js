@@ -257,6 +257,17 @@ const resolveClosestExpandable = (el) => {
   }
   return expandableRepeatedBy(expandable) || expandable;
 };
+// The popup a decision taken inside it answers (a clear, a send). A section
+// revealed in the page flow (<Expandable>, data-in-flow) is not one: it belongs
+// to whatever holds it, a page or a popup, so the walk goes through it.
+const POPUP_SELECTOR = "[aria-expanded]:not([data-in-flow])";
+const resolveClosestPopup = (el) => {
+  const popup = el.closest(POPUP_SELECTOR);
+  if (!popup) {
+    return null;
+  }
+  return expandableRepeatedBy(popup) || popup;
+};
 // A control's host repeats the aria-expanded of its root, beside its role, for
 // assistive tech to read (a picker's <input>, a combobox or a button). The root
 // is the expandable: the host is a leaf the walk lands on only when it is the
@@ -273,16 +284,16 @@ const expandableRepeatedBy = (el) => {
   }
   return null;
 };
-// The surface a send is decided on: the expandable holding the CONTROL that
-// sends, never one that control is itself. A picker's own root carries
-// aria-expanded for its popup, and a confirm picker pressed as a whole (see
+// The surface a send is decided on: the popup holding the CONTROL that sends,
+// never one that control is itself. A picker's own root carries aria-expanded
+// for its popup, and a confirm picker pressed as a whole (see
 // picker_confirm.jsx) sends from its input: what it answers is the surface
 // around the picker, not the picker. Same for a popup told to send upward
 // once it has closed (data-after-send="--navi-send"): the surface above it.
-const resolveExpandableAround = (source) => {
+const resolvePopupAround = (source) => {
   const sender = findControlRoot(source) || source;
   const parent = sender.parentElement;
-  return parent ? resolveClosestExpandable(parent) : null;
+  return parent ? resolveClosestPopup(parent) : null;
 };
 // An element carrying navi-command-proxy-for="anchorId" stands in for that
 // other element as the command's source when the source is forwarded to
@@ -308,16 +319,14 @@ const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
 // Both can enclose the send's source: a form inside a dialog is a control with
-// an action, inside an expandable. The nearer one owns the send — a button
-// inside that form means "submit this form", not "confirm the dialog around
-// it", and the same button placed directly in the dialog means the opposite.
-const resolveClosestSendTarget = (expandable, controlWithAction) => {
-  if (!expandable || !controlWithAction) {
-    return expandable || controlWithAction;
+// an action, inside a popup. The nearer one owns the send — a button inside
+// that form means "submit this form", not "confirm the dialog around it", and
+// the same button placed directly in the dialog means the opposite.
+const resolveClosestSendTarget = (popup, controlWithAction) => {
+  if (!popup || !controlWithAction) {
+    return popup || controlWithAction;
   }
-  return expandable.contains(controlWithAction)
-    ? controlWithAction
-    : expandable;
+  return popup.contains(controlWithAction) ? controlWithAction : popup;
 };
 
 // An id that names something that is not a control — a layout box, a label, a
@@ -522,9 +531,10 @@ const clearCommand = (source, event) => {
     }
     // Only what is open: the clear cross of a picker sits on the closed
     // trigger, with nothing to close. A clear pressed INSIDE an open popup is
-    // the one this is for: it answers the popup, so the popup goes away.
-    const expandable = resolveClosestExpandable(source);
-    if (expandable?.getAttribute("aria-expanded") !== "true") {
+    // the one this is for: it answers the popup, so the popup goes away. An
+    // open section of the page is answered by nothing pressed in it.
+    const popup = resolveClosestPopup(source);
+    if (popup?.getAttribute("aria-expanded") !== "true") {
       return;
     }
     // Asked of the popup itself, not resolved again from the source: a
@@ -532,7 +542,7 @@ const clearCommand = (source, event) => {
     // picker names the input it empties), and a close resolved from it would
     // aim at that input's picker — busy with the send it was just handed —
     // rather than at the popup the cross is in.
-    triggerNaviCommand(expandable, "--navi-close", clearEvent, {
+    triggerNaviCommand(popup, "--navi-close", clearEvent, {
       optional: true,
     });
   };
@@ -576,7 +586,8 @@ const resetCommand = (source, event) => {
  *   same act, a level down. A popup opened from another popup answers for
  *   itself only — say `data-after-send="--navi-send"` on the sending control
  *   to make the decision travel up to the surface holding it;
- * - the document: nothing. A form on a page stays where it is.
+ * - the document: nothing. A form on a page stays where it is, open
+ *   <Expandable> sections around it included (see resolveClosestPopup).
  */
 // What follows a send that went through — and it is asked of the button that
 // sent before the form it sent, because a form with two submit buttons has two
@@ -607,7 +618,7 @@ const resolveAfterSend = (target, requester, surface) => {
 // the target: a popup that IS the send target is handled on its own (see the
 // aria-expanded branch in sendCommand), and must not answer twice.
 const resolveSendSurface = (target) =>
-  target.parentElement?.closest(`[data-slide], [aria-expanded]`);
+  target.parentElement?.closest(`[data-slide], ${POPUP_SELECTOR}`);
 // What follows a send is caused by the send, not by the gesture: the send
 // answered the gesture and may have prevented it (an Enter must not also click
 // the submit button, nor activate the trigger of the popup it closed), and a
@@ -620,11 +631,10 @@ const createSentEvent = (event) => {
 };
 
 const sendCommand = (source, event, { requester }) => {
-  const expandable = resolveExpandableAround(source);
   const target =
     resolveExplicitTarget(source) ||
     resolveClosestSendTarget(
-      expandable,
+      resolvePopupAround(source),
       resolveClosestControlWithAction(source),
     );
   if (!target) {
@@ -635,7 +645,7 @@ const sendCommand = (source, event, { requester }) => {
   // looking at, and a decision just taken there is a reason to leave it. The
   // NEAREST surface answers, and only that one — a form inside a slide inside a
   // dialog goes back a slide, it does not also close the dialog.
-  // send inside expandable — the control itself when it sends from its host,
+  // send inside popup — the control itself when it sends from its host,
   // whose aria-expanded is its root's (see expandableRepeatedBy)
   if (
     target.getAttribute("aria-expanded") === "true" &&

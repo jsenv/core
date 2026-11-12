@@ -919,6 +919,9 @@ export const Expandable = (props) => {
       ref={rootRef}
       baseClassName="navi_expandable"
       aria-expanded={opened ? "true" : "false"}
+      // Read by commands.js: open or not, this is no popup — a clear or a send
+      // pressed inside does not close it (see resolveClosestPopup).
+      data-in-flow=""
       data-layout={isColumn ? "column" : undefined}
       data-open-direction={revealDirection}
       data-animation={animation ? "" : undefined}
@@ -1016,6 +1019,7 @@ const ExpandableUI = ({ marker, children, ...rest }) => {
       role="button"
       tabIndex={0}
       aria-expanded={opened}
+      data-in-flow=""
       aria-controls={contentId}
       onClick={onUIClick}
       onPointerDown={onUIPointerDown}
