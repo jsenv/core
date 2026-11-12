@@ -483,9 +483,12 @@ export const RouteTravel = ({
     const row = rowRef.current;
     // Already moving, so there is no ease-in to play: it would stall the row for an
     // instant right where the eye is following it.
-    const inFlight = Boolean(movement.playing) || Boolean(movement.rowTaken);
-    if (movement.playing) {
-      movement.playing.stop();
+    const replaced = movement.playing;
+    const inFlight = Boolean(replaced) || Boolean(movement.rowTaken);
+    if (replaced) {
+      // Its frames only: the row stays travelling across the hand-over. Let go of,
+      // it snaps to the nearest page at the read below, and the travel starts there.
+      replaced.cancelFrame();
     }
     const from = row.scrollLeft;
     const { durationMs } = latestRef.current;
@@ -506,8 +509,11 @@ export const RouteTravel = ({
     const playing = {
       // Where this travel put the row, for a scroll event to tell it from a hand.
       written: from,
-      stop: () => {
+      cancelFrame: () => {
         cancelAnimationFrame(frame);
+      },
+      stop: () => {
+        playing.cancelFrame();
         if (movement.playing === playing) {
           movement.playing = null;
           row.removeAttribute("data-route-row-travelling");
@@ -516,9 +522,12 @@ export const RouteTravel = ({
     };
     const step = (now) => {
       if (start === null) {
-        start = now;
+        // When this frame runs, not when it began: under load it began while the
+        // press was still being handled, and that time is no travel.
+        start = performance.now();
       }
-      const elapsed = (now - start) / travelMs;
+      // The next frame may have begun while this first one was still being handled.
+      const elapsed = now > start ? (now - start) / travelMs : 0;
       // Read at every frame: the layout may move under the travel (a scrollbar
       // coming in narrows the row), and it goes where the page stands.
       const to = pane.offsetLeft;
