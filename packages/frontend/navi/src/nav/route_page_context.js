@@ -24,6 +24,8 @@ import { createContext } from "preact";
  *   outside its own nodes (a slot in a bar, the document a list scrolls) steps
  *   out rather than showing with, or moving, the page arriving. Every box of it
  *   measures 0×0 by then. Set after the render keeping the page, so that render
- *   and what it builds can only ask `hasLeft()`.
+ *   and what it builds can only ask `hasLeft()`. Cleared by the render showing
+ *   the page again, before anything below it renders: what mounts then never
+ *   reads its page as leaving.
  */
 export const RoutePageContext = createContext(null);

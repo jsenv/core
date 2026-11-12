@@ -316,8 +316,16 @@ const RouteRowPane = ({ branch, page, shown, renderNeighbour }) => {
       h(RoutePageContext.Provider, { value: page }, branch.node),
     );
   }
+  // Back on screen before what it holds renders: built here, or mounted again under
+  // it, that content runs its layout effects before this component's, and would
+  // otherwise read its page as leaving.
+  if (shown) {
+    page.ownLeavingSignal.value = false;
+  }
   useLayoutEffect(() => {
-    page.ownLeavingSignal.value = !shown;
+    if (!shown) {
+      page.ownLeavingSignal.value = true;
+    }
   }, [shown]);
   return (
     <div
