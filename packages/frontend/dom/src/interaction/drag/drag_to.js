@@ -981,8 +981,10 @@ const warnAboutTransformsOutsideTransform = (element) => {
  *   what is carried; anything else has to be said — a palette beside the surface
  *   it fills, a piece drawn INSIDE the place it can be put back on.
  * @param {string} [options.itemSelector] What matches the items of the list.
- *   Left out, nothing is a place: no hint is drawn and no landing can be
- *   answered, which is what a drag that only ever throws the thing away asks for.
+ *   For a reorder, a match inside another match is an item of a list nested
+ *   in it, and not a place. Left out, nothing is a place: no hint is drawn and
+ *   no landing can be answered, which is what a drag that only ever throws the
+ *   thing away asks for.
  * @param {"column"|"row"|"wrap"} [options.itemFlow] How the items of a
  *   reordered list are laid out: one under the other, side by side on one line,
  *   or side by side over as many lines as it takes (inline-blocks, a flex-wrap,
@@ -1532,6 +1534,16 @@ const startDragToCarryCopy = (
     return undefined;
   }
   const flowSaid = resolveItemFlow(itemFlow, containerElement);
+  // The container itself may be an item (a community holding its groups): it
+  // is what holds this list, not an item the list is nested in.
+  const isInsideAnotherItem = (item) => {
+    const around = item.parentElement.closest(itemSelector);
+    return (
+      Boolean(around) &&
+      around !== containerElement &&
+      containerElement.contains(around)
+    );
+  };
   // Where the hand is, for a press handed over: its `pointerdown` says where it
   // WAS, before the hold and whatever the hold opened. Let go of meanwhile, it
   // is not picked up after the fact.
@@ -1684,6 +1696,13 @@ const startDragToCarryCopy = (
             // clone, because a custom itemSelector (a class, a tag) would still
             // match it.
             if (cloneWrapper.contains(el)) {
+              continue;
+            }
+            // An item inside another item belongs to a list nested in it — the
+            // groups of a community, the carried element's own included — and a
+            // reorder takes a place among the items of ITS list. A board keeps
+            // them: a piece standing on a surface is a place of its own.
+            if (!canLand && isInsideAnotherItem(el)) {
               continue;
             }
             allItems.push(el);
@@ -2538,11 +2557,15 @@ const createDragClone = (element, grabPoint, reach) => {
 // The nearest word about the press wins: an opted-out area INSIDE the dragged
 // element takes the press away from it, one AROUND it does not — a list
 // reordered inside a dialog, or a dialog carried by its own handle, is itself the
-// last thing said before the finger.
+// last thing said before the finger. Another drag source inside it is such a
+// word too: the press bubbles to both, and the one under the finger is the thing
+// the hand took — a group reordered inside a community, carried or refused,
+// never carries the community with it.
+const PRESS_TAKEN_SELECTOR = `${DRAG_IGNORED_SELECTOR},[data-drag-source]`;
 const isPressIgnored = (target, draggedElement) => {
   if (!target.closest) {
     return false;
   }
-  const ignored = target.closest(DRAG_IGNORED_SELECTOR);
+  const ignored = target.closest(PRESS_TAKEN_SELECTOR);
   return Boolean(ignored) && !ignored.contains(draggedElement);
 };
