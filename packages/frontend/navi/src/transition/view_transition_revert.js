@@ -27,6 +27,8 @@
  * there while the clock counts down.
  */
 
+import { CSS_EASE, easedProgress } from "../utils/css_timing.js";
+
 export const viewTransitionAnimations = () => {
   const animations = [];
   for (const animation of document.getAnimations()) {
@@ -149,25 +151,4 @@ export const whenPicturesArrived = (animations) => {
   return Promise.all(
     animations.map((animation) => animation.finished.catch(() => {})),
   );
-};
-
-// CSS `ease`, evaluated: time in, distance out. Solved numerically because the
-// curve is parametric — two cubics sharing a parameter, with no closed form for
-// one against the other. Twenty halvings put the answer well under a pixel of a
-// screen-wide movement.
-const CSS_EASE = [0.25, 0.1, 0.25, 1];
-const bezierAxis = (s, a, b) =>
-  3 * (1 - s) * (1 - s) * s * a + 3 * (1 - s) * s * s * b + s * s * s;
-const easedProgress = (x, [x1, y1, x2, y2]) => {
-  let low = 0;
-  let high = 1;
-  for (let i = 0; i < 20; i++) {
-    const mid = (low + high) / 2;
-    if (bezierAxis(mid, x1, x2) < x) {
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-  return bezierAxis((low + high) / 2, y1, y2);
 };

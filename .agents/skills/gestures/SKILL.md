@@ -76,16 +76,25 @@ out), and writes the position in one go when it lands. Native smooth scroll has 
 duration and flies past every slide in between. A row's scroll position while a
 travel plays belongs to the travel: a finger landing finishes it first.
 
-**A row of routes travels one box too.** For a reader the two are the same thing. Its
-travel stays the browser's smooth scroll, which would fly past every page in between, so
+**A row of routes travels one box too, at the same pace.** For a reader the two are the
+same thing. Its travel plays in `duration` on `SlideContainer`'s curve, the scroll
+position written at every frame with snapping off (`playTravel`): the browser's smooth
+scroll has no duration and a curve of its own (Chrome's hesitates for three frames,
+then peaks 1.65 times faster), and two rows of tabs in one app would move differently.
+Written to the scroll position, never offsets or a transform: the row stays a scroller
+all the way, what follows it reads it as it reads a hand, and a finger landing finds it
+where it is. A sideways wheel or a trackpad is told apart by where the travel last put
+the row, and the travel lets go of it. A scroll would fly past every page in between, so
 the page asked for takes the column next to what is in the frame (`grid-column`), on
 the side it already stands, which moves nothing on screen, and the columns and the
 scroll position go back in one go at rest. Columns, never stacking: placed over an
 occupied column with `left`, every other page had to be hidden, the readers taught to
 skip them and snapping turned off. Reordered, every page stays a place to snap to. A
 finger landing finishes the travel first, as in a `SlideContainer`; a wheel does not,
-since a page scrolled vertically over the row is no hand on it. A travel the layout
-moves under (a scrollbar coming in narrows the row) is sent again from its landing. A
+since a page scrolled vertically over the row is no hand on it. A travel reads where its
+page stands at every frame: the layout may move under it (a scrollbar coming in narrows
+the row). It says itself when it has arrived: its last frames can move the row by less
+than a pixel, and no scroll event then says the row stopped. A
 pane pinned with `top` reads another `offsetTop` than the page on screen, so every
 reading of a row of routes is one line (`sideways`), the landing's included.
 
@@ -110,15 +119,14 @@ scroller. Two things were built and must not come back:
   corrects that often enough to look fine: only a row ending early (a slide that holds)
   and `duration={0}` show it.
 
-**A row of routes takes it the same way, with no track.** Its travel is the browser's
-smooth scroll, which replaces the snap only until it ends: a short trip ends first, the
-snap comes back and the landing overrules the press, so a far tab landed and a near one
-did not. So the snap is ended first: `overflow: clip` for two frames with the panes
-held in place by `left` (a transform would capture what they hold in `position:
-fixed`), and there is no displaced track here to go stale, so the row is a scroller
-again for the smooth scroll. That scroll waits one more frame: WebKit still starts from
-where a box that is no scroller stood, and a smooth scroll to the first page sees
-nothing to do. Snapping stays off until the row rests or a hand comes back.
+**A row of routes takes it the same way, with no track.** A scroll position written
+over a snap the browser is still playing does not end it (instant or smooth, Chrome
+ignores both), and the landing then overrules the press. So the snap is ended first:
+`overflow: clip` for two frames with the panes held in place by `left` (a transform
+would capture what they hold in `position: fixed`), and there is no displaced track
+here to go stale, so the row is a scroller again for the travel. That travel waits one
+more frame: WebKit still has the row where a box that is no scroller stood, at 0.
+Snapping stays off from the clip to the travel's arrival.
 
 A press on the page the address is already on says nothing to the router (a state-only
 navigation is announced to nobody, on purpose). A stroke no lift ends leaves the address
@@ -149,9 +157,13 @@ ask only while it does, so a page cannot be built ahead of its address. In a row
 `<Route>` children each leaf gets a pane (`RouteRowContainer`), built on first match
 and kept: the hand brings back the page itself. A page not on screen is treated like
 one kept while leaving, except that it can come back: `isShown()` false (it does not
-re-render), `leavingSignal` true (it steps out of slots), no `hasLeft()`. Its
-`position: fixed` content would stand over the page shown, so at rest it paints
-nothing.
+re-render), `leavingSignal` true (it steps out of slots), no `hasLeft()`. It paints at
+rest: the compositor moves the row before any scroll event reaches the page, and a pane
+that waits for one to show comes in behind an empty strip, 2 to 5 frames of it on a busy
+phone. `contain: paint` holds its `position: fixed` content in the pane, which rides
+in with it rather than standing over the page shown; that content reaches the viewport
+when the address reaches its page. Its pin (below) is written at the touch, for the
+same reason.
 
 **One route, several params: one component.** A `routes` window has one live page
 and a picture (a clone) of what the hand leaves behind. The address leads there:

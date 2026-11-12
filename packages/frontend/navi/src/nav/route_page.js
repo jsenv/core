@@ -30,3 +30,25 @@ export const pageIsCurrent = ({ route, params }) => {
   }
   return params ? route.matchesParams(params) : true;
 };
+
+// The same question about an address the router does not have yet (a navigation
+// about to be routed, a link pressed): its path, and every param the page names at
+// the value the page gives it. The same path under another search param is another
+// page — a person opened from another list — and a param the page does not name is
+// state on top of it, as it is for matchesParams.
+export const pageIsAt = ({ route, params }, url) => {
+  const destination = new URL(url, window.location.href);
+  const own = new URL(route.buildUrl(params), window.location.href);
+  if (own.pathname !== destination.pathname) {
+    return false;
+  }
+  if (!params) {
+    return true;
+  }
+  for (const name of Object.keys(params)) {
+    if (own.searchParams.get(name) !== destination.searchParams.get(name)) {
+      return false;
+    }
+  }
+  return true;
+};

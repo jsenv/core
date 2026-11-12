@@ -114,6 +114,7 @@ import {
 } from "../graphic/icons/chevron_stroke_svg.jsx";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { Icon } from "../text/text.jsx";
+import { durationToMs } from "../utils/css_timing.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import { SlideContainerContext } from "./slide_container_context.js";
 import {
@@ -575,15 +576,6 @@ const parseAreas = (areas) => {
 const lineAreas = (slideElements, layout) => {
   const names = slideElements.map(readArea);
   return parseAreas(layout === "column" ? names : [names.join(" ")]);
-};
-
-// A CSS duration read as a number, so a window knows when its travel is over.
-const durationToMs = (duration) => {
-  const number = parseFloat(duration);
-  if (Number.isNaN(number)) {
-    return 0;
-  }
-  return String(duration).trimEnd().endsWith("ms") ? number : number * 1000;
 };
 
 // What asked for a travel, read off the event that carried it: the hand said

@@ -43,10 +43,11 @@
  * row sticks to the row, which never scrolls, so it never sticks. A row with fewer
  * than two pages is not a scroller at all, for that reason.
  *
- * A travel nobody's hand is on (a tab pressed, the back button) is the browser's
- * smooth scroll, one box long however far the page is (travelRowTo), after ending a
- * snap a hand has left running (takeRowFromHand). Whatever else follows, the trait
- * under a tab bar first, follows the row through route_row_follow.js.
+ * A travel nobody's hand is on (a tab pressed, the back button) is one box long
+ * however far the page is (travelRowTo), in `duration` on SlideContainer's curve,
+ * the scroll position written at every frame (playTravel), after ending a snap a
+ * hand has left running (takeRowFromHand). Whatever else follows, the trait under a
+ * tab bar first, follows the row through route_row_follow.js.
  */
 
 import { useLayoutEffect, useMemo, useReducer, useRef } from "preact/hooks";
@@ -64,7 +65,7 @@ import {
 } from "./route.jsx";
 import { notePageChange } from "./page_change.js";
 import { whenPageReadsAnswered } from "./route_action.js";
-import { pageIsCurrent } from "./route_page.js";
+import { pageIsAt, pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
 import {
   followPageOnScreen,
@@ -79,6 +80,12 @@ import {
 } from "../layout/native_row_scroll.js";
 import { afterPaint } from "../utils/after_paint.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import {
+  CSS_EASE,
+  CSS_EASE_OUT,
+  durationToMs,
+  easedProgress,
+} from "../utils/css_timing.js";
 
 const css = /* css */ `
   /* A column: the height given to the box reaches the row. */
@@ -117,16 +124,17 @@ const css = /* css */ `
     &[data-route-travel-row="still"] {
       overflow: visible;
     }
-    /* A tab pressed over a row a hand has left moving (see takeRowFromHand). Snapping
-       stays off for the travel: what it plays is not a place to snap back from. */
-    &[data-route-row-taken] {
+    /* A travel asked for plays (playTravel): a scroll position written at every frame
+       is snapped by the browser, and the places on the way are no places to stop. */
+    &[data-route-row-travelling] {
       scroll-snap-type: none;
     }
-    /* No scroller for the two frames the compositor takes to hear it, which is what
+    /* A tab pressed over a row a hand has left moving (see takeRowFromHand): no
+       scroller for the two frames the compositor takes to hear it, which is what
        ends a snap in Chrome, and the picture held where the scroll position had it.
        Offsets, for the same reason as the pin below: a transform would capture what a
        page holds in position: fixed. */
-    &[data-route-row-taken="clip"] {
+    &[data-route-row-taken] {
       overflow: clip;
 
       > [data-route-row-pane],
@@ -147,24 +155,22 @@ const css = /* css */ `
       /* One stroke does not skip a page it can stop on. */
       scroll-snap-stop: always;
     }
-    /* A page not on screen paints nothing at rest: what it holds in position:
-       fixed stands over the page shown, whatever scrolls it out of sight. */
-    &:not([data-moving]) > [data-route-row-pane][inert] {
-      visibility: hidden;
-    }
     /* A pane brought in stands where the reader is looking, and does not make the
        document taller than the page on screen does, when the document is what
-       scrolls. Nothing changes for a row that fits a box of its own. */
+       scrolls. Nothing changes for a row that fits a box of its own.
+       It paints at rest, as the placeholder below does: the compositor moves the
+       row before any scroll event reaches us, and a page waiting for one to show
+       comes in a few frames late, behind an empty strip. contain: what it holds in
+       position: fixed is held in its pane, and rides in with it, rather than
+       standing over the page shown. */
     > [data-route-row-pane][inert] {
       position: relative;
       top: var(--navi-route-row-pin, 0);
+      contain: paint;
       max-height: 100dvh;
       overflow: clip;
     }
-    /* What stands in the pane of a neighbour until its page does. It paints at
-       rest, unlike the pane around it: the compositor moves the row, and what
-       waits for the first scroll event to show comes a frame late. contain: what
-       it holds in position: fixed does not stand over the page. Out of flow: the
+    /* What stands in the pane of a neighbour until its page does. Out of flow: the
        height of the row stays the page's. */
     > [data-route-row-pane] > [data-route-row-neighbour] {
       position: absolute;
@@ -172,7 +178,6 @@ const css = /* css */ `
       display: flex;
       contain: layout paint;
       flex-direction: column;
-      visibility: visible;
     }
 
     /* The page of a window over something longer, in the pane of the address: a
@@ -206,6 +211,9 @@ const SET_OFF_PULL = 16;
 // A row of routes is one line, whatever `offsetTop` its pinned panes read (see the pin
 // above): they are on it all the same.
 const ROW_READING = { sideways: true };
+// How far a scroll position written can read back from what was written: rounded to
+// the device's pixels.
+const WRITE_ROUNDING = 1;
 
 /**
  * @type {import("preact").FunctionComponent<{
@@ -214,6 +222,7 @@ const ROW_READING = { sideways: true };
  *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
  *   renderNeighbour?: (page: {route: object, params: object|undefined}) => import("preact").ComponentChildren,
  *   prefetch?: boolean,
+ *   duration?: string,
  * }>}
  * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
  *   over something longer, in order. Read from the <Route> children by default,
@@ -243,6 +252,9 @@ const ROW_READING = { sideways: true };
  *   `route.preload(params)`. A swipe then builds a page whose answers are already
  *   there, with no wait to show. Off by default: every page one stops on costs the
  *   reads of two more.
+ * @param {string} [props.duration="300ms"] - how long a travel asked for takes: a
+ *   tab pressed, the back button. One box, on the curve a SlideContainer plays, so
+ *   two rows of tabs in one app move alike. A hand goes at its own pace.
  *
  * Every other prop lands on the box itself (`id`, `data-testid`, `className`, …).
  * The box has to outlive every page of its row: around those <Route>s, or around
@@ -255,6 +267,7 @@ export const RouteTravel = ({
     route.navTo(params, { replace: true, routeTransition: "none" }),
   renderNeighbour,
   prefetch = false,
+  duration = "300ms",
   className,
   children,
   ...rest
@@ -303,6 +316,7 @@ export const RouteTravel = ({
     liveIndex,
     onTravel,
     travelByDrag,
+    durationMs: durationToMs(duration),
   };
 
   // The page this box asked for: routing lands later, and read back as somebody
@@ -324,9 +338,9 @@ export const RouteTravel = ({
       Object.assign(movementRef.current, fields);
       return movementRef.current;
     }
-    row.setAttribute("data-moving", "");
     const movement = {
       travelling: false,
+      playing: null,
       pictures: new Map(),
       resumeScrollRecording: null,
       scrollsDocument: rowFollowsDocument(row),
@@ -410,11 +424,11 @@ export const RouteTravel = ({
   };
 
   // A travel no hand set off is one box long however far the page is, as in a
-  // SlideContainer: the browser's smooth scroll would fly past every page in between.
-  // So the page asked for takes the column next to what is in the frame, on the side
-  // it already stands, which moves nothing on screen, and endMovement puts the columns
-  // back. Columns rather than offsets: every page stays a place to snap to, and none
-  // has to be hidden.
+  // SlideContainer: a scroll to where the page stands would fly past every page in
+  // between. So the page asked for takes the column next to what is in the frame, on
+  // the side it already stands, which moves nothing on screen, and endMovement puts
+  // the columns back. Columns rather than offsets: every page stays a place to snap
+  // to, and none has to be hidden.
   const travelRowTo = (index, movement) => {
     const row = rowRef.current;
     const panes = panesOf(row);
@@ -455,7 +469,76 @@ export const RouteTravel = ({
         }
       });
     }
-    row.scrollTo({ left: pane.offsetLeft, behavior: "smooth" });
+    playTravel(pane, movement);
+  };
+
+  // A travel asked for, in `duration`, on SlideContainer's curve. Not the browser's
+  // smooth scroll, which has no duration to ask for and a curve of its own (Chrome's
+  // hesitates, then peaks at 1.65 times this one's speed): two rows of tabs in one
+  // app would not move alike. The scroll position is written at every frame, so the
+  // row stays a scroller all the way: what follows it (a Nav's bar) reads it as it
+  // reads a hand, and a finger landing finds it where it is. The clock starts at the
+  // first frame, after what the press itself costs, as an animation's does.
+  const playTravel = (pane, movement) => {
+    const row = rowRef.current;
+    // Already moving, so there is no ease-in to play: it would stall the row for an
+    // instant right where the eye is following it.
+    const inFlight = Boolean(movement.playing) || Boolean(movement.rowTaken);
+    if (movement.playing) {
+      movement.playing.stop();
+    }
+    const from = row.scrollLeft;
+    const { durationMs } = latestRef.current;
+    // One box in `duration` is the pace: what is left of a travel picked up on the
+    // way takes what is left of the time. Never slower: two boxes are not made to drag.
+    const boxes = Math.abs(pane.offsetLeft - from) / row.clientWidth;
+    const travelMs = boxes < 1 ? durationMs * boxes : durationMs;
+    if (!travelMs) {
+      row.scrollLeft = pane.offsetLeft;
+      // A write that changes nothing is followed by no scroll event to say the row
+      // stopped. After the commit that asked, which goes on to say the row moves.
+      Promise.resolve().then(landRow);
+      return;
+    }
+    const curve = inFlight ? CSS_EASE_OUT : CSS_EASE;
+    let start = null;
+    let frame = null;
+    const playing = {
+      // Where this travel put the row, for a scroll event to tell it from a hand.
+      written: from,
+      stop: () => {
+        cancelAnimationFrame(frame);
+        if (movement.playing === playing) {
+          movement.playing = null;
+          row.removeAttribute("data-route-row-travelling");
+        }
+      },
+    };
+    const step = (now) => {
+      if (start === null) {
+        start = now;
+      }
+      const elapsed = (now - start) / travelMs;
+      // Read at every frame: the layout may move under the travel (a scrollbar
+      // coming in narrows the row), and it goes where the page stands.
+      const to = pane.offsetLeft;
+      const arrived = elapsed >= 1;
+      playing.written = arrived
+        ? to
+        : from + (to - from) * easedProgress(elapsed, curve);
+      row.scrollLeft = playing.written;
+      if (!arrived) {
+        frame = requestAnimationFrame(step);
+        return;
+      }
+      playing.stop();
+      // Said here rather than waited for: the last frames of a curve can move the row
+      // by less than a pixel, and nothing then says it has stopped.
+      landRow();
+    };
+    movement.playing = playing;
+    row.setAttribute("data-route-row-travelling", "");
+    frame = requestAnimationFrame(step);
   };
 
   // Every column back where the map says, and the row on the page of the address, in
@@ -476,9 +559,8 @@ export const RouteTravel = ({
 
   // A tab pressed over a row a hand has left moving, which the browser plays on and
   // overwrites a travel with once that travel is over: the snap is ended first. Given
-  // back, the row stands where it stood. A frame later, because until then WebKit still
-  // starts from where a box that is no scroller stood: a smooth scroll to the first page
-  // sees nothing to do.
+  // back, the row stands where it stood. The travel a frame later, because until then
+  // WebKit still has the row where a box that is no scroller stood, at 0.
   const takeRowFromHand = (movement) => {
     const row = rowRef.current;
     const position = row.scrollLeft;
@@ -486,12 +568,14 @@ export const RouteTravel = ({
     // A travel no hand set off holds nothing: it goes where it goes.
     releaseHeldPage();
     row.style.setProperty("--navi-route-row-stand", `${-position}px`);
-    row.setAttribute("data-route-row-taken", "clip");
+    row.setAttribute("data-route-row-taken", "");
     afterFrames(2, () => {
       if (movementRef.current !== movement) {
         return;
       }
-      row.setAttribute("data-route-row-taken", "");
+      // A scroller again, standing where no page does: not snapped meanwhile.
+      row.setAttribute("data-route-row-travelling", "");
+      row.removeAttribute("data-route-row-taken");
       row.style.removeProperty("--navi-route-row-stand");
       afterFrames(1, () => {
         if (movementRef.current === movement) {
@@ -510,8 +594,11 @@ export const RouteTravel = ({
       return;
     }
     movementRef.current = null;
+    if (movement.playing) {
+      movement.playing.stop();
+    }
     putRowBack(movement);
-    row.removeAttribute("data-moving");
+    row.removeAttribute("data-route-row-travelling");
     row.removeAttribute("data-route-row-taken");
     publishRouteRowMove(null);
     releaseHeldPage();
@@ -534,6 +621,41 @@ export const RouteTravel = ({
     render();
   };
 
+  // The row may have stopped: on the page of the address, the movement is over; on
+  // another, a hand put it there and the address follows.
+  const landRow = () => {
+    const row = rowRef.current;
+    const movement = movementRef.current;
+    // A travel playing says itself when it is over.
+    if (!movement || movement.playing || isRowTaken(row)) {
+      return;
+    }
+    const panes = panesOf(row);
+    const pane = pageAtRest(row, panes, ROW_READING);
+    if (!pane) {
+      // A travel a hand took over (a trackpad, a wheel) and left between two pages:
+      // sent again, the row then rests.
+      const { currentIndex } = latestRef.current;
+      if (movement.travelling && panes[currentIndex]) {
+        travelRowTo(currentIndex, movement);
+      }
+      return;
+    }
+    movement.landed = true;
+    const { pages } = latestRef.current;
+    const page = pages[panes.indexOf(pane)];
+    if (!page || pageIsCurrent(page)) {
+      if (!askedPageRef.current || samePage(askedPageRef.current, page)) {
+        endMovement();
+      }
+      return;
+    }
+    if (samePage(askedPageRef.current, page)) {
+      return;
+    }
+    askForPageOfRow(panes.indexOf(pane), movement);
+  };
+
   // The address and the row, in step. The opening and a row given again around the
   // page on screen have nothing to show for it; somebody else moving the address
   // (a tab pressed, the back button) is a travel.
@@ -551,6 +673,13 @@ export const RouteTravel = ({
     }
     answeredPageRef.current = page;
     if (!page || !pane) {
+      // The address left the row while a travel nobody's hand is on was playing (a
+      // link to a page off the row): there is nothing left to travel to, and the
+      // landing would send the address back to the page the row rests on.
+      const movement = movementRef.current;
+      if (!page && movement?.travelling && !movement.byHand) {
+        Promise.resolve().then(endMovement);
+      }
       return;
     }
     const asked = askedPageRef.current;
@@ -575,7 +704,7 @@ export const RouteTravel = ({
       takeRowFromHand(movement);
       return;
     }
-    if (row.getAttribute("data-route-row-taken") !== "clip") {
+    if (!row.hasAttribute("data-route-row-taken")) {
       travelRowTo(currentIndex, movement);
     }
     // In this very commit: the tab pressed already wears its bar, and the first
@@ -595,10 +724,9 @@ export const RouteTravel = ({
       if (asked || currentIndex === -1) {
         return;
       }
-      const path = new URL(url, window.location.href).pathname;
       if (
-        pathOf(pages[currentIndex]) === path ||
-        !pages.some((page) => pathOf(page) === path)
+        pageIsAt(pages[currentIndex], url) ||
+        !pages.some((page) => pageIsAt(page, url))
       ) {
         return;
       }
@@ -609,14 +737,21 @@ export const RouteTravel = ({
 
   useLayoutEffect(() => {
     const row = rowRef.current;
-    const isClipped = () => row.getAttribute("data-route-row-taken") === "clip";
     const onScroll = ({ finger, lifted }) => {
       const { pages, currentIndex, travelByDrag } = latestRef.current;
       const panes = panesOf(row);
-      if (panes.length < 2 || isClipped()) {
+      if (panes.length < 2 || isRowTaken(row)) {
         return;
       }
       const moving = movementRef.current;
+      // Not where the travel put it: a hand has taken the row (a trackpad, a wheel),
+      // and the travel lets it go, snapping included, as the browser's own scroll does.
+      if (
+        moving?.playing &&
+        Math.abs(row.scrollLeft - moving.playing.written) > WRITE_ROUNDING
+      ) {
+        moving.playing.stop();
+      }
       const pane = panes[currentIndex];
       if (!moving && pane && restsOn(row, pane, ROW_READING)) {
         // Written by this box, at rest: nobody is moving anything.
@@ -687,53 +822,18 @@ export const RouteTravel = ({
       // address ran ahead to, even for a render.
       releaseHeldPage();
     };
-    const onLand = () => {
-      const movement = movementRef.current;
-      if (!movement || isClipped()) {
-        return;
-      }
-      const panes = panesOf(row);
-      const pane = pageAtRest(row, panes, ROW_READING);
-      if (!pane) {
-        // A travel stopped short of its page: the layout moved under it (a scrollbar
-        // coming in narrows the row), and where it was sent is not where the page
-        // stands. Sent again: the row then rests, or does not move and is not heard.
-        const target = panes[latestRef.current.currentIndex];
-        if (movement.travelling && !isClipped() && target) {
-          row.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
-        }
-        return;
-      }
-      movement.landed = true;
-      const { pages } = latestRef.current;
-      const page = pages[panes.indexOf(pane)];
-      if (!page || pageIsCurrent(page)) {
-        if (!askedPageRef.current || samePage(askedPageRef.current, page)) {
-          endMovement();
-        }
-        return;
-      }
-      if (samePage(askedPageRef.current, page)) {
-        return;
-      }
-      askForPageOfRow(panes.indexOf(pane), movement);
-    };
     const stopWatching = watchRowScroll(row, {
       onScroll,
-      onLand,
+      onLand: landRow,
       onLeftToSnap,
     });
     // A finger on a travel still playing: the row is the finger's from here, and it
-    // stands where the travel was going, as in a SlideContainer. A wheel only gives the
-    // row its snapping back: a page scrolled vertically over it is no hand on it.
+    // stands where the travel was going, as in a SlideContainer. Not a wheel: a page
+    // scrolled vertically over the row is no hand on it, and one scrolling it sideways
+    // is told apart by the travel itself (onScroll).
     const onTouchOnTravel = () => {
-      if (movementRef.current?.travelling && !isClipped()) {
+      if (movementRef.current?.travelling && !isRowTaken(row)) {
         endMovement();
-      }
-    };
-    const onWheelOnTravel = () => {
-      if (row.getAttribute("data-route-row-taken") === "") {
-        row.removeAttribute("data-route-row-taken");
       }
     };
     // A press for the page the address is already on changes nothing the router can
@@ -747,21 +847,23 @@ export const RouteTravel = ({
       const link = clickEvent.target.closest?.("a[href]");
       const { pages, currentIndex } = latestRef.current;
       const page = pages[currentIndex];
-      if (!link || !page || new URL(link.href).pathname !== pathOf(page)) {
+      if (!link || !page || !pageIsAt(page, link.href)) {
         return;
       }
       movement.travelling = true;
       takeRowFromHand(movement);
     };
     row.addEventListener("touchstart", onTouchOnTravel, { passive: true });
-    row.addEventListener("wheel", onWheelOnTravel, { passive: true });
     document.addEventListener("click", onPress, { capture: true });
     return () => {
       stopWatching();
       row.removeEventListener("touchstart", onTouchOnTravel);
-      row.removeEventListener("wheel", onWheelOnTravel);
       document.removeEventListener("click", onPress, { capture: true });
-      movementRef.current?.resumeScrollRecording?.();
+      const movement = movementRef.current;
+      if (movement) {
+        movement.playing?.stop();
+        movement.resumeScrollRecording?.();
+      }
       movementRef.current = null;
       publishRouteRowMove(null);
       releaseHeldPage();
@@ -825,12 +927,10 @@ export const RouteTravel = ({
   }, [prefetch, neighbours, restCount]);
 
   // A neighbour shows from the first frame the compositor moves the row, before
-  // any scroll event: a finger landing is the last word before that.
-  const paintsNeighbours = Boolean(renderNeighbour);
+  // any scroll event, so it has to stand where the reader is looking by then: a
+  // finger landing is the last word before that. A trackpad says nothing first, and
+  // the pin comes with its first scroll event (beginMovement).
   useLayoutEffect(() => {
-    if (!paintsNeighbours) {
-      return undefined;
-    }
     const row = rowRef.current;
     const onTouchStart = () => {
       if (!movementRef.current && rowFollowsDocument(row)) {
@@ -841,7 +941,8 @@ export const RouteTravel = ({
     return () => {
       row.removeEventListener("touchstart", onTouchStart);
     };
-  }, [paintsNeighbours]);
+  }, []);
+  const paintsNeighbours = Boolean(renderNeighbour);
 
   const rowContext = useMemo(() => ({ renderNeighbour }), [renderNeighbour]);
   const rowKind =
@@ -935,6 +1036,10 @@ const copyScrollPositions = (from, to) => {
     }
   }
 };
+
+// A tab pressed over a row a hand has left moving holds it still (takeRowFromHand):
+// what the row says meanwhile is not a hand moving it.
+const isRowTaken = (row) => row.hasAttribute("data-route-row-taken");
 
 const afterFrames = (count, callback) => {
   if (count === 0) {
