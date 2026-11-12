@@ -81,7 +81,10 @@ same thing. Its travel plays in `duration` on `SlideContainer`'s curve, the scro
 position written at every frame with snapping off (`playTravel`): the browser's smooth
 scroll has no duration and a curve of its own (Chrome's hesitates for three frames,
 then peaks 1.65 times faster), and two rows of tabs in one app would move differently.
-Written to the scroll position, never offsets or a transform: the row stays a scroller
+That is the main thread's work, on a clock of its own: a frame plays at most a 30fps
+frame's worth, so a thread busy building the page arriving slows the travel rather than
+making it jump. A 60Hz frame as the cap would play every travel in slow motion where a
+browser saves power. Written to the scroll position, never offsets or a transform: the row stays a scroller
 all the way, what follows it reads it as it reads a hand, and a finger landing finds it
 where it is. A sideways wheel or a trackpad is told apart by where the travel last put
 the row, and the travel lets go of it. A scroll would fly past every page in between, so
@@ -162,7 +165,9 @@ rest: the compositor moves the row before any scroll event reaches the page, and
 that waits for one to show comes in behind an empty strip, 2 to 5 frames of it on a busy
 phone. `contain: paint` holds its `position: fixed` content in the pane, which rides
 in with it rather than standing over the page shown; that content reaches the viewport
-when the address reaches its page. Its pin (below) is written at the touch, for the
+when its page is the one on screen. That is the address's page, except while the address
+has run ahead of a hand to build the next page: then it is the page under the hand, until
+the hand lets go. Its pin (below) is written at the touch, for the
 same reason.
 
 **One route, several params: one component.** A `routes` window has one live page
