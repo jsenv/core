@@ -163,12 +163,14 @@ one kept while leaving, except that it can come back: `isShown()` false (it does
 re-render), `leavingSignal` true (it steps out of slots), no `hasLeft()`. It paints at
 rest: the compositor moves the row before any scroll event reaches the page, and a pane
 that waits for one to show comes in behind an empty strip, 2 to 5 frames of it on a busy
-phone. `contain: paint` holds its `position: fixed` content in the pane, which rides
+phone. Its pin (below) is written at the touch, for the same reason. `contain: paint` holds its `position: fixed` content in the pane, which rides
 in with it rather than standing over the page shown; that content reaches the viewport
-when its page is the one on screen. That is the address's page, except while the address
-has run ahead of a hand to build the next page: then it is the page under the hand, until
-the hand lets go. Its pin (below) is written at the touch, for the
-same reason.
+when its page is the one on screen. That is the address's page at rest. For the length of
+a movement, a hand's or a travel asked for, it is the page the row rested on as it began,
+wherever the address goes meanwhile: the page arriving rides in with its own, and the
+layout changes once, at rest (measured in 2v2 for a travel: a `List` in the page arriving
+still comes back to where it was). What readers are told is another matter: that follows
+the hand, and moves at its lift (below).
 
 **One route, several params: one component.** A `routes` window has one live page
 and a picture (a clone) of what the hand leaves behind. The address leads there:

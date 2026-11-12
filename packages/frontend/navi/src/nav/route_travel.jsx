@@ -163,9 +163,10 @@ const css = /* css */ `
        comes in a few frames late, behind an empty strip. contain: what it holds in
        position: fixed is held in its pane, and rides in with it, rather than
        standing over the page shown.
-       The page on screen is the address's, except while the address has run ahead
-       of a hand to build the page it pulls towards: then it is the page under the
-       hand (data-route-row-held), until the hand lets go. */
+       The page on screen is the address's at rest. A movement keeps the one the row
+       rested on as it began (data-route-row-held) until the row rests again, wherever
+       the address goes meanwhile: a hand's or a travel asked for, the page arriving
+       rides in with what it holds, and the layout changes once, at rest. */
     > [data-route-row-pane][inert]:not([data-route-row-held]),
     &:has(> [data-route-row-held])
       > [data-route-row-pane]:not([data-route-row-held]) {
@@ -341,9 +342,23 @@ export const RouteTravel = ({
   const pathOf = ({ route, params }) =>
     new URL(route.buildUrl(params), window.location.href).pathname;
 
+  // The pane laid out as the page on screen for the length of a movement, let go of
+  // when the row rests. Not what readers are told the page held is
+  // (route_travel_hold.js): that follows the hand, and goes at its lift.
+  const heldPaneRef = useRef(null);
+  const releasePaneAtRest = () => {
+    const heldPane = heldPaneRef.current;
+    if (heldPane) {
+      heldPaneRef.current = null;
+      heldPane.removeAttribute("data-route-row-held");
+    }
+  };
+
   // One movement, whoever set it off, from the first thing that moves to the row
-  // at rest. Null when nothing moves.
-  const beginMovement = (fields) => {
+  // at rest. Null when nothing moves. `paneAtRest` is the pane the row rests on as it
+  // begins: laid out as the page on screen until the row rests again, wherever the
+  // address goes meanwhile (see the CSS).
+  const beginMovement = (fields, paneAtRest) => {
     const row = rowRef.current;
     if (movementRef.current) {
       Object.assign(movementRef.current, fields);
@@ -358,6 +373,11 @@ export const RouteTravel = ({
       ...fields,
     };
     movementRef.current = movement;
+    // In a window the page is a picture, contained with what it holds.
+    if (!windowed && paneAtRest) {
+      heldPaneRef.current = paneAtRest;
+      paneAtRest.setAttribute("data-route-row-held", "");
+    }
     if (movement.scrollsDocument) {
       // Whatever the browser does with the offset meanwhile (clamping it to a page
       // shorter than the trip) is not the reader scrolling, and the address it
@@ -579,24 +599,6 @@ export const RouteTravel = ({
     rowRef.current.removeAttribute("data-route-row-travelling");
   };
 
-  // The address runs ahead of a hand to build the page it pulls towards (onScroll):
-  // the pane under the hand stays laid out as the page on screen until the hand lets
-  // go, whatever `inert` says (see the CSS). What reads the page held is told apart
-  // (route_travel_hold.js), and both are let go of together.
-  const heldPaneRef = useRef(null);
-  const holdPaneOnScreen = (pane) => {
-    heldPaneRef.current = pane;
-    pane.setAttribute("data-route-row-held", "");
-  };
-  const releaseHold = () => {
-    releaseHeldPage();
-    const heldPane = heldPaneRef.current;
-    if (heldPane) {
-      heldPaneRef.current = null;
-      heldPane.removeAttribute("data-route-row-held");
-    }
-  };
-
   // Every column back where the map says, and the row on the page of the address, in
   // one go: that page stands at the same place on screen either way.
   const putRowBack = (movement) => {
@@ -622,7 +624,7 @@ export const RouteTravel = ({
     const position = row.scrollLeft;
     movement.rowTaken = true;
     // A travel no hand set off holds nothing: it goes where it goes.
-    releaseHold();
+    releaseHeldPage();
     row.style.setProperty("--navi-route-row-stand", `${-position}px`);
     row.setAttribute("data-route-row-taken", "");
     afterFrames(2, () => {
@@ -654,7 +656,8 @@ export const RouteTravel = ({
     putRowBack(movement);
     row.removeAttribute("data-route-row-taken");
     publishRouteRowMove(null);
-    releaseHold();
+    releaseHeldPage();
+    releasePaneAtRest();
     if (liveRef.current) {
       liveRef.current.style.top = "";
     }
@@ -751,7 +754,12 @@ export const RouteTravel = ({
       return;
     }
     const movementBefore = movementRef.current;
-    const movement = beginMovement({ travelling: true });
+    // The row still rests on the page answered before. Held in the commit that made
+    // its pane inert, so no frame paints it contained.
+    const movement = beginMovement(
+      { travelling: true },
+      panesOf(row)[pages.findIndex((each) => samePage(each, answered))],
+    );
     if (movementBefore?.byHand && !movementBefore.rowTaken) {
       sayRowMoves();
       takeRowFromHand(movement);
@@ -810,7 +818,7 @@ export const RouteTravel = ({
         // Written by this box, at rest: nobody is moving anything.
         return;
       }
-      const movement = moving || beginMovement({ byHand: true });
+      const movement = moving || beginMovement({ byHand: true }, pane);
       sayRowMoves();
       if (movement.travelling || !travelByDrag || !pane) {
         return;
@@ -846,12 +854,8 @@ export const RouteTravel = ({
           return;
         }
         leavePictureOfLive(movement);
-      } else {
-        if (paneTowards.hasAttribute("data-built")) {
-          return;
-        }
-        // Before the address moves: the render that makes it inert must find it held.
-        holdPaneOnScreen(pane);
+      } else if (paneTowards.hasAttribute("data-built")) {
+        return;
       }
       holdPage(pages[currentIndex], page);
       askFor(page);
@@ -876,8 +880,9 @@ export const RouteTravel = ({
         askForPageOfRow(index, movement);
       }
       // After the address: a pull coming back to its page must not light the tab the
-      // address ran ahead to, even for a render.
-      releaseHold();
+      // address ran ahead to, even for a render. Only what readers are told: the
+      // panes keep their layout until the row rests.
+      releaseHeldPage();
     };
     const stopWatching = watchRowScroll(row, {
       onScroll,
@@ -924,7 +929,8 @@ export const RouteTravel = ({
       row.removeAttribute("data-route-row-travelling");
       movementRef.current = null;
       publishRouteRowMove(null);
-      releaseHold();
+      releaseHeldPage();
+      releasePaneAtRest();
     };
   }, [windowed]);
 
