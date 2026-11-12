@@ -148,6 +148,24 @@ _Reference: the slide family's cut in `layout/popup_css.js`, taken only
 where a band of glass lies past the area's edge, and the top comment there
 for the restructuring that would remove the last animated cut._
 
+## When the device cannot keep up
+
+A movement stays correct on a device that cannot keep up: it arrives when it
+was asked to and where it was asked to, with coarser steps if it must. It
+never plays slower. A low battery or an old phone may get a degraded movement.
+A recent phone must never get a slow one. Between a design that is better
+most of the time but awful in some cases and one with no awful case, take the
+one with no awful case.
+
+So a movement played from JS counts time from the frames' own timestamps, and
+never assumes the time between two frames. A browser saving power gives 30fps
+(Safari in Low Power Mode, Chrome's Energy Saver lowering the refresh rate),
+and a clock counting 60Hz frames plays everything there at half speed. Cap
+what one frame may play only at what such a screen gives a frame, so that only
+a stall is held back.
+
+_Reference: `TRAVEL_FRAME_MAX_MS` in route_travel.jsx._
+
 ## View transitions
 
 `document.startViewTransition` takes a callback that **makes the DOM change**,
