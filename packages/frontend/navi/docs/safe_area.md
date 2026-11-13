@@ -198,6 +198,33 @@ above the device's own band, and it follows a bar coming or going while it is
 open. A sliding entrance is cut at that edge, so it comes out from behind the
 bar.
 
+#### Pushed away by hand
+
+A toast one has read is pushed away. `closeByDrag` pushes it back down, behind
+the bar it came out of; a list of sides lets it be thrown sideways as well, and
+it leaves the way it was thrown:
+
+```jsx
+<Popover
+  signal={toastSignal}
+  positionArea="bottom"
+  container="safe-area"
+  marginWithContainer={12}
+  animation="slide-from-bottom"
+  closeByDrag={["bottom", "left", "right"]}
+>
+```
+
+It follows the finger, and on release it finishes leaving or comes back. The way
+out covers the 12px too, so nothing of it is left showing at the edge. A button
+in it keeps its tap, and a push that starts on the button does not press it.
+
+The push closes the popover, which writes the signal like any other close. A
+toast that hides itself after a delay is then simply hidden sooner, and that
+delay was set for one toast: when it runs out, it closes the toast only if the
+signal still holds that one. Otherwise the next toast, shown in the meantime, is
+the one it closes.
+
 Not a fixed box carrying the insets with a `layer="local"` popover in it: that
 box is a second copy of the rectangle, and its popover is under the top layer,
 so a sheet open at the time hides it.

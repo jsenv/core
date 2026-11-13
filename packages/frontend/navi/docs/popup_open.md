@@ -563,12 +563,13 @@ does next.
 The gestures that close a popup do not all mean the same thing, and that is on
 purpose:
 
-| gesture                        | means       | who decides                                                                      |
-| ------------------------------ | ----------- | -------------------------------------------------------------------------------- |
-| Escape                         | cancel      | always on a `Dialog`/`Popover`; a `Picker`'s `escapeEffect="cancel"` (default)   |
-| a press outside                | close, keep | `pressOutside="close"`, default of `Dialog` and `Picker` (`Popover`: `"ignore"`) |
-| a close cross (`--navi-close`) | close, keep | [the cross](#the-close-cross)                                                    |
-| `--navi-cancel` on a button    | cancel      | the button                                                                       |
+| gesture                        | means       | who decides                                                                                              |
+| ------------------------------ | ----------- | -------------------------------------------------------------------------------------------------------- |
+| Escape                         | cancel      | always on a `Dialog`/`Popover`; a `Picker`'s `escapeEffect="cancel"` (default)                           |
+| a press outside                | close, keep | `pressOutside="close"`, default of `Dialog` and `Picker` (`Popover`: `"ignore"`)                         |
+| a close cross (`--navi-close`) | close, keep | [the cross](#the-close-cross)                                                                            |
+| `--navi-cancel` on a button    | cancel      | the button                                                                                               |
+| pushed out by hand             | close, keep | `closeByDrag`: on by default on a `SidePanel`, off on a `Popover`; a docked `Dialog` sheet by its header |
 
 Escape says "forget it". It is the one gesture that has meant that everywhere,
 for as long as there have been dialogs, and navi keeps it that way. **A popup

@@ -1582,7 +1582,7 @@ const useDialogProps = (props) => {
       ? parsedPositionArea.y
       : null;
   const onSwipePointerDown = swipeToCloseSide
-    ? createSwipeToClose(swipeToCloseSide, { grip: DOCKED_SWIPE_GRIP })
+    ? createSwipeToClose([swipeToCloseSide], { grip: DOCKED_SWIPE_GRIP })
     : null;
   // A corner sitting exactly on the container's own corner must not be
   // rounded: the gap a radius carves out would show the container through it,

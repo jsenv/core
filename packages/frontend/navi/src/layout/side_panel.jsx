@@ -318,7 +318,7 @@ export const SidePanel = ({
   import.meta.css = css;
   const rest = dropPickerPopupProps(restGiven, "SidePanel");
 
-  const onSwipePointerDown = closeByDrag ? createSwipeToClose(side) : null;
+  const onSwipePointerDown = closeByDrag ? createSwipeToClose([side]) : null;
 
   return (
     <Popup

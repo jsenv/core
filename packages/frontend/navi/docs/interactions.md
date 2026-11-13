@@ -310,6 +310,25 @@ rejecting with nothing comes back without a word. What a success does to it is
 yours (a list that redemands its rows, a row that leaves): navi does not make it
 disappear.
 
+### Not on a popup's own element
+
+What navi moves is the element that declares the swipe, through its `translate`.
+A popup's `translate` is where it stands: its placement writes it on the
+element, inline, and an inline value wins. A swipe declared on a `Popover`, a
+`Dialog` or a `SidePanel` itself is still answered, but nothing follows the
+finger: the popup stays put, and goes at the release if the answer closes it.
+navi warns about it in dev.
+
+Pushing a popup away is not a swipe to answer, it is a way of closing it:
+`closeByDrag` on a `Popover` (on by default on a `SidePanel`; a docked `Dialog`
+sheet is pushed by its header). The popup follows the finger without its
+placement being touched, is hidden behind the edge it leaves by, and closes once
+it is out — a close that keeps, like the cross's. A toast is the usual case, see
+[safe_area.md](./safe_area.md#pushed-away-by-hand).
+
+A swipe on something the popup holds, a row of a menu, is that element's, and it
+moves like any other.
+
 ## Twice, whichever hand it is
 
 At the finger there is no `dblclick`, and not even a second `click`: two taps in

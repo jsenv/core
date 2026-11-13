@@ -6,8 +6,9 @@ are two families, and they do not work the same way:
 - **A row of screens** (`SlideContainer`, `RouteTravel`) is a real scroller with
   one snap point per screen. The browser reads the hand. See
   [The browser scrolls the row](#the-browser-scrolls-the-row).
-- **A box pushed aside** (a docked `Dialog` or a `SidePanel` pushed back to close
-  it, a row swiped with `interactions`) has nothing to scroll to, so the press is
+- **A box pushed aside** (a docked `Dialog`, a `SidePanel` or a `Popover` with
+  `closeByDrag` pushed out to close it, a row swiped with `interactions`) has
+  nothing to scroll to, so the press is
   read by one module, `drag_to_travel.js` in @jsenv/dom. See
   [A box pushed aside: the press](#a-box-pushed-aside-the-press).
 
@@ -143,7 +144,8 @@ box moves:
 And one thing narrows it from the other end: a docked `Dialog` reads the press
 only on its grip — its header, plus anything carrying `data-swipe-grip` — so a
 board, a map or a list it holds keeps its own gestures, and a sheet with neither
-is not pushed back at all. A `SidePanel` is pushed from its whole surface.
+is not pushed back at all. A `SidePanel`, and a `Popover` with `closeByDrag`,
+are pushed from their whole surface.
 
 ### Boxes inside boxes
 

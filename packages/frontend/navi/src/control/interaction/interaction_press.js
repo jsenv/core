@@ -175,6 +175,12 @@ const DOUBLE_CLICK_SLOP_ATTRIBUTE = "data-double-click-slop";
 // taps: said in the DOM at render time, for the CSS below and for the boxes above
 // to read.
 const SWIPE_AXES_ATTRIBUTE = "data-swipe";
+// A popup's `translate` is where it is placed, written inline by the placement
+// (applyNewPosition in @jsenv/dom), and an inline declaration wins over the
+// rule painting the pull: the swipe is answered with nothing following it.
+// Moving a popup by hand is pushing it away, which swipe_to_close.js does by
+// composing a transform under the placement.
+const POPUP_ELEMENT_SELECTOR = `[navi-control="popover"], [navi-control="dialog"]`;
 export const LONGPRESS_ATTRIBUTE = "data-longpress";
 const DOUBLE_CLICK_ATTRIBUTE = "data-double-click";
 
@@ -324,6 +330,9 @@ defineInteractionDetector({
       });
     };
     if (axes) {
+      if (import.meta.dev && element.matches(POPUP_ELEMENT_SELECTOR)) {
+        warnSwipeOnPopupElement(element);
+      }
       mark(SWIPE_AXES_ATTRIBUTE, axes);
       // Read by the boxes ABOVE this one: an axis swiped here is not theirs to
       // travel (see axesLeftBy).
@@ -601,6 +610,13 @@ const warnOnceAboutHoldTakenByInner = (element, innerElement) => {
     `interactions: the "longpress" declared on this element was taken by the "longpress" declared inside it — the nearer hold wins, and this one never fires while the inner one is declared. One hold, one meaning: give the two things two gestures (a hold and a click, say), or declare the hold on one element only.`,
     element,
     innerElement,
+  );
+};
+
+const warnSwipeOnPopupElement = (element) => {
+  console.warn(
+    `interactions: a swipe declared on a popup's own element does not move it — its translate is where the popup is placed. A popup pushed away closes with closeByDrag (Popover, SidePanel; a docked Dialog sheet does it on its own); a swipe on something it holds is declared on that element.`,
+    element,
   );
 };
 

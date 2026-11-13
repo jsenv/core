@@ -176,7 +176,7 @@ start when unsure which export solves a problem.
 - `interactions.md` — a gesture is named, not read by hand: the `interactions`
   prop, swipes, holds, counted taps, the gate, a gesture's write verb
   (`{ answer, verb }`, held by the network policy), `selfInteractions`,
-  registering a detector. Before a `pointerdown` listener of your own, and before
+  registering a detector, why a popup's own element is not swiped. Before a `pointerdown` listener of your own, and before
   stopping propagation to keep a popup shut.
 - `drag_interactions.md` — an element carried: `move`, `reorder`, `land`,
   `toss`, `leave`, `moving`, the `grab`/`release`/`refuse` moments, an
@@ -197,7 +197,8 @@ start when unsure which export solves a problem.
   component style or writing `import.meta.css`.
 - `safe_area.md` — the app's rectangle and the band left free inside it, an app
   narrower than the window (`--navi-app-max-width`), `data-navi-safe-area`, a
-  popup kept clear of the bars (`container="safe-area"`, a toast), the viewport
+  popup kept clear of the bars (`container="safe-area"`, a toast and how it is
+  pushed away), the viewport
   under a virtual keyboard, a document wider than the screen. Before
   hand-writing an offset to clear a `FixedBar`.
 - `scroll.md` — where scrolling happens: `header`/`body`/`footer`, a `List`'s

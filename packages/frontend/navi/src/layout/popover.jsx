@@ -53,6 +53,7 @@ import {
   findSelfOrAncestorFixedPosition,
   getPositionedParent,
   getBorderSizes,
+  keepTouchRefusable,
   onAncestorReopen,
   parsePositionArea,
   pickPositionRelativeTo,
@@ -105,6 +106,11 @@ import { popupCss } from "./popup_css.js";
 import { surfaceTextCss } from "./surface_text_css.js";
 import { freezeSize, unfreezeSize } from "./freeze_size.js";
 import { deferPlacementWhileCovered, enterCoverStack } from "./popup_cover.js";
+import {
+  createSwipeToClose,
+  SWIPE_AXIS_BY_SIDE,
+  swipeAxesOf,
+} from "./swipe_to_close.js";
 import {
   armOutsidePressClose,
   armPointerDownOutsideClose,
@@ -320,6 +326,16 @@ const css = /* css */ `
        transitions — no shared transition-property to clobber, no propertyName
        to filter). An entrance animation moves the popover through scale and
        transform instead, which compose under it: see popup_css.js. */
+
+    /* What a touch may do on a popover pushed sideways to close it (see
+       swipe_to_close.js): the push takes the sideways axis, the page keeps the
+       vertical scroll. A push up or down travels the way the page scrolls and
+       cannot give that axis away: the browser keeps it, and the gesture is
+       settled by keepTouchRefusable. */
+    &[data-swipe-to-close~="left"],
+    &[data-swipe-to-close~="right"] {
+      touch-action: pan-y;
+    }
 
     /* The clamped max, not --popover-maxmax-*: that one ignores what the
        placement left available, which reaches here through
@@ -551,6 +567,20 @@ const css = /* css */ `
  *   overlap with the anchor; wrap it in `inset(...)` (e.g. `inset(top)`,
  *   `inset(top-left)`) to overlap the anchor instead (edges touching or
  *   inside it).
+ * @param {boolean|Array<"top"|"right"|"bottom"|"left">} [props.closeByDrag=false] -
+ *   Pushing the popover out of its container closes it: it follows the pointer
+ *   and, when released, finishes leaving or comes back to rest. `true` pushes
+ *   it back through the edge it is docked to, the word `positionArea` leads
+ *   with (`"bottom"`, `"bottom-start"`: pushed down; `"left-end"`: pushed
+ *   left); a centred popover rests on no edge and is not pushed (warned in
+ *   dev). A list names the sides it may leave by, and it leaves the way it was
+ *   pushed: `["bottom", "left", "right"]` for a toast pushed back down behind
+ *   the bar or thrown sideways. A popover placed against an anchor at its
+ *   opening is not pushed either way (warned in dev). It is pushed from its
+ *   whole surface, so it suits a popover holding little else: a button inside
+ *   keeps its tap, and a press that turns into a push swallows the click it
+ *   would have left. The close keeps, as a cross's does. See docs/interactions.md
+ *   for a swipe on the popover's own element, which does not move it.
  * @param {string} [props.positionAreaFixed] - Overrides `positionArea` once
  *   the popover has actually been positioned once, so a live reposition
  *   (e.g. anchor moved) doesn't jump to a different side.
@@ -1009,6 +1039,7 @@ const usePopoverProps = (props) => {
     positionAreaWhenAnchorIsInvalid,
     marginWithContainer = 0,
     container = "app",
+    closeByDrag = false,
     // "close"  → pointer press outside closes (a plain close = commit)
     // "cancel" → pointer press outside closes AS A CANCEL (revert)
     // "capture"→ absorb the press, stay open
@@ -1155,6 +1186,7 @@ const usePopoverProps = (props) => {
     return popupGroup.register(openController);
   }, [popupGroup, openController]);
   const hasBackdrop = pressOutside !== "ignore" && backdrop && !popupGroup;
+  const swipeToCloseSides = resolveSwipeToCloseSides(closeByDrag, positionArea);
   if (!popupGroup && !backdrop && pressOutside === "capture") {
     console.warn(
       `Popover: pressOutside="capture" needs a backdrop. Absorbing a press is what a wall does, and backdrop={false} takes it away — every press outside reaches the page, exactly as with "ignore".`,
@@ -1327,6 +1359,12 @@ const usePopoverProps = (props) => {
     }
     const hasAnchorElement = Boolean(anchorElement);
     anchorElementRef.current = anchorElement || null;
+    if (import.meta.dev && swipeToCloseSides && hasAnchorElement) {
+      console.warn(
+        `Popover: closeByDrag is ignored, this opening placed the popover against an anchor rather than in its container. A popover pushed away has no anchor: anchorCustomEventDetail="ignore" and no anchor prop.`,
+        anchorElement,
+      );
+    }
     // getPositionedParent already resolves to document.documentElement for
     // the via-attribute renderer on its own (popoverEl's own `popover`
     // attribute, present from render regardless of whether it's actually
@@ -2097,6 +2135,9 @@ const usePopoverProps = (props) => {
       }
     },
   });
+  const swipeToClose = swipeToCloseSides
+    ? createSwipeToClose(swipeToCloseSides)
+    : null;
   Object.assign(contentProps, {
     id,
     tabIndex,
@@ -2180,6 +2221,28 @@ const usePopoverProps = (props) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
     },
+    ...(swipeToClose
+      ? {
+          "data-swipe-to-close": swipeToCloseSides.join(" "),
+          // The axes it travels on when pushed out, said to the shared gesture
+          // layer before any finger lands (see side_panel.jsx, which says the
+          // same for the same reasons).
+          "data-drag-travel": swipeAxesOf(swipeToCloseSides),
+          "data-travel-by-drag": swipeAxesOf(swipeToCloseSides),
+          "onTouchMove": (e) => {
+            rest.onTouchMove?.(e);
+            keepTouchRefusable(e);
+          },
+          "onPointerDown": (e) => {
+            rest.onPointerDown?.(e);
+            // Placed against an anchor at this opening: it is not in its
+            // container to be pushed out of (warned at the opening).
+            if (!anchorElementRef.current) {
+              swipeToClose(e);
+            }
+          },
+        }
+      : null),
     // A popup opened from inside this one is in front of it, not a peer of
     // it: the group stops here.
     "children": popupGroup ? (
@@ -2262,6 +2325,41 @@ const resolvePositionAreaAndAnimationKind = ({
 
 Popover.Close = PopupClose;
 Popover.Title = PopupTitle;
+
+// The sides a popover pushed away leaves by, or null when it is not pushed.
+const resolveSwipeToCloseSides = (closeByDrag, positionArea) => {
+  if (!closeByDrag) {
+    return null;
+  }
+  if (Array.isArray(closeByDrag)) {
+    const sides = closeByDrag.filter((side) => side in SWIPE_AXIS_BY_SIDE);
+    if (import.meta.dev && sides.length !== closeByDrag.length) {
+      console.warn(
+        `Popover: closeByDrag={${JSON.stringify(closeByDrag)}} names something that is not a side; the sides are "top", "right", "bottom" and "left".`,
+      );
+    }
+    return sides.length ? sides : null;
+  }
+  const side = dockedSideOf(positionArea);
+  if (!side) {
+    if (import.meta.dev) {
+      console.warn(
+        `Popover: closeByDrag with positionArea="${positionArea}" rests on no edge, so there is no way back to push it through. Dock it to one ("bottom", "top", "left", "right", or a token leading with one of them), or name the sides it leaves by: closeByDrag={["left", "right"]}.`,
+      );
+    }
+    return null;
+  }
+  return [side];
+};
+const INSET_TOKEN_RE = /^inset\(\s*([a-z-]+)\s*\)$/;
+// The edge a popover docked to its container rests on: the word its
+// positionArea leads with, "bottom-start" resting on the bottom and "left-end"
+// on the left. "center" rests on none.
+const dockedSideOf = (positionArea) => {
+  const token = INSET_TOKEN_RE.exec(positionArea)?.[1] ?? positionArea;
+  const side = token.split("-")[0];
+  return side in SWIPE_AXIS_BY_SIDE ? side : null;
+};
 
 // The placement needs pixels: a value only CSS could evaluate (a percentage, a
 // calc()…) would put the popover at NaN, which is the top of the page.
