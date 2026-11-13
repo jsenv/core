@@ -756,6 +756,12 @@ browser, at no cost per element. Hand-written in JS the same suppression takes
 three handlers — once `mouseenter` has been swallowed, only `mousemove` can
 bring the hover back.
 
+End the selector on what it styles, as `.my_row` does here. A rule ending on
+`*` (`[navi-scrolling] *`, or `.my_row:is([navi-scrolling] *)`) gives Chrome
+nothing to narrow to: it restyles every element under the scroller, the whole
+document when the page scrolls, once as each scroll starts and again as it
+stops.
+
 The page scroll carries the attribute on `document.scrollingElement`, so an
 ancestor rule covers it too. In JS the same fact reads as `isScrolling()` /
 `isScrolling(element)`, or `scrollActivitySignal` to react to it.

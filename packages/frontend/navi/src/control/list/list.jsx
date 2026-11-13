@@ -378,10 +378,21 @@ const css = /* css */ `
        for those while the scroll animation runs. Out of hit-testing, the
        browser suppresses them all — see utils/scroll_activity.js for who
        writes navi-scrolling. The scroller itself keeps its own hit-testing, so
-       the wheel and the scrollbar go on reaching it. */
-    &:not([navi-hover-while-scrolling])
+       the wheel and the scrollbar go on reaching it.
+       One selector per place the scroller can be (above the list, the frame,
+       its scroll box), each ending on .navi_list, never on
+       :is([navi-scrolling] *): see utils/scroll_activity.js for what that
+       form costs. */
+    [navi-scrolling]
+      &:not([navi-hover-while-scrolling])
       > .navi_list_scroll_container
-      > .navi_list:is([navi-scrolling] *) {
+      > .navi_list,
+    &[navi-scrolling]:not([navi-hover-while-scrolling])
+      > .navi_list_scroll_container
+      > .navi_list,
+    &:not([navi-hover-while-scrolling])
+      > .navi_list_scroll_container[navi-scrolling]
+      > .navi_list {
       pointer-events: none;
     }
 

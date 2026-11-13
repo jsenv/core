@@ -8,9 +8,15 @@
  * element crossing the cursor — a dozen per wheel tick. Those hovers are noise:
  * the user asked to scroll, not to hover. Anything doing real work on hover (a
  * map highlight, a preview, a prefetch) then pays for that noise on the main
- * thread, exactly while a scroll animation is running. A rule matching
- * `[navi-scrolling] *` takes the rows out of hit-testing and the browser
- * suppresses it all, at no cost per element.
+ * thread, exactly while a scroll animation is running. A rule like
+ * `[navi-scrolling] .my_row { pointer-events: none }` takes the rows out of
+ * hit-testing and the browser suppresses it all.
+ *
+ * Such a rule must end on a class (or an id, a tag, an attribute) of what it
+ * styles: Chrome then restyles only those elements when the attribute comes and
+ * goes. One ending on `*`, including `.my_row:is([navi-scrolling] *)`, gives it
+ * nothing to narrow to, so it restyles everything under the scroller (the whole
+ * document when the page scrolls) at the start and at the end of every scroll.
  *
  * One capturing listener on the document sees them all: "scroll" does not
  * bubble, but it does propagate in the capture phase.

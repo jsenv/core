@@ -88,6 +88,13 @@ import {
 } from "../utils/css_timing.js";
 
 const css = /* css */ `
+  /* Written on the panes that read it (pinPanes), not on the row: inherited, it
+     would restyle every element of the pages they hold as a movement begins. */
+  @property --navi-route-row-pin {
+    syntax: "*";
+    inherits: false;
+  }
+
   /* A column: the height given to the box reaches the row. */
   .navi_route_travel {
     position: relative;
@@ -166,9 +173,11 @@ const css = /* css */ `
        The page on screen is the address's at rest. A movement keeps the one the row
        rested on as it began (data-route-row-held) until the row rests again, wherever
        the address goes meanwhile: a hand's or a travel asked for, the page arriving
-       rides in with what it holds, and the layout changes once, at rest. */
+       rides in with what it holds, and the layout changes once, at rest.
+       The row says it holds one (data-route-row-holding): a :has() over its panes
+       would restyle every element of the row each time the held pane changes. */
     > [data-route-row-pane][inert]:not([data-route-row-held]),
-    &:has(> [data-route-row-held])
+    &[data-route-row-holding]
       > [data-route-row-pane]:not([data-route-row-held]) {
       position: relative;
       top: var(--navi-route-row-pin, 0);
@@ -346,11 +355,25 @@ export const RouteTravel = ({
   // when the row rests. Not what readers are told the page held is
   // (route_travel_hold.js): that follows the hand, and goes at its lift.
   const heldPaneRef = useRef(null);
-  const releasePaneAtRest = () => {
+  const releasePaneAtRest = (row) => {
     const heldPane = heldPaneRef.current;
     if (heldPane) {
       heldPaneRef.current = null;
       heldPane.removeAttribute("data-route-row-held");
+      row.removeAttribute("data-route-row-holding");
+    }
+  };
+
+  // How far down the reader is looking, on every pane, for those the CSS pins.
+  const pinPanes = (row) => {
+    const pin = `${pinOf(row)}px`;
+    for (const pane of panesOf(row)) {
+      pane.style.setProperty("--navi-route-row-pin", pin);
+    }
+  };
+  const unpinPanes = (row) => {
+    for (const pane of panesOf(row)) {
+      pane.style.removeProperty("--navi-route-row-pin");
     }
   };
 
@@ -377,13 +400,14 @@ export const RouteTravel = ({
     if (!windowed && paneAtRest) {
       heldPaneRef.current = paneAtRest;
       paneAtRest.setAttribute("data-route-row-held", "");
+      row.setAttribute("data-route-row-holding", "");
     }
     if (movement.scrollsDocument) {
       // Whatever the browser does with the offset meanwhile (clamping it to a page
       // shorter than the trip) is not the reader scrolling, and the address it
       // would be written against may already be another page's.
       movement.resumeScrollRecording = suspendScrollRecording();
-      row.style.setProperty("--navi-route-row-pin", `${pinOf(row)}px`);
+      pinPanes(row);
     }
     return movement;
   };
@@ -657,7 +681,7 @@ export const RouteTravel = ({
     row.removeAttribute("data-route-row-taken");
     publishRouteRowMove(null);
     releaseHeldPage();
-    releasePaneAtRest();
+    releasePaneAtRest(row);
     if (liveRef.current) {
       liveRef.current.style.top = "";
     }
@@ -665,7 +689,7 @@ export const RouteTravel = ({
       picture.remove();
     }
     if (movement.scrollsDocument) {
-      row.style.removeProperty("--navi-route-row-pin");
+      unpinPanes(row);
       const { pages, currentIndex } = latestRef.current;
       if (currentIndex !== -1) {
         const { route, params } = pages[currentIndex];
@@ -930,7 +954,7 @@ export const RouteTravel = ({
       movementRef.current = null;
       publishRouteRowMove(null);
       releaseHeldPage();
-      releasePaneAtRest();
+      releasePaneAtRest(row);
     };
   }, [windowed]);
 
@@ -998,7 +1022,7 @@ export const RouteTravel = ({
     const row = rowRef.current;
     const onTouchStart = () => {
       if (!movementRef.current && rowFollowsDocument(row)) {
-        row.style.setProperty("--navi-route-row-pin", `${pinOf(row)}px`);
+        pinPanes(row);
       }
     };
     row.addEventListener("touchstart", onTouchStart, { passive: true });
