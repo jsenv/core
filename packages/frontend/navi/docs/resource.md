@@ -536,6 +536,10 @@ const ORDER = resource("order", {
 <Button action={ORDER.cancel.bindParams({ id })}>Cancel</Button>;
 ```
 
+A write's name is its own: never a verb's, in any case (`post`, `Patch`,
+`get_many`…), nor a member the resource already exposes (`store`, `one`,
+`scopedMany`, `withParams`…). Declaring the resource throws otherwise.
+
 `ORDER.cancel` is an action beside the verbs: its own loading and error on the
 button that runs it, held by the network policy as its `verb`, and answered as
 that verb is (a `PATCH` returns the item, which is upserted). Its `rerunOn` says

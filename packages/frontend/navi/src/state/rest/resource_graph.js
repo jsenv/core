@@ -191,8 +191,9 @@ const SCOPED_MANY_OPTIONS = new Set([
  *   policy as that verb, and is a write of its own for a dependent:
  *   `{ resource: ORDER, on: ["cancel"] }`. Its `rerunOn` says which reads of
  *   this resource it reruns (`{ GET_RANGE: true }`); a read it leaves out
- *   follows `rerunOn` for its verb. A name a verb takes, or one the resource
- *   already exposes (`withParams`, `store`…), throws. A `.scopedOne()` or
+ *   follows `rerunOn` for its verb. A verb's name in any case (`post`,
+ *   `get_many`…), or one the resource already exposes (`withParams`, `store`…),
+ *   throws. A `.scopedOne()` or
  *   `.scopedMany()` takes `writes` too, `.scopedMany()` with the plural verbs.
  * @param {{ GET?: { ms?: number, max?: number }, GET_MANY?: { ms?: number, max?: number } }} [restCallbacks.keep] -
  *   how long an answer of a read is trusted, coming back to the same params
@@ -1763,12 +1764,15 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
 
   // expose one action per write named in `writes`
   if (writes) {
+    const membersExposed = Object.keys(stateFacade).filter(
+      (key) => !VERB_KEYS.includes(key),
+    );
     for (const [writeName, write] of Object.entries(writes)) {
       assertWriteCanBeNamed(
         name,
         writeName,
         write,
-        stateFacade,
+        membersExposed,
         namedWriteVerbs,
       );
       const { verb: writeVerb, callback, rerunOn: writeRerunOn } = write;
@@ -2081,7 +2085,7 @@ const assertWriteCanBeNamed = (
   name,
   writeName,
   write,
-  stateFacade,
+  membersExposed,
   namedWriteVerbs,
 ) => {
   const where = `resource(${name}) writes.${writeName}`;
@@ -2090,9 +2094,9 @@ const assertWriteCanBeNamed = (
       `${where}: "${writeName}" is a verb's name — a write named in "writes" takes a name of its own (cancel, archive…)`,
     );
   }
-  if (Object.hasOwn(stateFacade, writeName)) {
+  if (membersExposed.includes(writeName)) {
     throw new Error(
-      `${where}: the resource already exposes "${writeName}" — pick another name`,
+      `${where}: the resource already exposes "${writeName}" — a write takes a name none of its members has: ${membersExposed.join(", ")}`,
     );
   }
   if (!write || typeof write !== "object") {

@@ -7048,10 +7048,19 @@ const useItemStore = ({
   // was asked for, and the window keeps growing meanwhile: dropping what the
   // page did not cover empties items on screen.
   const staleRanksRef = useRef(null);
+  // A run standing for no item has no rank to mark: its count is what is from
+  // before, and no window frames anything that would ask for it again.
+  const countStaleRef = useRef(false);
+  const markHeldStale = () => {
+    staleRanksRef.current = new Set(pages.byIndex.keys());
+    countStaleRef.current = pages.count === 0;
+  };
   if (staleRanksRef.current === null) {
-    staleRanksRef.current = restored
-      ? new Set(pages.byIndex.keys())
-      : new Set();
+    if (restored) {
+      markHeldStale();
+    } else {
+      staleRanksRef.current = new Set();
+    }
   }
   const takeInPage = ({ pageItems, pageStart, pageCount }) => {
     // An item from before is gone from where it stood when the page puts
@@ -7086,6 +7095,7 @@ const useItemStore = ({
       i++;
     }
     pages.count = pageCount;
+    countStaleRef.current = false;
     // Which rank holds which id, kept by the source so a list drawing
     // this collection again finds it drawn (see readComposition above).
     if (itemsAction.writeComposition) {
@@ -7122,7 +7132,7 @@ const useItemStore = ({
   const invalidationRef = useRef(invalidation);
   if (invalidationRef.current !== invalidation) {
     invalidationRef.current = invalidation;
-    staleRanksRef.current = new Set(pages.byIndex.keys());
+    markHeldStale();
   }
   // The one request in flight, with the means to call it off: a page asked for
   // a window the list has left is work the server and the browser are doing for
@@ -7331,7 +7341,8 @@ const useItemStore = ({
           rank++;
         }
       }
-      const revalidating = staleFrom !== -1;
+      const countStale = countStaleRef.current;
+      const revalidating = staleFrom !== -1 || countStale;
       // The list is held on an item nothing on screen leads to: the items it holds
       // do not contain it, so no window it could draw will ever bring it. Only
       // asking for it by name does.
@@ -7355,6 +7366,10 @@ const useItemStore = ({
             : 0;
         start = from < 0 ? 0 : from;
         end = start + budget - 1;
+      } else if (countStale) {
+        // Nothing drawn to anchor on: the first page, like the very first ask.
+        start = 0;
+        end = budget - 1;
       } else if (revalidating) {
         // The items from before that the window draws, and the missing ones
         // with them: one ask.
@@ -7567,6 +7582,7 @@ const useItemStore = ({
               staleRanksRef.current.delete(rank);
               rank++;
             }
+            countStaleRef.current = false;
             setRefreshing(false);
             return;
           }
