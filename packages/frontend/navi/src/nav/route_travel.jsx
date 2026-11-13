@@ -88,9 +88,13 @@ import {
 } from "../utils/css_timing.js";
 
 const css = /* css */ `
-  /* Written on the panes that read it (pinPanes), not on the row: inherited, it
-     would restyle every element of the pages they hold as a movement begins. */
+  /* Written on what reads them (pinPanes, holdRowAt), not on the row: inherited,
+     they would restyle every element of the pages as a movement begins. */
   @property --navi-route-row-pin {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-row-stand {
     syntax: "*";
     inherits: false;
   }
@@ -649,16 +653,14 @@ export const RouteTravel = ({
     movement.rowTaken = true;
     // A travel no hand set off holds nothing: it goes where it goes.
     releaseHeldPage();
-    row.style.setProperty("--navi-route-row-stand", `${-position}px`);
-    row.setAttribute("data-route-row-taken", "");
+    holdRowAt(row, position);
     afterFrames(2, () => {
       if (movementRef.current !== movement) {
         return;
       }
       // A scroller again, standing where no page does: not snapped meanwhile.
       row.setAttribute("data-route-row-travelling", "");
-      row.removeAttribute("data-route-row-taken");
-      row.style.removeProperty("--navi-route-row-stand");
+      releaseTakenRow(row);
       afterFrames(1, () => {
         if (movementRef.current === movement) {
           travelRowTo(latestRef.current.currentIndex, movement);
@@ -678,7 +680,7 @@ export const RouteTravel = ({
     movementRef.current = null;
     letRowGo(movement);
     putRowBack(movement);
-    row.removeAttribute("data-route-row-taken");
+    releaseTakenRow(row);
     publishRouteRowMove(null);
     releaseHeldPage();
     releasePaneAtRest(row);
@@ -1128,6 +1130,23 @@ const copyScrollPositions = (from, to) => {
 // A tab pressed over a row a hand has left moving holds it still (takeRowFromHand):
 // what the row says meanwhile is not a hand moving it.
 const isRowTaken = (row) => row.hasAttribute("data-route-row-taken");
+
+// What the CSS offsets while the row is taken. A picture left meanwhile is a clone
+// of the live page, and takes its offset along.
+const STANDING_IN_ROW =
+  ":scope > [data-route-row-pane], :scope > [data-route-row-live], :scope > [data-route-row-pictures] > *";
+const holdRowAt = (row, position) => {
+  for (const element of row.querySelectorAll(STANDING_IN_ROW)) {
+    element.style.setProperty("--navi-route-row-stand", `${-position}px`);
+  }
+  row.setAttribute("data-route-row-taken", "");
+};
+const releaseTakenRow = (row) => {
+  row.removeAttribute("data-route-row-taken");
+  for (const element of row.querySelectorAll(STANDING_IN_ROW)) {
+    element.style.removeProperty("--navi-route-row-stand");
+  }
+};
 
 const afterFrames = (count, callback) => {
   if (count === 0) {
