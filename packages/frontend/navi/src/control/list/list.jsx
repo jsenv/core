@@ -922,11 +922,11 @@ const css = /* css */ `
        the edge of the window, off screen, it covers the first item drawn. */
     &[data-continued] {
       display: grid;
+      margin-top: calc(-1 * var(--x-list-gap, 0px));
       /* The group's width, never its content's: an implicit (auto) column
          grows to the widest item's min-content and every item follows it,
          where the same items in a block box stay at the list's width. */
       grid-template-columns: minmax(0, 1fr);
-      margin-top: calc(-1 * var(--x-list-gap, 0px));
 
       > .navi_list_item_group_label,
       > .navi_list_item_group_list {
@@ -2489,11 +2489,18 @@ const useListScrollSync = ({
         // Not there yet, but where it stood is drawn already: the item
         // standing in for it at that index (see holdWindow). The list is placed
         // on that one, measured like any other, and the named item takes over
-        // where it lands.
-        if (listItems.pagesSignal.peek() === 0) {
-          if (typeof scrolledWanted.index === "number") {
+        // where it lands. Held for as long as the page at that index has not
+        // answered — the first one, or the one a press sends the list to: only
+        // an answer without the item says it is gone.
+        const standInIndex = scrolledWanted.index;
+        const hasStandIn = typeof standInIndex === "number";
+        if (
+          listItems.pagesSignal.peek() === 0 ||
+          (hasStandIn && listItems.itemOnItsWayAt(standInIndex))
+        ) {
+          if (hasStandIn) {
             placeItem(
-              findItemElementAt(getListEl(), scrolledWanted.index),
+              findItemElementAt(getListEl(), standInIndex),
               scrolledWanted.offset || 0,
               scrolledWanted.align,
             );
@@ -6370,6 +6377,10 @@ const useRunItems = (
       });
       return found;
     },
+    awaits: (itemIndex) =>
+      itemIndex >= runStart &&
+      itemIndex < runEnd &&
+      getItemAt(itemIndex) === undefined,
     roomAt: roomOf,
     givenRoomAt: givenRoomOf,
   });

@@ -472,6 +472,17 @@ export const createListItems = () => {
       }
       return null;
     },
+    // Whether a run stands for the item at that index without holding it: the
+    // page it belongs to has not answered yet. An id missing from what the runs
+    // hold says the item is gone only once the page where it stood is in.
+    itemOnItsWayAt: (index) => {
+      for (const locator of locatorByOwner.values()) {
+        if (locator.awaits(index)) {
+          return true;
+        }
+      }
+      return false;
+    },
     // The room the item at that index takes: the room it took when it was
     // last drawn, else the room its run is given for it (see List.Items'
     // itemSize), else undefined.
