@@ -1677,6 +1677,12 @@ const useListScrollSync = ({
   // its start ("back_to_start", see placeBackAtStart), unless a `scrolled`
   // changing in the same render says where it goes.
   const startPlaceRef = useRef(null);
+  // Each place the list is held at anew is said to its runs (see
+  // holdArmedSignal). Written during this render too, on purpose: the runs read
+  // it in theirs, which comes after.
+  const armHold = () => {
+    listItems.holdArmedSignal.value = listItems.holdArmedSignal.peek() + 1;
+  };
   if (startPlaceRef.current === null) {
     startPlaceRef.current = {
       userTookOver: false,
@@ -1698,6 +1704,7 @@ const useListScrollSync = ({
       place.way = null;
       place.arrived = false;
       place.smooth = false;
+      armHold();
       // What the list said it was reading, and what a search would give back,
       // are places in what it no longer shows.
       savedScrollRef.current = null;
@@ -1711,6 +1718,7 @@ const useListScrollSync = ({
       place.wanted = scrolled ?? defaultScrolled;
       place.userTookOver = false;
       place.smooth = false;
+      armHold();
     } else if (
       (scrolled === undefined || scrolled === null) &&
       !compareTwoJsValues(place.defaultScrolled, defaultScrolled)
@@ -1723,6 +1731,7 @@ const useListScrollSync = ({
         place.way = null;
         place.arrived = false;
         place.smooth = false;
+        armHold();
       }
     }
   }
@@ -1740,6 +1749,7 @@ const useListScrollSync = ({
     place.way = null;
     place.arrived = false;
     place.smooth = smooth;
+    armHold();
     setHoldRequestCount((count) => count + 1);
   };
   const scrolledWanted = startPlaceRef.current.wanted;
@@ -2215,6 +2225,7 @@ const useListScrollSync = ({
     !startPlaceRef.current.userTookOver &&
     scrolledWanted !== "start" &&
     scrolledWanted !== undefined;
+  listItems.heldSomewhere = heldSomewhere;
   if (heldSomewhere) {
     // Subscribing on purpose: the item size is measured by this list but read
     // by the runs, so a size that settles re-renders THEM — their fillers grow,
@@ -2489,13 +2500,16 @@ const useListScrollSync = ({
         // Not there yet, but where it stood is drawn already: the item
         // standing in for it at that index (see holdWindow). The list is placed
         // on that one, measured like any other, and the named item takes over
-        // where it lands. Held for as long as the page at that index has not
-        // answered — the first one, or the one a press sends the list to: only
-        // an answer without the item says it is gone.
+        // where it lands. Without an index nothing stands in for it, and the
+        // list stays where it is meanwhile. Held while it can still come: the
+        // item is gone only once every run answered its ask by name and the
+        // page where it stood is in, both without it. A list no run answered
+        // has said nothing yet (declared items come with the app's own data).
         const standInIndex = scrolledWanted.index;
         const hasStandIn = typeof standInIndex === "number";
         if (
           listItems.pagesSignal.peek() === 0 ||
+          listItems.namedItemOnItsWay() ||
           (hasStandIn && listItems.itemOnItsWayAt(standInIndex))
         ) {
           if (hasStandIn) {
@@ -6225,6 +6239,7 @@ const createStoreHoldingNothing = (itemCount) => {
     getItem: () => undefined,
     eachHeld: () => {},
     holds: () => false,
+    owesNamedItem: () => false,
     useRequestMissing: () => {},
   };
 };
@@ -6381,6 +6396,7 @@ const useRunItems = (
       itemIndex >= runStart &&
       itemIndex < runEnd &&
       getItemAt(itemIndex) === undefined,
+    owesNamedItem: store.owesNamedItem,
     roomAt: roomOf,
     givenRoomAt: givenRoomOf,
   });
@@ -7104,7 +7120,14 @@ const useItemStore = ({
       staleRanksRef.current = new Set();
     }
   }
-  const takeInPage = ({ pageItems, pageStart, pageCount }) => {
+  // The hold (see holdArmedSignal) whose item this run last answered for,
+  // asked for by name. Recorded as its page is taken in, when the locator can
+  // first find the item in it.
+  const namedAnsweredRef = useRef(-1);
+  const takeInPage = ({ pageItems, pageStart, pageCount, answersHold }) => {
+    if (answersHold !== undefined) {
+      namedAnsweredRef.current = answersHold;
+    }
     // An item from before is gone from where it stood when the page puts
     // it at another rank (it would be drawn twice), or when its rank is
     // past the end of the collection.
@@ -7187,6 +7210,8 @@ const useItemStore = ({
     controller: null,
     generation: 0,
     revalidating: false,
+    around: undefined,
+    answersHold: undefined,
   });
   // The items asked for that never came. Kept as a range so the list can say
   // where the hole is, and cleared by a retry — which is what makes the same
@@ -7194,6 +7219,10 @@ const useItemStore = ({
   const [failure, setFailure] = useState(null);
 
   const listItems = useContext(ListItemsContext);
+  // Read to render again when the list is held somewhere anew: a hold on an
+  // item this run does not have is an ask by name (see useRequestMissing), and
+  // a press that moves no window renders nothing else here.
+  const holdArmed = listItems.holdArmedSignal.value;
   // The items are there, which is what the list waits for to place itself on the
   // item it is held at (see placeWhereHeld). Said from an effect, once the run
   // has drawn them: a signal read during this very render must not be written
@@ -7350,6 +7379,11 @@ const useItemStore = ({
       }
     },
     holds: (index) => pages.byIndex.has(index),
+    // A collection given whole holds every item it will ever have: there is
+    // nothing to ask for by name.
+    owesNamedItem: () =>
+      !inMemory &&
+      namedAnsweredRef.current !== listItems.holdArmedSignal.peek(),
     useRequestMissing: (
       missingStart,
       missingEnd,
@@ -7366,6 +7400,9 @@ const useItemStore = ({
       let start = missingStart;
       let end = missingEnd;
       let around;
+      // The hold this ask answers for when it asks for the held item by name
+      // (see namedAnsweredRef).
+      let answersHold;
       // The window draws items from before: they are asked for again, and stay
       // drawn meanwhile.
       const staleRanks = staleRanksRef.current;
@@ -7385,21 +7422,26 @@ const useItemStore = ({
       }
       const countStale = countStaleRef.current;
       const revalidating = staleFrom !== -1 || countStale;
-      // The list is held on an item nothing on screen leads to: the items it holds
-      // do not contain it, so no window it could draw will ever bring it. Only
-      // asking for it by name does.
+      // The list is held on an item the run does not hold: no window it could
+      // draw is sure to bring it — where it stood may have changed hands, and
+      // without an index nothing says where it stands. Asking for it by name
+      // does, once per hold: an answer without it says it is not there, and
+      // the run goes back to asking for what the window misses. The very first
+      // ask names it already (see below).
       const wanted = listItems.scrolled;
       const askingAroundWantedItem =
-        revalidating &&
         // Only while the hold stands: once the user has taken the list over,
         // the reading position is where they are, not where it opened.
-        listItems.holdPending &&
+        listItems.heldSomewhere &&
+        pages.count !== undefined &&
+        namedAnsweredRef.current !== holdArmed &&
         wanted &&
         typeof wanted === "object" &&
         wanted.id !== undefined &&
         listItems.locateItem(wanted.id) === null;
       if (askingAroundWantedItem) {
         around = wanted.id;
+        answersHold = holdArmed;
         // Where it stood when it was written down is enough to frame the ask;
         // the answer says where it really landed.
         const from =
@@ -7465,6 +7507,7 @@ const useItemStore = ({
           // it was written down: the answer says where it really landed (see
           // the page's own `start`).
           around = scrolled.id;
+          answersHold = holdArmed;
         }
       }
       const ask = () => {
@@ -7522,10 +7565,13 @@ const useItemStore = ({
           // Nothing to compare a request to while the run does not know how
           // many items it stands for: what the window frames then is a
           // placeholder, not a place. The first answer is what the list is
-          // waiting for to exist at all.
+          // waiting for to exist at all. An ask by name is not for the window
+          // but for the hold, and a request for the window is no answer to it.
           const stillWanted =
             pages.count === undefined ||
-            (request.start <= windowTo && request.end >= windowFrom);
+            (answersHold === undefined
+              ? request.start <= windowTo && request.end >= windowFrom
+              : request.answersHold === answersHold);
           if (stillWanted) {
             debugAsk("a request still covers this window");
             return;
@@ -7535,12 +7581,15 @@ const useItemStore = ({
         }
         // Asking again for a range that was already asked for, having received
         // nothing since, can only produce the same answer — unless the
-        // collection moved since, which is what an invalidation says.
+        // collection moved since, which is what an invalidation says, or the
+        // ask names an item for another hold: the item may have come since.
         const held = `${pages.byIndex.size}/${staleRanks.size}/${invalidation}`;
         if (
           request.start === start &&
           request.end === end &&
-          request.held === held
+          request.held === held &&
+          request.around === around &&
+          request.answersHold === answersHold
         ) {
           debugAsk("this range was asked for already");
           return;
@@ -7548,6 +7597,8 @@ const useItemStore = ({
         request.start = start;
         request.end = end;
         request.held = held;
+        request.around = around;
+        request.answersHold = answersHold;
         request.generation++;
         const generation = request.generation;
         const controller = new AbortController();
@@ -7558,9 +7609,16 @@ const useItemStore = ({
           around,
           limit: end - start + 1,
           // A cursor names an item of the collection as it was; a revalidation
-          // is asked precisely because that is what changed.
-          before: revalidating ? undefined : cursor.before,
-          after: revalidating ? undefined : cursor.after,
+          // is asked precisely because that is what changed. An ask by name
+          // counts from the item it names.
+          before:
+            revalidating || answersHold !== undefined
+              ? undefined
+              : cursor.before,
+          after:
+            revalidating || answersHold !== undefined
+              ? undefined
+              : cursor.after,
           count: pages.count,
           signal: controller.signal,
         };
@@ -7594,7 +7652,7 @@ const useItemStore = ({
           const pageCount = Array.isArray(page)
             ? pageItems.length
             : (page.count ?? pageStart + pageItems.length);
-          const pageLanded = { pageItems, pageStart, pageCount };
+          const pageLanded = { pageItems, pageStart, pageCount, answersHold };
           if (!mountedRef.current) {
             // No render is coming to take it in, and the source still keeps
             // what came back for the next list drawing this collection.

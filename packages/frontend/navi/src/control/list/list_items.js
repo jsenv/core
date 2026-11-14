@@ -43,6 +43,12 @@ export const createListItems = () => {
   // an attribute: what is drawn is from before, and the app may want to say so
   // without taking anything away.
   const refreshingSignal = signal(0);
+  // Bumped each time the list is held somewhere anew — opened on a place, given
+  // another `scrolled`, sent by a press. Each hold on an item no run holds is
+  // asked for by name once per run, and a run says which hold its answer was
+  // for by this number (see useRequestMissing). A signal because a press that
+  // moves no window would otherwise render no run to ask.
+  const holdArmedSignal = signal(0);
   // The slots each walk declared, in order, by the slot the walk stands in
   // (null for the list's own children). Together they are a tree: a group's
   // items live inside the group's slot.
@@ -382,6 +388,7 @@ export const createListItems = () => {
     totalSignal,
     pagesSignal,
     refreshingSignal,
+    holdArmedSignal,
     // The entries that are items, in place order — every one drawn, and the
     // ones that show — and what the search made of them. Written once per
     // frame.
@@ -399,6 +406,8 @@ export const createListItems = () => {
     // they are.
     pageSize: 0,
     scrolled: "start",
+    // The list holds itself at `scrolled` until the user takes it over.
+    heldSomewhere: false,
     // The list is on its way somewhere: what the window frames is not what it
     // is about to frame, so a run must not fetch for it (see holdWindow).
     holdPending: false,
@@ -478,6 +487,16 @@ export const createListItems = () => {
     itemOnItsWayAt: (index) => {
       for (const locator of locatorByOwner.values()) {
         if (locator.awaits(index)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    // Whether a run is still to answer for the item the list is held on, asked
+    // for by name: an id none of them holds is gone only once each has said so.
+    namedItemOnItsWay: () => {
+      for (const locator of locatorByOwner.values()) {
+        if (locator.owesNamedItem()) {
           return true;
         }
       }

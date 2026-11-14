@@ -163,6 +163,35 @@ again a frame later. `:smooth` glides, and is instant under
 `scroll-behavior`: a `scroll-behavior: smooth` on the box glides every
 placement of the list, the one it opens on included.
 
+An item the run has not fetched yet is looked for two ways, and a named place
+can carry both:
+
+- **By name.** The run asks its source for the item: the range's `around` is
+  its id. A source that can find an item by id (a cursor API, a server that
+  answers "the page holding this id") answers that page with its own `start`,
+  and the list goes there once it is in. A source paginated only by
+  `start`/`end` cannot: it answers the range it was given, and the item is not
+  in it.
+- **By place.** `index` is where the item stood when the value was written, a
+  rank the screen already shows for instance. The list goes there at once,
+  onto whatever stands at that index (a skeleton until its page answers), and
+  the item takes over where it lands. A source paginated by offset needs it.
+
+```jsx
+// my row in a ranking read by start/end: the rank says where it stands
+<Button
+  command="--navi-scroll:smooth"
+  commandFor="ranking"
+  value={{ id: me.id, index: myIndex, align: "center" }}
+/>
+```
+
+So `{ id }` alone reaches an item not fetched yet only through a source that
+reads `around`. The list holds until every ask has answered; if none brought
+the item, it is not there: the list stops holding, and stays where it is. A
+request that fails says nothing about the item: the list keeps holding until
+the user takes it over, and a retry asks again.
+
 The `id` is on the list's outer box, which is not the box that scrolls: which one
 does depends on `scroller` and on what can be measured (see
 [above](#list-and-its-scroller)). So a list is moved through these, never through
