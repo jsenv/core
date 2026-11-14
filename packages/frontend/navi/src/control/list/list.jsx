@@ -2495,6 +2495,7 @@ const useListScrollSync = ({
             placeItem(
               findItemElementAt(getListEl(), scrolledWanted.index),
               scrolledWanted.offset || 0,
+              scrolledWanted.align,
             );
           }
           return;
@@ -2564,20 +2565,13 @@ const useListScrollSync = ({
     const viewportSize =
       (horizontal ? viewportRect.width : viewportRect.height) / scale;
     const itemSize = (horizontal ? itemRect.width : itemRect.height) / scale;
-    const scrollInset = getItemScrollInset(scrollerEl, itemEl, horizontal);
-    // Centred in what the room at the start leaves of the view (a fixed bar,
-    // a sticky header), not in the whole of it.
-    const alignedOffset =
-      align === "center"
-        ? scrollInset + (viewportSize - scrollInset - itemSize) / 2
-        : align === "end"
-          ? viewportSize - itemSize
-          : scrollInset;
-    const offsetWanted = resolveOpenOffset(
-      alignedOffset + offset,
+    const offsetWanted = resolveHeldOffset({
+      align,
+      offset,
+      scrollInset: getItemScrollInset(scrollerEl, itemEl, horizontal),
       viewportSize,
       itemSize,
-    );
+    });
     const offsetNow =
       (horizontal
         ? itemRect.left - viewportRect.left
@@ -3359,6 +3353,7 @@ const useListScrollSync = ({
     }
     let index = null;
     let offset = 0;
+    let align;
     if (typeof wanted === "number") {
       index = wanted;
     } else if (wanted && wanted.id !== undefined) {
@@ -3367,6 +3362,7 @@ const useListScrollSync = ({
         index = wanted.index;
       }
       offset = wanted.offset || 0;
+      align = wanted.align;
     }
     if (index === null || index < 0 || index >= total) {
       return null;
@@ -3377,11 +3373,15 @@ const useListScrollSync = ({
       const rect = itemEl.getBoundingClientRect();
       itemSize = horizontal ? rect.width : rect.height;
     }
-    const above = resolveOpenOffset(
-      getItemScrollInset(scrollerEl, itemEl, horizontal) + offset,
-      screenSize,
+    // Not drawn yet, the item weighs nothing and has no inset: centred, it
+    // stands half the screen down, which is where it will be put.
+    const above = resolveHeldOffset({
+      align,
+      offset,
+      scrollInset: getItemScrollInset(scrollerEl, itemEl, horizontal),
+      viewportSize: screenSize,
       itemSize,
-    );
+    });
     return { index, above };
   };
   const evaluateWindowRef = useRef(null);
@@ -4074,6 +4074,26 @@ const resolveOpenOffset = (offset, viewportSize, itemSize) => {
     return highest < 0 ? 0 : highest;
   }
   return offset;
+};
+// How far from the start of the view an item held at `{ offset, align }`
+// stands: read the same way where the list is placed (placeItem) and where the
+// window is sized around it (readHold), or the window frames a screen the
+// item is not on. Centred in what the room at the start leaves of the view (a
+// fixed bar, a sticky header), not in the whole of it.
+const resolveHeldOffset = ({
+  align,
+  offset,
+  scrollInset,
+  viewportSize,
+  itemSize,
+}) => {
+  const alignedOffset =
+    align === "center"
+      ? scrollInset + (viewportSize - scrollInset - itemSize) / 2
+      : align === "end"
+        ? viewportSize - itemSize
+        : scrollInset;
+  return resolveOpenOffset(alignedOffset + offset, viewportSize, itemSize);
 };
 
 // The room an item must be given at the top (or left) of the view: the
