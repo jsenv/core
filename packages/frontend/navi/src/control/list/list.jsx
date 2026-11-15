@@ -1429,7 +1429,7 @@ const ListUI = (props) => {
         const wanted = resolveScrollRequest(e.detail.to);
         if (wanted === undefined) {
           console.warn(
-            `--navi-scroll: ${JSON.stringify(e.detail.to)} is not a place in a list. It takes what "scrolled" takes — "start", "end", an index, { id, offset, align } — or an item's id.`,
+            `--navi-scroll: ${JSON.stringify(e.detail.to)} is not a place in a list. It takes what "scrolled" takes — "start", "end", "scroller-start", an index, { id, offset, align }, { index, offset, align } — or an item's id.`,
           );
           return;
         }
@@ -2075,6 +2075,29 @@ const useListScrollSync = ({
     return renderWindow;
   };
 
+  // The index the list is held at, with the offset and alignment it is held
+  // with. A named item is where a run has it; until one does, the `index` the
+  // place carries is where it stood when it was written down — near enough to
+  // frame, and to put the scrollbar roughly where it will end up rather than
+  // at the top. Without an `id`, that index is the place itself. Null while
+  // nothing says where the place is.
+  const locateHeldPlace = (wanted) => {
+    if (typeof wanted === "number") {
+      return { index: wanted, offset: 0, align: undefined };
+    }
+    if (!wanted || typeof wanted !== "object") {
+      return null;
+    }
+    let index =
+      wanted.id === undefined ? null : listItems.locateItem(wanted.id);
+    if (index === null && typeof wanted.index === "number") {
+      index = wanted.index;
+    }
+    if (index === null) {
+      return null;
+    }
+    return { index, offset: wanted.offset || 0, align: wanted.align };
+  };
   // While the list is held somewhere, its window is not free state: it is
   // around that place. Deriving it rather than waiting for the scroll listener
   // to catch up is what keeps a list opening on its last items from asking for
@@ -2115,19 +2138,15 @@ const useListScrollSync = ({
     if (scrolledWanted === "end") {
       heldItem = total - 1;
       wantedStart = total - windowSize;
-    } else if (typeof scrolledWanted === "number") {
-      heldItem = scrolledWanted;
-    } else if (scrolledWanted === "back_to_start") {
+    } else if (
+      scrolledWanted === "back_to_start" ||
+      scrolledWanted === "scroller-start"
+    ) {
       heldItem = 0;
-    } else if (scrolledWanted && scrolledWanted.id !== undefined) {
-      const itemIndex = listItems.locateItem(scrolledWanted.id);
-      if (itemIndex !== null) {
-        heldItem = itemIndex;
-      } else if (typeof scrolledWanted.index === "number") {
-        // The item has not come back yet, but where it stood is known: near
-        // enough to frame, and to put the scrollbar roughly where it will end
-        // up rather than at the top.
-        heldItem = scrolledWanted.index;
+    } else {
+      const held = locateHeldPlace(scrolledWanted);
+      if (held) {
+        heldItem = held.index;
       }
     }
     if (heldItem === null) {
@@ -2506,6 +2525,11 @@ const useListScrollSync = ({
       placeBackAtStart();
       return;
     }
+    if (scrolledWanted === "scroller-start") {
+      // A position, not an item: nothing to measure, nothing to wait for.
+      sendHeldScroll(0);
+      return;
+    }
     if (
       listItems.totalSignal.peek() === 0 ||
       virtualItemSizeSignal.peek() === 0
@@ -2588,9 +2612,11 @@ const useListScrollSync = ({
       placeItem(findItemElementAt(getListEl(), openAt), 0);
       return;
     }
-    if (typeof openAt === "object" && openAt.id !== undefined) {
+    if (typeof openAt === "object") {
       placeItem(
-        findItemElement(getListEl(), openAt.id),
+        openAt.id === undefined
+          ? findItemElementAt(getListEl(), openAt.index)
+          : findItemElement(getListEl(), openAt.id),
         openAt.offset || 0,
         openAt.align,
       );
@@ -2823,23 +2849,15 @@ const useListScrollSync = ({
     if (wanted === "end") {
       return max;
     }
-    let index = null;
-    let offset = 0;
-    let align;
-    if (typeof wanted === "number") {
-      index = wanted;
-    } else if (wanted && wanted.id !== undefined) {
-      index = listItems.locateItem(wanted.id);
-      if (index === null && typeof wanted.index === "number") {
-        index = wanted.index;
-      }
-      offset = wanted.offset || 0;
-      align = wanted.align;
+    if (wanted === "scroller-start") {
+      return 0;
     }
+    const held = locateHeldPlace(wanted);
     const total = listItems.totalSignal.peek();
-    if (index === null || index < 0 || index >= total) {
+    if (!held || held.index < 0 || held.index >= total) {
       return null;
     }
+    const { index, offset, align } = held;
     const itemSize = virtualItemSizeSignal.peek() / itemsPerLineRef.current;
     if (!(itemSize > 0)) {
       return null;
@@ -3586,22 +3604,28 @@ const useListScrollSync = ({
     if (wanted === "end") {
       return { atEnd: true };
     }
-    let index = null;
-    let offset = 0;
-    let align;
-    if (typeof wanted === "number") {
-      index = wanted;
-    } else if (wanted && wanted.id !== undefined) {
-      index = listItems.locateItem(wanted.id);
-      if (index === null && typeof wanted.index === "number") {
-        index = wanted.index;
-      }
-      offset = wanted.offset || 0;
-      align = wanted.align;
+    if (wanted === "scroller-start") {
+      // The scroller's first screen: the first item stands below whatever
+      // comes before the list in it.
+      const viewportRect = getScrollerViewportRect(scrollerEl);
+      const listRect = listEl.getBoundingClientRect();
+      const scrollNow = horizontal
+        ? scrollerEl.scrollLeft
+        : scrollerEl.scrollTop;
+      const listOffsetNow = horizontal
+        ? listRect.left - viewportRect.left
+        : listRect.top - viewportRect.top;
+      return {
+        index: 0,
+        above:
+          scrollNow * readScrollerScale(scrollerEl, horizontal) + listOffsetNow,
+      };
     }
-    if (index === null || index < 0 || index >= total) {
+    const held = locateHeldPlace(wanted);
+    if (!held || held.index < 0 || held.index >= total) {
       return null;
     }
+    const { index, offset, align } = held;
     const itemEl = findItemElementAt(listEl, index);
     let itemSize = 0;
     if (itemEl) {
@@ -4429,13 +4453,17 @@ const resolveScrollRequest = (to) => {
   if (to === "start") {
     return 0;
   }
-  if (to === "end" || typeof to === "number") {
+  if (to === "end" || to === "scroller-start" || typeof to === "number") {
     return to;
   }
   if (typeof to === "string") {
     return { id: to };
   }
-  if (to && typeof to === "object" && to.id !== undefined) {
+  if (
+    to &&
+    typeof to === "object" &&
+    (to.id !== undefined || typeof to.index === "number")
+  ) {
     return to;
   }
   return undefined;
@@ -8204,8 +8232,8 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   renderBudget?: number | string | {initial?: number | string, after?: number | string},
  *   virtualItemSize?: number,
  *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
- *   scrolled?: "start" | "end" | number | {id: string, offset?: number, align?: "start" | "center" | "end"},
- *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number, align?: "start" | "center" | "end"},
+ *   scrolled?: "start" | "end" | "scroller-start" | number | {id: string, offset?: number, align?: "start" | "center" | "end"} | {index: number, offset?: number, align?: "start" | "center" | "end"},
+ *   defaultScrolled?: "start" | "end" | "scroller-start" | number | {id: string, offset?: number, align?: "start" | "center" | "end"} | {index: number, offset?: number, align?: "start" | "center" | "end"},
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
  *   hoverWhileScrolling?: boolean,
@@ -8314,11 +8342,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   are skeletons, the others hold their room. `0` says the list is already
  *   known to be empty: the empty `fallback` shows right away rather than an
  *   empty frame.
- * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, align?: "start"|"center"|"end", visibleCount?: number}} [props.defaultScrolled="start"]
+ * @param {"start"|"end"|"scroller-start"|number|{id: string, index?: number, offset?: number, align?: "start"|"center"|"end", visibleCount?: number}|{index: number, offset?: number, align?: "start"|"center"|"end"}} [props.defaultScrolled="start"]
  *   Where the list opens, after which the user owns the scroll — unless it is
  *   being come back to (see `scrollResetOnNavigation`). `"end"` is a
  *   thread read backwards — the last items are the ones to show, and the ones
- *   asked for first. A number opens on that item of the collection. `{id,
+ *   asked for first. `"scroller-start"` is the start of the box that scrolls
+ *   the list, with what stands before the list in it: the head of a page whose
+ *   document scrolls the list. A number opens on that item of the collection. `{id,
  *   offset}` — what `onScrolledChange` hands out — opens on a NAMED item,
  *   `offset` pixels below where the item would land on its own: the item is asked
  *   for by name (see the range's own `around`), then put back by MEASURING it,
@@ -8329,13 +8359,15 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   room has to be restated as a number by whoever asks. The `index` and
  *   `visibleCount` it also hands out say where to aim before the item is found,
  *   and how many items to draw before the first paint (see `renderBudget`).
+ *   Without an `id`, `{index, offset, align}` is the number form placed the
+ *   same way: whatever item stands at that index, never asked for by name.
  *   `align: "center"` puts the item in the middle of the view instead (`"end"`:
  *   at its far edge) — the chosen level of a horizontal scale opening on it —
  *   and keeps it there while the box around it grows, until the user scrolls.
  *   A value that changes before anyone has moved the list is followed (a place
  *   read from a count that answered again): it is compared by value, so it can
  *   be computed at every render.
- * @param {"start"|"end"|number|{id: string, index?: number, offset?: number, align?: "start"|"center"|"end", visibleCount?: number}} [props.scrolled]
+ * @param {"start"|"end"|"scroller-start"|number|{id: string, index?: number, offset?: number, align?: "start"|"center"|"end", visibleCount?: number}|{index: number, offset?: number, align?: "start"|"center"|"end"}} [props.scrolled]
  *   The same, but held: the list goes back there every time this changes, even
  *   after the user has scrolled — the caller owns where the list is (see
  *   `defaultScrolled` for the uncontrolled form, and `open`/`defaultOpen`

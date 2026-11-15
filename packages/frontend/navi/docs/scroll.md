@@ -155,10 +155,11 @@ and held until the user reaches for the list:
 <List id="feed">…</List>
 ```
 
-The value is anything `scrolled` takes (`"start"`, `"end"`, an index,
-`{ id, offset, align }`) or an item's id, and the same place can be asked for
-again once the list was moved away from it — no `scrolled` released and set
-again a frame later. `:smooth` glides, and is instant under
+The value is anything `scrolled` takes (`"start"`, `"end"`,
+`"scroller-start"`, an index, `{ id, offset, align }`,
+`{ index, offset, align }`) or an item's id, and the same place can be asked
+for again once the list was moved away from it — no `scrolled` released and
+set again a frame later. `:smooth` glides, and is instant under
 `prefers-reduced-motion`. Without it a placement follows the scroller's own
 `scroll-behavior`: a `scroll-behavior: smooth` on the box glides every
 placement of the list, the one it opens on included.
@@ -201,11 +202,30 @@ the item, it is not there: the list stops holding, and stays where it is. A
 request that fails says nothing about the item: the list keeps holding until
 the user takes it over, and a retry asks again.
 
-The `id` is on the list's outer box, which is not the box that scrolls: which one
-does depends on `scroller` and on what can be measured (see
-[above](#list-and-its-scroller)). So a list is moved through these, never through
-`scrollTo` on an element of its DOM, and a "back to top" button is
-`command="--navi-scroll" value="start"`.
+Without an `id`, `{ index, offset, align }` is a place, not an item: whatever
+stands at that index, placed like a bare index with an offset and an alignment,
+and never asked for by name. A position needs nothing more ("the 500th"). A
+place that is an item names it: an index alone lands on whoever stands there
+by then, the id lands on that item even once it has moved.
+
+The list's own `id`, the one `commandFor` names, is on its outer box, which is
+not the box that scrolls: which one does depends on `scroller` and on what can
+be measured (see [above](#list-and-its-scroller)). So a list is moved through
+these, never through `scrollTo` on an element of its DOM. `"start"` puts the first item at the top
+of the screen. A list under a page head that scrolls with the document goes
+back to the head with `"scroller-start"`: the box that scrolls the list, at its
+start, whatever stands in it before the list. The list draws its first items
+as it gets there, which a `scrollTo` on that box does not:
+
+```jsx
+<Button
+  command="--navi-scroll:smooth"
+  commandFor="ranking"
+  value="scroller-start"
+>
+  Back to top
+</Button>
+```
 
 ### Another order, another filter: back to the start
 
