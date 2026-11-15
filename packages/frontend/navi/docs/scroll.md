@@ -163,6 +163,15 @@ again a frame later. `:smooth` glides, and is instant under
 `scroll-behavior`: a `scroll-behavior: smooth` on the box glides every
 placement of the list, the one it opens on included.
 
+A `:smooth` glide shows its way: what it passes is drawn as it passes — the
+items, or the skeletons of those not fetched, which nothing asks for — and only
+where it goes is fetched. A way longer than four screens shows the screens it
+leaves and the screens it arrives at, and skips the middle: crossed whole, a
+hundred screens are a blur, or a wait. It lasts under a second however far it
+goes, and once there the list measures the item and places it exactly. The
+glide a `scroll-behavior: smooth` gives is the browser's, and draws only where
+it lands.
+
 An item the run has not fetched yet is looked for two ways, and a named place
 can carry both:
 
@@ -512,6 +521,20 @@ screen, and sizes its whole window once the browser has painted them (see
 `renderBudget`'s `initial`). Its first ask is a page around what was on screen;
 the edge of the window past that page, below the screen, comes with the next
 one.
+
+### A scroll faster than its pages
+
+A run asks for what its window misses as soon as it misses it. A scroll that
+leaves each page as soon as it is asked for — a fling, the scrollbar dragged, a
+smooth scroll across the list — would have it ask for every window it passes,
+each request called off by the next through the range's `signal` (see
+[resource.md](./resource.md#get_range-feeding-a-list-that-loads-as-it-scrolls)):
+forty requests for one "back to the top" across a ranking. So when its window
+leaves a page within 300 ms of asking for it, the run draws skeletons, waits for
+the window to stand still 150 ms, and asks once, for where it stopped. That is
+the cost: such a scroll shows its skeletons 150 ms longer once it stops. A
+scroll one reads at is asked for at once, and so are the first page and the
+place `scrolled` or `--navi-scroll` sends the list to.
 
 ### What the list knows, and what it guesses
 

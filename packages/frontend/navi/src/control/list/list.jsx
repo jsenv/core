@@ -7878,12 +7878,9 @@ const useItemStore = ({
           debugAsk("this range was asked for already");
           return;
         }
-        // A window leaving the page just asked for, as soon as it was asked,
-        // is a scroll faster than pages come: asked at every window it
-        // passes, each page would be called off by the next. Its skeletons
-        // are drawn meanwhile, and the window it stands still on is asked for
-        // once. Not the first ask, which the list waits for to exist, nor
-        // where the list holds itself, which is no one scrolling.
+        // A scroll faster than its pages is asked for once it stands still
+        // (see ASK_OUTRUN_MS). Not the first ask, which the list waits for to
+        // exist, nor where the list holds itself, which is no one scrolling.
         const settle = settleRef.current;
         const now = performance.now();
         const settles =

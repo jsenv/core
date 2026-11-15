@@ -68,8 +68,9 @@ start when unsure which export solves a problem.
 - `route_transitions.md` — a transition states a relation between two pages;
   `RouteTravel` or a transition on one pair; fixed bars and
   `RouteTransitionArea`; the page being left stays mounted, hidden, until the
-  movement is over; a test waits for the page, never for its address; what a
-  transition costs. Before animating a navigation, and before believing a
+  movement is over; a signal bound straight into the DOM changes the picture
+  (read `.value` in the render); a test waits for the page, never for its
+  address; what a transition costs. Before animating a navigation, and before believing a
   symptom that only appears once a pair is animated.
 - `view_transitions.md` — what the browser does to any view transition: unique
   names (and none inside a page that moves), the fallback fade, a callback in
@@ -206,8 +207,10 @@ start when unsure which export solves a problem.
   included), a list that comes back (its `id` names one list of the app), a
   popup that scrolls, many rows (`<List.Items>`, the render window and its first
   picture, what a run knows when it opens — `count`, a composition kept, Back
-  versus a reload —, skeletons at the size of their item, `itemSize`, `findText`, how far
-  ahead its images load and `loading` before `src`), many
+  versus a reload —, a scroll faster than its pages asked for once it stands
+  still, a `:smooth` glide drawing its way, skeletons at the size of their item,
+  `itemSize`, `findText`, how far ahead its images load and `loading` before
+  `src`), many
   sections (`<Box mount="after-paint">` and what it leaves out of reach), hover
   while scrolling. Before writing CSS to make something scroll, before
   rendering a collection as `<List.Item>` children, before writing a

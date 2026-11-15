@@ -25,6 +25,7 @@ transition), `route_transition_fixed_bars/route_transition_fixed_bars.html`
 - [Route transitions and `RouteTravel` — one pair, one system](#route-transitions-and-routetravel--one-pair-one-system)
 - [A transition says nothing about data](#a-transition-says-nothing-about-data)
 - [The page being left stays until its movement is over](#the-page-being-left-stays-until-its-movement-is-over)
+- [A signal bound into the DOM changes the picture](#a-signal-bound-into-the-dom-changes-the-picture)
 - [Waiting for a navigation: the address is not the page](#waiting-for-a-navigation-the-address-is-not-the-page)
 - [What a transition costs](#what-a-transition-costs)
 - [The rest, briefly](#the-rest-briefly)
@@ -547,6 +548,23 @@ What that means for a page and for the application around it:
 - **Only where the page would have been taken down anyway.** A page rendered by
   the same element on both sides — two routes, one component — is the same
   instance carried over.
+
+## A signal bound into the DOM changes the picture
+
+The picture of the page being left is taken a frame after the navigation, and
+navi holds every render until it is taken — those asked for just before the
+navigation in the same task too (a switch writing its signal, then navigating):
+the page being left is photographed as it stood.
+
+A signal given straight to the DOM is not rendered. As a child
+(`{countSignal}`) or as an element's prop (`title={titleSignal}`),
+@preact/signals writes its value into the node itself, and nothing holds that
+write. Where a movement photographs it — the pages, the bars around them — a
+value changing with the navigation changes in the picture of the page being
+left, and both sides of the movement show the new one. Read it in the render
+(`{countSignal.value}`), which navi holds. A popup lifted out of its anchor is
+photographed the same way, the page around it included (see
+[popup_lift.md](./popup_lift.md)).
 
 ## Waiting for a navigation: the address is not the page
 

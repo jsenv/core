@@ -34,13 +34,11 @@
  * reads a Preact internal, and the reason this module watches every render
  * request.
  *
- * What is held is Preact's queue, and a signal bound straight into the DOM
- * does not go through it: given as a child (`{countSignal}`) or as an
- * element's prop (`title={titleSignal}`), @preact/signals writes its value
- * there itself, in a microtask of its own. No hold holds that write — the
- * option it is scheduled through is the one preact/hooks schedules its effects
- * through, so holding one would move the other. On anything a transition
- * photographs, a value is read in the render (`.value`).
+ * What is held is Preact's queue. A signal bound straight into the DOM
+ * (`{countSignal}`, `title={titleSignal}`) is written there by @preact/signals
+ * itself, scheduled through the option preact/hooks schedules its effects
+ * through: holding it would move every effect too. It is not held, and the app
+ * reads such a value in the render (see docs/route_transitions.md).
  *
  * ONE hold for the whole document, whoever animates: everything that
  * photographs the document holds through this module — a navigation, a popup
