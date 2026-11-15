@@ -21,3 +21,9 @@ import { createPubSub } from "@jsenv/dom";
 
 export const [publishBeforeRouting, observeBeforeRouting] = createPubSub();
 export const [publishAfterRouting, observeAfterRouting] = createPubSub();
+// A navigation the browser is asked for and answers later: a push to the entry
+// next door taken as a traversal (see the integrations). Its before and after
+// are published when the browser answers, a task or more away, and whatever the
+// press writes meanwhile is already the page arriving — so the page as it
+// stands is asked for from the press.
+export const [publishTraversalAsked, observeTraversalAsked] = createPubSub();

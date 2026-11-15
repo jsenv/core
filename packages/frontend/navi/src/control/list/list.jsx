@@ -1694,6 +1694,8 @@ const useListScrollSync = ({
       arrived: false,
       // Whether the hold's writes glide (--navi-scroll:smooth).
       smooth: false,
+      // The glide on its way there, driven by the list (see glideStepRef).
+      glide: null,
     };
   } else {
     const place = startPlaceRef.current;
@@ -1704,6 +1706,7 @@ const useListScrollSync = ({
       place.way = null;
       place.arrived = false;
       place.smooth = false;
+      place.glide = null;
       armHold();
       // What the list said it was reading, and what a search would give back,
       // are places in what it no longer shows.
@@ -1718,6 +1721,7 @@ const useListScrollSync = ({
       place.wanted = scrolled ?? defaultScrolled;
       place.userTookOver = false;
       place.smooth = false;
+      place.glide = null;
       armHold();
     } else if (
       (scrolled === undefined || scrolled === null) &&
@@ -1731,6 +1735,7 @@ const useListScrollSync = ({
         place.way = null;
         place.arrived = false;
         place.smooth = false;
+        place.glide = null;
         armHold();
       }
     }
@@ -1749,6 +1754,17 @@ const useListScrollSync = ({
     place.way = null;
     place.arrived = false;
     place.smooth = smooth;
+    place.glide = null;
+    if (
+      smooth &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const glide = { start: null };
+      place.glide = glide;
+      requestAnimationFrame((now) => {
+        glideStepRef.current(glide, now);
+      });
+    }
     armHold();
     setHoldRequestCount((count) => count + 1);
   };
@@ -2069,6 +2085,12 @@ const useListScrollSync = ({
       listItems.holdPending = false;
       return;
     }
+    if (startPlaceRef.current.glide) {
+      // Gliding there, the window is the screen's: what the way passes is
+      // drawn as it passes (see glideStepRef), and nothing is asked for it.
+      listItems.holdPending = true;
+      return;
+    }
     // Held somewhere it has not reached yet: what the window frames right now
     // is not what it will frame, so nothing should be fetched for it.
     listItems.holdPending =
@@ -2241,6 +2263,7 @@ const useListScrollSync = ({
   const releaseDocumentHoldRef = useRef(null);
   const letGo = () => {
     startPlaceRef.current.userTookOver = true;
+    startPlaceRef.current.glide = null;
     const releaseDocumentHold = releaseDocumentHoldRef.current;
     if (releaseDocumentHold) {
       releaseDocumentHoldRef.current = null;
@@ -2472,6 +2495,9 @@ const useListScrollSync = ({
       scrolledWanted === "start" ||
       scrolledWanted === undefined ||
       startPlaceRef.current.userTookOver ||
+      // The glide is the placement on its way: it hands the list back to the
+      // hold where it lands.
+      startPlaceRef.current.glide ||
       !ref.current
     ) {
       return;
@@ -2672,6 +2698,189 @@ const useListScrollSync = ({
     }
   };
   useLayoutEffect(placeWhereHeld);
+  // A hold asked to glide (--navi-scroll:smooth) writes the scroll itself, a
+  // frame at a time. A glide the browser runs is painted where the list has
+  // drawn nothing: the window follows a scroll event a frame late at best, and
+  // a hold frames it on where it is going — the whole way shows blank, and only
+  // where it lands is drawn. Written from the frame, each step's screen is
+  // drawn before that frame paints: what the way passes is shown, items or the
+  // skeletons of those not fetched, and nothing is asked for them (see
+  // holdWindow) — only for where it goes.
+  //
+  // A way longer than GLIDE_SHOWN_SCREENS screens shows the screens it leaves
+  // and the screens it arrives at, and skips its middle at full speed: a
+  // hundred screens crossed in under a second are a blur nobody reads as a
+  // scroll, and crossed slowly enough to be read, they are a wait. Where it
+  // goes is estimated from the room the fillers hold, again at every frame of
+  // the arrival; once there, the hold measures the item and places it exactly.
+  const glideStepRef = useRef(null);
+  glideStepRef.current = (glide, now) => {
+    const place = startPlaceRef.current;
+    if (place.glide !== glide) {
+      return;
+    }
+    if (!ref.current) {
+      place.glide = null;
+      return;
+    }
+    const scrollerEl = getScroller();
+    // Walked to through every item not drawn on the way (see
+    // estimateItemStart): read when it says where the glide is, not while it
+    // is still leaving a long way.
+    const readTarget = () =>
+      stageRef.current === "steady" ? estimateHeldScroll(scrollerEl) : null;
+    if (glide.start === null) {
+      const target = readTarget();
+      if (target === null) {
+        // Nothing says yet where that place stands: the hold places the list
+        // there itself, the way it opens on a place.
+        place.glide = null;
+        setHoldRequestCount((count) => count + 1);
+        return;
+      }
+      const scrollNow = horizontal
+        ? scrollerEl.scrollLeft
+        : scrollerEl.scrollTop;
+      const viewportRect = getScrollerViewportRect(scrollerEl);
+      const screenSize =
+        (horizontal ? viewportRect.width : viewportRect.height) /
+        readScrollerScale(scrollerEl, horizontal);
+      const distance =
+        target > scrollNow ? target - scrollNow : scrollNow - target;
+      const shownMax = GLIDE_SHOWN_SCREENS * screenSize;
+      glide.start = now;
+      glide.from = scrollNow;
+      glide.target = target;
+      glide.skips = distance > shownMax;
+      glide.shown = glide.skips ? shownMax : distance;
+      // Already there: the hold takes it from this frame.
+      glide.duration =
+        distance < 1 || screenSize < 1
+          ? 0
+          : GLIDE_BASE_MS + (GLIDE_MS_PER_SCREEN * glide.shown) / screenSize;
+    }
+    const elapsed = now - glide.start;
+    const t =
+      glide.duration > 0 && elapsed < glide.duration
+        ? elapsed / glide.duration
+        : 1;
+    const progress = easeInOutCubic(t);
+    const way = glide.shown * progress;
+    const arriving = !glide.skips || way >= glide.shown / 2;
+    if (arriving && elapsed > 0) {
+      const target = readTarget();
+      if (target !== null) {
+        glide.target = target;
+      }
+    }
+    const goingForward = glide.target > glide.from;
+    let position;
+    if (!glide.skips) {
+      position = glide.from + (glide.target - glide.from) * progress;
+    } else if (!arriving) {
+      position = goingForward ? glide.from + way : glide.from - way;
+    } else {
+      const left = glide.shown - way;
+      position = goingForward ? glide.target - left : glide.target + left;
+    }
+    scrollerEl.scrollTo({
+      [horizontal ? "left" : "top"]: position,
+      behavior: "instant",
+    });
+    // The scroll events these writes cause are the hold's own (see
+    // letGoUnlessHeldScroll), and the window keeps its spare on the side the
+    // glide goes to.
+    place.way = { from: glide.from, to: glide.target };
+    place.arrived = false;
+    scrollDirectionRef.current = goingForward ? 1 : -1;
+    if (t === 1) {
+      // Landed: placed exactly by the hold from here on, at once.
+      place.glide = null;
+      place.smooth = false;
+    }
+    evaluateWindowRef.current("glide");
+    if (t === 1) {
+      setHoldRequestCount((count) => count + 1);
+      return;
+    }
+    requestAnimationFrame((time) => {
+      glideStepRef.current(glide, time);
+    });
+  };
+  useLayoutEffect(() => {
+    return () => {
+      startPlaceRef.current.glide = null;
+    };
+  }, []);
+  // Where the scroll puts the place the list is held on, from what is drawn and
+  // the room the fillers hold for the items that are not (see
+  // estimateItemStart). Null while nothing can say.
+  const estimateHeldScroll = (scrollerEl) => {
+    const wanted = startPlaceRef.current.wanted;
+    const max = horizontal
+      ? scrollerEl.scrollWidth - scrollerEl.clientWidth
+      : scrollerEl.scrollHeight - scrollerEl.clientHeight;
+    if (wanted === "end") {
+      return max;
+    }
+    let index = null;
+    let offset = 0;
+    let align;
+    if (typeof wanted === "number") {
+      index = wanted;
+    } else if (wanted && wanted.id !== undefined) {
+      index = listItems.locateItem(wanted.id);
+      if (index === null && typeof wanted.index === "number") {
+        index = wanted.index;
+      }
+      offset = wanted.offset || 0;
+      align = wanted.align;
+    }
+    const total = listItems.totalSignal.peek();
+    if (index === null || index < 0 || index >= total) {
+      return null;
+    }
+    const itemSize = virtualItemSizeSignal.peek() / itemsPerLineRef.current;
+    if (!(itemSize > 0)) {
+      return null;
+    }
+    const listEl = getListEl();
+    const geometry = readWindowGeometry(scrollerEl, listEl, horizontal);
+    if (!geometry) {
+      return null;
+    }
+    const roomOf = (itemIndex) => {
+      const room = listItems.roomAt(itemIndex);
+      return room === undefined ? itemSize : room;
+    };
+    const itemStart = estimateItemStart(geometry.items, index, roomOf);
+    const itemEl = findItemElementAt(listEl, index);
+    let itemRoom = roomOf(index);
+    if (itemEl) {
+      const rect = itemEl.getBoundingClientRect();
+      itemRoom = horizontal ? rect.width : rect.height;
+    }
+    const scale = readScrollerScale(scrollerEl, horizontal);
+    const viewportRect = getScrollerViewportRect(scrollerEl);
+    const offsetWanted = resolveHeldOffset({
+      align,
+      offset,
+      scrollInset: getItemScrollInset(scrollerEl, itemEl, horizontal),
+      viewportSize:
+        (horizontal ? viewportRect.width : viewportRect.height) / scale,
+      itemSize: itemRoom / scale,
+    });
+    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    const viewportStart = horizontal ? viewportRect.left : viewportRect.top;
+    const to = scrollNow + (itemStart - viewportStart) / scale - offsetWanted;
+    if (to > max) {
+      return max;
+    }
+    if (to < 0) {
+      return 0;
+    }
+    return to;
+  };
   // The window leaves its first stage where the list stands once it is placed
   // — tried at every commit until the list is laid out somewhere it can be
   // measured (a closed popup is not) — and a first picture of its own leaves
@@ -3366,7 +3575,12 @@ const useListScrollSync = ({
   const readHold = (scrollerEl, listEl, screenSize, total) => {
     const place = startPlaceRef.current;
     const wanted = place.wanted;
-    if (place.userTookOver || wanted === "start" || wanted === undefined) {
+    if (
+      place.userTookOver ||
+      place.glide ||
+      wanted === "start" ||
+      wanted === undefined
+    ) {
       return null;
     }
     if (wanted === "end") {
@@ -4095,6 +4309,50 @@ const resolveOpenOffset = (offset, viewportSize, itemSize) => {
     return highest < 0 ? 0 : highest;
   }
   return offset;
+};
+// The way a hold glides (see glideStepRef): all of it up to this many screens,
+// past them the screens it leaves and the screens it arrives at.
+const GLIDE_SHOWN_SCREENS = 4;
+// What it takes: a short way is still seen leaving, a long one is not a wait.
+const GLIDE_BASE_MS = 250;
+const GLIDE_MS_PER_SCREEN = 120;
+const easeInOutCubic = (t) =>
+  t < 0.5
+    ? 4 * t * t * t
+    : 1 - ((-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2)) / 2;
+// Where an item starts along the scroll axis, in viewport coordinates: read off
+// it when it is drawn, otherwise walked to from the nearest item drawn through
+// the room each item between them is held at — what the fillers hold, so where
+// the item will be drawn (findBandStart walks the same way, from a position).
+const estimateItemStart = (items, index, roomOf) => {
+  let before = null;
+  let after = null;
+  for (const item of items) {
+    if (item.index === index) {
+      return item.from;
+    }
+    if (item.index < index) {
+      before = item;
+    } else if (!after) {
+      after = item;
+    }
+  }
+  if (before) {
+    let position = before.to;
+    let itemIndex = before.index + 1;
+    while (itemIndex < index) {
+      position += roomOf(itemIndex);
+      itemIndex++;
+    }
+    return position;
+  }
+  let position = after.from;
+  let itemIndex = after.index - 1;
+  while (itemIndex >= index) {
+    position -= roomOf(itemIndex);
+    itemIndex--;
+  }
+  return position;
 };
 // How far from the start of the view an item held at `{ offset, align }`
 // stands: read the same way where the list is placed (placeItem) and where the
@@ -6973,6 +7231,13 @@ const ListItemsFailure = ({ error, retry }) => {
 // hits the network again.
 const ITEM_STORE_MAX_DEFAULT = 1000;
 const ITEM_STORE_KEEP_AROUND = 250;
+// A run asks for what its window misses at once, unless the window left the
+// last page asked for within ASK_OUTRUN_MS of asking: a fling, the scrollbar
+// dragged, a smooth scroll across the list. It then waits for the window to
+// stand still ASK_SETTLE_MS — the delay a scroll stopping pays before its page
+// is asked — and asks once (see the run's ask).
+const ASK_OUTRUN_MS = 300;
+const ASK_SETTLE_MS = 150;
 const COUNT_NOT_SAID = {};
 
 // The index of the item the list is held at, when the hold names one: a number,
@@ -7212,6 +7477,19 @@ const useItemStore = ({
     revalidating: false,
     around: undefined,
     answersHold: undefined,
+    // When it was sent, and the window it was sent for (see ASK_OUTRUN_MS).
+    sentAt: -Infinity,
+    windowFrom: -1,
+    windowTo: -1,
+  });
+  // The wait for a window moving faster than pages come to stand still (see
+  // ASK_SETTLE_MS): `due` once it stood still, `ask` the latest render's.
+  const settleRef = useRef({
+    timer: null,
+    due: false,
+    windowFrom: -1,
+    windowTo: -1,
+    ask: null,
   });
   // The items asked for that never came. Kept as a range so the list can say
   // where the hole is, and cleared by a retry — which is what makes the same
@@ -7323,6 +7601,8 @@ const useItemStore = ({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      clearTimeout(settleRef.current.timer);
+      settleRef.current.timer = null;
       if (requestStateRef.current.busy && onRequestStateChangeRef.current) {
         onRequestStateChangeRef.current({
           busy: false,
@@ -7578,6 +7858,10 @@ const useItemStore = ({
           }
           request.controller?.abort();
           request.busy = false;
+          // Answered nothing: its range is askable again, the window may come
+          // back to it before anything else is sent.
+          request.start = -1;
+          request.end = -1;
         }
         // Asking again for a range that was already asked for, having received
         // nothing since, can only produce the same answer — unless the
@@ -7594,6 +7878,51 @@ const useItemStore = ({
           debugAsk("this range was asked for already");
           return;
         }
+        // A window leaving the page just asked for, as soon as it was asked,
+        // is a scroll faster than pages come: asked at every window it
+        // passes, each page would be called off by the next. Its skeletons
+        // are drawn meanwhile, and the window it stands still on is asked for
+        // once. Not the first ask, which the list waits for to exist, nor
+        // where the list holds itself, which is no one scrolling.
+        const settle = settleRef.current;
+        const now = performance.now();
+        const settles =
+          !settle.due &&
+          pages.count !== undefined &&
+          answersHold === undefined &&
+          !listItems.heldSomewhere &&
+          (settle.timer !== null ||
+            ((request.windowFrom !== windowFrom ||
+              request.windowTo !== windowTo) &&
+              now - request.sentAt < ASK_OUTRUN_MS));
+        if (settles) {
+          if (
+            settle.timer === null ||
+            settle.windowFrom !== windowFrom ||
+            settle.windowTo !== windowTo
+          ) {
+            clearTimeout(settle.timer);
+            settle.windowFrom = windowFrom;
+            settle.windowTo = windowTo;
+            settle.timer = setTimeout(() => {
+              settle.timer = null;
+              if (!mountedRef.current) {
+                return;
+              }
+              settle.due = true;
+              settle.ask();
+              publishRequestState();
+            }, ASK_SETTLE_MS);
+          }
+          debugAsk("the window outruns the pages: asked once it stands still");
+          return;
+        }
+        clearTimeout(settle.timer);
+        settle.timer = null;
+        settle.due = false;
+        request.sentAt = now;
+        request.windowFrom = windowFrom;
+        request.windowTo = windowTo;
         request.start = start;
         request.end = end;
         request.held = held;
@@ -7711,6 +8040,7 @@ const useItemStore = ({
       // screen, aimed at the item it is held on — and what the run asks for is
       // the window the list settles on. A render coming meanwhile asks instead.
       useLayoutEffect(() => {
+        settleRef.current.ask = ask;
         askTurnRef.current++;
         const turn = askTurnRef.current;
         queueMicrotask(() => {

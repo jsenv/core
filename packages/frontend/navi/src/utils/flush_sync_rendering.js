@@ -1,5 +1,7 @@
 import { options } from "preact";
 
+import { setHeldRendersAside } from "../nav/rendering_hold.js";
+
 /**
  * Runs `fn` and commits whatever it re-renders before returning, instead of
  * letting Preact batch it into the next microtask. Layout effects of what gets
@@ -15,8 +17,13 @@ import { options } from "preact";
  * is exactly how preact/compat implements React's flushSync. Reserve it for the
  * case above: rendering synchronously in the middle of an event gives up the
  * batching that makes several state changes one commit.
+ *
+ * While the rendering is held for a view transition (see rendering_hold.js),
+ * what the hold holds stays held: the page arriving drawn here would be
+ * photographed as the page being left.
  */
 export const flushSyncRendering = (fn) => {
+  const giveBackHeldRenders = setHeldRendersAside();
   const debounceRenderingPrevious = options.debounceRendering;
   options.debounceRendering = (drainRenderQueue) => {
     drainRenderQueue();
@@ -24,6 +31,9 @@ export const flushSyncRendering = (fn) => {
   try {
     fn();
   } finally {
+    // Restored first: what is given back is queued under the hold, not
+    // drained by this flush.
     options.debounceRendering = debounceRenderingPrevious;
+    giveBackHeldRenders();
   }
 };

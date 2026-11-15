@@ -25,6 +25,12 @@ description: How npm dependencies are updated in this monorepo, and how a depend
    plugin ecosystems usually aren't ready yet, so it has a good chance of not
    working outright) — not something to fold into a routine dependency bump.
 
+**`preact`: navi reads one of its internals.** A component's flags and the
+one saying a render is owed (`COMPONENT_DIRTY` in
+`packages/frontend/navi/src/nav/rendering_hold.js`). On a preact bump, check
+what the comment above that constant lists still holds in the new version, and
+mention the check in the hand-off.
+
 **Exception: `eslint`/`babel` and their plugins.** These tend to ship large breaking changes, and their plugin ecosystems typically lag behind a new major by weeks or months. Wait until the plugins you actually use are compatible before upgrading these.
 
 ## Bumping a package's own version

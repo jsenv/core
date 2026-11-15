@@ -19,7 +19,11 @@ import {
   isTargetWriteInProgress,
   rearmUrlTarget,
 } from "../url_target/url_target.js";
-import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
+import {
+  publishAfterRouting,
+  publishBeforeRouting,
+  publishTraversalAsked,
+} from "./before_routing.js";
 import {
   applyNavigationToNavDepth,
   canNavBackSignal,
@@ -196,6 +200,7 @@ export const setupBrowserIntegrationViaHistory = ({
           element: options.element,
           routeTransition: options.routeTransition,
         };
+        publishTraversalAsked(elidedPressPending);
         if (delta === -1) {
           window.history.back();
         } else {

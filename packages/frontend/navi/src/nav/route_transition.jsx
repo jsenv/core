@@ -108,6 +108,7 @@ import { computed } from "@preact/signals";
 import {
   observeAfterRouting,
   observeBeforeRouting,
+  observeTraversalAsked,
 } from "./browser_integration/before_routing.js";
 import { navTo } from "./browser_integration/browser_integration.js";
 import { NAV_DEPTH_STATE_KEY } from "./browser_integration/document_back_and_forward.js";
@@ -1510,6 +1511,22 @@ observeBeforeRouting((details) => {
   if (turnRunningTransitionRound(navigationFromUrl, navigationUrl)) {
     navigationAnimated = true;
   }
+});
+// A push taken as a traversal is announced when the browser answers it, a task
+// after the press: whatever the press wrote in the meantime (a mode switched,
+// the bars it shows) would be drawn on the page being left before its picture.
+// The hold is taken from the press, and the traversal's own announcement keeps
+// that share. What it retraces cannot be read before it lands, so only what is
+// defined and what the press asks decide here.
+observeTraversalAsked((details) => {
+  if (
+    relations.length === 0 &&
+    !defaultTransition &&
+    !readNavigationRequest(details)
+  ) {
+    return;
+  }
+  holdRenderingForRouting();
 });
 observeAfterRouting(() => {
   const request = layerRequest(navigationRequest, navigationReplay);

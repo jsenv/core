@@ -43,7 +43,11 @@ import {
   isTargetWriteInProgress,
   rearmUrlTarget,
 } from "../url_target/url_target.js";
-import { publishAfterRouting, publishBeforeRouting } from "./before_routing.js";
+import {
+  publishAfterRouting,
+  publishBeforeRouting,
+  publishTraversalAsked,
+} from "./before_routing.js";
 import {
   applyNavigationToNavDepth,
   canNavBackSignal,
@@ -610,14 +614,12 @@ export const setupBrowserIntegrationViaNavigation = ({
         // The press is still the press: what it asks of a route transition is
         // about this crossing, and the traversal's navigate event reads it
         // from `info` like any re-asked navigation's.
-        navigation.traverseTo(key, {
-          info: {
-            element: pressElement,
-            routeTransition: event.info
-              ? event.info.routeTransition
-              : undefined,
-          },
-        });
+        const press = {
+          element: pressElement,
+          routeTransition: event.info ? event.info.routeTransition : undefined,
+        };
+        publishTraversalAsked(press);
+        navigation.traverseTo(key, { info: press });
         return;
       }
     }

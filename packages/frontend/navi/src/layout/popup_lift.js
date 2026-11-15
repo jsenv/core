@@ -62,6 +62,7 @@
 
 import { trapScrollInside } from "@jsenv/dom";
 
+import { holdRendering } from "../nav/rendering_hold.js";
 import {
   removeTransitionValue,
   setTransitionValue,
@@ -352,11 +353,13 @@ export const liftPopupFromAnchor = (
   let giveBackNameArriving = null;
   let stopWaitingForTarget = null;
   let stopWaitingForAnchor = null;
+  let giveBackRendering = null;
   const release = () => {
     if (releaseLiftInProgress !== release) {
       return;
     }
     releaseLiftInProgress = null;
+    giveBackRendering?.();
     stopWaitingForTarget?.();
     stopWaitingForAnchor?.();
     boxAnimationInProgress?.cancel();
@@ -382,7 +385,15 @@ export const liftPopupFromAnchor = (
   const startMovement = (change, resolveElementArriving) => {
     let boxArriving = null;
     let cornersArriving = null;
+    // The page is photographed whole, at the next frame (see rendering_hold.js):
+    // a render queued with the press that closes — what it wrote beside the
+    // close, a page it navigates to — would be drawn under the popup still
+    // open: the page changing before the movement rather than with it.
+    giveBackRendering = holdRendering();
     const viewTransition = startViewTransition(async () => {
+      // Drawn first, so the change is applied to the page as asked, and the
+      // landing below waits for renders that are free to run.
+      giveBackRendering();
       // The name is the arriving box's from here on: worn by both, it is worn
       // by neither. Written rather than removed, so a name the element also
       // has from a stylesheet cannot resurface for the length of the movement.
