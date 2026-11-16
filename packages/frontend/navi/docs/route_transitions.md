@@ -511,6 +511,10 @@ What that means for a page and for the application around it:
   re-renders in it too, and what it renders stays hidden, a top node it swaps
   for another included. What it reads through `useAsyncData` does not:
   navi leaves a page alone as soon as its container would no longer show it.
+  Re-rendered by something else, it reads there what it read last, and a
+  reader that was waiting goes on waiting, though its route actions ask
+  nothing once their route stops matching: a page drawing the code it loaded
+  (see [dynamic_import.md](./dynamic_import.md)) still has it.
   Its `navState` keeps the entry it was shown on: a section or a popup open
   there stays open until the page is taken down, rather than being closed by
   the entry that replaced it.

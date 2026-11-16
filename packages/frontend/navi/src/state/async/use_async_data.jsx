@@ -236,6 +236,7 @@ const subscribeToChanges = (signal, onChange) => {
 };
 
 const LoadingContext = createContext(null);
+const WAITING = Symbol("waiting");
 const actionPendingPromiseWeakMap = new WeakMap();
 const dismissedActionWeakSet = new WeakSet();
 const dismissedActionPendingPromiseWeakMap = new WeakMap();
@@ -334,13 +335,9 @@ const useActionAsyncData = (
   // What this render read of the action, for the subscriptions below to tell
   // a change that came between the render and them from none at all.
   const readRef = useRef(null);
+  // What the last render handed back, or WAITING when it suspended: what a
+  // page off the screen draws (see below).
   const lastReadRef = useRef(null);
-  readRef.current = {
-    runningState,
-    data: action.dataSignal.peek(),
-    params: action.paramsSignal.peek(),
-    settling: action.paramsSettlingSignal.peek(),
-  };
   useEffect(() => {
     let stopOwingRender = null;
     const rerender = () => {
@@ -430,30 +427,59 @@ const useActionAsyncData = (
     // subscribed to the state of the one it no longer reads.
   }, [action, routePage]);
 
-  // A page kept while leaving still renders when a signal it reads directly
-  // moves, and its route actions, asking nothing once their route stops
-  // matching, hold nothing to read. Hidden and never shown again — a return
-  // mounts the page anew — it draws what it read last.
-  if (routePage && routePage.hasLeft() && lastReadRef.current) {
-    return lastReadRef.current;
+  // A page off the screen — kept while leaving, or a pane of a row the hand
+  // left — still renders when a signal it reads directly moves, and its route
+  // actions, asking nothing once their route stops matching, hold nothing to
+  // read. It draws what it read last, and a reader that was waiting goes on
+  // waiting. Shown again, it reads anew: the subscriptions above owe it that
+  // render, and readRef keeps what they compare against.
+  const lastRead = lastReadRef.current;
+  const pageHidden =
+    lastRead !== null &&
+    routePage !== null &&
+    (routePage.hasLeft() || routePage.leavingSignal.peek());
+  if (pageHidden && lastRead !== WAITING) {
+    return lastRead;
   }
-  const read = readActionAsyncData(action, {
+  readRef.current = {
     runningState,
-    loadingEffect,
-    errorEffect,
-    prerun,
-    loadingRef,
-    setTick,
-  });
-  lastReadRef.current = read;
-  return read;
+    data: action.dataSignal.peek(),
+    params: action.paramsSignal.peek(),
+    settling: action.paramsSettlingSignal.peek(),
+  };
+  try {
+    const read = readActionAsyncData(action, {
+      runningState,
+      loadingEffect,
+      errorEffect,
+      prerun,
+      loadingRef,
+      setTick,
+      goOnWaiting: pageHidden,
+    });
+    lastReadRef.current = read;
+    return read;
+  } catch (thrown) {
+    if (thrown instanceof Promise) {
+      lastReadRef.current = WAITING;
+    }
+    throw thrown;
+  }
 };
 
 // The tuple for the action as it stands, or a throw: the promise a delegated
 // wait suspends on, the failure a delegated error stops the render with.
 const readActionAsyncData = (
   action,
-  { runningState, loadingEffect, errorEffect, prerun, loadingRef, setTick },
+  {
+    runningState,
+    loadingEffect,
+    errorEffect,
+    prerun,
+    loadingRef,
+    setTick,
+    goOnWaiting,
+  },
 ) => {
   // The params moved and the run has not started: under a debounce the action
   // is still the previous one, COMPLETED with the previous answer. There is no
@@ -557,8 +583,14 @@ const readActionAsyncData = (
   // where a route action lands when its params getter returns false. It is not a
   // load in progress, so there is nothing to wait for — suspending here would
   // throw a promise that never settles, and the whole <Loading> subtree would
-  // stay hidden for good, silently.
-  if (runningState !== RUNNING && action.paramsSignal.peek() === undefined) {
+  // stay hidden for good, silently. Except for a reader whose page left the
+  // screen while it waited: its boundary is already waiting on it, and the
+  // route action asking nothing is the page gone, not an answer to draw.
+  if (
+    runningState !== RUNNING &&
+    action.paramsSignal.peek() === undefined &&
+    !goOnWaiting
+  ) {
     return [action.dataSignal.peek(), false, undefined];
   }
 

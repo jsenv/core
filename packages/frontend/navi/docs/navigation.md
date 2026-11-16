@@ -544,8 +544,8 @@ a hand pushing the pages:
 ```
 
 A page is built when its route first matches, since a route's actions only ask
-while it does, and stays once built: a hand brings back the page itself, with where
-it was scrolled to. The order of the tabs — "one step that way", which no URL says —
+while it does, and stays once built: a hand brings back the page itself, with what
+it read and where it was scrolled to. The order of the tabs — "one step that way", which no URL says —
 is the order the children are written; the row is on the **first** of its pages
 that matches, like a `<Route>`; a page left out of the row does not travel. A swipe
 **replaces** the current entry, as `<Link replace>` does for a tab pressed: two
