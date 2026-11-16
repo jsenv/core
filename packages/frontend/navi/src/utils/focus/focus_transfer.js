@@ -554,7 +554,16 @@ const getFocusedBeforeTransfer = (e) => {
       // a press replayed once something it was waiting for arrived. There is
       // no element to read there, and whatever holds the focus is then all
       // there is to know.
-      return initiator.currentTarget || document.activeElement;
+      //
+      // Nor is there one when the listener is not on an element: the outside
+      // press closing a popup is heard on `document` (armOutsidePressClose),
+      // and a popup asked for during that close would read `document` — a
+      // node nothing can give the focus back to.
+      const listened = initiator.currentTarget;
+      if (listened && listened.nodeType === Node.ELEMENT_NODE) {
+        return listened;
+      }
+      return document.activeElement;
     }
   }
   return document.activeElement;

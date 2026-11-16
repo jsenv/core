@@ -219,8 +219,10 @@ const css = /* css */ `
       display: contents;
     }
     /* What it left behind. contain: what it holds in position: fixed is its own,
-       and does not stand over the page. */
+       and does not stand over the page. Positioned: a page brought in earlier in
+       the movement is left where it was pinned (leavePictureOfLive). */
     > [data-route-row-pictures] > * {
+      position: relative;
       contain: layout paint;
       min-width: 0;
       grid-row: 1;
@@ -431,10 +433,11 @@ export const RouteTravel = ({
   };
 
   // A clone of the page in the pane it stands in, before anything changes it. In
-  // that pane and the same height: the row keeps its size, so the document its
-  // offset, and the page one looked at is where it was. The live page then stands
-  // where `page`, the one it is about to show, lands (see pinPanes).
-  const leavePictureOfLive = (movement, page) => {
+  // that pane, the same height and the same top: the row keeps its size, so the
+  // document its offset, and the page one looked at is where it was, pinned when
+  // the hand brought it in earlier in this movement. The live page then stands
+  // for the page at `towards`, the one it is about to show.
+  const leavePictureOfLive = (movement, towards) => {
     const live = liveRef.current;
     const index = latestRef.current.liveIndex;
     const picture = live.cloneNode(true);
@@ -442,15 +445,25 @@ export const RouteTravel = ({
     picture.setAttribute("inert", "");
     picture.setAttribute("aria-hidden", "true");
     picture.style.gridColumn = String(index + 1);
-    picture.style.top = "";
     movement.pictures.get(index)?.remove();
     movement.pictures.set(index, picture);
     // After the live page in the document: an id it holds still finds the page.
     picturesRef.current.append(picture);
     copyScrollPositions(live, picture);
-    if (movement.scrollsDocument) {
-      live.style.top = `${window.scrollY - landingOf(page)}px`;
+    pinLive(movement, towards);
+  };
+
+  // Where the live page stands for the rest of a movement, showing the page at
+  // `index`: where the picture of that page stands when the hand left one there,
+  // where the page lands otherwise (see pinPanes).
+  const pinLive = (movement, index) => {
+    if (!movement.scrollsDocument) {
+      return;
     }
+    const picture = movement.pictures.get(index);
+    liveRef.current.style.top = picture
+      ? picture.style.top
+      : `${window.scrollY - landingOf(latestRef.current.pages[index])}px`;
   };
 
   const askFor = (page) => {
@@ -464,8 +477,10 @@ export const RouteTravel = ({
   const askForPageOfRow = (index, movement) => {
     const row = rowRef.current;
     const page = latestRef.current.pages[index];
-    if (windowed && !movement.pictures.has(index)) {
-      leavePictureOfLive(movement, page);
+    // The page being left keeps its column for the snap, back to a page the hand
+    // left as well: the live page goes under that page's picture.
+    if (windowed) {
+      leavePictureOfLive(movement, index);
     }
     Promise.resolve(askFor(page)).then(() => {
       if (pageIsCurrent(page)) {
@@ -829,12 +844,12 @@ export const RouteTravel = ({
       if (pageIsAt(pages[currentIndex], url)) {
         return;
       }
-      const page = pages.find((each) => pageIsAt(each, url));
-      if (!page) {
+      const index = pages.findIndex((page) => pageIsAt(page, url));
+      if (index === -1) {
         return;
       }
       const movement = beginMovement({ travelling: true });
-      leavePictureOfLive(movement, page);
+      leavePictureOfLive(movement, index);
     });
   }, [windowed]);
 
@@ -895,7 +910,7 @@ export const RouteTravel = ({
         if (movement.pictures.has(index)) {
           return;
         }
-        leavePictureOfLive(movement, page);
+        leavePictureOfLive(movement, index);
       } else if (paneTowards.hasAttribute("data-built")) {
         return;
       }

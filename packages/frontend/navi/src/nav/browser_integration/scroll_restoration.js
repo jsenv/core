@@ -100,7 +100,47 @@ const saidByScrollerName = new Map();
 // Resolved, as an address handed to navTo can be kept as it was given.
 let readRoutingAddress = () => window.location.href;
 const readShownUrl = () => {
-  return new URL(readRoutingAddress(), window.location.href).href;
+  return keyOf(readRoutingAddress());
+};
+
+// The key a position is kept under: the address resolved, each part of its query
+// decoded and encoded again as a route builds it. A param typed or pasted as
+// written (`?list=with:owner-1`) and the same param built by a route
+// (`?list=with%3Aowner-1`) are one value to the routing, so one place to come
+// back to. Only the key: the address itself stays as written (see
+// dropSearchParamsOnce in route.js). Commas stay as written, encoded or not: the
+// routing splits an array on the raw ones (extractSearchParams).
+const reencode = (part) => {
+  try {
+    return encodeURIComponent(decodeURIComponent(part));
+  } catch {
+    // A malformed escape (a `%` alone) is kept as written.
+    return part;
+  }
+};
+const reencodeSearchPair = (pair) => {
+  const eqIndex = pair.indexOf("=");
+  if (eqIndex === -1) {
+    return reencode(pair);
+  }
+  const key = reencode(pair.slice(0, eqIndex));
+  const value = pair
+    .slice(eqIndex + 1)
+    .split(",")
+    .map(reencode)
+    .join(",");
+  return `${key}=${value}`;
+};
+const keyOf = (url) => {
+  const urlObject = new URL(url, window.location.href);
+  if (urlObject.search) {
+    urlObject.search = urlObject.search
+      .slice(1)
+      .split("&")
+      .map(reencodeSearchPair)
+      .join("&");
+  }
+  return urlObject.href;
 };
 
 /**
@@ -118,7 +158,9 @@ export const documentLoadIsReturn = () => {
 };
 // Read as the document starts: the positions are loaded later, by whoever
 // needs them first, and the page may have moved by then.
-const urlArrivedAtByLoad = documentLoadIsReturn() ? null : window.location.href;
+const urlArrivedAtByLoad = documentLoadIsReturn()
+  ? null
+  : keyOf(window.location.href);
 
 // Read once, the first time anyone needs the positions: the document's
 // restoration is installed by the routing, and a list remembering itself may
@@ -144,10 +186,13 @@ const loadStore = () => {
   try {
     const { document: documentPositions, scrollers } = JSON.parse(stored);
     for (const [url, position] of Object.entries(documentPositions || {})) {
-      positionByUrl.set(url, position);
+      positionByUrl.set(keyOf(url), position);
     }
     for (const [url, positionByName] of Object.entries(scrollers || {})) {
-      scrollerPositionsByUrl.set(url, new Map(Object.entries(positionByName)));
+      scrollerPositionsByUrl.set(
+        keyOf(url),
+        new Map(Object.entries(positionByName)),
+      );
     }
   } catch {
     // Something else wrote there, or it was truncated.
@@ -541,7 +586,7 @@ const whenSettled = (actions, callback) => {
 // measures its window right after.
 const restoreScrollPosition = (url) => {
   pendingRestoration = null;
-  const position = positionByUrl.get(new URL(url, window.location.href).href);
+  const position = positionByUrl.get(keyOf(url));
   if (!position) {
     return false;
   }
@@ -563,7 +608,7 @@ const restoreScrollPosition = (url) => {
 // url already returned to.
 export const restoreScrollPositionOnReturn = (url) => {
   pendingRestoration = null;
-  const href = new URL(url, window.location.href).href;
+  const href = keyOf(url);
   carryScrollersOnceRendered(href);
   const position = positionByUrl.get(href);
   if (!position) {
@@ -602,7 +647,7 @@ export const startAtTop = (url, { from } = {}) => {
     return;
   }
   pendingRestoration = null;
-  const href = new URL(url, window.location.href).href;
+  const href = keyOf(url);
   carryScrollersOnceRendered(href);
   // Written down as well as done: a document already at its top fires no
   // scroll event, and a page left without ever being scrolled would have no
@@ -641,7 +686,7 @@ export const isArrival = (url, { from }) => {
 // url as it travels, and the offset belongs to nobody until the row says where
 // its tab lands (see arriveAtScrollPosition).
 export const stayInPlace = (url) => {
-  const href = new URL(url, window.location.href).href;
+  const href = keyOf(url);
   carryScrollersOnceRendered(href);
   if (documentOffset !== null && !suspendCount) {
     positionByUrl.set(href, documentOffset);
@@ -685,7 +730,7 @@ export const hasScrollPositionToReturnTo = (url, { from }) => {
   if (!isArrival(url, { from })) {
     return false;
   }
-  return positionByUrl.has(new URL(url, window.location.href).href);
+  return positionByUrl.has(keyOf(url));
 };
 
 // The same arrival, for the page's own scrollers. The document is scrolled to
@@ -696,7 +741,7 @@ export const forgetScrollersOnArrival = (url, { from } = {}) => {
   if (!isArrival(url, { from })) {
     return;
   }
-  scrollerPositionsByUrl.delete(new URL(url, window.location.href).href);
+  scrollerPositionsByUrl.delete(keyOf(url));
 };
 
 // An arrival at a page whose scrollport is already showing another one: the
@@ -720,7 +765,7 @@ export const arriveAtScrollPosition = (url) => {
 // moves nothing. A list holding the document places it itself (see
 // holdDocumentScroll), somewhere nothing can read before it has.
 export const landingOffsetOf = (url) => {
-  const position = positionByUrl.get(new URL(url, window.location.href).href);
+  const position = positionByUrl.get(keyOf(url));
   return position ? position.y : 0;
 };
 
