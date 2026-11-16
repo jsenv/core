@@ -199,10 +199,11 @@ the landing instead (`watchRowScroll`).
 with the page on screen: everything the root scroller gives (a collapsing URL bar,
 pull to refresh, a tap to the top) stays, `position: sticky` inside the row does
 not. A row with fewer than two pages is not a scroller. A page brought in is pinned
-where the reader is looking, with `top` (a transform would capture what it holds in
-`position: fixed`). The document's offset is written on arrival
-(`arriveAtScrollPosition`), with recording suspended for the movement: clamps are
-not the reader scrolling.
+at the offset it lands on, with `top` (a transform would capture what it holds in
+`position: fixed`): shifted by the document's offset less that one, it stands on
+screen where it will at rest from the first frame, whatever stands above the row.
+The document's offset is written on arrival (`arriveAtScrollPosition`), with
+recording suspended for the movement: clamps are not the reader scrolling.
 
 ## A box pushed aside: when a press becomes a travel
 

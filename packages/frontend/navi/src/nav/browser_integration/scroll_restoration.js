@@ -715,6 +715,14 @@ export const arriveAtScrollPosition = (url) => {
   buildDeferredBoxesAbove(window.innerHeight);
   startAtTop(url);
 };
+// Where arriveAtScrollPosition puts the document for `url`, read ahead: the row
+// shows a page it brings in at that offset for the whole movement, so landing
+// moves nothing. A list holding the document places it itself (see
+// holdDocumentScroll), somewhere nothing can read before it has.
+export const landingOffsetOf = (url) => {
+  const position = positionByUrl.get(new URL(url, window.location.href).href);
+  return position ? position.y : 0;
+};
 
 // What the offset shows is built first: written into a document still missing
 // a deferred box, the offset is clamped (see mount_after_paint.jsx). That build

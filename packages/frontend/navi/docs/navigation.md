@@ -614,7 +614,8 @@ does not run.
 
 **The box has a height, or the document scrolls.** Pages may scroll themselves in a
 box the page gives a height to. If the document is what scrolls, it goes on doing
-so, and a page brought in stands where the reader is looking; what is lost is
+so, and a page brought in stands where it lands once the row rests (where it was
+left when one comes back to it, at its top otherwise); what is lost is
 `position: sticky` inside the row (see
 [drag_to_travel.md](./drag_to_travel.md#the-browser-scrolls-the-row)).
 

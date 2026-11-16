@@ -38,8 +38,8 @@
  * The document goes on scrolling when that is what the page does. A horizontal
  * scroller cannot let the other axis through (overflow-x: auto makes overflow-y
  * something else than visible), so the row is a scroll container that never moves
- * vertically and grows with the page on screen. A page brought in stands where the
- * reader is looking (see pinning below). The price: `position: sticky` inside the
+ * vertically and grows with the page on screen. A page brought in stands where it
+ * lands once the row rests (see pinPanes). The price: `position: sticky` inside the
  * row sticks to the row, which never scrolls, so it never sticks. A row with fewer
  * than two pages is not a scroller at all, for that reason.
  *
@@ -56,6 +56,7 @@ import { getScrollContainer } from "@jsenv/dom";
 import { observeBeforeRouting } from "./browser_integration/before_routing.js";
 import {
   arriveAtScrollPosition,
+  landingOffsetOf,
   suspendScrollRecording,
 } from "./browser_integration/scroll_restoration.js";
 import {
@@ -91,6 +92,10 @@ const css = /* css */ `
   /* Written on what reads them (pinPanes, holdRowAt), not on the row: inherited,
      they would restyle every element of the pages as a movement begins. */
   @property --navi-route-row-pin {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-row-landing {
     syntax: "*";
     inherits: false;
   }
@@ -166,9 +171,10 @@ const css = /* css */ `
       /* One stroke does not skip a page it can stop on. */
       scroll-snap-stop: always;
     }
-    /* A pane brought in stands where the reader is looking, and does not make the
-       document taller than the page on screen does, when the document is what
-       scrolls. Nothing changes for a row that fits a box of its own.
+    /* A pane brought in stands where its page lands once the row rests, when the
+       document is what scrolls (pinPanes), and is cut a screen past that offset:
+       enough to fill the screen, and the document does not grow to the whole page.
+       Nothing changes for a row that fits a box of its own.
        It paints at rest, as the placeholder below does: the compositor moves the
        row before any scroll event reaches us, and a page waiting for one to show
        comes in a few frames late, behind an empty strip. contain: what it holds in
@@ -186,7 +192,7 @@ const css = /* css */ `
       position: relative;
       top: var(--navi-route-row-pin, 0);
       contain: paint;
-      max-height: 100dvh;
+      max-height: calc(100dvh + var(--navi-route-row-landing, 0px));
       overflow: clip;
     }
     /* What stands in the pane of a neighbour until its page does. Out of flow: the
@@ -368,16 +374,24 @@ export const RouteTravel = ({
     }
   };
 
-  // How far down the reader is looking, on every pane, for those the CSS pins.
+  // Every pane at the offset its page lands on, for those the CSS pins: shifted by
+  // where the reader is less that offset, a page brought in stands on screen where
+  // it will at rest, whatever the document holds above the row. Each pane is its
+  // own page: one come back to lands where it was left, one never read at its top.
   const pinPanes = (row) => {
-    const pin = `${pinOf(row)}px`;
-    for (const pane of panesOf(row)) {
-      pane.style.setProperty("--navi-route-row-pin", pin);
-    }
+    const { pages } = latestRef.current;
+    // Once: a read after the first write would lay the row out again.
+    const offset = window.scrollY;
+    panesOf(row).forEach((pane, index) => {
+      const landing = landingOf(pages[index]);
+      pane.style.setProperty("--navi-route-row-pin", `${offset - landing}px`);
+      pane.style.setProperty("--navi-route-row-landing", `${landing}px`);
+    });
   };
   const unpinPanes = (row) => {
     for (const pane of panesOf(row)) {
       pane.style.removeProperty("--navi-route-row-pin");
+      pane.style.removeProperty("--navi-route-row-landing");
     }
   };
 
@@ -418,8 +432,9 @@ export const RouteTravel = ({
 
   // A clone of the page in the pane it stands in, before anything changes it. In
   // that pane and the same height: the row keeps its size, so the document its
-  // offset, and the page one looked at is where it was.
-  const leavePictureOfLive = (movement) => {
+  // offset, and the page one looked at is where it was. The live page then stands
+  // where `page`, the one it is about to show, lands (see pinPanes).
+  const leavePictureOfLive = (movement, page) => {
     const live = liveRef.current;
     const index = latestRef.current.liveIndex;
     const picture = live.cloneNode(true);
@@ -434,7 +449,7 @@ export const RouteTravel = ({
     picturesRef.current.append(picture);
     copyScrollPositions(live, picture);
     if (movement.scrollsDocument) {
-      live.style.top = `${pinOf(rowRef.current)}px`;
+      live.style.top = `${window.scrollY - landingOf(page)}px`;
     }
   };
 
@@ -450,7 +465,7 @@ export const RouteTravel = ({
     const row = rowRef.current;
     const page = latestRef.current.pages[index];
     if (windowed && !movement.pictures.has(index)) {
-      leavePictureOfLive(movement);
+      leavePictureOfLive(movement, page);
     }
     Promise.resolve(askFor(page)).then(() => {
       if (pageIsCurrent(page)) {
@@ -811,14 +826,15 @@ export const RouteTravel = ({
       if (asked || currentIndex === -1) {
         return;
       }
-      if (
-        pageIsAt(pages[currentIndex], url) ||
-        !pages.some((page) => pageIsAt(page, url))
-      ) {
+      if (pageIsAt(pages[currentIndex], url)) {
+        return;
+      }
+      const page = pages.find((each) => pageIsAt(each, url));
+      if (!page) {
         return;
       }
       const movement = beginMovement({ travelling: true });
-      leavePictureOfLive(movement);
+      leavePictureOfLive(movement, page);
     });
   }, [windowed]);
 
@@ -879,7 +895,7 @@ export const RouteTravel = ({
         if (movement.pictures.has(index)) {
           return;
         }
-        leavePictureOfLive(movement);
+        leavePictureOfLive(movement, page);
       } else if (paneTowards.hasAttribute("data-built")) {
         return;
       }
@@ -1017,9 +1033,9 @@ export const RouteTravel = ({
   }, [prefetch, neighbours, restCount]);
 
   // A neighbour shows from the first frame the compositor moves the row, before
-  // any scroll event, so it has to stand where the reader is looking by then: a
-  // finger landing is the last word before that. A trackpad says nothing first, and
-  // the pin comes with its first scroll event (beginMovement).
+  // any scroll event, so it has to stand where it lands by then: a finger landing
+  // is the last word before that. A trackpad says nothing first, and the pin comes
+  // with its first scroll event (beginMovement).
   useLayoutEffect(() => {
     const row = rowRef.current;
     const onTouchStart = () => {
@@ -1107,12 +1123,9 @@ const rowFollowsDocument = (row) =>
   getScrollContainer(row.parentElement, { includeHidden: true }) ===
   document.documentElement;
 
-// How far down the row the reader is looking, for a page brought in: a page on
-// screen scrolls with the document, and one arriving has to start from there.
-const pinOf = (row) => {
-  const { top } = row.getBoundingClientRect();
-  return top < 0 ? -top : 0;
-};
+// The document offset a page of the row is given once the row rests on it (see
+// endMovement).
+const landingOf = (page) => landingOffsetOf(page.route.buildUrl(page.params));
 
 // What a clone does not take: where what scrolls inside was left.
 const copyScrollPositions = (from, to) => {
