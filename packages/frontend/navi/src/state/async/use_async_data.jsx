@@ -334,6 +334,7 @@ const useActionAsyncData = (
   // What this render read of the action, for the subscriptions below to tell
   // a change that came between the render and them from none at all.
   const readRef = useRef(null);
+  const lastReadRef = useRef(null);
   readRef.current = {
     runningState,
     data: action.dataSignal.peek(),
@@ -429,6 +430,31 @@ const useActionAsyncData = (
     // subscribed to the state of the one it no longer reads.
   }, [action, routePage]);
 
+  // A page kept while leaving still renders when a signal it reads directly
+  // moves, and its route actions, asking nothing once their route stops
+  // matching, hold nothing to read. Hidden and never shown again — a return
+  // mounts the page anew — it draws what it read last.
+  if (routePage && routePage.hasLeft() && lastReadRef.current) {
+    return lastReadRef.current;
+  }
+  const read = readActionAsyncData(action, {
+    runningState,
+    loadingEffect,
+    errorEffect,
+    prerun,
+    loadingRef,
+    setTick,
+  });
+  lastReadRef.current = read;
+  return read;
+};
+
+// The tuple for the action as it stands, or a throw: the promise a delegated
+// wait suspends on, the failure a delegated error stops the render with.
+const readActionAsyncData = (
+  action,
+  { runningState, loadingEffect, errorEffect, prerun, loadingRef, setTick },
+) => {
   // The params moved and the run has not started: under a debounce the action
   // is still the previous one, COMPLETED with the previous answer. There is no
   // run to await yet, so nothing can be suspended on — but a component drawing
