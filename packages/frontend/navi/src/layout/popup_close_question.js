@@ -16,6 +16,13 @@
  * already say what they mean, and that is also why the close following the
  * answer goes through: it says yes or no, so nothing has to remember that the
  * question was asked.
+ *
+ * A close is held only for a question opened in a press the popup owns. A
+ * press outside a popup with no wall belongs to the page, which answers it
+ * whatever the popup does (see armOutsidePressClose): asking in the middle of
+ * it splits the press between the page and the question's wall, and the focus
+ * the question gives goes with it. That press leaves the popup open instead,
+ * and the question waits for a close that can be held.
  */
 
 import { findEvent } from "@jsenv/dom";
@@ -56,6 +63,12 @@ export const createCloseQuestion = (openController, readCloseQuestion) => {
     const questionElement = resolveQuestionElement(readCloseQuestion());
     if (!questionElement) {
       return false;
+    }
+    if (requestCloseEvent.detail.pressOnPage) {
+      // The page already heard this press begin, and answers the rest of it:
+      // a question opened now would put its wall in the middle of the press.
+      // The popup stays, and asks at a close it can hold (its cross, a push).
+      return true;
     }
     const question = { element: questionElement };
     pendingQuestion = question;

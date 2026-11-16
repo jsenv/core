@@ -795,9 +795,12 @@ const css = /* css */ `
  *   a `--navi-cancel` in it closes the popover with `isCancel`, and any other
  *   way out of the question (Escape, a press outside it, its cross) returns
  *   to the popover. A cancel, a confirm, a send and a link's press are never
- *   asked about: they already say what they mean. An id, an element or a
- *   ref; a function is called at each close request, for a popover that only
- *   knows then whether anything changed. Naming nothing: no question.
+ *   asked about: they already say what they mean. A press outside a popover
+ *   with `backdrop={false}` goes on to the page whatever the popover answers,
+ *   so while there is a question to ask it leaves the popover open without
+ *   asking. An id, an element or a ref; a function is called at each close
+ *   request, for a popover that only knows then whether anything changed.
+ *   Naming nothing: no question.
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it

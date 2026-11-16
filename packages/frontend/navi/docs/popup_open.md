@@ -554,6 +554,11 @@ about, for the same reason. Nor is a link pressed inside the popup: its
 navigation goes ahead whatever the answer. A `--navi-close:all` stops climbing
 at the popup that asks, as at any popup that refuses.
 
+A popup with `backdrop={false}` leaves the page answering a press outside it,
+so it cannot hold that press for a question: while there is one to ask, the
+press leaves the popup open, and the question is asked at its cross or when it
+is pushed out.
+
 ### Closing when a button also runs an action
 
 A button that carries both runs them in that order: the action first, the

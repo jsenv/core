@@ -629,6 +629,9 @@ export const armOutsidePressClose = (
     }
     openController.requestClose(pointerDownEvent, {
       isCancel: pressOutside === "cancel",
+      // With no wall the press goes on to the page whatever the popup answers,
+      // so nothing may hold it for a question (see popup_close_question.js).
+      pressOnPage: pressEventType === "pointerdown",
     });
   };
   document.addEventListener(pressEventType, onDocumentPointerDown, {
