@@ -695,6 +695,15 @@ export const createOpenController = (
         if (nativeCancelEvent) {
           nativeCancelEvent.preventDefault();
         }
+        // A press on the wall, answered by the popup staying, is spent as one
+        // answered by closing is (see transferFocusOnOpen's cleanup): its
+        // default would give the focus to what was pressed, the wall, taking
+        // it from where the refusal put it — a closeQuestion it opened, a
+        // callout. Only the mousedown, for the same reason as there.
+        const mousedownEvent = findEvent(requestCloseEvent, "mousedown");
+        if (mousedownEvent) {
+          mousedownEvent.preventDefault();
+        }
         return false;
       }
       performClose(requestCloseEvent);
