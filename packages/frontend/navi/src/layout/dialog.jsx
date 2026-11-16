@@ -96,9 +96,11 @@ import {
   onRequestInteraction,
 } from "../control/rules/control_interaction.js";
 import {
+  canGiveUpOnControlsHoldingPopup,
   findControlsHoldingPopup,
   giveUpOnControlsHoldingPopup,
 } from "./popup_busy.js";
+import { createCloseQuestion } from "./popup_close_question.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import {
@@ -1096,12 +1098,25 @@ const css = /* css */ `
  * @param {(event: Event) => void} [props.onClose] - Called when the dialog
  *   actually closes — not preventable: it is the close happening, not a
  *   request. What refuses a close is navi's: a control inside still
- *   running its action (see popup_busy.js for the runs that let it through).
+ *   running its action (see popup_busy.js for the runs that let it through),
+ *   and the `closeQuestion` below while it is on screen.
  *   `event.detail.isCancel` says the close meant "revert", and
  *   `event.detail.isConfirm` that a `--navi-confirm` said yes, and
  *   `event.detail.isSend` that a send aimed at the dialog itself closed it
  *   (a row's `--navi-send`). To await that answer from where the opening is
  *   decided, open it with `askPopup` instead.
+ * @param {string|Element|{current: Element}|(() => string|Element|{current: Element}|undefined)} [props.closeQuestion] -
+ *   A popup asked before a close that keeps — the cross, a press outside,
+ *   a push through its edge — for a dialog holding what only one of its
+ *   buttons writes (a draft its footer applies). The dialog stays on screen
+ *   behind the question and the request is refused until it is answered: a
+ *   yes in it (`--navi-confirm`, a send) closes the dialog with `isConfirm`,
+ *   a `--navi-cancel` in it closes the dialog with `isCancel`, and any other
+ *   way out of the question (Escape, a press outside it, its cross) returns
+ *   to the dialog. A cancel, a confirm, a send and a link's press are never
+ *   asked about: they already say what they mean. An id, an element or a
+ *   ref; a function is called at each close request, for a dialog that only
+ *   knows then whether anything changed. Naming nothing: no question.
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it
@@ -1185,9 +1200,15 @@ const UncontrolledDialog = (props) => {
   // through a ref, an onClose given by a render while open is the one called.
   const onCloseRef = useRef(null);
   onCloseRef.current = props.onClose;
+  const closeQuestionRef = useRef(null);
+  closeQuestionRef.current = props.closeQuestion;
   const openController = useOpenController((openEvent) => {
     const dialogEl = props.ref.current;
     debugPopup(openEvent, `dialog opened`);
+    const closeHeldByQuestion = createCloseQuestion(
+      openController,
+      () => closeQuestionRef.current,
+    );
 
     return {
       onRequestClose: (requestCloseEvent) => {
@@ -1197,25 +1218,25 @@ const UncontrolledDialog = (props) => {
         // this file's top comment), so it asks what it contains, and lets that
         // control report why the way it would to anyone else.
         const controlsHolding = findControlsHoldingPopup(dialogEl);
-        if (controlsHolding.length === 0) {
+        if (!canGiveUpOnControlsHoldingPopup(controlsHolding)) {
+          dispatchRequestInteraction(controlsHolding[0].element, {
+            event: requestCloseEvent,
+            name: "dialog request close",
+          });
+          requestCloseEvent.preventDefault();
           return;
         }
-        // Unless every one of those runs was declared givable-up
-        // (`actionAbortable`): the answer is not coming, closing is how the
-        // person waiting says so, and the runs are called off on the way out.
-        if (
-          giveUpOnControlsHoldingPopup(
-            controlsHolding,
-            "the dialog holding the run was closed",
-          )
-        ) {
+        if (closeHeldByQuestion(requestCloseEvent)) {
+          requestCloseEvent.preventDefault();
           return;
         }
-        dispatchRequestInteraction(controlsHolding[0].element, {
-          event: requestCloseEvent,
-          name: "dialog request close",
-        });
-        requestCloseEvent.preventDefault();
+        // Every run holding it was declared givable-up (`actionAbortable`):
+        // the answer is not coming, closing is how the person waiting says so,
+        // and the runs are called off on the way out.
+        giveUpOnControlsHoldingPopup(
+          controlsHolding,
+          "the dialog holding the run was closed",
+        );
       },
       onClose: (closeEvent) => {
         onCloseRef.current?.(closeEvent);
@@ -1234,6 +1255,7 @@ const UncontrolledDialog = (props) => {
       navState={undefined}
       ownSignals={undefined}
       onClose={undefined}
+      closeQuestion={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {

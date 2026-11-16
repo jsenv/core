@@ -219,6 +219,9 @@ const css = /* css */ `
  *   `signal` (see `Dialog`/`Popover`'s own `navState`).
  * @param {(event: Event) => void} [props.onClose] - Called when the panel
  *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
+ * @param {string|Element|{current: Element}|(() => string|Element|{current: Element}|undefined)} [props.closeQuestion] -
+ *   A popup asked before a close that keeps — pushed back, the cross, a
+ *   press outside (see `Dialog`/`Popover`'s own `closeQuestion`).
  * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
  *   viewport/container edge the panel is docked flush against.
  * @param {string|number} [props.width] - Explicit width — a bare number is

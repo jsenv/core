@@ -50,32 +50,54 @@ import { chainPopupAsk } from "./popup_ask_chain.js";
  *   popup refused the opening: what a gesture's answer reads as a refusal
  *   to say nothing about.
  */
-export const askPopup = (element, event, { value, anchor } = {}) => {
+export const askPopup = (element, event, options) => {
   return new Promise((resolve, reject) => {
-    const ask = {
-      taken: false,
-      answer: (closeEvent) => {
-        resolve({ confirmed: closeSaysYes(closeEvent), closeEvent });
+    const opened = openPopupAsk(
+      element,
+      event,
+      {
+        answer: (closeEvent) => {
+          resolve({ confirmed: closeSaysYes(closeEvent), closeEvent });
+        },
+        // Asked again before the close: no close of its own to answer with, so
+        // the request that took its place is handed over instead.
+        supersede: (requestOpenEvent) => {
+          resolve({ confirmed: false, closeEvent: requestOpenEvent });
+        },
       },
-      // Asked again before the close: no close of its own to answer with, so
-      // the request that took its place is handed over instead.
-      supersede: (requestOpenEvent) => {
-        resolve({ confirmed: false, closeEvent: requestOpenEvent });
-      },
-    };
-    const askEvent = chainPopupAsk(event, ask);
-    triggerNaviCommand(element, "--navi-open", askEvent, { value, anchor });
-    // An opening is decided within its request, whatever builds or animates it
-    // afterwards: not taken by now, it was not let through.
-    if (!ask.taken) {
+      options,
+    );
+    if (!opened) {
       reject(undefined);
     }
   });
 };
 
+/**
+ * askPopup's opening, for a caller that has to know within its own request
+ * whether the question is on screen: a popup refusing its close while it asks
+ * (see popup_close_question.js). `answer(closeEvent)` is called when the popup
+ * closes, `supersede(requestOpenEvent)` when another ask takes its place.
+ *
+ * @returns {boolean} Whether the popup opened (or was open already).
+ */
+export const openPopupAsk = (
+  element,
+  event,
+  { answer, supersede },
+  { value, anchor } = {},
+) => {
+  const ask = { taken: false, answer, supersede };
+  const askEvent = chainPopupAsk(event, ask);
+  triggerNaviCommand(element, "--navi-open", askEvent, { value, anchor });
+  // An opening is decided within its request, whatever builds or animates it
+  // afterwards: not taken by now, it was not let through.
+  return ask.taken;
+};
+
 // "sent" is what a send's follow-up is chained to (createSentEvent in
 // commands.js): the popup closed because what it held went through.
-const closeSaysYes = (closeEvent) => {
+export const closeSaysYes = (closeEvent) => {
   const { detail } = closeEvent;
   if (detail.isCancel) {
     return false;

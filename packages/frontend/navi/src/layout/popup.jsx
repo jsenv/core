@@ -184,6 +184,8 @@ const css = /* css */ `
  * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
  *   mount-only).
  * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
+ * @param {string|Element|{current: Element}|(() => string|Element|{current: Element}|undefined)} [props.closeQuestion] -
+ *   Forwarded as-is (see `Dialog`/`Popover`'s own `closeQuestion`).
  * @param {object} [props.openController] - Forwarded as-is (advanced —
  *   see `open_controller.js`).
  * @param {string} [props.className] - Merged with the shared

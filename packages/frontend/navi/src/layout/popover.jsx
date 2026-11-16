@@ -70,9 +70,11 @@ import {
   onRequestInteraction,
 } from "../control/rules/control_interaction.js";
 import {
+  canGiveUpOnControlsHoldingPopup,
   findControlsHoldingPopup,
   giveUpOnControlsHoldingPopup,
 } from "./popup_busy.js";
+import { createCloseQuestion } from "./popup_close_question.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
@@ -777,12 +779,25 @@ const css = /* css */ `
  * @param {(event: Event) => void} [props.onClose] - Called when the popover
  *   actually closes — not preventable: it is the close happening, not a
  *   request. What refuses a close is navi's: a control inside still
- *   running its action (see popup_busy.js for the runs that let it through).
+ *   running its action (see popup_busy.js for the runs that let it through),
+ *   and the `closeQuestion` below while it is on screen.
  *   `event.detail.isCancel` says the close meant "revert", and
  *   `event.detail.isConfirm` that a `--navi-confirm` said yes, and
  *   `event.detail.isSend` that a send aimed at the popover itself closed it
  *   (a row's `--navi-send`). To await that answer from where the opening is
  *   decided, open it with `askPopup` instead.
+ * @param {string|Element|{current: Element}|(() => string|Element|{current: Element}|undefined)} [props.closeQuestion] -
+ *   A popup asked before a close that keeps — the cross, a press outside,
+ *   a push through its edge — for a popover holding what only one of its
+ *   buttons writes (a draft its footer applies). The popover stays on screen
+ *   behind the question and the request is refused until it is answered: a
+ *   yes in it (`--navi-confirm`, a send) closes the popover with `isConfirm`,
+ *   a `--navi-cancel` in it closes the popover with `isCancel`, and any other
+ *   way out of the question (Escape, a press outside it, its cross) returns
+ *   to the popover. A cancel, a confirm, a send and a link's press are never
+ *   asked about: they already say what they mean. An id, an element or a
+ *   ref; a function is called at each close request, for a popover that only
+ *   knows then whether anything changed. Naming nothing: no question.
  * @param {boolean|string|{id?: string, type?: "push"|"replace"}} [props.navState] -
  *   Keeps the open state in the history entry, so a screen left and come back
  *   to finds this popup as it was — open, and without an entrance playing: it
@@ -867,35 +882,41 @@ const UncontrolledPopover = (props) => {
   // Read at the close, not captured at the opening: see UncontrolledDialog.
   const onCloseRef = useRef(null);
   onCloseRef.current = props.onClose;
+  const closeQuestionRef = useRef(null);
+  closeQuestionRef.current = props.closeQuestion;
   // Same as Dialog's own UncontrolledDialog, for the same reasons — see it for
-  // the full story: a popover is a surface, so the only thing it has to say
-  // about closing is that what it contains must not be interrupted mid-action.
+  // the full story: a popover is a surface, so what it has to say about
+  // closing is that what it contains must not be interrupted mid-action, and
+  // the question its caller asks before a close that keeps.
   const openController = useOpenController((openEvent) => {
     const popoverEl = props.ref.current;
     debugPopup(openEvent, `popover opened`);
+    const closeHeldByQuestion = createCloseQuestion(
+      openController,
+      () => closeQuestionRef.current,
+    );
 
     return {
       onRequestClose: (requestCloseEvent) => {
         const controlsHolding = findControlsHoldingPopup(popoverEl);
-        if (controlsHolding.length === 0) {
+        if (!canGiveUpOnControlsHoldingPopup(controlsHolding)) {
+          dispatchRequestInteraction(controlsHolding[0].element, {
+            event: requestCloseEvent,
+            name: "popover request close",
+          });
+          requestCloseEvent.preventDefault();
           return;
         }
-        // Unless every one of those runs was declared givable-up
-        // (`actionAbortable`): the answer is not coming, closing is how the
-        // person waiting says so, and the runs are called off on the way out.
-        if (
-          giveUpOnControlsHoldingPopup(
-            controlsHolding,
-            "the popover holding the run was closed",
-          )
-        ) {
+        if (closeHeldByQuestion(requestCloseEvent)) {
+          requestCloseEvent.preventDefault();
           return;
         }
-        dispatchRequestInteraction(controlsHolding[0].element, {
-          event: requestCloseEvent,
-          name: "popover request close",
-        });
-        requestCloseEvent.preventDefault();
+        // Every run holding it was declared givable-up (`actionAbortable`):
+        // called off on the way out.
+        giveUpOnControlsHoldingPopup(
+          controlsHolding,
+          "the popover holding the run was closed",
+        );
       },
       onClose: (closeEvent) => {
         onCloseRef.current?.(closeEvent);
@@ -914,6 +935,7 @@ const UncontrolledPopover = (props) => {
       navState={undefined}
       ownSignals={undefined}
       onClose={undefined}
+      closeQuestion={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {

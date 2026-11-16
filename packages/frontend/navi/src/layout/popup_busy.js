@@ -51,13 +51,25 @@ export const findControlsHoldingPopup = (popupEl) => {
  * ones asked after it has been called off simply find nothing to call off.
  */
 export const giveUpOnControlsHoldingPopup = (controlsHolding, reason) => {
+  if (!canGiveUpOnControlsHoldingPopup(controlsHolding)) {
+    return false;
+  }
+  for (const controlHolding of controlsHolding) {
+    abortControlRun(controlHolding.controller, reason);
+  }
+  return true;
+};
+
+/**
+ * Whether giveUpOnControlsHoldingPopup would let the close through, asked
+ * without calling anything off yet: a close that still has a question to ask
+ * (see popup_close_question.js) keeps the runs going until it is answered.
+ */
+export const canGiveUpOnControlsHoldingPopup = (controlsHolding) => {
   for (const controlHolding of controlsHolding) {
     if (!controlHolding.abortable) {
       return false;
     }
-  }
-  for (const controlHolding of controlsHolding) {
-    abortControlRun(controlHolding.controller, reason);
   }
   return true;
 };

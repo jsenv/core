@@ -476,8 +476,9 @@ every real close, with `detail.isCancel` when the close meant "revert" and
 asking a yes/no question after a gesture already over answers it there
 (`onClose={(e) => e.detail.isConfirm && release()}`). Neither
 can veto: `onClose` is the close happening, not a request to close. The refusals
-are navi's: a close over a control mid-action, and a `Picker`'s close over a
-value that does not validate.
+are navi's: a close over a control mid-action, a `Picker`'s close over a value
+that does not validate, and a close waiting for the popup's
+[`closeQuestion`](#asking-before-a-close-that-keeps-closequestion).
 
 ### Awaiting the answer: `askPopup`
 
@@ -512,6 +513,46 @@ reads as a refusal to say nothing about.
 
 The popup stays the popup: uncontrolled, with its own say over closing, and
 nothing in it knows it was asked rather than opened.
+
+### Asking before a close that keeps: `closeQuestion`
+
+A sheet holding a draft only its footer writes (filters applied by « Voir les
+parties ») drops it when closed any other way. `closeQuestion` names a popup
+asked first, on a close that keeps — the cross, a press outside, a push through
+its edge:
+
+```jsx
+<Dialog
+  id="filters"
+  closeQuestion={() => (draftChanged() ? "filters_question" : undefined)}
+  onClose={(e) => {
+    if (e.detail.isConfirm) {
+      applyDraft(); // the footer's yes, or the question's
+    }
+  }}
+>
+  …
+  <Button command="--navi-confirm">Voir les parties</Button>
+</Dialog>
+<Dialog id="filters_question">
+  Appliquer ces filtres ?
+  <Button command="--navi-cancel">Non</Button>
+  <Button command="--navi-confirm">Oui</Button>
+</Dialog>
+```
+
+The sheet stays on screen behind the question, since the question is about
+what it shows: the close request is refused, and a push springs back. A yes in
+the question closes the sheet with `isConfirm`, a `--navi-cancel` with
+`isCancel`; any other way out of the question (Escape, a press outside it, its
+cross) answers nothing and returns to the sheet. So `onClose` reads the answer
+the way it reads any close, and the close that follows the answer is never
+asked about again: it already says yes or no.
+
+A cancel (Escape, Back, `--navi-cancel`), a confirm and a send are never asked
+about, for the same reason. Nor is a link pressed inside the popup: its
+navigation goes ahead whatever the answer. A `--navi-close:all` stops climbing
+at the popup that asks, as at any popup that refuses.
 
 ### Closing when a button also runs an action
 
