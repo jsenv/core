@@ -12,15 +12,43 @@
  * out of the way of an error the app is already showing — one mark, one meaning:
  * "this is on screen somewhere".
  *
+ * A claimed error is still possibly a bug, and an app logging its bugs cannot
+ * see the places navi takes errors in charge. So the claim is announced on
+ * window (`navi_error_displayed`), once per error: the app hears every claim
+ * in one listener and decides for itself what is data and what is a bug.
+ *
  * The whole picture, control errors and validation included: docs/error_handling.md
  */
 
 import { isNetworkPolicyError } from "./network_policy.js";
 
+/**
+ * Claims the error: it is on screen somewhere, so the report below and the jsenv
+ * overlay leave it alone. The first claim is the one kept, and it is announced
+ * on window as `navi_error_displayed` with `detail: { error, by }`.
+ *
+ * @param {unknown} error
+ * @param {string} by What displays it, as told to the app: "<ErrorBoundary>", "<List.Items>"…
+ */
 export const markErrorAsDisplayedBy = (error, by) => {
-  if (error && typeof error === "object") {
-    error.__handled_by__ = by;
+  if (!error || typeof error !== "object") {
+    return;
   }
+  if (error.__handled_by__) {
+    // A claim happens once: what displays the error next (the boundary a
+    // control threw it at, every render after the first) shows an error
+    // already taken in charge.
+    return;
+  }
+  error.__handled_by__ = by;
+  if (typeof window === "undefined") {
+    return;
+  }
+  // A listener that throws is reported by dispatchEvent and does not reach the
+  // claimer, which is often a render.
+  window.dispatchEvent(
+    new CustomEvent("navi_error_displayed", { detail: { error, by } }),
+  );
 };
 
 export const errorIsDisplayed = (error) => {

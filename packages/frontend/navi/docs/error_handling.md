@@ -214,7 +214,33 @@ fallback, `<ActionRenderer>` when it renders its error branch,
 run given an `onError` — asking for the error is taking it. Every control with
 an `action` runs it that way, so the control claims the failure whatever it
 then shows: a callout, a boundary (`actionErrorEffect="throw"`), or nothing
-(`"none"`, a mapping returning nothing).
+(`"none"`, a mapping returning nothing). `<List.Items>` claims the failure it
+draws in place of the items (its own row or `renderError`), and the failed
+revalidation it drops to keep the items it already had.
+
+### Hearing what navi claims: `navi_error_displayed`
+
+A claimed error is out of the overlay's way, and out of window's: it never
+becomes an `error` or `unhandledrejection` event. That is right for a screen
+calmly saying "you are offline", and wrong for an app that sends its bugs
+somewhere. A `TypeError` drawn in a list's failure row is still a bug.
+
+So every claim is announced on window, once per error, whoever makes it (an app
+calling `markErrorAsDisplayedBy` included):
+
+```js
+window.addEventListener("navi_error_displayed", (event) => {
+  const { error, by } = event.detail; // by: "<List.Items>", "<button action>", "<ErrorBoundary>"…
+  // the app decides what is data (an HTTP status, offline) and what is a bug
+  errorReporter.report(error, { by });
+});
+```
+
+It is a window event so a classic script at the top of the page can listen
+before the bundle loads, next to its `error` and `unhandledrejection` listeners.
+navi does not sort data from bugs here: the app knows which errors are data,
+and its filters already do. An error the app also reads itself
+(`useAsyncData({ error: true })`) is heard here as well.
 
 ## Taken by nobody: the report
 

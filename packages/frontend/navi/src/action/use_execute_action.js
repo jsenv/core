@@ -13,6 +13,7 @@ import {
 } from "../control/rules/validation/action_error_constraint.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
+import { markErrorAsDisplayedBy } from "./action_error_report.js";
 import { runUnwatched } from "./run_unwatched.js";
 
 export const useExecuteAction = (
@@ -216,6 +217,10 @@ export const useExecuteAction = (
             });
           },
           onError: (error) => {
+            markErrorAsDisplayedBy(
+              error,
+              `<${element.tagName.toLowerCase()} action>`,
+            );
             if (errorEffect === "show_validation_message") {
               addErrorMessage(error, { requester });
             } else if (errorEffect === "throw") {

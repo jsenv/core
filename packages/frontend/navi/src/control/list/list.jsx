@@ -42,6 +42,7 @@ import { Text } from "../../text/text.jsx";
 import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { showRangeReader } from "../../state/rest/kept_reads.js";
+import { markErrorAsDisplayedBy } from "../../action/action_error_report.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { ParallelGuardContext, useParallelGuard } from "../parallel_guard.js";
@@ -7062,6 +7063,7 @@ const useRunItems = (
     if (itemIndex >= failureFrom && itemIndex <= failureTo) {
       closeGroup();
       const failedItemCount = failureTo - itemIndex + 1;
+      markErrorAsDisplayedBy(store.failure.error, "<List.Items>");
       nodes.push(
         <li
           key={`${ownerId}_failure_${failureFrom}`}
@@ -7417,6 +7419,10 @@ const useItemStore = ({
   // asked for by name. Recorded as its page is taken in, when the locator can
   // first find the item in it.
   const namedAnsweredRef = useRef(-1);
+  // A collection given whole holds every item it will ever have: there is
+  // nothing to ask for by name.
+  const owesNamedItemFor = (hold) =>
+    !inMemory && namedAnsweredRef.current !== hold;
   const takeInPage = ({ pageItems, pageStart, pageCount, answersHold }) => {
     if (answersHold !== undefined) {
       namedAnsweredRef.current = answersHold;
@@ -7687,11 +7693,7 @@ const useItemStore = ({
       }
     },
     holds: (index) => pages.byIndex.has(index),
-    // A collection given whole holds every item it will ever have: there is
-    // nothing to ask for by name.
-    owesNamedItem: () =>
-      !inMemory &&
-      namedAnsweredRef.current !== listItems.holdArmedSignal.peek(),
+    owesNamedItem: () => owesNamedItemFor(listItems.holdArmedSignal.peek()),
     useRequestMissing: (
       missingStart,
       missingEnd,
@@ -7742,7 +7744,7 @@ const useItemStore = ({
         // the reading position is where they are, not where it opened.
         listItems.heldSomewhere &&
         pages.count !== undefined &&
-        namedAnsweredRef.current !== holdArmed &&
+        owesNamedItemFor(holdArmed) &&
         wanted &&
         typeof wanted === "object" &&
         wanted.id !== undefined &&
@@ -8030,7 +8032,9 @@ const useItemStore = ({
           if (revalidating) {
             // The items from before stay, and are not asked for again until the
             // source says the collection moved: a revalidation that failed has
-            // nothing better to put in their place.
+            // nothing better to put in their place. The list takes the failure
+            // without showing it, which is still a claim the app must hear.
+            markErrorAsDisplayedBy(error, "<List.Items>");
             let rank = start;
             while (rank <= end) {
               staleRanksRef.current.delete(rank);
