@@ -1827,11 +1827,11 @@ const useListScrollSync = ({
   const getListEl = () => ref.current.querySelector(".navi_list");
   // Which box scrolls is measured (see getScrollerEl), so the answer holds
   // only for the geometry it was taken on: an ancestor that is bounded but
-  // still waiting for its first items looks like it will never scroll, and a
-  // list whose fillers have not committed the room of the items it leaves out
-  // looks like it fits. It is taken again on every commit of the list or of a
-  // filler (see fillerResized) and on every resize; the state exists so the
-  // effects below reattach their listeners to whatever it lands on.
+  // still waiting for its first items looks like it will never scroll. It is
+  // taken again on every commit of the list, on every commit of a filler,
+  // which resizes in one of its own (see fillerResized), and on every resize;
+  // the state exists so the effects below reattach their listeners to
+  // whatever it lands on.
   const [scrollerElResolved, setScrollerElResolved] = useState(null);
   const resolveScroller = () => {
     if (!ref.current) {
@@ -5292,6 +5292,11 @@ const measureItemSize = (listEl, horizontal, inLines) => {
   };
 };
 
+// The size the fillers hold an item at: `virtualItemSize` when given,
+// otherwise measured on the items this mount draws. Never carried over from a
+// previous visit, as the scroll position is: a returning visitor would see a
+// list a first visit never shows, which hides what goes wrong only there, and
+// a size kept across a release describes markup that is gone.
 const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
@@ -5453,12 +5458,9 @@ const useVirtualItemSizeSignal = (
   return virtualSizeSignal;
 };
 
-// Inner <ul> — hosts the fillers + items.
-// Creates a virtualItemSize signal so BeforeFiller and AfterFiller can
-// subscribe to it independently. When virtualItemSize is passed as a prop it
-// initialises the signal directly; otherwise UnorderedList measures a rendered
-// item after each commit and writes to the signal, causing only the fillers to
-// re-render.
+// The track, the <ul>: the items, the fillers holding the room of the items
+// left out (see VirtualFiller), and the messages standing in for items when
+// there are none to show (see Fallback, SearchFallback).
 const UnorderedList = ({
   listItems,
   renderWindow,
