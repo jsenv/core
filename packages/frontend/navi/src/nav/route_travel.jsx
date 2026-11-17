@@ -65,7 +65,7 @@ import {
   RouteRowNeighbour,
 } from "./route.jsx";
 import { notePageChange } from "./page_change.js";
-import { whenPageReadsAnswered } from "./route_action.js";
+import { whenPageAtRest } from "./route_action.js";
 import { pageIsAt, pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
 import {
@@ -79,7 +79,6 @@ import {
   restsOn,
   watchRowScroll,
 } from "../layout/native_row_scroll.js";
-import { afterPaint } from "../utils/after_paint.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   CSS_EASE,
@@ -1026,25 +1025,16 @@ export const RouteTravel = ({
     if (!neighbours[0] && !neighbours[1]) {
       return undefined;
     }
-    let cancelPaint = null;
-    const cancelWait = whenPageReadsAnswered(() => {
-      cancelPaint = afterPaint(() => {
-        if (movementRef.current) {
-          return;
-        }
-        for (const page of neighbours) {
-          if (page) {
-            page.route.preload(page.params || {});
-          }
-        }
-      });
-    });
-    return () => {
-      cancelWait();
-      if (cancelPaint) {
-        cancelPaint();
+    return whenPageAtRest(() => {
+      if (movementRef.current) {
+        return;
       }
-    };
+      for (const page of neighbours) {
+        if (page) {
+          page.route.preload(page.params || {});
+        }
+      }
+    });
   }, [prefetch, neighbours, restCount]);
 
   // A neighbour shows from the first frame the compositor moves the row, before

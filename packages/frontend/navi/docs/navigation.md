@@ -612,6 +612,18 @@ way. Don't prerun the actions yourself: their params getters would then be writt
 twice, and once one of them changes, the prefetch asks for an instance the arrival
 does not run.
 
+Pages that are not a row, like the destinations of a bottom bar, are asked for ahead
+at the same moment with `whenPageAtRest(callback)`. It calls back once, after the
+page's route actions have answered, no route transition is playing, and the page
+is painted. It returns a cancel.
+
+```js
+whenPageAtRest(() => TOURNAMENTS_PAGE.preload({}));
+```
+
+What comes next is the app's: the order, one destination per idle period, whether
+the connection is worth spending.
+
 **The box has a height, or the document scrolls.** Pages may scroll themselves in a
 box the page gives a height to. If the document is what scrolls, it goes on doing
 so, and a page brought in stands where it lands once the row rests (where it was

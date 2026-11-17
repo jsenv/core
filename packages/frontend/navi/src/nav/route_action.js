@@ -13,6 +13,7 @@ import {
   takeKeptRead,
 } from "../state/rest/kept_reads.js";
 import { readStateAsIf } from "../state/state_signal.js";
+import { afterPaint } from "../utils/after_paint.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
 import {
@@ -20,6 +21,7 @@ import {
   registerRouteReload,
   registerRouteStatePreload,
 } from "./route.js";
+import { routeTransitionPlayingSignal } from "./route_transition_playing.js";
 
 // Every route action, with whether it asks something of the address at the
 // moment: its route matches and its params getter returns something.
@@ -61,32 +63,65 @@ export const activeRouteActionsSignal = computed(() => {
 });
 
 /**
- * Calls back once every route action asking something for the page on screen
- * has answered, none running and none about to: what is asked on behalf of
- * another page waits for it, and never competes with the page's own reads.
+ * Calls back once the page on screen is at rest: every route action asking
+ * something for it has answered, none running and none about to, no route
+ * transition is playing, and the browser has painted it. What is asked on
+ * behalf of another page waits for that moment, and never competes with the
+ * page's own reads or movement — `<RouteTravel prefetch>` asks its neighbours
+ * then, and an app asks its other destinations the same way:
+ *
+ *   whenPageAtRest(() => TOURNAMENTS_PAGE.preload({}));
+ *
+ * Called back once; a read or a transition starting before the paint makes it
+ * wait again. A row of routes moving under a hand is not watched: `<RouteTravel>`
+ * checks its own. Neither is the connection: whether it is worth spending is the
+ * caller's decision.
  *
  * @param {() => void} callback
  * @returns {() => void} cancel
  */
-export const whenPageReadsAnswered = (callback) => {
-  let cancelled = false;
-  const stop = effect(function () {
-    for (const routeAction of activeRouteActionsSignal.value) {
-      const runningState = routeAction.runningStateSignal.value;
-      // IDLE: asking, and run by an effect of the same batch that has not run yet.
-      if (runningState === RUNNING || runningState === IDLE) {
+export const whenPageAtRest = (callback) => {
+  let cancelWait;
+  const wait = () => {
+    let cancelPaint = null;
+    const stop = effect(function () {
+      if (pageIsArriving()) {
         return;
       }
-    }
-    this.dispose();
-    if (!cancelled) {
-      untracked(callback);
-    }
-  });
-  return () => {
-    cancelled = true;
-    stop();
+      this.dispose();
+      cancelPaint = afterPaint(() => {
+        if (pageIsArriving()) {
+          cancelWait = wait();
+          return;
+        }
+        callback();
+      });
+    });
+    return () => {
+      stop();
+      if (cancelPaint) {
+        cancelPaint();
+      }
+    };
   };
+  cancelWait = wait();
+  return () => {
+    cancelWait();
+  };
+};
+
+const pageIsArriving = () => {
+  if (routeTransitionPlayingSignal.value) {
+    return true;
+  }
+  for (const routeAction of activeRouteActionsSignal.value) {
+    const runningState = routeAction.runningStateSignal.value;
+    // IDLE: asking, and run by an effect of the same batch that has not run yet.
+    if (runningState === RUNNING || runningState === IDLE) {
+      return true;
+    }
+  }
+  return false;
 };
 
 /**

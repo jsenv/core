@@ -118,6 +118,7 @@ import { Box } from "../box/box.jsx";
 import { isRenderingPageChange, notePageChange } from "./page_change.js";
 import { keepLeavingPages, observeRouteRender } from "./route.jsx";
 import { pageIsCurrent } from "./route_page.js";
+import { routeTransitionPlayingSignal } from "./route_transition_playing.js";
 import { readRouteTransitionRequest } from "./route_transition_request.js";
 import {
   holdRenderingForRouting,
@@ -1722,6 +1723,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     releaseTransitionRoot(currentTransition);
   }
   currentTransition = transition;
+  routeTransitionPlayingSignal.value = true;
   // Said before the picture is taken: whoever names something for a movement
   // between two pages decides on it now (see transition_destination.js).
   holdTransitionDestination(transition, url);
@@ -1896,6 +1898,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     if (currentTransition === transition) {
       currentTransition = null;
       releaseTransitionRoot(transition);
+      routeTransitionPlayingSignal.value = false;
     }
   };
   transition.viewTransition = viewTransition;

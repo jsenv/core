@@ -145,6 +145,7 @@ export {
   activeRouteReadsSignal,
   anyMatchingRouteSignal,
   routeAction,
+  whenPageAtRest,
 } from "./src/nav/route_action.js";
 // What the page on screen reads, kept for the document that opens on it next
 // (see src/nav/page_kept.js).
