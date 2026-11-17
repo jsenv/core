@@ -413,9 +413,10 @@ export const createListItems = () => {
     holdPending: false,
     // Called by a run just before items land in it: what is on screen must not
     // move because something arrived above it. Set by the list itself, with
-    // what puts the view back once they have (see VirtualFiller).
+    // what a filler resizing in a commit of its own asks of it, the view put
+    // back included (see VirtualFiller).
     captureAnchor: () => {},
-    holdViewStill: () => {},
+    fillerResized: () => {},
     // The list has asked for a window no render has drawn yet: a run holding
     // the one before has nothing to ask for it (see useRequestMissing).
     windowOnItsWay: () => false,

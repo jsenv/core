@@ -1804,8 +1804,10 @@ const useListScrollSync = ({
   const getListEl = () => ref.current.querySelector(".navi_list");
   // Which box scrolls is measured (see getScrollerEl), so the answer holds
   // only for the geometry it was taken on: an ancestor that is bounded but
-  // still waiting for its first items looks like it will never scroll. It is
-  // taken again on every commit and every resize; the state exists so the
+  // still waiting for its first items looks like it will never scroll, and a
+  // list whose fillers have not committed the room of the items it leaves out
+  // looks like it fits. It is taken again on every commit of the list or of a
+  // filler (see fillerResized) and on every resize; the state exists so the
   // effects below reattach their listeners to whatever it lands on.
   const [scrollerElResolved, setScrollerElResolved] = useState(null);
   const resolveScroller = () => {
@@ -1823,7 +1825,7 @@ const useListScrollSync = ({
   useStuckWindowWarning({
     ref,
     getListEl,
-    scrollerElResolved,
+    getScroller,
     renderWindowRef,
     windowLeavesItemsOut,
     totalSignal: listItems.totalSignal,
@@ -3242,9 +3244,18 @@ const useListScrollSync = ({
       // captured before.
       updateItemsPerLineRef.current();
     });
-    observer.observe(scrollerEl);
-    observer.observe(listEl);
+    // Observed on the next frame (as createWatchAfterCheck in @jsenv/dom): a
+    // resize that switches the scroller runs this effect again from inside the
+    // frame's ResizeObserver deliveries, where an element observed anew — the
+    // document's box above all — is skipped and reported as "ResizeObserver
+    // loop completed with undelivered notifications". Animation frames run
+    // before that step, so a mount is still notified in its own frame.
+    const observeFrame = requestAnimationFrame(() => {
+      observer.observe(scrollerEl);
+      observer.observe(listEl);
+    });
     return () => {
+      cancelAnimationFrame(observeFrame);
       observer.disconnect();
       cancelAnimationFrame(itemsResizedFrame);
     };
@@ -3334,9 +3345,11 @@ const useListScrollSync = ({
   };
   useLayoutEffect(holdAnchorStill);
   // What a filler resizing in a commit of its own asks for (see VirtualFiller):
+  // the box that scrolls the list, taken on the geometry the filler makes, and
   // the view put back the way the list keeps it — where the list holds itself,
   // or on the item the anchor captured.
-  listItems.holdViewStill = () => {
+  listItems.fillerResized = () => {
+    resolveScroller();
     if (heldSomewhere) {
       placeWhereHeld();
       return;
@@ -3859,7 +3872,7 @@ const readItemsPerLine = (listEl) => {
 const useStuckWindowWarning = ({
   ref,
   getListEl,
-  scrollerElResolved,
+  getScroller,
   renderWindowRef,
   windowLeavesItemsOut,
   totalSignal,
@@ -3867,50 +3880,66 @@ const useStuckWindowWarning = ({
   horizontal,
 }) => {
   const doneRef = useRef(false);
-  // Read where they stand at each commit, not subscribed to: this reports a
-  // geometry, and the commit is when there is a new one to look at.
+  // Asked at each commit, not subscribed to: this reports a geometry, and a
+  // commit is when there is a new one to look at. Read on the next frame: the
+  // fillers commit the room of the items the window leaves out in a commit of
+  // their own, after the list's (see VirtualFiller), and read before that, a
+  // list leaving a hundred items out stands at the height of the few it draws.
   useLayoutEffect(() => {
-    if (!import.meta.dev || doneRef.current || !scrollerElResolved) {
-      return;
+    if (!import.meta.dev || doneRef.current) {
+      return undefined;
     }
-    if (!windowLeavesItemsOut() || !virtualItemSizeSignal.peek()) {
-      // Nothing is held outside the window yet, or the room it takes is not
-      // measured: there is no blank tail to report.
-      return;
-    }
-    const viewportRect = getScrollerViewportRect(scrollerElResolved);
-    const viewportSize = horizontal ? viewportRect.width : viewportRect.height;
-    if (!viewportSize) {
-      // Not on screen — a list inside a closed popup, a parked subtree.
-      return;
-    }
-    if (canScrollerScroll(scrollerElResolved, horizontal ? "x" : "y")) {
-      return;
-    }
-    // Scrolling nothing, the box keeps out of reach only the items past what
-    // it shows. A list standing whole on the window's screen is one the window
-    // covers at its next evaluation: an item added in this commit is drawn on
-    // the resize it causes (see onItemsResizedRef), after this effect.
-    const listEl = getListEl();
-    if (!listEl) {
-      return;
-    }
-    const screen = readWindowScreen(scrollerElResolved, horizontal);
-    const listRect = listEl.getBoundingClientRect();
-    const listFrom = horizontal ? listRect.left : listRect.top;
-    const listTo = horizontal ? listRect.right : listRect.bottom;
-    // A pixel of slack, like canScroll.
-    if (listFrom > screen.from - 1 && listTo < screen.to + 1) {
-      return;
-    }
-    doneRef.current = true;
-    const { start, end } = renderWindowRef.current;
-    console.warn(
-      `<List> draws ${end - start} of ${totalSignal.peek()} items and holds the room of the others, and the box its render window follows, ${getElementSignature(
-        scrollerElResolved,
-      )}, scrolls nothing: the window never moves and those items stay blank. Give the list a bounded height so its own scroll box scrolls, or name the box that scrolls it with scroller="parent" / "document" / {element}.`,
-      { list: ref.current, scroller: scrollerElResolved },
-    );
+    const frame = requestAnimationFrame(() => {
+      if (!ref.current) {
+        return;
+      }
+      if (!windowLeavesItemsOut() || !virtualItemSizeSignal.peek()) {
+        // Nothing is held outside the window yet, or the room it takes is not
+        // measured: there is no blank tail to report.
+        return;
+      }
+      // Measured as the window's evaluation measures it (see evaluateWindow).
+      const scrollerEl = getScroller();
+      const viewportRect = getScrollerViewportRect(scrollerEl);
+      const viewportSize = horizontal
+        ? viewportRect.width
+        : viewportRect.height;
+      if (!viewportSize) {
+        // Not on screen — a list inside a closed popup, a parked subtree.
+        return;
+      }
+      if (canScrollerScroll(scrollerEl, horizontal ? "x" : "y")) {
+        return;
+      }
+      // Scrolling nothing, the box keeps out of reach only the items past what
+      // it shows. A list standing whole on the window's screen is one the
+      // window covers at its next evaluation: an item added in this commit is
+      // drawn on the resize it causes (see onItemsResizedRef), after this
+      // check.
+      const listEl = getListEl();
+      if (!listEl) {
+        return;
+      }
+      const screen = readWindowScreen(scrollerEl, horizontal);
+      const listRect = listEl.getBoundingClientRect();
+      const listFrom = horizontal ? listRect.left : listRect.top;
+      const listTo = horizontal ? listRect.right : listRect.bottom;
+      // A pixel of slack, like canScroll.
+      if (listFrom > screen.from - 1 && listTo < screen.to + 1) {
+        return;
+      }
+      doneRef.current = true;
+      const { start, end } = renderWindowRef.current;
+      console.warn(
+        `<List> draws ${end - start} of ${totalSignal.peek()} items and holds the room of the others, and the box its render window follows, ${getElementSignature(
+          scrollerEl,
+        )}, scrolls nothing: the window never moves and those items stay blank. Give the list a bounded height so its own scroll box scrolls, or name the box that scrolls it with scroller="parent" / "document" / {element}.`,
+        { list: ref.current, scroller: scrollerEl },
+      );
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
   });
 };
 // canScroll reads the declared overflow, which the root element answers
@@ -4132,17 +4161,16 @@ const useStuckStickyParts = (
     updateRef.current();
   });
 
+  // Synchronously, not on a rAF: scroll events are dispatched while the frame
+  // is being put together, so the attribute lands in the same paint as the
+  // scroll that caused it. A frame late is a frame of flicker.
+  const update = () => {
+    updateRef.current();
+  };
   useLayoutEffect(() => {
-    const listContainerEl = ref.current;
-    if (!listContainerEl) {
+    if (!ref.current) {
       return undefined;
     }
-    const update = () => {
-      // Synchronously, not on a rAF: scroll events are dispatched while the
-      // frame is being put together, so the attribute lands in the same paint
-      // as the scroll that caused it. A frame late is a frame of flicker.
-      updateRef.current();
-    };
     // A page-level scroller does not emit "scroll" on the element itself
     // (document.scrollingElement); the document does.
     const scrollerEl = getScroller();
@@ -4151,17 +4179,29 @@ const useStuckStickyParts = (
         ? document
         : scrollerEl;
     scrollEventTarget.addEventListener("scroll", update, { passive: true });
+    return () => {
+      scrollEventTarget.removeEventListener("scroll", update);
+    };
+  }, [scrollerElResolved]);
+  // Not tied to the scroller, which can change from inside a resize delivery
+  // (see resolveScroller): an observer made again there observes the list
+  // where the browser skips it ("ResizeObserver loop completed with
+  // undelivered notifications").
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return undefined;
+    }
     window.addEventListener("resize", update);
     // The list growing under a scroller that has not moved — items loaded by
     // scroll, a group unfolding — changes which parts sit at an edge.
     const observer = new ResizeObserver(update);
     observer.observe(listContainerEl);
     return () => {
-      scrollEventTarget.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
       observer.disconnect();
     };
-  }, [scrollerElResolved]);
+  }, []);
 };
 
 // Anything but visible and clip makes a scroll container, hidden included.
@@ -5513,10 +5553,11 @@ const VirtualFiller = ({
     roomKnown;
   // A filler resizing moves what stands below it — the items on screen, when it
   // holds the room of items above them — and it resizes in a commit of its own
-  // when the item size settles after the list has rendered: the list puts its
-  // view back from here too (see holdViewStill).
+  // when the item size settles after the list has rendered: up to that commit
+  // the list stands at the height of the items it draws, so it takes its
+  // geometry again from here (see fillerResized).
   useLayoutEffect(() => {
-    listItems.holdViewStill();
+    listItems.fillerResized();
   }, [sizeToFill]);
   if (!sizeToFill) {
     return null;
