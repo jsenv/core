@@ -422,6 +422,9 @@ export const createListItems = () => {
     windowOnItsWay: () => false,
     horizontal: false,
     virtualItemSizeSignal: null,
+    // Asked by a filler drawn before there was an item size (see
+    // VirtualFiller); set by the list, which owns the measure.
+    measureFirstSize: () => {},
     roomById,
     renderSkeleton: undefined,
     // The children a walk stands over, in order — said in one call, before any

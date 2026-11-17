@@ -62,7 +62,7 @@ try {
     }
   },
   "find_lines_of_items_drawn_before": {
-    "checked": 66,
+    "checked": 68,
     "away_from_where_their_item_was_drawn": 0
   },
   "errors": []

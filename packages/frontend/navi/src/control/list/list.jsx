@@ -586,6 +586,13 @@ const css = /* css */ `
     }
   }
 
+  /* The size of a line of items, written on the track when the list first
+     measures one (see measureFirstSize): what a filler drawn before that holds
+     its lines at. Zero on every track until then, so that a list nested in an
+     item of another does not hold its lines at the outer list's. */
+  .navi_list {
+    --x-item-line-size: 0px;
+  }
   /* Virtual scroll fillers — must remain invisible.
      The browser may briefly flash them during scroll before the render window
      updates, so giving them a visible background would cause visual glitches. */
@@ -1287,6 +1294,17 @@ const ListUI = (props) => {
     return { id: itemId, itemId, index: itemIndex };
   };
 
+  // The children say what they stand for while they render (see
+  // listItems.take), and they render after the list: on its first render it
+  // has heard from none of them, and an empty state drawn then would stand in
+  // the first commit next to the items they draw — or hide the list, items
+  // included — under every layout effect measuring it. Unknown until they
+  // have rendered once; the list renders again for it, which it does anyway
+  // when they declared anything.
+  const [childrenDeclared, setChildrenDeclared] = useState(false);
+  useLayoutEffect(() => {
+    setChildrenDeclared(true);
+  }, []);
   const noMatchCount = listItems.noMatchCountSignal.value;
   // What the list stands for, which is not always what it holds: a run saying
   // it covers 60 items is not an empty list while it waits for the first of
@@ -1304,13 +1322,17 @@ const ListUI = (props) => {
   // "remove" mode empties the view; "muted"/"invisible_and_inert" keep items on
   // screen.
   const noVisibleItems =
-    itemCount === 0 || (allNoMatch && searchNoMatchMode === "remove");
+    childrenDeclared &&
+    (itemCount === 0 || (allNoMatch && searchNoMatchMode === "remove"));
   // Which fallback message actually renders (mirrors SearchFallback / Fallback
   // below): during a search an empty/no-match result is a "no match" state (the
   // search fallback), otherwise an empty list is the "empty" state.
   const searchFallbackShown =
-    (allNoMatch || (searching && itemCount === 0)) && !searchFallbackDisabled;
-  const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
+    childrenDeclared &&
+    (allNoMatch || (searching && itemCount === 0)) &&
+    !searchFallbackDisabled;
+  const emptyFallbackShown =
+    childrenDeclared && !searching && itemCount === 0 && !fallbackDisabled;
   // A loading state only holds the list on screen when it has something to
   // draw. A count of 0 (or no loadingFallback at all) says the list is known to
   // be empty before the response arrives, so the empty state can already be
@@ -1792,6 +1814,7 @@ const useListScrollSync = ({
     virtualItemSize,
     horizontal,
     {
+      listItems,
       inLines: Boolean(columns),
       windowLeavesItemsOut,
       scrolledWanted,
@@ -3881,10 +3904,10 @@ const useStuckWindowWarning = ({
 }) => {
   const doneRef = useRef(false);
   // Asked at each commit, not subscribed to: this reports a geometry, and a
-  // commit is when there is a new one to look at. Read on the next frame: the
-  // fillers commit the room of the items the window leaves out in a commit of
-  // their own, after the list's (see VirtualFiller), and read before that, a
-  // list leaving a hundred items out stands at the height of the few it draws.
+  // commit is when there is a new one to look at. Read on the next frame, once
+  // what a commit of the list causes below it has landed — the fillers taking
+  // a new item size in a commit of their own (see VirtualFiller), the items a
+  // run takes in: read before, the list can stand short of the room it holds.
   useLayoutEffect(() => {
     if (!import.meta.dev || doneRef.current) {
       return undefined;
@@ -5273,7 +5296,13 @@ const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
   horizontal,
-  { inLines, windowLeavesItemsOut, scrolledWanted, beforeSizeChange },
+  {
+    listItems,
+    inLines,
+    windowLeavesItemsOut,
+    scrolledWanted,
+    beforeSizeChange,
+  },
 ) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -5343,31 +5372,55 @@ const useVirtualItemSizeSignal = (
       feedSample(measure);
     }
   }
-  useLayoutEffect(() => {
+  // Measured only for what reads the size: the fillers of items held off
+  // screen, and a list held somewhere (placeWhereHeld) before it knows where
+  // that is. A list drawing every item it has, opening at its start, would
+  // pay a layout in every commit for a number nobody reads.
+  const firstSizeWanted = () => {
     if (virtualSizeSignal.peek() !== 0) {
-      return undefined;
+      return false;
     }
-    // Measured only for what reads the size: the fillers of items held off
-    // screen, and a list held somewhere (placeWhereHeld) before it knows where
-    // that is. A list drawing every item it has, opening at its start, would
-    // pay a layout in every commit for a number nobody reads.
-    const sizeRead =
+    return (
       windowLeavesItemsOut() ||
-      (scrolledWanted !== undefined && scrolledWanted !== "start");
-    if (!sizeRead) {
+      (scrolledWanted !== undefined && scrolledWanted !== "start")
+    );
+  };
+  // Fillers drawn before there was a size hold their lines at
+  // --x-item-line-size (see VirtualFiller): written with the size, it gives
+  // them their room at once, ahead of their next render.
+  const takeFirstSize = (listEl, size) => {
+    listEl.style.setProperty("--x-item-line-size", `${size}px`);
+    virtualSizeSignal.value = size;
+  };
+  // The first size, on the first items drawn. Asked after each commit of the
+  // list until there is one, and first by a filler drawn without it, whose
+  // layout effect runs ahead of the list's: those read the list's geometry,
+  // which is then already the one holding the room of the items left out.
+  listItems.measureFirstSize = () => {
+    if (!firstSizeWanted()) {
+      return;
+    }
+    const listEl = ref.current?.querySelector(".navi_list");
+    if (!listEl) {
+      return;
+    }
+    const measure = measureItemSize(listEl, horizontal, inLines);
+    if (!measure) {
+      return;
+    }
+    const samples = samplesRef.current;
+    samples.sum = measure.size * measure.lineCount;
+    samples.count = measure.lineCount;
+    samples.fromSkeletons = measure.fromSkeletons;
+    takeFirstSize(listEl, measure.size);
+  };
+  useLayoutEffect(() => {
+    listItems.measureFirstSize();
+    if (!firstSizeWanted()) {
       return undefined;
     }
     const listEl = ref.current?.querySelector(".navi_list");
     if (!listEl) {
-      return undefined;
-    }
-    const measure = measureItemSize(listEl, horizontal, inLines);
-    if (measure) {
-      const samples = samplesRef.current;
-      samples.sum = measure.size * measure.lineCount;
-      samples.count = measure.lineCount;
-      samples.fromSkeletons = measure.fromSkeletons;
-      virtualSizeSignal.value = measure.size;
       return undefined;
     }
     const firstListItem =
@@ -5388,7 +5441,7 @@ const useVirtualItemSizeSignal = (
       const rect = firstListItem.getBoundingClientRect();
       const measuredSize = horizontal ? rect.width : rect.height;
       if (measuredSize > 0) {
-        virtualSizeSignal.value = measuredSize;
+        takeFirstSize(listEl, measuredSize);
         observer.disconnect();
       }
     });
@@ -5551,24 +5604,43 @@ const VirtualFiller = ({
     Math.ceil(itemCount / itemsPerLine) * lineSize -
     (itemsKnown * lineSize) / itemsPerLine +
     roomKnown;
+  // Drawn before there is an item size, the lines are held at the one the list
+  // writes when it first measures (see measureFirstSize), asked for by the
+  // layout effect below: the first filler's to run comes ahead of the other
+  // fillers' and of the list's own, so all of those read a list holding the
+  // room of the items it leaves out from its first commit, not one standing at
+  // the height of the few it draws.
+  const linesUnsized = lineSize
+    ? 0
+    : Math.ceil(itemCount / itemsPerLine) - itemsKnown / itemsPerLine;
   // A filler resizing moves what stands below it — the items on screen, when it
   // holds the room of items above them — and it resizes in a commit of its own
-  // when the item size settles after the list has rendered: up to that commit
-  // the list stands at the height of the items it draws, so it takes its
+  // when the item size changes after the list has rendered: the list takes its
   // geometry again from here (see fillerResized).
   useLayoutEffect(() => {
+    if (!lineSize) {
+      listItems.measureFirstSize();
+    }
     listItems.fillerResized();
   }, [sizeToFill]);
-  if (!sizeToFill) {
+  if (!sizeToFill && !(linesUnsized > 0)) {
     return null;
   }
+  const lineShare = lineSize
+    ? `${lineSize / itemsPerLine}px`
+    : `calc(var(--x-item-line-size) / ${itemsPerLine})`;
   return (
     <li
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler={edge}
       aria-hidden
-      style={{ "--size-to-fill": `${sizeToFill}px` }}
+      style={{
+        "--size-to-fill":
+          linesUnsized > 0
+            ? `calc(${linesUnsized} * var(--x-item-line-size) + ${roomKnown}px)`
+            : `${sizeToFill}px`,
+      }}
     >
       {findChunks &&
         findChunks.map((chunk) => (
@@ -5581,7 +5653,8 @@ const VirtualFiller = ({
             hidden="until-found"
             style={{
               "--x-find-line-count": chunk.to - chunk.from,
-              "--x-find-line-size": `${chunk.room === undefined ? lineSize / itemsPerLine : chunk.room}px`,
+              "--x-find-line-size":
+                chunk.room === undefined ? lineShare : `${chunk.room}px`,
             }}
           >
             {chunk.text}
