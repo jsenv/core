@@ -32,9 +32,12 @@
  * back to the same way, and the browser never knew it was a scrollport at
  * all: those say where they are by name (rememberScrollerPosition), under the
  * same URL and for the same session, and ask it back when they mount again
- * (recallScrollerPosition). What a push means for them is what it means for
- * the document — an arrival opens at the top (see startAtTop): the page
- * arrived at has its named positions dropped before its lists render, so a
+ * (recallScrollerPosition) — or, still mounted, when the address they are
+ * shown under is returned to (recallScrollerPositionOnReturn): where a
+ * scroller opens is its address's, not its mount's. What a push means for
+ * them is what it means for the document — an arrival opens at the top (see
+ * startAtTop): the page arrived at has its named positions dropped before its
+ * lists render, so a
  * list recalls only on the way back — or on a push that says it is one (see
  * link_return.js). A scroller that outlives a navigation —
  * its page stays under a new address, or it lives outside the page that
@@ -68,7 +71,7 @@
  * route_travel.jsx).
  */
 
-import { effect } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import { useLayoutEffect } from "preact/hooks";
 
 import { COMPLETED, IDLE, RUNNING } from "../../action/action_run_states.js";
@@ -694,6 +697,7 @@ const restoreScrollPosition = (url) => {
 export const restoreScrollPositionOnReturn = (url) => {
   pendingRestoration = null;
   const href = keyOf(url);
+  scrollerReturnSignal.value = { url: href };
   carryScrollersOnceRendered(href);
   const position = positionByUrl.get(href);
   if (!position) {
@@ -886,6 +890,33 @@ export const recallScrollerPosition = (name) => {
     return undefined;
   }
   return positionByName.get(name);
+};
+
+// A return to an address reaches the scrollers still mounted there too: a page
+// kept under a search param that went and came back (`?list=b`, then back), a
+// sidebar kept by every page. Each goes back where it was under that address,
+// as one mounting there would (recallScrollerPosition) — where it opens is the
+// address's, not the mount's. A new value per return, read by the scrollers
+// that remember, so each re-renders once for it.
+export const scrollerReturnSignal = signal(null);
+// What `name` kept under the address returned to, when `scrollerReturn` is the
+// return that put it on screen — a later navigation shows another address, and
+// is no return. Taken back, the position is said under that address again: the
+// one the scroller said under the address it leaves is not carried over it
+// (see carryScrollersOnceRendered).
+export const recallScrollerPositionOnReturn = (name, scrollerReturn) => {
+  if (!scrollerReturn) {
+    return undefined;
+  }
+  const url = readShownUrl();
+  if (scrollerReturn.url !== url) {
+    return undefined;
+  }
+  const position = recallScrollerPosition(name);
+  if (position !== undefined) {
+    saidByScrollerName.set(name, { url, position });
+  }
+  return position;
 };
 
 // Said by a scroller sent back to its start while it stays mounted: where it

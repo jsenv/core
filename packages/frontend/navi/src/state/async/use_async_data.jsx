@@ -35,11 +35,13 @@ import { createAction } from "../../action/actions.js";
 import { prerunUnwatched, runUnwatched } from "../../action/run_unwatched.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { documentUrlSignal } from "../../nav/browser_integration/document_url_signal.js";
+import { suspendScrollRecording } from "../../nav/browser_integration/scroll_restoration.js";
 import {
   observeRouteRender,
   publishRouteRender,
 } from "../../nav/route_render.js";
 import { RoutePageContext } from "../../nav/route_page_context.js";
+import { createLoadingPark, LoadingParkContext } from "./loading_park.js";
 import { usePromiseAsyncData } from "./use_promise_async_data.js";
 
 /**
@@ -73,10 +75,12 @@ import { usePromiseAsyncData } from "./use_promise_async_data.js";
  *
  * When `loading` is not set (default), the component suspends until data is
  * ready, so `data` is always defined when the component renders and `loading`
- * is always `false`. With `loading: true` the component never suspends: every
- * state — running, settling, params nobody has started yet, a failure whose
- * message was dismissed — comes back as a value, so the subtree it draws is
- * never swapped for the boundary above and remounted.
+ * is always `false`. Ready means an answer of its own: a rerun of what the
+ * action already answered for these params keeps drawing that answer, a first
+ * load and new params suspend. With `loading: true` the component never
+ * suspends: every state — running, settling, params nobody has started yet, a
+ * failure whose message was dismissed — comes back as a value, so the subtree
+ * it draws is never parked under the boundary above (see docs/data_states.md).
  *
  * When `error` is not set (default), any action failure causes the component
  * to throw, so `error` is always `undefined` when the component renders. With
@@ -449,6 +453,7 @@ const useActionAsyncData = (
   };
   try {
     const read = readActionAsyncData(action, {
+      instance,
       runningState,
       loadingEffect,
       errorEffect,
@@ -472,6 +477,7 @@ const useActionAsyncData = (
 const readActionAsyncData = (
   action,
   {
+    instance,
     runningState,
     loadingEffect,
     errorEffect,
@@ -504,6 +510,24 @@ const readActionAsyncData = (
   }
   if (runningState === COMPLETED) {
     return [action.dataSignal.peek(), false, undefined];
+  }
+  // Asked again for what the instance has already answered — a refresh, a
+  // dependency asking again, `.rerun()`: a wait handed to <Loading> would take
+  // the subtree out of the document (see loading_park.js) for an answer that
+  // only replaces the one on screen. So the answer held stays drawn, as for a
+  // poll. Not what stands in for an answer — inherited from other params,
+  // provisional, kept from the previous document: a first load and new params
+  // still wait (see hasAnswered). A component drawing its own wait still says
+  // `loading`.
+  if (
+    loadingEffect !== "use" &&
+    (runningState === RUNNING || runningState === IDLE) &&
+    getActionPrivateProperties(instance).hasAnswered()
+  ) {
+    const dataHeld = action.dataSignal.peek();
+    if (dataHeld !== undefined) {
+      return [dataHeld, false, undefined];
+    }
   }
   // Called off (abort(), a route left with nothing else asking for it): nothing
   // is on its way until something runs it again. What it held stays drawn and
@@ -597,15 +621,16 @@ const readActionAsyncData = (
   // `loading: true` says the component draws its own wait, so this hook never
   // suspends: running, or holding params nobody has started yet — a debounced
   // binding that just retargeted, a run this very render is about to issue. Either way what is on screen is not the current answer,
-  // which is what `loading` says. Suspending would not draw a spinner: it swaps
-  // the subtree for the boundary, and everything under it remounts — a dialog
-  // open inside it is then closed, by a hook the caller told to stay out of it.
+  // which is what `loading` says. Suspending would not draw a spinner: it parks
+  // the subtree — out of the document with its state, its effects run again
+  // when it comes back, what lives in the layout lost (see loading_park.js) —
+  // by a hook the caller told to stay out of it.
   if (loadingEffect === "use") {
     return [action.dataSignal.peek(), true, undefined];
   }
 
-  // IDLE, RUNNING, or called off holding nothing, with loadingEffect:
-  // "delegate" — suspend
+  // IDLE or RUNNING with no answer of its own to draw, or called off holding
+  // nothing, with loadingEffect: "delegate" — suspend
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = { reason, action };
   let pendingPromise = actionPendingPromiseWeakMap.get(action);
@@ -737,21 +762,41 @@ export const Loading = ({ children, fallback }) => {
     );
   }
   const loadingRef = useRef({ reason: "idle", action: null });
+  const parentPark = useContext(LoadingParkContext);
+  const [park] = useState(() => createLoadingPark(parentPark));
   return (
     <LoadingContext.Provider value={loadingRef}>
-      <Suspense
-        fallback={
-          <LoadingFallback loadingRef={loadingRef} fallback={fallback} />
-        }
-      >
-        {children}
-      </Suspense>
+      <LoadingParkContext.Provider value={park}>
+        <Suspense
+          fallback={
+            <LoadingFallback
+              loadingRef={loadingRef}
+              park={park}
+              fallback={fallback}
+            />
+          }
+        >
+          {children}
+        </Suspense>
+      </LoadingParkContext.Provider>
     </LoadingContext.Provider>
   );
 };
-const LoadingFallback = ({ loadingRef, fallback }) => {
+const LoadingFallback = ({ loadingRef, park, fallback }) => {
   const [, setTick] = useState(0);
   const { action } = loadingRef.current;
+  // Standing in for the subtree is the park (see loading_park.js). The
+  // document scrolls over this instead of the page: a page taller than the
+  // fallback clamps it, and that clamp is not the reader moving — written down,
+  // the address would come back to it (see suspendScrollRecording).
+  useLayoutEffect(() => {
+    park.park();
+    const resumeScrollRecording = suspendScrollRecording();
+    return () => {
+      park.reveal();
+      resumeScrollRecording();
+    };
+  }, []);
   useEffect(() => {
     if (!action) {
       return undefined;

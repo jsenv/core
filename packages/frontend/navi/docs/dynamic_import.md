@@ -46,10 +46,9 @@ const GamePage = () => {
 ```
 
 Why a branch rather than a `<Loading>` around it: suspending takes the subtree
-away, puts the boundary's fallback in its place, then mounts the page again — a
-cost worth paying when a page already on screen re-reads its data (see
-[data_states.md](./data_states.md)), and worth nothing here, where the page is not
-there yet. `loading: true` never suspends: one component, no wrapper, a pending
+out of the document until the wait is over and draws the boundary's fallback in
+its place (see [data_states.md](./data_states.md)) — the boundary's shape, for a
+page that is not there yet. `loading: true` never suspends: one component, no wrapper, a pending
 screen in the page's own shape, and the failure beside it. What is delegated stays
 delegated — the page's data, read inside `game_page.jsx` with
 `useAsyncData(GAME_PAGE_ACTION)`, still waits in the `<Loading>` written between

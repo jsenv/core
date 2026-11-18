@@ -6,7 +6,7 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { cloneElement, createContext } from "preact";
+import { cloneElement, Component, createContext } from "preact";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 // Imported for its side effect: it is what writes navi-scrolling on whatever
@@ -28,8 +28,11 @@ import {
   forgetScrollerUnlessPageLeft,
   holdDocumentScroll,
   recallScrollerPosition,
+  recallScrollerPositionOnReturn,
   rememberScrollerPosition,
+  scrollerReturnSignal,
 } from "../../nav/browser_integration/scroll_restoration.js";
+import { LoadingParkContext } from "../../state/async/loading_park.js";
 import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { openCallout } from "../rules/callout/callout.js";
@@ -1233,6 +1236,7 @@ const ListUI = (props) => {
     holdAt,
     pendingScrollRef,
     captureAnchor,
+    onListLeave,
   } = useListScrollSync({
     ref,
     listItems,
@@ -1494,9 +1498,22 @@ const ListUI = (props) => {
       >
         {content}
       </ListContent>
+      <ListLeaveWatcher onLeave={onListLeave} />
     </Box>
   );
 };
+// What says a list is gone: its unmount. Not an effect cleanup — a Suspense
+// park runs every cleanup of what it parks, and keeps it (see
+// loading_park.js). A class component's componentWillUnmount runs at the
+// unmount alone: the park unmounts a copy of the tree with no component in it.
+class ListLeaveWatcher extends Component {
+  componentWillUnmount() {
+    this.props.onLeave();
+  }
+  render() {
+    return null;
+  }
+}
 // How many of a list's own items may be acting at once, when the items are what
 // carry the action. Four rather than none: a list is a place where the same
 // gesture is available many times over, and nothing else stops a long one from
@@ -1696,9 +1713,16 @@ const useListScrollSync = ({
   // one kept from the previous visit): followed for as long as nobody has
   // moved the list, and compared by value, since it is said at every render.
   // Nothing to hold it at (a position not saved yet) is not a position: the
-  // list opens where it opens. A `scrollResetKey` that changes sends it back to
-  // its start ("back_to_start", see placeBackAtStart), unless a `scrolled`
-  // changing in the same render says where it goes.
+  // list opens where it opens.
+  //
+  // Where a list remembered under its `id` opens is its address's, not its
+  // mount's: a return to the address it is shown under — the list staying
+  // mounted, its page kept under a search param that went and came back —
+  // holds it where it was there, and so does an `id` that changes (another list
+  // drawn by the same component, see listIdRef). A `scrollResetKey` that
+  // changes sends it back to its start ("back_to_start", see
+  // placeBackAtStart), unless that place says where it goes, or a `scrolled`
+  // changing in the same render does.
   const startPlaceRef = useRef(null);
   // Each place the list is held at anew is said to its runs (see
   // holdArmedSignal). Written during this render too, on purpose: the runs read
@@ -1706,6 +1730,19 @@ const useListScrollSync = ({
   const armHold = () => {
     listItems.holdArmedSignal.value = listItems.holdArmedSignal.peek() + 1;
   };
+  // Where the list was as its effects went down (see the cleanup that sets
+  // it): at its unmount, or at a Suspense park, which keeps the list and runs
+  // every cleanup all the same. Only a park renders the list again, so a render
+  // finding it set is the reveal, once the boundary says the park is over —
+  // the list renders while parked too, signals moving under it.
+  const parkedPlaceRef = useRef(null);
+  const loadingPark = useContext(LoadingParkContext);
+  const routePage = useContext(RoutePageContext);
+  // Read through a ref by what the effects installed once call (see
+  // reportPosition): the `id` can change while the list stays mounted.
+  const listIdRef = useRef(listId);
+  listIdRef.current = listId;
+  const scrollerReturn = rememberScroll ? scrollerReturnSignal.value : null;
   if (startPlaceRef.current === null) {
     startPlaceRef.current = {
       userTookOver: false,
@@ -1713,6 +1750,8 @@ const useListScrollSync = ({
       scrolled,
       defaultScrolled,
       scrollResetKey,
+      listId,
+      scrollerReturn,
       way: null,
       arrived: false,
       // Whether the hold's writes glide (--navi-scroll:smooth).
@@ -1722,20 +1761,63 @@ const useListScrollSync = ({
     };
   } else {
     const place = startPlaceRef.current;
-    if (!compareTwoJsValues(place.scrollResetKey, scrollResetKey)) {
-      place.scrollResetKey = scrollResetKey;
-      place.wanted = "back_to_start";
+    const holdAgainAt = (wanted) => {
+      place.wanted = wanted;
       place.userTookOver = false;
       place.way = null;
       place.arrived = false;
       place.smooth = false;
       place.glide = null;
       armHold();
+    };
+    const parked = parkedPlaceRef.current;
+    if (parked && !(loadingPark && loadingPark.isParked())) {
+      // The reveal: the scroller the list comes back in is not where the
+      // reader left it — an own box returns at its start, the document was
+      // clamped to the fallback. A return to a known place, held like one.
+      parkedPlaceRef.current = null;
+      if (parked.wanted !== null) {
+        holdAgainAt(parked.wanted);
+      }
+    }
+    let keptPlace;
+    if (place.scrollerReturn !== scrollerReturn) {
+      place.scrollerReturn = scrollerReturn;
+      // Not for a list on a page being left (kept hidden while its route
+      // transition plays): the address returned to is not where it is shown.
+      const pageLeft =
+        routePage !== null &&
+        (routePage.hasLeft() || routePage.leavingSignal.peek());
+      if (!pageLeft) {
+        keptPlace = recallScrollerPositionOnReturn(listId, scrollerReturn);
+      }
+    }
+    if (place.listId !== listId) {
+      const listIdLeft = place.listId;
+      place.listId = listId;
+      if (rememberScroll) {
+        // The list named before leaves, the one named now arrives: what an
+        // unmount and a mount would say (see ListLeaveWatcher).
+        forgetScrollerUnlessPageLeft(listIdLeft);
+        keptPlace = recallScrollerPosition(listId);
+      }
+    }
+    // A list held by its caller is where the caller says.
+    const heldAtKeptPlace =
+      keptPlace !== undefined && (scrolled === undefined || scrolled === null);
+    if (heldAtKeptPlace) {
+      holdAgainAt(keptPlace);
+    }
+    if (!compareTwoJsValues(place.scrollResetKey, scrollResetKey)) {
+      place.scrollResetKey = scrollResetKey;
       // What the list said it was reading, and what a search would give back,
       // are places in what it no longer shows.
       savedScrollRef.current = null;
-      if (rememberScroll) {
-        forgetScrollerPosition(listId);
+      if (!heldAtKeptPlace) {
+        holdAgainAt("back_to_start");
+        if (rememberScroll) {
+          forgetScrollerPosition(listId);
+        }
       }
     }
     if (place.scrolled !== scrolled) {
@@ -2977,7 +3059,6 @@ const useListScrollSync = ({
   // this list's to say, measured on the item, not the url's offset in pixels
   // (see holdDocumentScroll). The hold read again: a layout effect of this
   // commit may have let go already (see placeWhereHeld).
-  const routePage = useContext(RoutePageContext);
   useLayoutEffect(() => {
     if (
       !heldSomewhere ||
@@ -3012,6 +3093,12 @@ const useListScrollSync = ({
       }
     });
   }, []);
+  // A parked list is out of the document the same way, until its reveal (see
+  // parkedPlaceRef): a list rendered while parked installs its listeners on
+  // the scroller again, and the document goes on scrolling — clamped to the
+  // fallback, for one.
+  const outOfDocument = () =>
+    pageLeftRef.current || parkedPlaceRef.current !== null;
   // What to do when the list's own geometry moves under it, kept fresh for the
   // observer below (which is installed once). A held list is placed inside the
   // resize delivery, so the browser paints it where it lands; answers whether
@@ -3080,8 +3167,12 @@ const useListScrollSync = ({
   onScrolledChangeRef.current = onScrolledChange;
   const rememberScrollRef = useRef(false);
   rememberScrollRef.current = rememberScroll;
-  // Where the list was at the last thing that moved it. Kept whether anyone
-  // asked for it or not: it is what a resize needs to put things back.
+  // Where the last scroll left the list — the reader's, or one the list wrote.
+  // Kept whether anyone asked for it or not: it is what a resize puts back (see
+  // putTopItemBack), and where a park holds the list again. Not what the list
+  // last said (announcedRef): that is read again whenever the screen is better
+  // known, a resize included — and a reading taken after a resize is the very
+  // position the resize moved the list to.
   const positionRef = useRef(null);
   const captureListAnchor = (countVisible) =>
     captureScrollAnchor({
@@ -3128,11 +3219,19 @@ const useListScrollSync = ({
     if (!position) {
       if (!ifChanged) {
         reportOwedRef.current = true;
+        // The place the scroll left has nothing to read it from yet: the
+        // previous one is a place it left.
+        positionRef.current = null;
       }
       return;
     }
+    // A scroll, or the re-read it was owed: where the scroll left the list. Any
+    // other re-read is the same scroll said better, or something else moving
+    // the screen — a resize, which is put back from the place before it.
+    if (!ifChanged || reportOwedRef.current) {
+      positionRef.current = position;
+    }
     reportOwedRef.current = false;
-    positionRef.current = position;
     if (!remember && !onScrolledChange) {
       return;
     }
@@ -3146,7 +3245,7 @@ const useListScrollSync = ({
     }
     announcedRef.current = scrolledNow;
     if (remember) {
-      rememberScrollerPosition(listId, scrolledNow);
+      rememberScrollerPosition(listIdRef.current, scrolledNow);
     }
     if (onScrolledChange) {
       onScrolledChange(scrolledNow);
@@ -3168,17 +3267,43 @@ const useListScrollSync = ({
     }
     const position = captureListAnchor(true);
     if (position) {
-      rememberScrollerPosition(listId, toScrolledPosition(position));
+      rememberScrollerPosition(listIdRef.current, toScrolledPosition(position));
     }
   };
-  // Leaving: with its page, or alone (see forgetScrollerUnlessPageLeft).
+  // The list's effects going down: at its unmount, or at a Suspense park, which
+  // keeps the list and runs every cleanup all the same (see loading_park.js).
+  // Nothing of the list can be measured out of the document, so it lets go of
+  // whatever held it, says nothing until it is placed again, and keeps where it
+  // was — the place it is held at again at the reveal (see parkedPlaceRef).
+  // Leaving is the unmount's alone to say (see ListLeaveWatcher): a park
+  // forgets nothing.
   useLayoutEffect(() => {
     return () => {
-      if (rememberScrollRef.current) {
-        forgetScrollerUnlessPageLeft(listId);
+      const place = startPlaceRef.current;
+      const held =
+        !place.userTookOver &&
+        place.wanted !== "start" &&
+        place.wanted !== undefined;
+      const position = positionRef.current;
+      let wanted = null;
+      if (held) {
+        wanted = place.wanted;
+      } else if (position) {
+        wanted = toScrolledPosition(position);
       }
+      parkedPlaceRef.current = { wanted };
+      announcedRef.current = null;
+      reportOwedRef.current = false;
+      letGo();
     };
   }, []);
+  // Said by the list as it unmounts (see ListLeaveWatcher): it leaves with its
+  // page, or alone (see forgetScrollerUnlessPageLeft).
+  const onListLeave = () => {
+    if (rememberScrollRef.current) {
+      forgetScrollerUnlessPageLeft(listIdRef.current);
+    }
+  };
   useWarnSharedRememberedId(listId, rememberScroll, ref);
 
   // A list that gets narrower rewraps every item it holds, so everything below
@@ -3205,7 +3330,7 @@ const useListScrollSync = ({
         const placed = onGeometryChangeRef.current();
         cancelAnimationFrame(itemsResizedFrame);
         itemsResizedFrame = requestAnimationFrame(() => {
-          if (pageLeftRef.current) {
+          if (outOfDocument()) {
             return;
           }
           onItemsResizedRef.current();
@@ -3252,7 +3377,7 @@ const useListScrollSync = ({
       }
     };
     const observer = new ResizeObserver((entries) => {
-      if (pageLeftRef.current) {
+      if (outOfDocument()) {
         return;
       }
       // A box that grows may be a box that starts to scroll — the scroller is
@@ -3260,8 +3385,10 @@ const useListScrollSync = ({
       // list which has outgrown a bounded ancestor stops holding on to the
       // page.
       resolveScroller();
-      rememberPosition();
+      // Put back first, from where the last scroll left the list; what is
+      // kept and said after is the place it is put back at (see positionRef).
       putTopItemBack(entries);
+      rememberPosition();
       // Once the top item is back where it was: that is the place a line of
       // another length has to keep, and putting it back drops any anchor
       // captured before.
@@ -3720,7 +3847,7 @@ const useListScrollSync = ({
     }
     const scrollerEl = getScroller();
     const onScroll = () => {
-      if (pageLeftRef.current) {
+      if (outOfDocument()) {
         return;
       }
       // Which way the user is going, read before the position is stored: what
@@ -3839,6 +3966,7 @@ const useListScrollSync = ({
     scrollToItem,
     holdAt,
     captureAnchor,
+    onListLeave,
   };
 };
 // The band of the scroller the user actually sees. A page-level scroller is

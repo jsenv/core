@@ -26,8 +26,8 @@ whether a missing list is a skeleton, a sentence or an illustration.
 ## Asking for a state means receiving it as a value
 
 Without options, `useAsyncData` **delegates**: it suspends while the action
-runs — a rerun over data already held included — and throws when the action
-failed, so the states are drawn by the
+runs with no answer of its own for these params — a first load, params that
+changed — and throws when the action failed, so the states are drawn by the
 `<Loading>` and `<ErrorBoundary>` above rather than by the component. Each
 option turns one of those from something done _to_ the component into a value
 the component reads:
@@ -50,13 +50,25 @@ suspends.** Not while the action runs, not while a debounced binding is
 settling, not while it holds params nobody has started yet, not after a failure
 whose message was dismissed. Every one of those comes back as a value.
 
-That is what keeps the component alive. Suspending does not draw a spinner over
-a subtree: it takes the subtree away and puts the boundary's fallback in its
-place, and everything under it is remounted when it comes back — a dialog open
-inside it leaves and is reopened, a scroll position is lost, half-typed text is
-gone, and the retry button the component was offering disappears with it.
+That is what keeps the component on screen. Suspending does not draw a spinner
+over a subtree: it parks it — takes it out of the document, with the boundary's
+fallback in its place until the wait is over. What is parked keeps its state
+(half-typed text is still there when it comes back) and runs its effects again
+when it comes back; what lives in the layout does not make the trip — a scroll
+box comes back at its start, the document is clamped to the fallback, focus is
+lost, a dialog open inside it leaves and is reopened. navi gives back what it
+owns: a `List` comes back where it was, and the position the document keeps for
+the address is not overwritten meanwhile, so a return lands where the page was
+read. Until then the retry button the component was offering is gone with it.
 `error: true` says the same thing about failure: the component stays, so it is
 still there to offer the way out.
+
+A rerun of what the action already answered — the app coming back to the
+foreground, a dependency asking again, `.rerun()` — is not a wait to delegate:
+the answer held stays drawn while the new one is on its way, the way a poll's
+rerun does. What only stands in for an answer — a value inherited from other
+params, a provisional one, one kept from the previous document — is not one,
+and still waits.
 
 A component that delegates nothing needs no `<Loading>` above it. One that
 delegates its wait does, since that is where the suspension lands, and navi says

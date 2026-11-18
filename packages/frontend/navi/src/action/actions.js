@@ -1384,6 +1384,13 @@ export const createAction = (callback, rootOptions = {}) => {
       // going until its callback settles, and must find nothing of the
       // instance to write into by then (see settleCalledOff).
       let currentRun = null;
+      // Whether what the instance holds is its own answer to its params: set
+      // when a run completes, kept while it is asked again (a rerun keeps the
+      // value), dropped by the reset that drops the value. What stands in for
+      // an answer — a value inherited from other params, a provisional one, one
+      // kept from the previous document — is set before any run completes, and
+      // is not one (see readActionAsyncData).
+      let answered = false;
 
       const performRun = (runParams) => {
         const {
@@ -1526,6 +1533,7 @@ export const createAction = (callback, rootOptions = {}) => {
               : runResult;
             errorSignal.value = undefined;
             valueSignal.value = value;
+            answered = true;
             runningStateSignal.value = COMPLETED;
             const data = dataSignal.value;
             if (outputSignal) {
@@ -1667,6 +1675,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (!willRunOrPrerun) {
             errorSignal.value = undefined;
             valueSignal.value = valueInitial;
+            answered = false;
             if (outputSignal) {
               outputSignal.value = undefined;
             }
@@ -1684,6 +1693,7 @@ export const createAction = (callback, rootOptions = {}) => {
         // Whether the last run answered with a promise, written by
         // updateActions: the tense a run joining this instance answers in.
         answeredAsync: false,
+        hasAnswered: () => answered,
 
         performRun,
         performReset,

@@ -127,7 +127,10 @@ paint. A `defaultScrolled` that changes before anyone has moved the list is
 followed — a place read from an answer that refreshes (yesterday's "today", then
 today's) — and it is compared by value, so it can be computed at every render. A list with an `id` also **comes back where it was** when its screen is
 left and come back to, or the page reloaded, the way the page does (its `id`
-must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-list));
+must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-list)):
+where it opens is the address's, not the mount's, so a list that stayed mounted
+— its page kept under a search param that went and came back — goes back
+where it was under the address returned to as well.
 **`scrollResetOnNavigation`** opts out. A push to its screen is an arrival and
 forgets it — so is a document loaded fresh at its address, typed or reached from
 outside the app, where only a reload or a back/forward load finds it again —
@@ -140,6 +143,13 @@ answers is another matter
 opens on an item places the document itself: the offset the page kept for its url
 is not put back over it — the items held off screen are fillers of an estimated
 height, and the same pixels now fall on other items.
+
+A list parked by the `<Loading>` above it — a read under the same boundary
+waiting for its first answer, see
+[data_states.md](./data_states.md#asking-for-a-state-means-receiving-it-as-a-value)
+— comes back where it was: its box came back at its start, the document was
+clamped to the fallback, and the list is held again on the item it was showing,
+as on a return. Meanwhile it neither says nor keeps where it is.
 
 ### Moving the list on a press
 
@@ -242,15 +252,16 @@ When the value changes after mount (compared by value, so an array can be writte
 at every render), the list goes back to its start in the box `scroller` names,
 before the paint, and stays there while answers land, until the user reaches for
 it. Its window moves in the same render: nothing is drawn or fetched at the place
-it leaves. Mounting is not a change, so the list still comes back where it was
-left.
+it leaves. Coming back is not a change: a list mounting, or still mounted when
+the address it was left at is returned to, comes back where it was there.
 
 - **Its start is what is brought back, never sent forward.** A list further down a
   box or a page that also shows what stands above it does not move when its start
   is in view: the picker above it stays on screen.
 - **The position kept under its `id`** is dropped for the address shown, so a
   return finds the list at its start. A key that is also a search param changes
-  the address: the address left keeps its position, for a return to it.
+  the address: the address left keeps its position, and a return to it — back
+  to the previous key — brings the list there rather than to its start.
 
 ### A list that comes back: one `id`, one list
 
@@ -282,7 +293,10 @@ So:
 
 Not a clash: a page rendered by the same element on both sides — one route whose
 params change (`/threads/1` to `/threads/2`), two routes with one `element` — is
-carried over, and its list is one list moving from one url to the next.
+carried over, and its list is one list moving from one url to the next. Its `id`
+may follow the page (`partners_list`, `adversaries_list`): the list named before
+is left, and the one named now opens where it was left under the address shown,
+as it would mounting there.
 
 ### A search moves the list, and gives it back
 
