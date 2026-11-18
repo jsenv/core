@@ -155,6 +155,7 @@ import {
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 import {
+  hurryPictures,
   viewTransitionAnimations,
   walkPicturesHome,
   walkPicturesOn,
@@ -1531,7 +1532,10 @@ observeTraversalAsked((details) => {
 });
 observeAfterRouting(() => {
   const request = layerRequest(navigationRequest, navigationReplay);
-  const url = navigationUrl;
+  // Where the navigation landed: where it was going, or further when a
+  // navigation asked from inside its routing took it there — a param put back,
+  // a state written in reaction to the arrival (see announceRouting).
+  const url = documentUrlSignal.peek();
   const fromUrl = navigationFromUrl;
   const fromDepth = navigationFromDepth;
   const type = navigationType;
@@ -1604,12 +1608,12 @@ const recordCrossing = ({ url, fromDepth, decision }) => {
   if (!decision || fromDepth === undefined) {
     return;
   }
-  const to = absoluteUrl(url);
-  if (!to) {
-    return;
-  }
-  if (documentUrlSignal.peek() !== to) {
-    // Superseded before it landed: the entry now current is another one's.
+  const state = documentStateSignal.peek();
+  if (navDepthOf(state) !== fromDepth + 1) {
+    // A push asked from inside this one's routing stacked an entry of its own
+    // (see announceRouting): the entry this push created is behind it now,
+    // and only the current one can be written. Named by its depth rather than
+    // its url, which a param put back on the same entry changes.
     return;
   }
   const crossing = { fromDepth };
@@ -1622,8 +1626,7 @@ const recordCrossing = ({ url, fromDepth, decision }) => {
   if (decision.duration !== undefined) {
     crossing.duration = decision.duration;
   }
-  const state = documentStateSignal.peek();
-  navTo(to, {
+  navTo(url, {
     replace: true,
     state: { ...(state || {}), [CROSSING_STATE_KEY]: crossing },
   });
@@ -1698,7 +1701,6 @@ let currentTransition = null;
 
 const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   navigationAnimated = true;
-  const documentElement = document.documentElement;
   navigationDecision = { type, direction, duration };
   // The two ends of the crossing, kept for the length of the movement: they are
   // what lets the navigation after this one be recognised as its way back (see
@@ -1712,8 +1714,75 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     releaseReverting: null,
     duration: undefined,
     restoreDuration: null,
-    releaseLeavingPages: null,
+    // The pages kept hidden until the movement is over (see keepLeavingPages
+    // in route.jsx): its own, and those of a movement it took over from.
+    leavingPagesReleases: [],
+    // A movement waiting for this one's pictures to land before it starts.
+    next: null,
   };
+  const releaseRendering = takeoverRoutingRenderingHold();
+  // Armed from here rather than from inside the update callback: the browser
+  // calls that callback a frame later, and a navigation that has already
+  // been decided renders its page in between — a wait armed then waits for
+  // something that has already happened.
+  const renderWait = armRouteRenderWait();
+  const play = () => {
+    playTransition(transition, {
+      page,
+      url,
+      direction,
+      type,
+      duration,
+      releaseRendering,
+      renderWait,
+    });
+  };
+  const running = currentTransition;
+  if (!running) {
+    play();
+    return;
+  }
+  // A movement already waiting on the one on screen is about a navigation
+  // this one has gone past: it is not played at all.
+  if (running.next) {
+    running.next.cancel();
+    running.next = null;
+  }
+  // Starting a view transition skips the one on screen, and its pictures go
+  // at once: the page jumps to where they were going, and the movement after
+  // it opens on that page whole. A press is answered at full strength
+  // instead: the pictures are hurried to where they are going, and this
+  // movement photographs the page once they are there — the page the DOM
+  // shows by then, its own render held until its picture is taken.
+  if (!running.viewTransition || !hurryPictures(viewTransitionAnimations())) {
+    // No picture on screen yet — the movement was asked for a frame ago — or
+    // none walking any more: nothing to see jump.
+    play();
+    return;
+  }
+  if (transition.url && transition.url === running.url) {
+    // Back where the pictures on screen are going: once they are there,
+    // there is nothing left to move.
+    renderWait.stop();
+    releaseRendering();
+    return;
+  }
+  // Kept on the movement on screen, which starts it as it ends (see end).
+  running.next = {
+    transition,
+    play,
+    cancel: () => {
+      renderWait.stop();
+      releaseRendering();
+    },
+  };
+};
+
+const playTransition = (
+  transition,
+  { page, url, direction, type, duration, releaseRendering, renderWait },
+) => {
+  const documentElement = document.documentElement;
   // The document wears one transition at a time, and the one this interrupts
   // ends only after this one has begun — too late to take off what it wears
   // (see end). Taking over therefore starts by taking it off, so that what is
@@ -1781,12 +1850,6 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
       removeTransitionValue(TRANSITION_DURATION_PROPERTY);
     };
   }
-  const releaseRendering = takeoverRoutingRenderingHold();
-  // Armed from here rather than from inside the callback below: the browser
-  // calls that callback a frame later, and a navigation that has already
-  // been decided renders its page in between — a wait armed then waits for
-  // something that has already happened.
-  const renderWait = armRouteRenderWait();
   // What the browser ACTUALLY captured, read once the pictures exist: it is
   // the only place the silent misconfigurations show. They are all about the
   // same thing — a movement playing on pictures that are not the pages.
@@ -1828,7 +1891,7 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
       // The page being left is photographed already: it only has to stay out
       // of the second picture, not be taken down before it (see
       // keepLeavingPages in route.jsx).
-      transition.releaseLeavingPages = keepLeavingPages();
+      transition.leavingPagesReleases.push(keepLeavingPages());
       // Releasing flushes the held render synchronously, so a route that
       // rendered has already resolved the wait by the next line.
       releaseRendering();
@@ -1880,13 +1943,28 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     // document is handed back to the application. Both are idempotent, and
     // the document is handed back only by the LAST transition begun: an
     // earlier one ending late was taken off by the one that replaced it, and
-    // must not strip what that one is wearing.
+    // must not strip what that one is wearing. A movement waiting for these
+    // pictures to land starts here, on a document handed back.
     renderWait.stop();
     releaseRendering();
-    // Taken down once nobody sees it any more.
-    if (transition.releaseLeavingPages) {
-      transition.releaseLeavingPages();
-      transition.releaseLeavingPages = null;
+    const next = transition.next;
+    transition.next = null;
+    const successor = next
+      ? next.transition
+      : currentTransition !== transition
+        ? currentTransition
+        : null;
+    // Taken down once nobody sees them any more — and while another movement
+    // plays, somebody does: taken down now, they would be taken down inside
+    // its update callback, the frozen frame they were kept out of. That one
+    // takes them over, hidden, and takes them down when it is over.
+    const leavingPagesReleases = transition.leavingPagesReleases.splice(0);
+    if (successor) {
+      successor.leavingPagesReleases.push(...leavingPagesReleases);
+    } else {
+      for (const releaseLeavingPages of leavingPagesReleases) {
+        releaseLeavingPages();
+      }
     }
     // The hold a way back took, when it is still standing: the pictures were
     // turned round a second time and played out, or something else took the
@@ -1898,7 +1976,12 @@ const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
     if (currentTransition === transition) {
       currentTransition = null;
       releaseTransitionRoot(transition);
-      routeTransitionPlayingSignal.value = false;
+      if (!next) {
+        routeTransitionPlayingSignal.value = false;
+      }
+    }
+    if (next) {
+      next.play();
     }
   };
   transition.viewTransition = viewTransition;
@@ -1937,7 +2020,9 @@ const releaseTransitionRoot = (transition) => {
  * view_transition_revert.js).
  *
  * Only the exact way back qualifies. Anything else — a third page, a bar entry
- * — is a different crossing, and gets a movement of its own.
+ * — is a different crossing, and gets a movement of its own, once the pictures
+ * on screen have landed (see beginTransition). While they walk home it gets
+ * none: no picture of the page it leaves can be taken (see below).
  */
 const turnRunningTransitionRound = (fromUrl, url) => {
   const running = currentTransition;
@@ -1954,7 +2039,18 @@ const turnRunningTransitionRound = (fromUrl, url) => {
   const isWayInAgain =
     running.walkHome && from === running.fromUrl && to === running.url;
   if (!isWayBack && !isWayInAgain) {
-    return false;
+    if (!running.walkHome) {
+      return false;
+    }
+    // Somewhere else, asked while the pictures walk home. The DOM is held on
+    // the state they walk away from, which neither they nor the address show
+    // any more: a movement photographed from it would open on that page
+    // whole. The state they walk to cannot be drawn either — the address has
+    // moved past it. So they are hurried home, and this navigation lands
+    // under them as they are dropped (see the walk's arrival below): the walk
+    // ends at once, and the page asked for cuts in.
+    hurryPictures(viewTransitionAnimations());
+    return true;
   }
   const animations = viewTransitionAnimations();
   if (isWayInAgain) {
@@ -1966,7 +2062,8 @@ const turnRunningTransitionRound = (fromUrl, url) => {
     // The pages stay held. The pictures are going to the state they were going
     // to all along, which is the one the DOM has held since the way back began
     // — what must not land under them is the render the way back queued. The
-    // hold is given back when the movement ends (see end).
+    // movement's hold is given back when it ends (see end), and this routing's
+    // own share with its routing.
     return true;
   }
   if (!walkPicturesHome(animations, LEAD_NAMES)) {
@@ -1989,8 +2086,14 @@ const turnRunningTransitionRound = (fromUrl, url) => {
   // photograph of it — so a page put back under it while it is still on screen
   // shows on BOTH sides of the movement, and the way back is watched happening
   // to nothing.
-  const releaseRendering = takeoverRoutingRenderingHold();
-  running.releaseReverting = releaseRendering;
+  //
+  // One hold for the movement, taken by its first way back: from then until
+  // the pictures are home the DOM is not what they show, however many times
+  // the door turns them round on the way. A later turn's routing share is a
+  // copy of it, given back with its routing.
+  if (!running.releaseReverting) {
+    running.releaseReverting = takeoverRoutingRenderingHold();
+  }
   whenPicturesArrived(animations).then(() => {
     if (currentTransition !== running || running.walkHome !== walkHome) {
       // Turned round again on the way home, or replaced by another movement
@@ -1998,9 +2101,11 @@ const turnRunningTransitionRound = (fromUrl, url) => {
       return;
     }
     running.walkHome = null;
+    const releaseRendering = running.releaseReverting;
     running.releaseReverting = null;
     // The state goes back UNDER the pictures before they are dropped, so the
-    // two are the same thing at the instant they are swapped.
+    // two are the same thing at the instant they are swapped — or, when the
+    // address went elsewhere on the way, the page it went to cuts in.
     releaseRendering();
     running.viewTransition.skipTransition();
   });

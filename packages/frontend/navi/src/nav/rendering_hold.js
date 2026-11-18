@@ -82,7 +82,8 @@ const drain = (render) => {
 };
 
 const debounceRenderingBefore = options.debounceRendering;
-options.debounceRendering = (render) => {
+const debounceRenderingHeld = (render) => {
+  checkPreactFlags();
   (debounceRenderingBefore || queueMicrotask)(() => {
     if (renderingHold) {
       renderingHold.render = render;
@@ -91,6 +92,7 @@ options.debounceRendering = (render) => {
     drain(render);
   });
 };
+options.debounceRendering = debounceRenderingHeld;
 
 export const holdRendering = () => {
   let hold = renderingHold;
@@ -111,13 +113,29 @@ export const holdRendering = () => {
     }
     renderingHold = null;
     const { render, waiting } = hold;
+    // The render owed is the application's, run here instead of by Preact's
+    // own scheduling: what it throws is reported on its own, as Preact's drain
+    // would have it reported, and not at whoever gave the hold back — a view
+    // transition's update, the end of a navigation. What waits on the hold is
+    // navi's bookkeeping — the scroll a page lands at, the page change said
+    // over (see page_change.js) — and runs whatever the render did.
     if (render) {
-      drain(render);
+      runWithErrorApart(() => drain(render));
     }
     for (const wait of waiting) {
-      wait();
+      runWithErrorApart(wait);
     }
   };
+};
+
+const runWithErrorApart = (callback) => {
+  try {
+    callback();
+  } catch (error) {
+    setTimeout(() => {
+      throw error;
+    });
+  }
 };
 
 // Preact's flags on a component (`_bits`, mangled to `__g`) and the one saying
@@ -128,6 +146,60 @@ export const holdRendering = () => {
 // a flush then draws everything, the arriving page included.
 const COMPONENT_DIRTY = 1 << 3;
 const giveBackNothing = () => {};
+
+// What this module counts on and nothing enforces, checked in dev and said
+// once, rather than found as a page sliding onto itself. First, the flags
+// above, on the application's own preact, which may be newer than the one this
+// was read on: when Preact schedules a drain, a component just asked to render
+// owes one. Read at the first drain scheduled, from the components noted as
+// asked since the last one.
+let preactFlagsChecked = false;
+const checkPreactFlags = import.meta.dev
+  ? () => {
+      if (preactFlagsChecked || componentsAskedToRender.size === 0) {
+        return;
+      }
+      preactFlagsChecked = true;
+      for (const component of componentsAskedToRender) {
+        if (
+          typeof component.__g === "number" &&
+          component.__g & COMPONENT_DIRTY
+        ) {
+          return;
+        }
+      }
+      console.warn(
+        `navi reads two of Preact's internals to keep a route transition's picture honest — a component's flags (\`__g\`) and the one saying a render is owed (1 << 3) — and neither says so on this version of preact. A render asked for synchronously during a navigation (a popup measuring what it mounts) will draw the page arriving before its picture is taken. Check src/constants.js and enqueueRender in preact, and update rendering_hold.js.`,
+      );
+    }
+  : () => {};
+// Second, the drain being this module's to schedule. A `debounceRendering` put
+// in its place while a hold stands takes the drain Preact hands over, and runs
+// it: everything the hold holds is drawn, the page arriving included, before
+// its picture is taken. preact/compat's flushSync does exactly that for the
+// length of its callback.
+let debounceRenderingReplacedSaid = false;
+if (import.meta.dev) {
+  let debounceRenderingInstalled = options.debounceRendering;
+  Object.defineProperty(options, "debounceRendering", {
+    configurable: true,
+    enumerable: true,
+    get: () => debounceRenderingInstalled,
+    set: (debounceRendering) => {
+      if (
+        renderingHold &&
+        debounceRendering !== debounceRenderingHeld &&
+        !debounceRenderingReplacedSaid
+      ) {
+        debounceRenderingReplacedSaid = true;
+        console.warn(
+          `options.debounceRendering was replaced while navi holds the rendering for a route transition's picture (preact/compat's flushSync does this for the length of its callback). A render asked for in there draws the page arriving before its picture is taken, and the movement shows it on both sides. Flush before navigating, not after.`,
+        );
+      }
+      debounceRenderingInstalled = debounceRendering;
+    },
+  });
+}
 
 /**
  * For flushSyncRendering while a hold stands: takes the owed render off every

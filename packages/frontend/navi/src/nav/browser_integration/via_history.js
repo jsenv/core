@@ -19,11 +19,7 @@ import {
   isTargetWriteInProgress,
   rearmUrlTarget,
 } from "../url_target/url_target.js";
-import {
-  publishAfterRouting,
-  publishBeforeRouting,
-  publishTraversalAsked,
-} from "./before_routing.js";
+import { announceRouting, publishTraversalAsked } from "./before_routing.js";
 import {
   applyNavigationToNavDepth,
   canNavBackSignal,
@@ -222,17 +218,18 @@ export const setupBrowserIntegrationViaHistory = ({
     // about to change, and this is the last moment the page still stands as it
     // was. And after, whichever way the change went out — so that whoever took
     // something at the first announcement has a definite place to give it back.
-    publishBeforeRouting({ url, ...options });
-    try {
-      // Every caller below drops this value — a click handler has nothing to do
-      // with what the routing returns — so a rejection here would become an
-      // anonymous unhandled one, pointing at the navigation rather than at what
-      // failed. Taken, and passed to the one place that knows what to do with
-      // an error nobody displays (see run_unwatched.js).
-      return runUnwatched(() => applyRoutingTask(url, options));
-    } finally {
-      publishAfterRouting({ url, ...options });
-    }
+    // A navigation asked from inside this one's routing — a param put back, a
+    // state written in reaction to the arrival — is part of it, and announced
+    // by nobody (see announceRouting).
+    //
+    // Every caller below drops the value — a click handler has nothing to do
+    // with what the routing returns — so a rejection here would become an
+    // anonymous unhandled one, pointing at the navigation rather than at what
+    // failed. Taken, and passed to the one place that knows what to do with an
+    // error nobody displays (see run_unwatched.js).
+    return announceRouting({ url, ...options }, () =>
+      runUnwatched(() => applyRoutingTask(url, options)),
+    );
   };
 
   const applyRoutingTask = (url, options) => {

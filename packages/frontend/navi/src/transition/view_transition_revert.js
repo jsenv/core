@@ -136,6 +136,32 @@ export const walkPicturesOn = (animations, leadNames) => {
   return true;
 };
 
+// A press landing while the pictures still walk: they are sent where they are
+// going in a fifth of the time they have left, compounding press after press
+// up to a pace past which nobody sees the difference (see hurryTravel in
+// slide_container.jsx). Played out fast rather than dropped: dropped, they
+// jump to where they were going.
+const HURRY_FACTOR = 5;
+const HURRY_RATE_MAX = 25;
+
+/**
+ * The pictures, hurried on to wherever they are walking — home or on. Returns
+ * false when none is walking: nothing would ever arrive.
+ */
+export const hurryPictures = (animations) => {
+  let hurried = false;
+  for (const animation of animations) {
+    if (animation.playState !== "running") {
+      continue;
+    }
+    const rate = animation.playbackRate * HURRY_FACTOR;
+    const pace = Math.min(Math.abs(rate), HURRY_RATE_MAX);
+    animation.updatePlaybackRate(rate < 0 ? -pace : pace);
+    hurried = true;
+  }
+  return hurried;
+};
+
 /**
  * When the pictures have arrived, whichever way they were walking. A rejection
  * is an outcome — animations cancelled by a transition that took this one's

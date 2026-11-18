@@ -320,6 +320,13 @@ playing turns that movement round. Only on furniture that stands still: a contro
 travelling with the pages has a rectangle where it will be, not where it is seen
 (navi warns about one inside the area).
 
+Any other navigation landing while a movement plays — two quick backs, a third
+page — does not cut it short: the movement is hurried to where it was going, and
+the next one starts from the page it lands on. While a movement turned round is
+still walking back, there is no page to start from — neither the one it walks
+back to nor the one it walks away from is where the address now is — so it is
+hurried home, and the page asked for then appears without a movement of its own.
+
 A **modal `Dialog` open on a page** is furniture of the same kind: it travels with
 its page, or holds if both states have it. One the navigation itself opens or
 closes — a layer whose `weak` param the link drops, or the back brings back —
@@ -502,7 +509,8 @@ the first frame of the movement. Taking a page down — every hook of every
 component cleaned up — is a large part of it, and the page's picture already
 exists, so it only has to stay out of the second one: a container that changes
 page during the callback keeps the page it was showing, hidden (`display: none`),
-and takes it down once the movement is over.
+and takes it down once the movement is over — or, when another movement takes
+over from that one, once the last of them is over.
 
 What that means for a page and for the application around it:
 

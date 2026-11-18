@@ -44,6 +44,7 @@ import {
   rearmUrlTarget,
 } from "../url_target/url_target.js";
 import {
+  announceRouting,
   publishAfterRouting,
   publishBeforeRouting,
   publishTraversalAsked,
@@ -345,8 +346,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     if (url === urlLeft) {
       return;
     }
-    publishBeforeRouting({ url, navigationType: "replace" });
-    try {
+    announceRouting({ url, navigationType: "replace" }, () => {
       runRouting(url, {
         reason: `navTo called with "${url}"`,
         navigationType: "replace",
@@ -354,9 +354,7 @@ export const setupBrowserIntegrationViaNavigation = ({
         urlLeft,
         stateLeft: getDocumentState(),
       });
-    } finally {
-      publishAfterRouting({ url, navigationType: "replace" });
-    }
+    });
     if (pendingReplaceTimer !== null) {
       clearTimeout(pendingReplaceTimer);
     }
