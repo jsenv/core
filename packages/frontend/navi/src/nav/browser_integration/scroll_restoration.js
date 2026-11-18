@@ -70,6 +70,7 @@ import { useLayoutEffect } from "preact/hooks";
 import { COMPLETED, IDLE, RUNNING } from "../../action/action_run_states.js";
 import { buildDeferredBoxesAbove } from "../../box/mount_after_paint.jsx";
 import { afterPaint } from "../../utils/after_paint.js";
+import { decodeUrlPart } from "../decode_url_part.js";
 import { whenPageRendered } from "../rendering_hold.js";
 import {
   activeRouteActionsSignal,
@@ -111,12 +112,10 @@ const readShownUrl = () => {
 // dropSearchParamsOnce in route.js). Commas stay as written, encoded or not: the
 // routing splits an array on the raw ones (extractSearchParams).
 const reencode = (part) => {
-  try {
-    return encodeURIComponent(decodeURIComponent(part));
-  } catch {
-    // A malformed escape (a `%` alone) is kept as written.
-    return part;
-  }
+  const text = decodeUrlPart(part);
+  // A part naming no text (a `%` alone) is kept as written, as the routing
+  // keeps it.
+  return text === null ? part : encodeURIComponent(text);
 };
 const reencodeSearchPair = (pair) => {
   const eqIndex = pair.indexOf("=");

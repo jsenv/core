@@ -1,8 +1,9 @@
 import { createIterableWeakSet } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
-import { batch, computed, effect, signal, untracked } from "@preact/signals";
+import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { getDebouncedSignal } from "../state/debounce_signal.js";
+import { batchWithEffectErrorsApart } from "../utils/batch_with_effect_errors_apart.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { isSignal } from "../utils/is_signal.js";
 import { createJsValueWeakMap } from "../utils/js_value_weak_map.js";
@@ -2166,34 +2167,11 @@ const isPlainObject = (obj) => {
   );
 };
 
-// Every state write of a run (start, end, failure, abort, reset), batched. At
-// the end of the batch preact runs the effects those writes woke up, anywhere
-// in the app, and rethrows the first one that threw: from there it would fail
-// this run, or leave it RUNNING, or stop the update half way. That throw is
-// the effect's, so it is reported on its own, as action_error_report.js
-// reports an error (thrown from a timer), and the action carries on. What
+// Every state write of a run (start, end, failure, abort, reset), batched. An
+// effect those writes wake up that throws must not fail this run, leave it
+// RUNNING or stop the update half way (see batchWithEffectErrorsApart). What
 // `write` throws (resultToValue, onComplete…) is the run's, and goes on.
-const writeActionState = (write) => {
-  let writeThrew = false;
-  let writeError;
-  try {
-    batch(() => {
-      try {
-        write();
-      } catch (e) {
-        writeThrew = true;
-        writeError = e;
-      }
-    });
-  } catch (effectError) {
-    setTimeout(() => {
-      throw effectError;
-    });
-  }
-  if (writeThrew) {
-    throw writeError;
-  }
-};
+const writeActionState = batchWithEffectErrorsApart;
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {

@@ -945,7 +945,7 @@ const writeOpenedInLandedSignal = (
   }
   const closedValue = readClosedValue(signalValue);
   if (
-    signal.options?.getHistory?.() === "push" &&
+    signal.options?.history === "push" &&
     // Nothing of this document behind: the popup was opened by the url itself
     // (a shared link, a bookmark). navBack would do nothing at all there, so
     // the entry is rewritten in place — the address must not keep saying open
@@ -969,9 +969,7 @@ const writeOpenedInLandedSignal = (
 const NO_DISCARD = () => {};
 // What a popup's `ownSignals` hold means nothing once it is closed: emptied
 // the way its own open state is, `undefined` being a state signal's default
-// and so out of the url. A signal already empty is not written again. One
-// write at a time, not batched: a write's history is read as it is made (see
-// stateSignal's `set`), and a batch would leave each to its state's own.
+// and so out of the url. A signal already empty is not written again.
 const createOwnSignalsDiscard = (ownSignals) => {
   if (!ownSignals || ownSignals.length === 0) {
     return NO_DISCARD;

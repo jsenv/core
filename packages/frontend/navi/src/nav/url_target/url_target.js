@@ -59,6 +59,7 @@ import { observeBeforeRouting } from "../browser_integration/before_routing.js";
 import { documentIsBusySignal } from "../browser_integration/document_loading_signal.js";
 import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
 import { documentLoadIsReturn } from "../browser_integration/scroll_restoration.js";
+import { decodeUrlPart } from "../decode_url_part.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
@@ -208,7 +209,11 @@ const urlToTargetKey = (url) => {
 };
 const urlToTargetId = (url) => {
   const { hash } = new URL(url);
-  return hash ? decodeURIComponent(hash.slice(1)) : "";
+  return hash ? decodeFragment(hash.slice(1)) : "";
+};
+// A fragment naming no text (see decodeUrlPart) is the id as written.
+const decodeFragment = (fragment) => {
+  return decodeUrlPart(fragment) ?? fragment;
 };
 
 // Calls `onSettled` with the element once it can be answered: it exists, it
@@ -415,7 +420,7 @@ const writeTarget = (element) => {
   const entryState = entry ? entry.getState() : undefined;
   const putScrollBack = captureScroll(element);
   const addressFragment = new URL(address).hash.slice(1);
-  const addressTargetId = decodeURIComponent(addressFragment);
+  const addressTargetId = decodeFragment(addressFragment);
 
   let fragmentUrl;
   let silencedElement = null;

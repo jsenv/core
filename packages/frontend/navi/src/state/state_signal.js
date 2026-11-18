@@ -231,6 +231,13 @@ const STATE_SIGNAL_OPTIONS = new Set([
  */
 // The types "" is a value of: an empty text is still a text.
 const TEXT_TYPE_SET = new Set(["string", "email", "url"]);
+// Each state's own write, which says what the write asks of the address (see
+// askOfWrite in stateSignal).
+const writeBySignal = new WeakMap();
+// A write the address itself makes: what it writes is what the address says
+// already, so it is not carried back there.
+const ASK_OF_ADDRESS = { history: "replace" };
+
 export const stateSignal = (defaultValue, options = {}) => {
   const {
     id,
@@ -494,11 +501,28 @@ export const stateSignal = (defaultValue, options = {}) => {
     ),
   );
 
+  const signalProto = Object.getPrototypeOf(preactSignal);
+  const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
+  // What the last write asks of the address, beside the value it wrote: a
+  // history (`set`), a share of a move (writeStatesAsOne), or nothing to write
+  // there at all (ASK_OF_ADDRESS). Kept with the state rather than around the
+  // write: the effect carrying the value to the address (route.js) runs when
+  // the outermost batch ends — inside the write, or after the effect, the
+  // render or the batch that made it — and reads it there. The next write
+  // replaces it, so it never answers for another value.
+  let askOfWrite = null;
+  const write = (newValue, ask) => {
+    askOfWrite = ask;
+    const processedValue = processValue(newValue);
+    // const currentValue = valueDescriptor.get.call(preactSignal);
+    // if (compareTwoJsValues(processedValue, currentValue)) {
+    //   return;
+    // }
+    valueDescriptor.set.call(preactSignal, processedValue);
+  };
   // Override the value setter on the instance to intercept writes and apply processValue.
   // We do this on the instance (not the prototype) so preactSignal remains a real Signal
   // instance — Preact's JSX integration requires instanceof Signal to render signals as children.
-  const signalProto = Object.getPrototypeOf(preactSignal);
-  const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
   Object.defineProperty(preactSignal, "value", {
     get() {
       if (valuesAsIf !== null && valuesAsIf.has(preactSignal)) {
@@ -507,45 +531,41 @@ export const stateSignal = (defaultValue, options = {}) => {
       return valueDescriptor.get.call(preactSignal);
     },
     set(newValue) {
-      const processedValue = processValue(newValue);
-      // const currentValue = valueDescriptor.get.call(preactSignal);
-      // if (compareTwoJsValues(processedValue, currentValue)) {
-      //   return;
-      // }
-      valueDescriptor.set.call(preactSignal, processedValue);
+      write(newValue, null);
     },
     enumerable: true,
     configurable: true,
   });
 
-  // What the write being made right now asks of the history, over what this
-  // state declares. It lives for the length of one assignment: the effect that
-  // writes the url runs synchronously inside it (see route.js), and reads it
-  // there. A write made inside batch() is therefore out of its reach — say the
-  // history on the state itself for those.
-  let historyForCurrentWrite;
   const facadeSignal = preactSignal;
+  writeBySignal.set(facadeSignal, write);
   /**
    * Write the state, saying what this ONE write is worth in the history.
    *
    * The state says which of the two it usually is (`history` above); a writer
    * that knows THIS move is not one of them says so here — a slide reached by
-   * dragging inside a container whose slides are places one came from.
+   * dragging inside a container whose slides are places one came from. Said
+   * from anywhere: an effect, a render, a batch, an action's callback.
    *
    * @param {any} value
    * @param {{history?: "replace"|"push"}} [options]
    */
   facadeSignal.set = (value, { history: historyAsked } = {}) => {
-    if (historyAsked === undefined) {
-      facadeSignal.value = value;
-      return;
+    write(value, historyAsked === undefined ? null : { history: historyAsked });
+  };
+  const takeHistoryOfWrite = () => {
+    if (askOfWrite === null) {
+      return history;
     }
-    historyForCurrentWrite = historyAsked;
-    try {
-      facadeSignal.value = value;
-    } finally {
-      historyForCurrentWrite = undefined;
+    const { move } = askOfWrite;
+    if (!move) {
+      return askOfWrite.history;
     }
+    if (move.taken) {
+      return "replace";
+    }
+    move.taken = true;
+    return move.history;
   };
   facadeSignal.validity = validity;
   facadeSignal.validSignal = computed(() => {
@@ -578,7 +598,8 @@ export const stateSignal = (defaultValue, options = {}) => {
           `[stateSignal:${signalIdString}] becomes undefined, reset to ${defaultValue}`,
         );
       }
-      facadeSignal.value = defaultValue;
+      // The end of the write that emptied the state, asking what it asked.
+      write(defaultValue, askOfWrite);
     });
   }
   dynamic_signal_effect: {
@@ -737,8 +758,12 @@ export const stateSignal = (defaultValue, options = {}) => {
     debug,
     ...options,
     history,
-    getHistory: () =>
-      historyForCurrentWrite || takeHistoryOfWriteAsOne() || history,
+    // What the url write the last write causes is worth in the history: what
+    // that write asked, or what the state declares. A move's push goes to the
+    // first url write of the move, taking it.
+    takeHistoryOfWrite,
+    // Whether the last write is the address's own (see writeStateFromAddress).
+    isWrittenByAddress: () => askOfWrite === ASK_OF_ADDRESS,
     debounceUrl,
   };
   globalSignalRegistry.set(signalIdString, {
@@ -764,32 +789,29 @@ export const stateSignal = (defaultValue, options = {}) => {
 
 // Several states written as one move (see stateSignalGroup): the first url
 // write it causes is worth what the move asks of the history, and the ones
-// after it replace that entry instead of each pushing their own. The url
-// writes run when the batch ends, synchronously, inside this function — a
-// write made inside an outer batch() is out of its reach, as `set` is.
-let writeAsOne = null;
+// after it replace that entry instead of each pushing their own. The move
+// travels with each write, so it holds wherever the writes are made.
 export const writeStatesAsOne = (writes, { history }) => {
-  const writeAsOnePrevious = writeAsOne;
-  writeAsOne = { history, taken: false };
-  try {
-    batch(() => {
-      for (const [stateSignalToWrite, value] of writes) {
+  const move = { history, taken: false };
+  batch(() => {
+    for (const [stateSignalToWrite, value] of writes) {
+      const writeState = writeBySignal.get(stateSignalToWrite);
+      if (writeState) {
+        writeState(value, { move });
+      } else {
         stateSignalToWrite.value = value;
       }
-    });
-  } finally {
-    writeAsOne = writeAsOnePrevious;
-  }
+    }
+  });
 };
-const takeHistoryOfWriteAsOne = () => {
-  if (!writeAsOne) {
-    return undefined;
-  }
-  if (writeAsOne.taken) {
-    return "replace";
-  }
-  writeAsOne.taken = true;
-  return writeAsOne.history;
+
+/**
+ * Writes into a state what the address it is bound to says (see
+ * sync_routes_with_url in route.js). The address already says it: no url write
+ * follows, wherever and whenever the effects of this write run.
+ */
+export const writeStateFromAddress = (stateSignalToWrite, value) => {
+  writeBySignal.get(stateSignalToWrite)(value, ASK_OF_ADDRESS);
 };
 
 /**

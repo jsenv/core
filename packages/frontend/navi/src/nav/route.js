@@ -4,10 +4,13 @@
  */
 
 import { createPubSub } from "@jsenv/dom";
-import { batch, computed, effect, signal, untracked } from "@preact/signals";
+import { computed, effect, signal, untracked } from "@preact/signals";
 
+import { writeStateFromAddress } from "../state/state_signal.js";
+import { batchWithEffectErrorsApart } from "../utils/batch_with_effect_errors_apart.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
+import { decodeUrlPart } from "./decode_url_part.js";
 import {
   createRoutePattern,
   resolveRouteUrl,
@@ -21,8 +24,6 @@ const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
 const ROUTE_NOT_MATCHING_PARAMS = {};
-// Flag to prevent signal-to-URL synchronization during URL-to-signal synchronization
-let isUpdatingRoutesFromUrl = false;
 const ROUTE_OPTIONS = new Set([
   "searchParams",
   "params",
@@ -478,12 +479,10 @@ export const route = (pattern, options = {}) => {
     for (const connection of connections) {
       const { signal: paramSignal, debug, paramName } = connection;
       // What a write of this state is worth in the history: what the state
-      // declares, and what the write happening right now says instead (see
+      // declares, and what the write being carried says instead (see
       // stateSignal's `history` and its `set`). Read at the moment of the
-      // navigation and never before. A plain signal says nothing and replaces,
-      // which is what a param qualifying a screen is.
-      const historyOfWrite = () =>
-        paramSignal.options?.getHistory?.() || "replace";
+      // navigation and never before.
+      const historyOfWrite = () => paramSignal.options.takeHistoryOfWrite();
       // Milliseconds the browser's address waits for this state to settle
       // (see stateSignal's `debounceUrl`); 0 writes at once. A plain signal says nothing.
       const debounceUrl = paramSignal.options?.debounceUrl || 0;
@@ -493,17 +492,18 @@ export const route = (pattern, options = {}) => {
           paramSignal,
         );
       }
-      // eslint-disable-next-line no-loop-func
       const writeValueInUrl = (value) => {
+        // What the address wrote, it says already. A value it could not hold
+        // as written (autoFix) is put back by the pass that wrote it
+        // (repairedParamsByRoute). What anything writes in reaction to it —
+        // an effect resetting a page when a filter changes — is a write of its
+        // own, and goes on.
+        if (paramSignal.options.isWrittenByAddress()) {
+          return;
+        }
         const rawParams = route.rawParamsSignal.peek();
         const urlParamValue = rawParams[paramName];
         const matching = route.matchingSignal.peek();
-
-        // Signal returned to default - clean up URL by removing the parameter
-        // Skip cleanup during URL-to-signal synchronization to prevent recursion
-        if (isUpdatingRoutesFromUrl) {
-          return;
-        }
 
         if (!matching) {
           // Route not matching, no URL sync needed
@@ -729,7 +729,7 @@ const dropSearchParamsOnce = (url) => {
     const pairsKept = pairs.filter((pair) => {
       const eqIndex = pair.indexOf("=");
       const key = eqIndex > -1 ? pair.slice(0, eqIndex) : pair;
-      return !dropSearchParams.includes(decodeURIComponent(key));
+      return !dropSearchParams.includes(decodeUrlPart(key) ?? key);
     });
     if (pairsKept.length === pairs.length) {
       continue;
@@ -957,7 +957,6 @@ This prevents cross-test pollution and ensures clean state.`,
       // state
     } = {},
   ) => {
-    currentUrl = url;
     // Whether a route matches is decided by the path alone: the search string
     // only fills the params (see matchUrl). An address that keeps its path — a
     // search param written, at every notch of a wheel bound to it — cannot make
@@ -969,7 +968,6 @@ This prevents cross-test pollution and ensures clean state.`,
     // this change in the render it causes (see page_change.js). Not the first
     // one — there was no page before it, and what it mounts mounts as it is.
     const pageChanged = previousPath !== null && !pathKept;
-    previousPath = path;
     const returnValue = { pageChanged };
     const routeMatchInfoSet = new Set();
     for (const route of routeSet) {
@@ -1010,7 +1008,19 @@ This prevents cross-test pollution and ensures clean state.`,
         oldActionParams,
       };
       routeMatchInfoSet.add(routeMatchInfo);
-      // Store current state for next comparison
+    }
+    // Recorded once every route has been read: a route that throws on the
+    // way (a param constraint) leaves the previous address as the one the
+    // routes were read on, rather than this path with routes never read on it
+    // — which the next pass on the same path would skip (pathKept).
+    currentUrl = url;
+    previousPath = path;
+    for (const {
+      route,
+      newMatching,
+      newParams,
+      oldActionParams,
+    } of routeMatchInfoSet) {
       routePreviousStateMap.set(route, {
         matching: newMatching,
         params: newParams,
@@ -1020,9 +1030,8 @@ This prevents cross-test pollution and ensures clean state.`,
 
     sync_routes_with_url: {
       // URL -> Signal synchronization (moved from individual route effects to eliminate circular dependency)
-      // Prevent signal-to-URL synchronization during URL-to-signal synchronization
-      isUpdatingRoutesFromUrl = true;
-      // Apply all signal updates in a batch
+      // Every state is written as the address's own (writeStateFromAddress):
+      // its url write then stays silent, whenever its effects run.
       const matchingRouteSet = new Set();
       const routeUpdateSet = new Set();
       // Params the address gave and the state could not hold as written
@@ -1033,7 +1042,10 @@ This prevents cross-test pollution and ensures clean state.`,
       // A query connection is inherited by the child routes of the one
       // declaring it: the first route to record a param answers for all.
       const repairedParamNameSet = new Set();
-      batch(() => {
+      // An effect reacting to these writes that throws is its own failure,
+      // not the routing's: the routes have changed, and the pass goes on to
+      // the end (publishing, repairs, the rest of the navigation).
+      batchWithEffectErrorsApart(() => {
         for (const {
           route,
           routePrivateProperties,
@@ -1119,7 +1131,7 @@ This prevents cross-test pollution and ensures clean state.`,
                       `[route] weak param ${paramName}: route no longer matching, back to ${defaultValue}`,
                     );
                   }
-                  paramSignal.value = defaultValue;
+                  writeStateFromAddress(paramSignal, defaultValue);
                 }
                 continue;
               }
@@ -1145,7 +1157,7 @@ This prevents cross-test pollution and ensures clean state.`,
                       `[route] Same family navigation, ${paramName} not extracted and has no default: resetting signal`,
                     );
                   }
-                  paramSignal.value = undefined;
+                  writeStateFromAddress(paramSignal, undefined);
                 } else if (debug) {
                   // Parameter has a default value - preserve current signal value
                   console.debug(
@@ -1202,7 +1214,7 @@ This prevents cross-test pollution and ensures clean state.`,
                   `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
                 );
               }
-              paramSignal.value = defaultValue;
+              writeStateFromAddress(paramSignal, defaultValue);
               continue;
             }
             if (compareTwoJsValues(urlParamValue, value)) {
@@ -1214,7 +1226,7 @@ This prevents cross-test pollution and ensures clean state.`,
                 `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
               );
             }
-            paramSignal.value = urlParamValue;
+            writeStateFromAddress(paramSignal, urlParamValue);
             if (
               paramSignal.validity?.autoFixed &&
               !repairedParamNameSet.has(paramName)
@@ -1245,8 +1257,6 @@ This prevents cross-test pollution and ensures clean state.`,
       if (routeUpdateSet.size > 0) {
         publishRouteMutations(routeUpdateSet);
       }
-      // Reset flag after URL -> Signal synchronization is complete
-      isUpdatingRoutesFromUrl = false;
       routedSignal.value = true;
       Object.assign(returnValue, { matchingRouteSet });
       for (const [route, repairedParams] of repairedParamsByRoute) {

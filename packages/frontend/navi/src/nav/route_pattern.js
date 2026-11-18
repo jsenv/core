@@ -5,6 +5,7 @@
 
 import { globalSignalRegistry } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { decodeUrlPart } from "./decode_url_part.js";
 
 const DEBUG =
   import.meta.dev &&
@@ -992,7 +993,7 @@ export const createRoutePattern = (
       if (seg.type !== "literal") {
         break;
       }
-      literalSegments.push(seg.value);
+      literalSegments.push(seg.encodedValue);
     }
     if (literalSegments.length === 0) {
       return new URL(resolveRouteUrl("/")).pathname;
@@ -1150,6 +1151,14 @@ const encodeParamValue = (value, isWildcard = false) => {
 
   // For named parameters and search params, encode everything including slashes
   return encodeURIComponent(value);
+};
+
+// What a path needs encoded and nothing more, so a literal in ASCII is built as
+// it is written.
+const encodePathLiteral = (text) => {
+  return text.replace(/[^a-zA-Z0-9\-._~!$&'()*+,;=:@]+/gu, (chars) =>
+    encodeURIComponent(chars),
+  );
 };
 
 // Function to detect signals in route patterns and connect them
@@ -1357,10 +1366,14 @@ const parsePattern = (
         index,
       };
     }
-    // Literal segment
+    // Literal segment: text, compared with the segment the address carries
+    // once decoded, and built encoded — the browser writes `/réglages` as
+    // `/r%C3%A9glages`. Written encoded in the pattern, it is the same text.
+    const value = decodeUrlPart(seg) ?? seg;
     return {
       type: "literal",
-      value: seg,
+      value,
+      encodedValue: encodePathLiteral(value),
       index,
     };
   });
@@ -1429,7 +1442,10 @@ const tryExtractChildParameters = (
       // We need to verify that this parameter isn't already captured by parent
       if (!(segment.name in existingParams)) {
         const urlSegment = remainingSegments[remainingIndex];
-        const paramValue = decodeURIComponent(urlSegment);
+        const paramValue = decodeUrlPart(urlSegment);
+        if (paramValue === null) {
+          return null;
+        }
         const paramConstraint = childPattern.paramConstraintMap.get(
           segment.name,
         );
@@ -1445,7 +1461,7 @@ const tryExtractChildParameters = (
     ) {
       // Check if this literal matches remaining segments
       const urlSegment = remainingSegments[remainingIndex];
-      if (urlSegment === segment.value) {
+      if (decodeUrlPart(urlSegment) === segment.value) {
         remainingIndex++;
       }
       // Note: we don't return null if literal doesn't match, because it might be
@@ -1555,7 +1571,7 @@ const matchUrl = (
       }
 
       const urlSeg = urlSegments[urlSegmentIndex];
-      if (urlSeg !== patternSeg.value) {
+      if (decodeUrlPart(urlSeg) !== patternSeg.value) {
         // Literal mismatch - this route doesn't match this URL
         return null;
       }
@@ -1580,7 +1596,11 @@ const matchUrl = (
 
       // Capture URL segment as parameter value
       const urlSeg = urlSegments[urlSegmentIndex];
-      const paramValue = decodeURIComponent(urlSeg);
+      const paramValue = decodeUrlPart(urlSeg);
+      if (paramValue === null) {
+        // names no value: no param accepts it, the route does not match
+        return null;
+      }
       const paramConstraint = paramConstraintMap.get(patternSeg.name);
       if (paramConstraint && !paramConstraint(paramValue)) {
         return null; // the param declines this value: the route does not match
@@ -1726,10 +1746,10 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
     let rawValue;
 
     if (eqIndex > -1) {
-      key = decodeURIComponent(pair.slice(0, eqIndex));
+      key = decodeSearchPart(pair.slice(0, eqIndex));
       rawValue = pair.slice(eqIndex + 1); // Keep raw for array processing
     } else {
-      key = decodeURIComponent(pair);
+      key = decodeSearchPart(pair);
       rawValue = "";
     }
 
@@ -1749,16 +1769,17 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
       } else {
         params[key] = rawValue
           .split(",")
-          .map((item) => decodeURIComponent(item))
+          .map(decodeSearchPart)
           .filter((item) => item.trim() !== "")
           .map((item) => castStringToItemType(item, itemType));
       }
-    } else if (signalType === "number" || signalType === "float") {
-      const decodedValue = decodeURIComponent(rawValue);
+      continue;
+    }
+    const decodedValue = decodeSearchPart(rawValue);
+    if (signalType === "number" || signalType === "float") {
       const numberValue = Number(decodedValue);
       params[key] = isNaN(numberValue) ? decodedValue : numberValue;
     } else if (signalType === "boolean") {
-      const decodedValue = decodeURIComponent(rawValue);
       // Handle boolean query parameters:
       // ?walk=true → true
       // ?walk=1 → true
@@ -1768,20 +1789,23 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
       params[key] =
         decodedValue === "true" || decodedValue === "1" || decodedValue === "";
     } else if (signalType === "date") {
-      const decodedValue = decodeURIComponent(rawValue);
       // Keep as "YYYY-MM-DD" string — canonical date form, no timezone conversion
       params[key] = decodedValue.slice(0, 10);
     } else if (signalType === "datetime") {
-      const decodedValue = decodeURIComponent(rawValue);
       // Normalize to ISO string — canonical datetime form
       const d = new Date(decodedValue);
       params[key] = isNaN(d.getTime()) ? decodedValue : d.toISOString();
     } else {
-      params[key] = decodeURIComponent(rawValue);
+      params[key] = decodedValue;
     }
   }
 
   return params;
+};
+// A search key or value naming no text (see decodeUrlPart) is kept as written:
+// a tracking param cut short must not keep the path from matching.
+const decodeSearchPart = (part) => {
+  return decodeUrlPart(part) ?? part;
 };
 
 /**
@@ -1918,7 +1942,7 @@ const buildUrlFromPattern = (
 
   for (const patternSeg of parsedPattern.segments) {
     if (patternSeg.type === "literal") {
-      segments.push(patternSeg.value);
+      segments.push(patternSeg.encodedValue);
     } else if (patternSeg.type === "param") {
       const value = params[patternSeg.name];
 

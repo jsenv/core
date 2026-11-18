@@ -208,6 +208,10 @@ stands for the bare address, as `/games/me` does for `/games/me/:section` (see
 [Declaring the sections](#declaring-the-sections-is-what-makes-them-places)).
 The accepted forms are in `route()`'s JSDoc.
 
+A segment that names no text — a `%` not followed by two hex digits, a link cut
+inside `%C3%A9`, a Latin-1 `%E9` — is a value no param accepts: the route does
+not match, and the fallback answers that address.
+
 #### Constrain the shape, never the existence
 
 A constraint answers one question: **is this segment addressed to this route?**
@@ -312,6 +316,10 @@ pages may each have a `?q=` of their own: the list at `/places` and the clubs at
 `/places/clubs` keep two searches, even with a `/places/:section` matching both.
 A param several pages need, and no frame holds, is declared on each of them,
 with the same signal.
+
+A search key or value that names no text (`?q=-50%`, a link cut inside an
+escape) is kept as written: the signal bound to it receives that text, for its
+validation to judge, and the routes match as they would without it.
 
 Writing it AMENDS the history entry one is on rather than stacking a new one: a
 param that qualifies a screen is not a place, and one entry per write turns a
