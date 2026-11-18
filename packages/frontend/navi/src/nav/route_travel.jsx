@@ -102,6 +102,18 @@ const css = /* css */ `
     syntax: "*";
     inherits: false;
   }
+  /* The column a page stands in, written by two hands on two properties: the
+     render says where a page belongs, a travel where it stands while it plays
+     (travelRowTo). The movement over, the travel's goes, and the render's shows
+     through, whatever it became meanwhile. */
+  @property --navi-route-row-column {
+    syntax: "*";
+    inherits: false;
+  }
+  @property --navi-route-row-travel-column {
+    syntax: "*";
+    inherits: false;
+  }
 
   /* A column: the height given to the box reaches the row. */
   .navi_route_travel {
@@ -160,6 +172,14 @@ const css = /* css */ `
       }
     }
 
+    > [data-route-row-pane],
+    > [data-route-row-live],
+    > [data-route-row-pictures] > * {
+      grid-column: var(
+        --navi-route-row-travel-column,
+        var(--navi-route-row-column, auto)
+      );
+    }
     > [data-route-row-pane] {
       display: flex;
       min-width: 0;
@@ -412,6 +432,9 @@ export const RouteTravel = ({
       pictures: new Map(),
       resumeScrollRecording: null,
       scrollsDocument: rowFollowsDocument(row),
+      // Where a window's page stood as the row set off: the panes beside it stay
+      // within reach of the hand for the whole movement (see isNeighbourPane).
+      startIndex: latestRef.current.liveIndex,
       ...fields,
     };
     movementRef.current = movement;
@@ -443,7 +466,8 @@ export const RouteTravel = ({
     picture.removeAttribute("data-route-row-live");
     picture.setAttribute("inert", "");
     picture.setAttribute("aria-hidden", "true");
-    picture.style.gridColumn = String(index + 1);
+    picture.style.setProperty("--navi-route-row-column", String(index + 1));
+    standWithPane(picture, panesOf(rowRef.current)[index], movement);
     movement.pictures.get(index)?.remove();
     movement.pictures.set(index, picture);
     // After the live page in the document: an id it holds still finds the page.
@@ -465,35 +489,63 @@ export const RouteTravel = ({
       : `${window.scrollY - landingOf(latestRef.current.pages[index])}px`;
   };
 
-  const askFor = (page) => {
+  // The page asked for, until the address comes, and what follows when it does not:
+  // `onTravel` refused, sent the address elsewhere, or failed. Not for an ask taken
+  // over since by another. Settled from what the navigation did, not from the address
+  // alone: otherwise the ask stands for good, every landing waits for it, and the
+  // movement never ends.
+  const askFor = (page, movement, onRefused) => {
     const { onTravel } = latestRef.current;
     askedPageRef.current = page;
     notePageChange();
-    return onTravel({ route: page.route, params: page.params, cause: "drag" });
+    const settle = () => {
+      if (askedPageRef.current !== page || pageIsCurrent(page)) {
+        return;
+      }
+      askedPageRef.current = null;
+      if (movementRef.current === movement) {
+        onRefused();
+      }
+    };
+    let answer;
+    try {
+      answer = onTravel({
+        route: page.route,
+        params: page.params,
+        cause: "drag",
+      });
+    } catch (e) {
+      settle();
+      throw e;
+    }
+    Promise.resolve(answer).then(settle, (e) => {
+      settle();
+      throw e;
+    });
+  };
+  // The row on the page of the address, by a travel: where else the hand put it is
+  // somewhere the address did not go.
+  const sendRowToAddress = (movement) => {
+    const { currentIndex } = latestRef.current;
+    if (!panesOf(rowRef.current)[currentIndex]) {
+      // The address left the row: there is nothing left to travel to.
+      endMovement();
+      return;
+    }
+    movement.travelling = true;
+    travelRowTo(currentIndex, movement);
   };
 
   // The page the row goes to, once nothing is left to the hand.
   const askForPageOfRow = (index, movement) => {
-    const row = rowRef.current;
     const page = latestRef.current.pages[index];
     // The page being left keeps its column for the snap, back to a page the hand
     // left as well: the live page goes under that page's picture.
     if (windowed) {
       leavePictureOfLive(movement, index);
     }
-    Promise.resolve(askFor(page)).then(() => {
-      if (pageIsCurrent(page)) {
-        return;
-      }
-      // Refused, or sent elsewhere: the row says where the address is.
-      askedPageRef.current = null;
-      const { currentIndex } = latestRef.current;
-      const paneCurrent = panesOf(row)[currentIndex];
-      if (paneCurrent) {
-        movement.travelling = true;
-        travelRowTo(currentIndex, movement);
-      }
-    });
+    // Refused, or sent elsewhere: the row says where the address is.
+    askFor(page, movement, () => sendRowToAddress(movement));
   };
 
   const sayRowMoves = () => {
@@ -514,9 +566,11 @@ export const RouteTravel = ({
   // A travel no hand set off is one box long however far the page is, as in a
   // SlideContainer: a scroll to where the page stands would fly past every page in
   // between. So the page asked for takes the column next to what is in the frame, on
-  // the side it already stands, which moves nothing on screen, and endMovement puts
-  // the columns back. Columns rather than offsets: every page stays a place to snap
-  // to, and none has to be hidden.
+  // the side it already stands, which moves nothing on screen, and endMovement takes
+  // those columns away (putRowBack). Columns rather than offsets: every page stays a
+  // place to snap to, and none has to be hidden. Written on a property of the
+  // travel's own (see the CSS): the render goes on writing where each page belongs,
+  // and the address may move a window's page meanwhile.
   const travelRowTo = (index, movement) => {
     const row = rowRef.current;
     const panes = panesOf(row);
@@ -547,13 +601,11 @@ export const RouteTravel = ({
       const from = columns.indexOf(pane);
       columns.splice(from, 1);
       columns.splice(from < first ? first - 1 : last + 1, 0, pane);
-      movement.placed ||= new Map();
+      movement.placed ||= new Set();
       columns.forEach((eachPane, column) => {
         for (const element of standingIn(panes.indexOf(eachPane))) {
-          if (!movement.placed.has(element)) {
-            movement.placed.set(element, element.style.gridColumn);
-          }
-          element.style.gridColumn = String(column + 1);
+          movement.placed.add(element);
+          element.style.setProperty(TRAVEL_COLUMN, String(column + 1));
         }
       });
     }
@@ -656,13 +708,13 @@ export const RouteTravel = ({
     rowRef.current.removeAttribute("data-route-row-travelling");
   };
 
-  // Every column back where the map says, and the row on the page of the address, in
-  // one go: that page stands at the same place on screen either way.
+  // Every page back in the column the render gives it, and the row on the page of the
+  // address, in one go: that page stands at the same place on screen either way.
   const putRowBack = (movement) => {
     const row = rowRef.current;
     if (movement.placed) {
-      for (const [element, column] of movement.placed) {
-        element.style.gridColumn = column;
+      for (const element of movement.placed) {
+        element.style.removeProperty(TRAVEL_COLUMN);
       }
       movement.placed = null;
     }
@@ -734,7 +786,7 @@ export const RouteTravel = ({
 
   // The row may have stopped: on the page of the address, the movement is over; on
   // another, a hand put it there and the address follows.
-  const landRow = () => {
+  const landRow = (event, { handLetGo = false } = {}) => {
     const row = rowRef.current;
     const movement = movementRef.current;
     // A travel playing says itself when it is over.
@@ -749,6 +801,17 @@ export const RouteTravel = ({
       const { currentIndex } = latestRef.current;
       if (movement.travelling && panes[currentIndex]) {
         travelRowTo(currentIndex, movement);
+        return;
+      }
+      // A hand done with the row between two pages — a snap stopping a few pixels
+      // short of its page (seen on iOS) — leaves nothing that will land it: the row
+      // goes to the nearest page, which then lands as any other. A hand only pausing
+      // (a trackpad's fingers resting) is left where it is, as the browser leaves it.
+      if (handLetGo && !movement.travelling) {
+        const { base, toward, fraction } = readRowFrame(row, panes);
+        const nearest = fraction >= 0.5 && toward ? toward : base;
+        movement.travelling = true;
+        travelRowTo(panes.indexOf(nearest), movement);
       }
       return;
     }
@@ -773,6 +836,13 @@ export const RouteTravel = ({
   const answeredPageRef = useRef(null);
   useLayoutEffect(() => {
     const row = rowRef.current;
+    // A window's page stands with its pane for the length of a movement: a travel
+    // may have given the panes other columns, and the address moves the page from
+    // one pane to the next meanwhile.
+    const movementNow = movementRef.current;
+    if (windowed && movementNow?.placed) {
+      standWithPane(liveRef.current, panesOf(row)[liveIndex], movementNow);
+    }
     const page = currentIndex === -1 ? null : pages[currentIndex];
     const pane = panesOf(row)[currentIndex];
     const answered = answeredPageRef.current;
@@ -879,42 +949,75 @@ export const RouteTravel = ({
       if (movement.travelling || !travelByDrag || !pane) {
         return;
       }
+      const { base, toward, fraction } = readRowFrame(row, panes);
       // Nothing will say when a trackpad's fingers leave, and a long stroke would keep
       // the first tab lit for the whole trip: the nearest page answers. A finger has a
       // lift to wait for (onLeftToSnap), and until then the page held stands.
       if (!finger) {
-        const { base, toward, fraction } = readRowFrame(row, panes);
         followPageOnScreen(
           pages[panes.indexOf(fraction >= 0.5 && toward ? toward : base)],
           askedPageRef.current || pages[currentIndex],
         );
       }
-      // The pull is read from the pane of the address. Once the finger has lifted,
-      // the address is where the snap goes (onLeftToSnap), and what still lies
-      // between is the snap playing out, not a hand pulling towards the neighbour.
+      // Once the finger has lifted, the address is where the snap goes
+      // (onLeftToSnap), and what still lies between is the snap playing out, not a
+      // hand pulling towards the neighbour.
       if (lifted) {
         return;
       }
-      const pulled = row.scrollLeft - pane.offsetLeft;
-      if (Math.abs(pulled) < SET_OFF_PULL) {
-        return;
-      }
-      const index = pulled > 0 ? currentIndex + 1 : currentIndex - 1;
-      const paneTowards = panes[index];
-      const page = pages[index];
-      if (!paneTowards || samePage(askedPageRef.current, page)) {
-        return;
-      }
-      if (windowed) {
-        if (movement.pictures.has(index)) {
-          return;
+      // The page the hand brings: of the two in the frame, one that is not there yet
+      // and shows more than a shake would bring into view. Read off the frame, not
+      // from the pane of the address: the address may have run ahead to the page on
+      // one side, and the hand turned back past the page it held, towards the other.
+      const span = toward ? toward.offsetLeft - base.offsetLeft : 0;
+      const inView = toward
+        ? [
+            [base, (1 - fraction) * span],
+            [toward, fraction * span],
+          ]
+        : [[base, row.clientWidth]];
+      let reached = null;
+      for (const [paneInView, shown] of inView) {
+        const index = panes.indexOf(paneInView);
+        if (index === currentIndex || shown < SET_OFF_PULL) {
+          continue;
         }
-        leavePictureOfLive(movement, index);
-      } else if (paneTowards.hasAttribute("data-built")) {
+        if (samePage(askedPageRef.current, pages[index])) {
+          continue;
+        }
+        const alreadyThere = windowed
+          ? movement.pictures.has(index)
+          : paneInView.hasAttribute("data-built");
+        if (alreadyThere) {
+          continue;
+        }
+        if (!reached || shown > reached.shown) {
+          reached = { index, shown };
+        }
+      }
+      if (!reached) {
         return;
+      }
+      const { index } = reached;
+      const page = pages[index];
+      if (windowed) {
+        leavePictureOfLive(movement, index);
       }
       holdPage(pages[currentIndex], page);
-      askFor(page);
+      askFor(page, movement, () => {
+        // Refused, or sent elsewhere, with the hand perhaps still on the row: its
+        // landing decides. Come to rest meanwhile, the row goes back to the address.
+        const panesNow = panesOf(row);
+        const paneAtRest = pageAtRest(row, panesNow, ROW_READING);
+        if (!paneAtRest || movement.playing) {
+          return;
+        }
+        if (panesNow.indexOf(paneAtRest) === latestRef.current.currentIndex) {
+          landRow();
+          return;
+        }
+        sendRowToAddress(movement);
+      });
     };
     // The address, the tabs and what reads the held page all move here, the way they
     // do for a tab pressed. If the row ends up elsewhere after all, onLand corrects
@@ -1041,12 +1144,31 @@ export const RouteTravel = ({
   // any scroll event, so it has to stand where it lands by then: a finger landing
   // is the last word before that. A trackpad says nothing first, and the pin comes
   // with its first scroll event (beginMovement).
+  //
+  // The pin is the touch's until a movement takes it over (which unpins at its end):
+  // a touch that moves nothing (a tap, a vertical scroll setting off on a page)
+  // takes it off as it ends. Left at rest, the landing of a page left scrolled would
+  // size its pane, and the row with it (see the CSS).
   useLayoutEffect(() => {
     const row = rowRef.current;
-    const onTouchStart = () => {
-      if (!movementRef.current && rowFollowsDocument(row)) {
-        pinPanes(row);
+    const onTouchStart = (touchEvent) => {
+      if (movementRef.current || !rowFollowsDocument(row)) {
+        return;
       }
+      pinPanes(row);
+      // Heard on what the finger landed on, as in watchRowScroll: a page changing
+      // under it may have taken it out of the document.
+      const { target } = touchEvent;
+      const onEnd = (endEvent) => {
+        target.removeEventListener("touchend", onEnd);
+        target.removeEventListener("touchcancel", onEnd);
+        // Another finger still down is a touch of its own, ending on its own.
+        if (endEvent.touches.length === 0 && !movementRef.current) {
+          unpinPanes(row);
+        }
+      };
+      target.addEventListener("touchend", onEnd, { passive: true });
+      target.addEventListener("touchcancel", onEnd, { passive: true });
     };
     row.addEventListener("touchstart", onTouchStart, { passive: true });
     return () => {
@@ -1085,7 +1207,7 @@ export const RouteTravel = ({
                   key={index}
                   data-route-row-pane=""
                   inert={holdsNeighbour}
-                  style={{ gridColumn: index + 1 }}
+                  style={{ "--navi-route-row-column": index + 1 }}
                 >
                   {holdsNeighbour && (
                     <RouteRowNeighbour
@@ -1099,7 +1221,7 @@ export const RouteTravel = ({
             <div
               ref={liveRef}
               data-route-row-live=""
-              style={{ gridColumn: liveIndex + 1 }}
+              style={{ "--navi-route-row-column": liveIndex + 1 }}
             >
               {children}
             </div>
@@ -1115,10 +1237,17 @@ export const RouteTravel = ({
   );
 };
 
-// The panes on each side of the live page. Not one holding a picture of the page
-// left there: a page with no background of its own would show it through.
+// The panes on each side of the live page, and, while the row moves, on each side
+// of the page it set off from: the address runs ahead of the hand, which can turn
+// back past the page it held. Not one holding a picture of the page left there: a
+// page with no background of its own would show it through.
 const isNeighbourPane = (index, liveIndex, movement) => {
-  if (index !== liveIndex - 1 && index !== liveIndex + 1) {
+  if (index === liveIndex) {
+    return false;
+  }
+  const besides = (pageIndex) =>
+    index === pageIndex - 1 || index === pageIndex + 1;
+  if (!besides(liveIndex) && !(movement && besides(movement.startIndex))) {
     return false;
   }
   return !movement || !movement.pictures.has(index);
@@ -1143,6 +1272,21 @@ const copyScrollPositions = (from, to) => {
       toElements[i].scrollLeft = scrollLeft;
     }
   }
+};
+
+// Where a travel stands a page for the length of a movement (see travelRowTo).
+const TRAVEL_COLUMN = "--navi-route-row-travel-column";
+// What the window puts in the column of a pane — its page, a picture of it — stands
+// where a travel stood that pane, if it did.
+const standWithPane = (element, pane, movement) => {
+  const column = pane ? pane.style.getPropertyValue(TRAVEL_COLUMN) : "";
+  if (!column) {
+    element.style.removeProperty(TRAVEL_COLUMN);
+    return;
+  }
+  movement.placed ||= new Set();
+  movement.placed.add(element);
+  element.style.setProperty(TRAVEL_COLUMN, column);
 };
 
 // A tab pressed over a row a hand has left moving holds it still (takeRowFromHand):

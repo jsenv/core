@@ -94,9 +94,12 @@ export const readRowStretch = (scroller, pages, page, { sideways } = {}) => {
  *   say where it goes (`onLeftToSnap`). Without one (a trackpad, a wheel) nothing
  *   will. `lifted`: that finger has lifted and none has landed since: no hand moves
  *   the row, the snap the lift left running does.
- * @param {(event: Event|null) => void} options.onLand - the row may have stopped.
- *   Read `pageAtRest` to know whether it stopped on a page. Heard more than once
- *   for one landing, so what it does must find nothing to do the second time.
+ * @param {(event: Event|null, landing: {handLetGo: boolean}) => void} options.onLand -
+ *   the row may have stopped. Read `pageAtRest` to know whether it stopped on a
+ *   page. Heard more than once for one landing, so what it does must find nothing
+ *   to do the second time. `handLetGo`: the hand is done with the row — the browser
+ *   says the scroll ended, or a finger lifted and the row went still. Otherwise a
+ *   hand may only be pausing (a trackpad's fingers resting, which nothing tells).
  * @param {(forward: boolean) => void} [options.onLeftToSnap] - a finger has lifted
  *   and the row moves: snapping plays out what the browser has decided and does not
  *   turn round, so this is where it is going. Heard once per lift, after `onScroll`.
@@ -115,9 +118,13 @@ export const watchRowScroll = (
     liftedAt = null;
     // A finger holding the row still: nothing has stopped.
     if (!touching) {
+      const fingerLifted = touchedSinceStop;
       touchedSinceStop = false;
-      onLand(null);
+      onLand(null, { handLetGo: fingerLifted });
     }
+  };
+  const onScrollEnd = (scrollEndEvent) => {
+    onLand(scrollEndEvent, { handLetGo: !touching });
   };
   const armSilence = () => {
     clearTimeout(stoppedTimeout);
@@ -166,12 +173,12 @@ export const watchRowScroll = (
     target.addEventListener("touchcancel", onEnd, { passive: true });
   };
   scroller.addEventListener("scroll", onScrollEvent, { passive: true });
-  scroller.addEventListener("scrollend", onLand);
+  scroller.addEventListener("scrollend", onScrollEnd);
   scroller.addEventListener("touchstart", onTouchStart, { passive: true });
   return () => {
     clearTimeout(stoppedTimeout);
     scroller.removeEventListener("scroll", onScrollEvent);
-    scroller.removeEventListener("scrollend", onLand);
+    scroller.removeEventListener("scrollend", onScrollEnd);
     scroller.removeEventListener("touchstart", onTouchStart);
   };
 };

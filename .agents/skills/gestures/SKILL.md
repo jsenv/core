@@ -62,7 +62,10 @@ answers come from the held page (see below).
 fires `scrollend` once, when the wheel goes quiet, about 220ms before its snap has
 finished, and never again; Safari before 26.2 has none. A landing is also heard on
 150ms of silence, so it runs twice and must find nothing to do the second time. It
-only counts when the row rests on a page: a hand pausing midway is no landing.
+only counts when the row rests on a page: a hand pausing midway is no landing. A hand
+done with the row between two pages (the browser says the scroll ended, or a finger
+lifted and the row went still: an iOS snap can stop a few pixels short) sends it to
+the nearest page, a travel like any other, so every movement ends on a page.
 
 **Past the next screen.** A finger carries the row past `scroll-snap-stop`, which
 only stops momentum, so what follows is painted between the two screens the row
