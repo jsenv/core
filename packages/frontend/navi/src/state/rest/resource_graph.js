@@ -1728,9 +1728,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       // (see resource_range_reader.js).
       stateFacade.GET_RANGE = createRangeReader(
         `${name}.GET_RANGE`,
-        readLazyDependenciesFirst(
-          applyNetworkPolicy(restCallback, { verb: "GET", isMany: true }),
-        ),
+        readLazyDependenciesFirst(applyNetworkPolicyToRangeReads(restCallback)),
         { store, params },
       );
       resourceLifecycleManager.registerRangeReader(
@@ -2022,6 +2020,22 @@ const applyNetworkPolicy = (
           return item;
         }
       }
+    }
+    throw new NetworkPolicyError(policy.reason);
+  };
+};
+
+// A range reader is not an action: it holds no answer and no row of its own
+// to answer a slice with. What a list kept of a window is drawn from its
+// composition before anything is asked (see readComposition in
+// resource_range_reader.js), so under a policy answering reads from the store
+// every ask that gets here settles with the policy's reason, and under one
+// sending reads out it goes out.
+const applyNetworkPolicyToRangeReads = (restCallback) => {
+  return (params, context) => {
+    const policy = peekNetworkPolicy();
+    if (policy === null || !policy.readsFromStore) {
+      return restCallback(params, context);
     }
     throw new NetworkPolicyError(policy.reason);
   };

@@ -6377,7 +6377,7 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * inside `<List.Group>`s; each takes its place in declaration order.
  *
  * @type {import("preact").FunctionComponent<{
- *   renderItem: (item: any, index: number, state: {refreshing: boolean}) => import("preact").ComponentChildren,
+ *   renderItem: (item: any, index: number, state: {refreshing: boolean, refreshError: any}) => import("preact").ComponentChildren,
  *   findText?: (item: any, index: number) => string,
  *   items?: any[],
  *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
@@ -6394,17 +6394,19 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   itemSize?: (index: number) => number,
  *   renderError?: (failure: {error: any, retry: () => void, start: number, end: number}) => import("preact").ComponentChildren,
- *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void,
+ *   onRequestStateChange?: (state: {busy: boolean, refreshing: boolean, refreshError: any, range: {start: number, end: number}|null}) => void,
  *   onCountChange?: (count: number|undefined) => void,
  * }>}
- * @param {(item: any, index: number, state: {refreshing: boolean}) => any} props.renderItem
+ * @param {(item: any, index: number, state: {refreshing: boolean, refreshError: any}) => any} props.renderItem
  *   What is drawn for one item, given its data and where it sits — its place in the list,
  *   which is its rank in the collection plus whatever items are declared before
  *   the run. `state.refreshing` says the items drawn are the ones from before
  *   while the run reads the collection again — the list carries
- *   `navi-refreshing` for the same reason. What it returns is kept per item
+ *   `navi-refreshing` for the same reason. `state.refreshError` is what the
+ *   last reading again failed with, `null` once one answers: the items stay
+ *   as they were. What it returns is kept per item
  *   and handed back as long as the function, the item, its index and
- *   `refreshing` are the same: an inline `renderItem` in a component that
+ *   its state are the same: an inline `renderItem` in a component that
  *   re-renders redraws every row. What changes inside a row is read in the
  *   row's own component, or listed in `useCallback`'s deps.
  * @param {(item: any, index: number) => string} [props.findText]
@@ -6523,15 +6525,18 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   collection's own ranks, as `itemsAction` was asked for them. Defaults to an
  *   inline message with a retry button, drawn on the item the user is looking
  *   at.
- * @param {(state: {busy: boolean, refreshing: boolean, range: {start: number, end: number}|null}) => void} [props.onRequestStateChange]
+ * @param {(state: {busy: boolean, refreshing: boolean, refreshError: any, range: {start: number, end: number}|null}) => void} [props.onRequestStateChange]
  *   Called when the run starts or stops asking for items — for the screen around
  *   the list to say that it is looking (the items themselves have skeletons and
  *   `refreshing` already). `busy` covers every ask, first slice and holes
  *   opened by scrolling included; `refreshing` is the subset where items already
- *   held are being read again; `range` is what is being asked for, in the
+ *   held are being read again; `refreshError` is what the last such reading
+ *   failed with — the items stay drawn as they were — and `null` once one
+ *   answers; `range` is what is being asked for, in the
  *   collection's own ranks as `itemsAction` sees them, `null` once nothing is.
  *   A range called off and asked again right away stays one `busy`, and a list
- *   unmounted while asking says `busy: false` on its way out.
+ *   unmounted while asking says `busy: false` once, on its way out: a request
+ *   of its landing after that says nothing.
  * @param {(count: number|undefined) => void} [props.onCountChange]
  *   Called with how many items the collection holds when that changes — for
  *   the screen around the list to say it ("5 of 83 books"): the `count` the
@@ -6635,8 +6640,10 @@ const LOADING_ITEMS_PROPS = {};
 const createStoreHoldingNothing = (itemCount) => {
   return {
     itemCount,
+    idKey: "id",
     failure: null,
     refreshing: false,
+    refreshError: null,
     forget: () => {},
     retry: () => {},
     getItem: () => undefined,
@@ -6690,8 +6697,8 @@ const useRunItems = (
   // the same vnode for an item that has not changed, and preact leaves that
   // item's whole subtree alone. Only for a `renderItem` that is the same
   // function as last time — a new one may close over new state — and for an
-  // item at the same index, in the same refreshing state: everything the
-  // function is given.
+  // item at the same index, in the same state (refreshing, refresh error):
+  // everything the function is given.
   const itemVnodesRef = useRef(null);
   if (
     !itemVnodesRef.current ||
@@ -6749,9 +6756,12 @@ const useRunItems = (
   // The item answers to its own id when the item carries one — that is what
   // addresses it from outside (--navi-select, --navi-scroll, startAt) — and
   // otherwise to one made from the run and its place, unique within the list,
-  // which is all an id has to be.
+  // which is all an id has to be. Its own id is under the key its source
+  // names its rows by (a resource's `idKey`).
   const idOf = (item, index) =>
-    item && item.id !== undefined ? item.id : `${ownerId}_${index}`;
+    item && item[store.idKey] !== undefined
+      ? item[store.idKey]
+      : `${ownerId}_${index}`;
   // Where an item named from outside actually sits. Only the run can answer:
   // items it holds but does not draw are nowhere else — a list only knows the
   // items it has drawn (they register themselves, see ListItemUI).
@@ -7173,7 +7183,10 @@ const useRunItems = (
       />,
     );
   }
-  const renderItemState = { refreshing: store.refreshing };
+  const renderItemState = {
+    refreshing: store.refreshing,
+    refreshError: store.refreshError,
+  };
   let itemIndex = windowFrom;
   while (itemIndex < windowTo) {
     if (itemIndex >= failureFrom && itemIndex <= failureTo) {
@@ -7252,7 +7265,8 @@ const useRunItems = (
     if (
       itemVnodeKept &&
       itemVnodeKept.itemIndex === itemIndex &&
-      itemVnodeKept.refreshing === renderItemState.refreshing
+      itemVnodeKept.refreshing === renderItemState.refreshing &&
+      itemVnodeKept.refreshError === renderItemState.refreshError
     ) {
       itemVnode = itemVnodeKept.vnode;
       itemContextValue = itemVnodeKept.itemContextValue;
@@ -7268,6 +7282,7 @@ const useRunItems = (
         itemContextValue,
         itemIndex,
         refreshing: renderItemState.refreshing,
+        refreshError: renderItemState.refreshError,
       });
     }
     if (itemVnode) {
@@ -7377,6 +7392,13 @@ const ListItemsFailure = ({ error, retry }) => {
 // hits the network again.
 const ITEM_STORE_MAX_DEFAULT = 1000;
 const ITEM_STORE_KEEP_AROUND = 250;
+// What a run asking for nothing says of its request.
+const REQUEST_STATE_IDLE = {
+  busy: false,
+  refreshing: false,
+  refreshError: null,
+  range: null,
+};
 // A run asks for what its window misses at once, unless the window left the
 // last page asked for within ASK_OUTRUN_MS of asking: a fling, the scrollbar
 // dragged, a smooth scroll across the list. It then waits for the window to
@@ -7500,6 +7522,13 @@ const useItemStore = ({
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
+  // What tells two items apart: the key the source names its rows by (a
+  // resource's `idKey`), `id` for a collection given whole.
+  const idKey =
+    !inMemory && typeof itemsAction === "function" && itemsAction.idKey
+      ? itemsAction.idKey
+      : "id";
+  const idOfItem = (item) => (item ? item[idKey] : undefined);
   // A list on screen is part of what the page reads: the composition it reads
   // is kept with the page for the next document (see keepPageOnScreen).
   useLayoutEffect(() => {
@@ -7539,32 +7568,84 @@ const useItemStore = ({
   // nothing to ask for by name.
   const owesNamedItemFor = (hold) =>
     !inMemory && namedAnsweredRef.current !== hold;
-  const takeInPage = ({ pageItems, pageStart, pageCount, answersHold }) => {
+  const takeInPage = ({
+    pageItems,
+    pageStart,
+    pageCount,
+    answersHold,
+    invalidation: pageInvalidation,
+    params,
+  }) => {
     if (answersHold !== undefined) {
       namedAnsweredRef.current = answersHold;
     }
-    // An item from before is gone from where it stood when the page puts
-    // it at another rank (it would be drawn twice), or when its rank is
-    // past the end of the collection.
     const staleRanks = staleRanksRef.current;
     const pageEnd = pageStart + pageItems.length;
-    let dropped = false;
-    if (staleRanks.size > 0) {
-      const pageIds = new Set();
-      for (const pageItem of pageItems) {
-        if (pageItem && pageItem.id !== undefined) {
-          pageIds.add(pageItem.id);
+    // An answer is held against what it claims to confirm. One read before
+    // the source last said the collection moved (it landed after) is of the
+    // collection as it was: it fills what the run does not hold, as items
+    // from before, and confirms nothing.
+    if (
+      pageInvalidation !== undefined &&
+      pageInvalidation !== invalidationRef.current
+    ) {
+      let i = 0;
+      while (i < pageItems.length) {
+        const rank = pageStart + i;
+        if (!pages.byIndex.has(rank)) {
+          pages.byIndex.set(rank, pageItems[i]);
+          staleRanks.add(rank);
         }
+        i++;
       }
-      for (const rank of staleRanks) {
-        if (rank >= pageStart && rank < pageEnd) {
-          continue;
+      if (pages.count === undefined) {
+        pages.count = pageCount;
+        countStaleRef.current = pageCount === 0;
+      }
+      return;
+    }
+    // Every page is evidence about the order. An item it holds that the run
+    // holds at another rank would be drawn twice: that rank goes. Held at a
+    // rank from before, the item moved, which is what being from before
+    // means. Held at a rank the run took for current, the collection moved
+    // between the two reads without anything saying so — where, nothing
+    // tells — so whatever else is held outside the page is from before, and
+    // asked again as the window reaches it. A rank from before past the end
+    // of the collection is gone too.
+    const pageIds = new Set();
+    for (const pageItem of pageItems) {
+      const id = idOfItem(pageItem);
+      if (id !== undefined) {
+        pageIds.add(id);
+      }
+    }
+    let dropped = false;
+    let moved = false;
+    for (const [rank, heldItem] of pages.byIndex) {
+      if (rank >= pageStart && rank < pageEnd) {
+        continue;
+      }
+      const stale = staleRanks.has(rank);
+      const heldId = idOfItem(heldItem);
+      if (heldId !== undefined && pageIds.has(heldId)) {
+        pages.byIndex.delete(rank);
+        staleRanks.delete(rank);
+        dropped = true;
+        if (!stale) {
+          moved = true;
         }
-        const staleItem = pages.byIndex.get(rank);
-        if (rank >= pageCount || (staleItem && pageIds.has(staleItem.id))) {
-          staleRanks.delete(rank);
-          pages.byIndex.delete(rank);
-          dropped = true;
+        continue;
+      }
+      if (stale && rank >= pageCount) {
+        pages.byIndex.delete(rank);
+        staleRanks.delete(rank);
+        dropped = true;
+      }
+    }
+    if (moved) {
+      for (const rank of pages.byIndex.keys()) {
+        if (rank < pageStart || rank >= pageEnd) {
+          staleRanks.add(rank);
         }
       }
     }
@@ -7577,35 +7658,80 @@ const useItemStore = ({
     pages.count = pageCount;
     countStaleRef.current = false;
     // Which rank holds which id, kept by the source so a list drawing
-    // this collection again finds it drawn (see readComposition above).
+    // this collection again finds it drawn (see readComposition above) —
+    // under the params the page answered for.
     if (itemsAction.writeComposition) {
       itemsAction.writeComposition({
         byIndex: pages.byIndex,
         count: pageCount,
         replace: dropped,
+        params,
       });
     }
   };
-  // The pages answered since the last render, taken in by the render and not
-  // as they land: what the list reads of the run — how many items it stands for
-  // (see listItems.take), where an item sits (its locator) — then moves in one
-  // step. Taken in on landing, an item could be located past the count the list
-  // still holds, and a list held on it would aim its window there at every
-  // render, framed back each time.
-  const pagesLandedRef = useRef([]);
-  const pagesLanded = pagesLandedRef.current;
-  const pagesTakenIn = pagesLanded.length > 0;
-  if (pagesTakenIn) {
-    pagesLandedRef.current = [];
-    for (const page of pagesLanded) {
-      takeInPage(page);
+  // A row that leaves the source's store leaves the collection (see
+  // observeRemovals in resource_range_reader.js): its rank is no longer
+  // held, and asked for again as the window reaches it. Every rank after it
+  // moved up one place, so what the run holds there is from before. Applied
+  // in the render, like the pages (see below).
+  const removedIdsRef = useRef(null);
+  const applyRemovals = () => {
+    const removedIds = removedIdsRef.current;
+    removedIdsRef.current = null;
+    const staleRanks = staleRanksRef.current;
+    let firstGone = Infinity;
+    for (const [rank, heldItem] of pages.byIndex) {
+      const heldId = idOfItem(heldItem);
+      if (heldId !== undefined && removedIds.has(heldId)) {
+        pages.byIndex.delete(rank);
+        staleRanks.delete(rank);
+        if (rank < firstGone) {
+          firstGone = rank;
+        }
+      }
     }
-  }
-  const [refreshing, setRefreshing] = useState(false);
+    if (firstGone === Infinity) {
+      return false;
+    }
+    for (const rank of pages.byIndex.keys()) {
+      if (rank > firstGone) {
+        staleRanks.add(rank);
+      }
+    }
+    return true;
+  };
+  useLayoutEffect(() => {
+    if (
+      inMemory ||
+      typeof itemsAction !== "function" ||
+      !itemsAction.observeRemovals
+    ) {
+      return undefined;
+    }
+    return itemsAction.observeRemovals((removedItems) => {
+      let removedIds = removedIdsRef.current;
+      for (const removedItem of removedItems) {
+        const removedId = idOfItem(removedItem);
+        if (removedId === undefined) {
+          continue;
+        }
+        if (!removedIds) {
+          removedIds = new Set();
+          removedIdsRef.current = removedIds;
+        }
+        removedIds.add(removedId);
+      }
+      if (removedIds) {
+        setPageVersion((version) => version + 1);
+      }
+    });
+  }, [inMemory, itemsAction]);
   // A source that says when what it reads has moved (a resource range reader
   // does: see rerunOn.GET_RANGE) is heard here — a write deciding who belongs
   // to the collection is exactly what a run cannot deduce from the items it
-  // holds. A source that says nothing is read once and stays as it is.
+  // holds. A source that says nothing is read once and stays as it is. Heard
+  // before the pages below are taken in: each is held against the
+  // invalidation it answers for (see takeInPage).
   const invalidationSignal =
     typeof itemsAction === "function" ? itemsAction.invalidationSignal : null;
   const invalidation = invalidationSignal ? invalidationSignal.value : 0;
@@ -7614,6 +7740,26 @@ const useItemStore = ({
     invalidationRef.current = invalidation;
     markHeldStale();
   }
+  const removalsApplied = removedIdsRef.current !== null && applyRemovals();
+  // The pages answered since the last render, taken in by the render and not
+  // as they land: what the list reads of the run — how many items it stands for
+  // (see listItems.take), where an item sits (its locator) — then moves in one
+  // step. Taken in on landing, an item could be located past the count the list
+  // still holds, and a list held on it would aim its window there at every
+  // render, framed back each time.
+  const pagesLandedRef = useRef([]);
+  const pagesLanded = pagesLandedRef.current;
+  const pagesTakenIn = pagesLanded.length > 0 || removalsApplied;
+  if (pagesLanded.length > 0) {
+    pagesLandedRef.current = [];
+    for (const page of pagesLanded) {
+      takeInPage(page);
+    }
+  }
+  // Said by the request itself (see publishRequestState): one owner for what
+  // the run is doing, and the render draws its copy.
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(null);
   // The one request in flight, with the means to call it off: a page asked for
   // a window the list has left is work the server and the browser are doing for
   // nothing.
@@ -7625,6 +7771,11 @@ const useItemStore = ({
     controller: null,
     generation: 0,
     revalidating: false,
+    // The invalidation it was sent under: an answer is about the collection
+    // as it stood then (see ask).
+    invalidation: undefined,
+    // What the last revalidation failed with, until one answers.
+    refreshError: null,
     around: undefined,
     answersHold: undefined,
     // When it was sent, and the window it was sent for (see ASK_OUTRUN_MS).
@@ -7714,25 +7865,30 @@ const useItemStore = ({
   // its own skeletons, what is around it has to be told. Read from the request
   // itself rather than pushed from each place that touches it, so a range
   // called off and asked again right away stays one uninterrupted ask.
-  const requestStateRef = useRef({
-    busy: false,
-    refreshing: false,
-    range: null,
-  });
+  const requestStateRef = useRef(REQUEST_STATE_IDLE);
   const onRequestStateChangeRef = useRef(onRequestStateChange);
   onRequestStateChangeRef.current = onRequestStateChange;
   const publishRequestState = () => {
+    if (!mountedRef.current) {
+      // The run said it stopped on its way out (see below): a request landing
+      // after it is gone speaks for nobody, and the next run may be asking.
+      return;
+    }
     const request = requestRef.current;
     const busy = request.busy;
     const state = {
       busy,
       refreshing: busy && request.revalidating,
+      refreshError: request.refreshError,
       range: busy ? { start: request.start, end: request.end } : null,
     };
+    setRefreshing(state.refreshing);
+    setRefreshError(state.refreshError);
     const previous = requestStateRef.current;
     if (
       previous.busy === state.busy &&
       previous.refreshing === state.refreshing &&
+      previous.refreshError === state.refreshError &&
       rangeIsSame(previous.range, state.range)
     ) {
       return;
@@ -7743,7 +7899,9 @@ const useItemStore = ({
     }
   };
   // A list taken off the screen while it was asking leaves nothing ringing
-  // behind it: whoever is drawing "looking for items" has to stop.
+  // behind it: whoever is drawing "looking for items" has to stop. Its request
+  // is not called off: what it went to fetch is paid for, and still kept for
+  // the next list drawing the collection (see done).
   const mountedRef = useRef(false);
   // Which render's ask is the one to send (see useRequestMissing).
   const askTurnRef = useRef(0);
@@ -7753,20 +7911,21 @@ const useItemStore = ({
       mountedRef.current = false;
       clearTimeout(settleRef.current.timer);
       settleRef.current.timer = null;
-      if (requestStateRef.current.busy && onRequestStateChangeRef.current) {
-        onRequestStateChangeRef.current({
-          busy: false,
-          refreshing: false,
-          range: null,
-        });
+      if (requestStateRef.current.busy) {
+        requestStateRef.current = REQUEST_STATE_IDLE;
+        if (onRequestStateChangeRef.current) {
+          onRequestStateChangeRef.current(REQUEST_STATE_IDLE);
+        }
       }
     };
   }, []);
 
   const store = {
     itemCount,
+    idKey,
     failure,
     refreshing: refreshingShown,
+    refreshError,
     // JS memory is cheap next to the DOM, but a long enough scroll accumulates
     // everything it ever went through. Items far from what is on screen are
     // dropped and simply asked for again if the user goes back — the same
@@ -7908,9 +8067,9 @@ const useItemStore = ({
         // Anchored on the first item from before on screen: a source
         // paginating by cursor gets an item to count from, and the reading
         // position is what must survive.
-        const firstStale = pages.byIndex.get(staleFrom);
-        if (firstStale && firstStale.id !== undefined) {
-          around = firstStale.id;
+        const firstStaleId = idOfItem(pages.byIndex.get(staleFrom));
+        if (firstStaleId !== undefined) {
+          around = firstStaleId;
         }
       } else if (pages.count === undefined) {
         // The very first ask is what the window misses, like any other: the
@@ -7973,13 +8132,24 @@ const useItemStore = ({
           return;
         }
         const request = requestRef.current;
+        if (request.busy && request.invalidation !== invalidation) {
+          // Sent before the source last said the collection moved: it answers
+          // for the collection as it was. Called off and asked again, which is
+          // what a write does to a read still out (see the actions' rerun) —
+          // under writes faster than the read, the ask waits for them to pause.
+          request.controller?.abort();
+          request.busy = false;
+          request.revalidating = false;
+          request.start = -1;
+          request.end = -1;
+        }
         if (revalidating && request.busy) {
           if (request.revalidating) {
             debugAsk("already revalidating");
             return;
           }
-          // A page asked for before the items went stale answers for the
-          // collection as it was.
+          // The items from before that the window draws come first: one
+          // request at a time, and a page for missing items gives way.
           request.controller?.abort();
           request.busy = false;
         }
@@ -8071,6 +8241,7 @@ const useItemStore = ({
         request.held = held;
         request.around = around;
         request.answersHold = answersHold;
+        request.invalidation = invalidation;
         request.generation++;
         const generation = request.generation;
         const controller = new AbortController();
@@ -8097,18 +8268,15 @@ const useItemStore = ({
         request.busy = true;
         request.revalidating = revalidating;
         debugAsk("sent");
-        if (revalidating) {
-          setRefreshing(true);
-        }
         const done = (page) => {
           const current = generation === request.generation;
           if (current) {
             request.busy = false;
             request.revalidating = false;
-            setFailure(null);
             if (revalidating) {
-              setRefreshing(false);
+              request.refreshError = null;
             }
+            setFailure(null);
             publishRequestState();
           }
           if (revalidating && !current) {
@@ -8124,7 +8292,16 @@ const useItemStore = ({
           const pageCount = Array.isArray(page)
             ? pageItems.length
             : (page.count ?? pageStart + pageItems.length);
-          const pageLanded = { pageItems, pageStart, pageCount, answersHold };
+          const pageLanded = {
+            pageItems,
+            pageStart,
+            pageCount,
+            answersHold,
+            // What it answers for: the invalidation and the params it was
+            // read under (see readRange).
+            invalidation: Array.isArray(page) ? undefined : page.invalidation,
+            params: Array.isArray(page) ? undefined : page.params,
+          };
           if (!mountedRef.current) {
             // No render is coming to take it in, and the source still keeps
             // what came back for the next list drawing this collection.
@@ -8144,12 +8321,13 @@ const useItemStore = ({
           }
           request.busy = false;
           request.revalidating = false;
-          publishRequestState();
           if (revalidating) {
             // The items from before stay, and are not asked for again until the
             // source says the collection moved: a revalidation that failed has
-            // nothing better to put in their place. The list takes the failure
-            // without showing it, which is still a claim the app must hear.
+            // nothing better to put in their place. The failure is said beside
+            // them — `refreshError`, to the screen around the list and to each
+            // item — until a revalidation answers; handed to the screen, it is
+            // claimed as displayed, a claim the app's own listener still hears.
             markErrorAsDisplayedBy(error, "<List.Items>");
             let rank = start;
             while (rank <= end) {
@@ -8157,9 +8335,11 @@ const useItemStore = ({
               rank++;
             }
             countStaleRef.current = false;
-            setRefreshing(false);
+            request.refreshError = error;
+            publishRequestState();
             return;
           }
+          publishRequestState();
           setFailure({ start, end, error });
         };
         let result;

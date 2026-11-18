@@ -74,8 +74,19 @@ export const createRangeReader = (
     // Bumped whenever what is kept of a composition for the next document
     // changes (see readKept); shared like the compositions themselves.
     keptVersionSignal = signal(0),
+    // The reads out right now, through this reader or one bound from it: one
+    // collection, so one invalidation calls them all off (see readRange).
+    callsInFlight = new Set(),
   },
 ) => {
+  // Called off before the invalidation is said: a call's own settlement runs
+  // a microtask later at the earliest, and finds the collection moved; a read
+  // started by whoever hears the invalidation is not among them.
+  const callOffReadsInFlight = () => {
+    for (const call of callsInFlight) {
+      call.abort();
+    }
+  };
   // Which composition this reader is about: the values its params hold, not its
   // own identity, so two `bindParams({ scope: "thread" })` made in two places
   // read and write the same one. There are as many compositions as there are
@@ -124,38 +135,86 @@ export const createRangeReader = (
     bumpKeptVersion();
     return composition;
   };
+  // A slice read before the collection moved is a slice of the collection as
+  // it was: written into the store, its rows would replace what the write that
+  // moved it put there. So a read carries the invalidation it was asked under,
+  // a newer invalidation calls it off, and it is asked again — the reader's
+  // counterpart of an action's rerun. Its answer then says which invalidation
+  // it answers for, and which params: a list compares the one with what it
+  // holds (see useItemStore in list.jsx), and keeps the composition of the
+  // other, whatever the bound signals hold by the time it lands.
   const readRange = async (range = {}) => {
-    const { signal, ...rangeParams } = range;
-    const paramsResolved = { ...resolveParams(boundParams), ...rangeParams };
-    const result = await callback(paramsResolved, { signal });
-    if (!result || !Array.isArray(result.items)) {
-      throw new TypeError(
-        `${actionName} must return { items, start, count }, received ${describeResult(result)}.`,
-      );
-    }
-    const items = store.upsertAnswer(result.items);
-    let { start, count } = result;
-    if (start === undefined) {
-      const startAsked = rangeParams.start;
-      if (startAsked === undefined || startAsked < 0) {
+    const { signal: callerSignal, ...rangeParams } = range;
+    const params = resolveParams(boundParams);
+    const paramsResolved = { ...params, ...rangeParams };
+    for (;;) {
+      throwIfAborted(callerSignal);
+      const invalidation = invalidationSignal.peek();
+      const call = new AbortController();
+      const callOff = () => {
+        call.abort(callerSignal.reason);
+      };
+      if (callerSignal) {
+        callerSignal.addEventListener("abort", callOff);
+      }
+      callsInFlight.add(call);
+      let result;
+      try {
+        result = await callback(paramsResolved, { signal: call.signal });
+      } catch (e) {
+        if (invalidationSignal.peek() !== invalidation) {
+          throwIfAborted(callerSignal);
+          continue;
+        }
+        throw e;
+      } finally {
+        callsInFlight.delete(call);
+        if (callerSignal) {
+          callerSignal.removeEventListener("abort", callOff);
+        }
+      }
+      if (invalidationSignal.peek() !== invalidation) {
+        // Answered all the same, by a callback deaf to its signal: from before
+        // the collection moved, so it never reaches the store.
+        throwIfAborted(callerSignal);
+        continue;
+      }
+      if (!result || !Array.isArray(result.items)) {
         throw new TypeError(
-          `${actionName} must say where the range lands (start), it was asked for ${describeRangeAsked(rangeParams)}.`,
+          `${actionName} must return { items, start, count }, received ${describeResult(result)}.`,
         );
       }
-      start = startAsked;
+      const items = store.upsertAnswer(result.items);
+      let { start, count } = result;
+      if (start === undefined) {
+        const startAsked = rangeParams.start;
+        if (startAsked === undefined || startAsked < 0) {
+          throw new TypeError(
+            `${actionName} must say where the range lands (start), it was asked for ${describeRangeAsked(rangeParams)}.`,
+          );
+        }
+        start = startAsked;
+      }
+      if (count === undefined) {
+        count = start + items.length;
+      }
+      return { items, start, count, invalidation, params };
     }
-    if (count === undefined) {
-      count = start + items.length;
-    }
-    return { items, start, count };
   };
   Object.defineProperty(readRange, "name", { value: actionName });
   readRange.isRangeReader = true;
+  // What tells two rows apart, for whoever holds them by rank.
+  readRange.idKey = store.idKey;
+  // A row leaving the store — deleted, or dropped with the row it belonged to
+  // (`onDelete: "cascade"`) — leaves the collection: a list holding it hears
+  // it and stops drawing it (see readComposition, the same rule at mount).
+  readRange.observeRemovals = (callback) => store.observeRemovals(callback);
   // Bumped when the collection this reads has moved: the slices anyone holds
   // stand for a composition that is gone.
   readRange.invalidationSignal = invalidationSignal;
   readRange.invalidate = () => {
     compositionSet.clear();
+    callOffReadsInFlight();
     invalidationSignal.value = invalidationSignal.peek() + 1;
     bumpKeptVersion();
   };
@@ -164,6 +223,7 @@ export const createRangeReader = (
   // their rows kept until the answer lands. The compositions stay, so a list
   // off screen comes back drawn, and asks for its window then.
   readRange.revalidate = () => {
+    callOffReadsInFlight();
     invalidationSignal.value = invalidationSignal.peek() + 1;
   };
   // The rows of a composition, drawn from the store: a rank whose row is gone
@@ -191,9 +251,14 @@ export const createRangeReader = (
   // elsewhere, ranks past its end): kept here, they would come back at the next
   // mount. Otherwise the ranks are merged, so two lists reading the same
   // collection through their own windows add up to one composition instead of
-  // taking turns erasing each other.
-  readRange.writeComposition = ({ byIndex, count, replace }) => {
-    const params = currentParams();
+  // taking turns erasing each other. `params` are those the slices answered
+  // for (see readRange), which bound signals may have moved past since.
+  readRange.writeComposition = ({
+    byIndex,
+    count,
+    replace,
+    params = currentParams(),
+  }) => {
     let composition = findComposition(params);
     if (!composition) {
       composition = {
@@ -311,6 +376,7 @@ export const createRangeReader = (
       invalidationSignal,
       compositionSet,
       keptVersionSignal,
+      callsInFlight,
     });
     readerByParams.set(paramsToBind, reader);
     return reader;
@@ -330,6 +396,14 @@ const resolveParams = (params) => {
     paramsResolved[key] = isSignal(value) ? value.value : value;
   }
   return paramsResolved;
+};
+
+const throwIfAborted = (signal) => {
+  if (signal && signal.aborted) {
+    throw signal.reason === undefined
+      ? new DOMException("The read was called off", "AbortError")
+      : signal.reason;
+  }
 };
 
 const describeResult = (result) => {

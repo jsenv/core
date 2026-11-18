@@ -348,7 +348,10 @@ composition, so a list coming back finds it drawn
 ([list_refresh.md](./list_refresh.md#leaving-the-screen-and-coming-back)), and a
 verb listed in `rerunOn.GET_RANGE` makes it ask again for the window it draws,
 rows staying on screen
-([list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)). It
+([list_refresh.md](./list_refresh.md#a-paginated-list-stays-on-screen-too)). A
+slice still out when that happens is called off and asked again, whoever
+awaits it: read before the write, it would put the rows back in the store as
+they were. It
 reads a collection, so it lives on the resource (or on a `withParams()` of it),
 not on a relation.
 

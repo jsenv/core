@@ -101,6 +101,9 @@ export const arraySignalStore = (
   const removalsCallbackSet = new Set();
   const observeRemovals = (callback) => {
     removalsCallbackSet.add(callback);
+    return () => {
+      removalsCallbackSet.delete(callback);
+    };
   };
 
   const itemMatchLifecycleSet = new Set();

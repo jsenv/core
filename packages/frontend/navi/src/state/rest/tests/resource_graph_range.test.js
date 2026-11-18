@@ -43,22 +43,23 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("GET_RANGE binds params and passes the range signal", async () => {
     let paramsSeen;
-    let signalSeen;
+    let callerAbortSeen;
+    const abortController = new AbortController();
     const GAME = resource("game", {
       GET_RANGE: async (params, { signal }) => {
         paramsSeen = params;
-        signalSeen = signal;
+        abortController.abort();
+        callerAbortSeen = signal.aborted;
         return { items: [], start: params.start, count: 0 };
       },
     });
     const radarGames = GAME.GET_RANGE.bindParams({ radar: 7 });
 
-    const abortController = new AbortController();
     await radarGames({ start: 0, limit: 10, signal: abortController.signal });
 
     return {
       paramsSeen,
-      signalGiven: signalSeen === abortController.signal,
+      callerAbortSeen,
     };
   });
 

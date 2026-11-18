@@ -49,7 +49,10 @@ key is what cannot be missing. A callback that returns nothing — a `204`, or a
 `204`, return what was written yourself: `{ id, ...props }`.
 
 `DELETE` is symmetric: returning the id drops the item from the store, and every
-list containing it drops it too.
+list containing it drops it too — a `<List.Items>` over `GET_RANGE` included:
+the place the row held is asked for again, and the rows after it move up when
+the answer lands. So does a row dropped with the one it belonged to
+(`onDelete: "cascade"`).
 
 A `<List.Items>` over `GET_RANGE` keeps the objects it was handed, so its rows
 follow a write only where they read their item from the store with `useById`
@@ -87,9 +90,18 @@ The items, the scroll position and the item being read all stay. An answer
 confirms or replaces the ranks it covers, and nothing else: an item it did not
 cover stays drawn as it was, and is asked for again when the window reaches it —
 the window keeps moving while the ask is out. A re-read that fails leaves the
-items from before on screen. While it is in flight, the list carries `navi-refreshing` and
+items from before on screen, and says so: `renderItem` gets `{ refreshError }`,
+and `onRequestStateChange` too, until a re-read answers. While it is in flight, the list carries `navi-refreshing` and
 `renderItem` gets `{ refreshing }` — "what you see is from before", never "there
 is nothing to see".
+
+An answer is held against what it claims. A write landing while a re-read is
+out calls that re-read off and asks again: read before the write, its answer
+would put the collection back as it was, in the store as on screen. And an item
+an answer holds that the run already holds at another rank says the collection
+moved between two reads with nothing saying so — a source paginating by offset,
+another user adding a row: the copy held goes, and whatever else the run holds
+is read again as the window reaches it.
 
 An app that knows a row is on its way out (it is the one deleting it) says so
 itself: it is the one rendering the row, so it draws it loading, muted, or not
@@ -200,7 +212,7 @@ ask 0-49: held on a row not reached yet (revalidating=true holdPending=true coun
 | `sent`                               | the range on the line went out                                                                          |
 | `nothing missing`                    | the run holds every row it draws and has nothing to revalidate                                          |
 | `held on a row not reached yet`      | the list is on its way somewhere the window does not frame; only the row it is held on can be asked for |
-| `already revalidating`               | a revalidation for this window is in flight                                                             |
+| `already revalidating`               | a revalidation sent since the collection last moved is in flight                                        |
 | `a request still covers this window` | what is in flight is still what the list would draw                                                     |
 | `this range was asked for already`   | asking again could only produce the same answer                                                         |
 

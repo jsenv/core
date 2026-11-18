@@ -215,8 +215,10 @@ run given an `onError` — asking for the error is taking it. Every control with
 an `action` runs it that way, so the control claims the failure whatever it
 then shows: a callout, a boundary (`actionErrorEffect="throw"`), or nothing
 (`"none"`, a mapping returning nothing). `<List.Items>` claims the failure it
-draws in place of the items (its own row or `renderError`), and the failed
-revalidation it drops to keep the items it already had.
+draws in place of the items (its own row or `renderError`), and a failed
+revalidation, which it hands to the component beside the items it keeps —
+`refreshError`, to `renderItem` and to `onRequestStateChange` — as
+`useAsyncData({ error: true })` does.
 
 ### Hearing what navi claims: `navi_error_displayed`
 
