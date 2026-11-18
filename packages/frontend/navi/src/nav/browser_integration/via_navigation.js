@@ -49,6 +49,7 @@ import {
   publishBeforeRouting,
   publishTraversalAsked,
 } from "./before_routing.js";
+import { whenDocumentMayEnd } from "./document_may_end.js";
 import {
   applyNavigationToNavDepth,
   canNavBackSignal,
@@ -385,12 +386,7 @@ export const setupBrowserIntegrationViaNavigation = ({
   };
   // The document is leaving, or may be killed in the background: what the
   // entry says about it has to be what the document says.
-  window.addEventListener("pagehide", flushPendingReplace);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      flushPendingReplace();
-    }
-  });
+  whenDocumentMayEnd(flushPendingReplace);
 
   // window.location.reload() — jsenv's hot reload uses it — must stay a full
   // document reload; navigation.reload() would arrive as an interceptable

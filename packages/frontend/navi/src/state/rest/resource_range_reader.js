@@ -50,6 +50,7 @@ import { isSignal } from "../../utils/is_signal.js";
 import { createJsValueWeakMap } from "../../utils/js_value_weak_map.js";
 import {
   getKeptReadKey,
+  noteKeptFrameMoved,
   serializeItem,
   takeKeptRead,
   upsertKeptItem,
@@ -304,13 +305,15 @@ export const createRangeReader = (
     }
     composition.keptFrom = keptFrom;
     composition.keptTo = keptTo;
-    bumpKeptVersion();
+    noteKeptFrameMoved();
   };
   // What a document keeps of the composition these params read, for the
   // next one (see keepPageOnScreen): the count, and the ranks around the
   // window last drawn with their rows inline. Read inside an effect, it
-  // follows the composition and the rows. `answeredAt` grows with every answer
-  // the composition takes (0: none in this document, restored from a kept one).
+  // follows the answers the composition takes; its entry is read when the page
+  // is written, with the rows and the window as they are then. `answeredAt`
+  // grows with every answer the composition takes (0: none in this document,
+  // restored from a kept one).
   readRange.readKept = () => {
     // eslint-disable-next-line no-unused-expressions
     keptVersionSignal.value;
@@ -321,6 +324,10 @@ export const createRangeReader = (
       return { key, answeredAt: 0, readEntry: () => undefined };
     }
     const readEntry = () => {
+      if (!compositionSet.has(composition)) {
+        // Dropped since (an invalidation): the order it stood for is gone.
+        return undefined;
+      }
       const items = {};
       for (const [index, id] of composition.idByIndex) {
         if (
@@ -358,7 +365,7 @@ export const createRangeReader = (
       }
     }
     if (trimmed) {
-      bumpKeptVersion();
+      noteKeptFrameMoved();
     }
   };
   // Memoized for the reasons an action's bindParams is (see actions.js): params

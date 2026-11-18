@@ -120,7 +120,9 @@ ME.many("my_games", GAME);
 ```
 
 The copy follows the store — a `PUT` on the item, a game joining `my_games`
-rewrite it — and the first run of the `GET` draws it as its provisional value:
+rewrite it, a second after the item last moved and whenever the document may
+end (hidden, frozen or left); what the item reaches through its relations is
+read then — and the first run of the `GET` draws it as its provisional value:
 `data` set while `loading` is `true`, the answer replacing it. Under a network
 policy answering reads from the store, the kept row answers the `GET`
 ([network_policy.md](./network_policy.md)): a reload with no network reopens on
@@ -253,10 +255,10 @@ A read writes what it shows once it has answered in this document. Until then
 the slot keeps what the previous document kept for it, never what the read
 shows meanwhile: an answer handed over from other params (a list standing in
 for the next search) is not about these. The write waits for the page to settle
-and is flushed when the document is hidden, which is when the system may discard
-it. Between those moments a navigation goes through half-built pages: the route
-matched but its list not mounted, or the page left still drawn under a
-transition.
+and is flushed whenever the document may end — hidden, frozen or left, the
+moments the system may discard it. Between those moments a navigation goes
+through half-built pages: the route matched but its list not mounted, or the
+page left still drawn under a transition.
 
 **Declare the route actions where the app starts.** A route action that is not
 a resource read is most often an action made from a callback, named
@@ -281,10 +283,11 @@ is its own signal to keep. When a list's opening position comes from such a
 count, `defaultScrolled` follows the fresh value as long as nobody has moved the
 list ([scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)).
 
-What it costs: the copy follows the store, so a `PUT` on a row rewrites it, and
-every change in the stores the page reads serializes the page's reads again.
-Only the write to the signal is coalesced. A list's window with its rows inline
-is tens of kilobytes.
+What it costs: the page's reads are written out — rows and relations inline —
+when the slot is written, not as the page moves: a second after the page last
+changed (a read landing, a navigation, a list's window moving past a step), and
+whenever the document may end. A row changing in between is written with the
+next write. A list's window with its rows inline is tens of kilobytes.
 
 ## `GET_RANGE`: feeding a list that loads as it scrolls
 

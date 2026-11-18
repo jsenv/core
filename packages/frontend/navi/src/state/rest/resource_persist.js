@@ -1,5 +1,6 @@
 import { effect, signal, untracked } from "@preact/signals";
 
+import { whenDocumentMayEnd } from "../../nav/browser_integration/document_may_end.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { getParamsKey, serializeItem } from "./kept_reads.js";
 
@@ -22,12 +23,15 @@ import { getParamsKey, serializeItem } from "./kept_reads.js";
  * declaration: relations are declared after `resource()` returns, and a row
  * upserted before them keeps its relation values as plain data.
  *
- * The write follows the store, not the callback: an effect reads the item and
- * every row it reaches through a relation, so a PUT on the item or a list
- * upserting one of its children rewrites the copy. The signal turning
- * `undefined` from outside is "forget": nothing is written until a GET lands
- * again.
+ * The write follows the store, not the callback: a PUT on the item rewrites
+ * the copy. What the item reaches through its relations is read when the copy
+ * is written — a second after the item last moved, and whenever the document
+ * may end (see document_may_end.js) — not at every write to those stores: a
+ * list upserting a page of children would otherwise write the whole copy out
+ * again, page after page. The signal turning `undefined` from outside is
+ * "forget": nothing is written until a GET lands again.
  */
+const WRITE_DELAY = 1000;
 export const createResourcePersistence = (
   store,
   { idKey, name, signal: persistedSignal, when },
@@ -59,10 +63,16 @@ export const createResourcePersistence = (
     return when ? Boolean(when()) : true;
   };
 
+  // Whether a GET has landed since the copy was last forgotten: what is
+  // written then is built at the moment it is written.
+  let copyDue = false;
+  let writeTimeout;
   // An empty signal means "nothing is known": whoever emptied it — sign-out
   // writing undefined, or `when` saying no — nothing is written again until a
   // GET lands.
   const forget = () => {
+    copyDue = false;
+    clearTimeout(writeTimeout);
     storedItemMap.clear();
     if (entryMapSignal.peek().size > 0) {
       entryMapSignal.value = new Map();
@@ -76,6 +86,28 @@ export const createResourcePersistence = (
     lastWritten = value;
     persistedSignal.value = value;
   };
+  const buildCopy = () => {
+    const stored = {};
+    for (const [paramsKey, storedItem] of storedItemMap) {
+      stored[paramsKey] = storedItem;
+    }
+    for (const [paramsKey, itemId] of entryMapSignal.peek()) {
+      const item = store.select(itemId);
+      if (!item) {
+        continue;
+      }
+      stored[paramsKey] = serializeItem(item, new Set());
+    }
+    return stored;
+  };
+  const flush = () => {
+    clearTimeout(writeTimeout);
+    if (!copyDue || !isAllowed()) {
+      return;
+    }
+    write(untracked(buildCopy));
+  };
+  whenDocumentMayEnd(flush);
   // Runs at once with what the signal already holds (the copy read from
   // storage), then on every write — the module's own ones are recognized
   // and left alone.
@@ -136,18 +168,13 @@ export const createResourcePersistence = (
       // be erased by a page that has not asked anything.
       return;
     }
-    const stored = {};
-    for (const [paramsKey, storedItem] of storedItemMap) {
-      stored[paramsKey] = storedItem;
+    // The rows themselves, followed: a PUT on one moves the copy.
+    for (const itemId of entryMap.values()) {
+      store.select(itemId);
     }
-    for (const [paramsKey, itemId] of entryMap) {
-      const item = store.select(itemId);
-      if (!item) {
-        continue;
-      }
-      stored[paramsKey] = serializeItem(item, new Set());
-    }
-    write(stored);
+    copyDue = true;
+    clearTimeout(writeTimeout);
+    writeTimeout = setTimeout(flush, WRITE_DELAY);
   });
 
   return {

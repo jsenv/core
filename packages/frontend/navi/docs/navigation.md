@@ -692,7 +692,10 @@ Five cases, and they are not a policy to configure but five different facts:
   browser answers it: stacked, it would leave an entry that Back returns to
   without moving.
 - **A reload** lands where one was, as it would have without navi, once the
-  page is there ([below](#a-page-that-is-not-whole-yet)).
+  page is there ([below](#a-page-that-is-not-whole-yet)) — and so does a tab the
+  system discarded in the background, when the reader comes back to it: the
+  positions are written whenever the document may end (hidden, frozen or left),
+  not only when it is left.
 
 Where the browser exposes its stack (the Navigation API), **a `<Link>` or a
 `navTo()` whose destination is the entry right next to the current one becomes a
@@ -712,7 +715,10 @@ a notification would be one. Only the link knows, and it says so:
 entry, and lands like a back: the document where that address was last left,
 its lists on the positions they kept there
 ([scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)). An address never
-left opens at its top as usual.
+left opens at its top as usual. Positions are kept for the addresses the
+history holds, and for the last fifty others (the tab of a row left, the page
+an `asReturn` goes back to); an address left further back than that opens at
+its top too.
 
 ### A page that is not whole yet
 
@@ -730,7 +736,9 @@ is not waited for), a read reset since the page was left. The position is
 written at once into what the page shows meanwhile, as far as that goes — left
 at the top until then, the page would be seen jumping, and a route transition
 photographs it as soon as it renders — and put back again once they have
-answered and the page has rendered. When one of them fails, nothing more is
+answered and the page has rendered. Until then the address's position is the
+one being put back: what scrolls the document meanwhile — a stand-in clamping
+the offset — is not recorded under it. When one of them fails, nothing more is
 written: the screen saying so is not the page the position was taken
 on, and the position stays for the visit that brings it back. What it costs: a
 slow read that every page asks for delays the position of every page, since

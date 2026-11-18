@@ -29,6 +29,7 @@ import {
   getKeptReadKey,
   isKeepableRead,
   markKeepableRead,
+  markRelationshipRead,
   takeKeptRead,
   upsertKeptItem,
 } from "./kept_reads.js";
@@ -786,7 +787,7 @@ ${relationLabel} source location: ${declarationSite}`,
         `${name}.${verb}`,
         declarationSite,
       );
-      return createAction(callback, {
+      const action = createAction(callback, {
         meta: {
           verb,
           isMany: false,
@@ -816,6 +817,10 @@ ${relationLabel} source location: ${declarationSite}`,
         valueToData: (childItemId) => childStore.select(childItemId),
         completeSideEffect: onActionComplete,
       });
+      if (verb === "GET") {
+        markRelationshipRead(action);
+      }
+      return action;
     };
 
     return createResource(childName, {
@@ -1023,7 +1028,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         `${name}.${verb}`,
         declarationSite,
       );
-      return createAction(callback, {
+      const action = createAction(callback, {
         meta: { verb, isMany: false, paramScope },
         name: `${name}.${verb}`,
         // Another params' answer is another row.
@@ -1064,6 +1069,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         valueToData: (childItemId) => childStore.select(childItemId),
         completeSideEffect: onActionComplete,
       });
+      if (verb === "GET") {
+        markRelationshipRead(action);
+      }
+      return action;
     };
     const createRestActionAffectingManyItems = (
       verb,
@@ -1127,7 +1136,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         `${name}.${verb}[many]`,
         declarationSite,
       );
-      return createAction(callback, {
+      const action = createAction(callback, {
         meta: { verb, isMany: true, paramScope },
         name: `${name}.${verb}[many]`,
         // A list standing in for the next one beats a skeleton. A screen where
@@ -1173,6 +1182,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
             : childStore.selectAll(childItemIdArray),
         completeSideEffect: onActionComplete,
       });
+      if (verb === "GET") {
+        markRelationshipRead(action);
+      }
+      return action;
     };
 
     return createResource(childName, {
@@ -1349,7 +1362,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       { onActionComplete, paramScope, writeName, writeRerunOn },
     ) => {
       const childActionName = `${childName}.${writeName || verb}`;
-      return createAction(callback, {
+      const action = createAction(callback, {
         name: childActionName,
         meta: writeName
           ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
@@ -1381,6 +1394,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         },
         completeSideEffect: onActionComplete,
       });
+      if (verb === "GET") {
+        markRelationshipRead(action);
+      }
+      return action;
     };
 
     return createResource(childName, {
@@ -1594,7 +1611,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       { isMany, onActionComplete, paramScope, writeName, writeRerunOn },
     ) => {
       const childActionName = `${childName}.${writeName || verb}`;
-      return createAction(callback, {
+      const action = createAction(callback, {
         name: childActionName,
         meta: writeName
           ? { verb, isMany, paramScope, writeName, writeRerunOn }
@@ -1679,6 +1696,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         },
         completeSideEffect: onActionComplete,
       });
+      if (verb === "GET") {
+        markRelationshipRead(action);
+      }
+      return action;
     };
 
     const childResource = createResource(childName, {

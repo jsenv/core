@@ -1,4 +1,4 @@
-import { effect } from "@preact/signals";
+import { effect, untracked } from "@preact/signals";
 
 import { getActionPrivateProperties } from "../action/action_private_properties.js";
 import { COMPLETED } from "../action/action_run_states.js";
@@ -6,6 +6,8 @@ import { NO_PARAMS } from "../action/actions.js";
 import {
   getKeptReadKey,
   isKeepableRead,
+  isRelationshipRead,
+  observeKeptFrameMoved,
   offerKeptReads,
   serializeData,
   shownRangeReadersSignal,
@@ -13,6 +15,7 @@ import {
 } from "../state/rest/kept_reads.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { isSignal } from "../utils/is_signal.js";
+import { whenDocumentMayEnd } from "./browser_integration/document_may_end.js";
 import { routedSignal } from "./route.js";
 import {
   activeRouteActionsSignal,
@@ -44,16 +47,24 @@ import {
  * the route actions declared (see getRouteActionKeptName), not by a name the
  * app would have to give every action made from a callback.
  *
+ * A relationship read (`.one()`, `.many()`, `.scopedOne()`, `.scopedMany()`)
+ * is neither: its value is ids into another store, under an owner a new
+ * document may not hold yet. It is not kept.
+ *
  * A read is written once it has answered in this document. Before that it
  * keeps what the previous document kept for it, never what it shows meanwhile:
  * an answer handed over from other params (a list standing in for the next
  * one) says nothing about these.
  *
- * The write waits for the page to settle and is flushed when the document is
- * hidden. A navigation goes through pages half there — the route matched, its
- * list not mounted yet, the page left still drawn under a transition — and
- * each would otherwise be written out in full. Hidden is the moment the system
- * may discard the document, so nothing is lost by waiting until then.
+ * Which reads are the page is followed as it moves; what they hold is written
+ * out only when the slot is written, once the page has settled, and whenever
+ * the document may end (see document_may_end.js). A navigation goes through
+ * pages half there — the route matched, its list not mounted yet, the page left
+ * still drawn under a transition — and a list scrolled moves the window kept of
+ * it at every step: each would otherwise be written out in full, rows and
+ * relations, in the middle of a render. A row changing without the page moving
+ * is written with the next write; the document ending is the last one, and
+ * nothing the next document reads is older than that.
  *
  * The signal turning `undefined` from outside (sign-out) forgets the page, and
  * nothing is written until a read lands again: written at once, the page still
@@ -61,7 +72,6 @@ import {
  */
 
 const WRITE_DELAY = 1000;
-const NOTHING_PENDING = {};
 let stopKeepingCurrent = null;
 
 /**
@@ -78,7 +88,8 @@ let stopKeepingCurrent = null;
  * run of the same read with the same params draws the kept answer as its
  * provisional value: `data` set while `loading` is `true`, the answer replacing
  * it. Under a network policy answering reads from the store, a resource read
- * completes with it. The copy follows the store: a `PUT` on a row rewrites it.
+ * completes with it. The copy follows the store: a `PUT` on a row is written
+ * with the next write, and the document ending writes everything.
  *
  * Call it before the routes start: the first runs are the ones that look. And
  * declare the route actions where the app starts: one that is not a resource
@@ -146,33 +157,36 @@ export const keepPageOnScreen = ({
   };
 
   let lastWritten;
-  let pendingWrite = NOTHING_PENDING;
+  // The reads the page is made of, as the effect below last followed them:
+  // what the slot is built from when it is written. Null while nothing is to
+  // be written — nothing routed yet, or forgotten until a read lands.
+  let readsToWrite = null;
   let writeTimeout;
-  const flush = () => {
-    clearTimeout(writeTimeout);
-    if (pendingWrite === NOTHING_PENDING) {
-      return;
-    }
-    const value = pendingWrite;
-    pendingWrite = NOTHING_PENDING;
+  const writeNow = (value) => {
     if (compareTwoJsValues(value, lastWritten)) {
       return;
     }
     lastWritten = value;
     keptSignal.value = value;
   };
-  const scheduleWrite = (value) => {
-    pendingWrite = value;
+  const flush = () => {
+    clearTimeout(writeTimeout);
+    if (readsToWrite === null) {
+      return;
+    }
+    const reads = readsToWrite;
+    writeNow(untracked(() => buildSlot(reads)));
+  };
+  const scheduleWrite = () => {
     clearTimeout(writeTimeout);
     writeTimeout = setTimeout(flush, WRITE_DELAY);
   };
-  const onVisibilityChange = () => {
-    if (document.visibilityState === "hidden") {
-      flush();
+  const stopFlushingAtEnd = whenDocumentMayEnd(flush);
+  const stopFollowingFrames = observeKeptFrameMoved(() => {
+    if (readsToWrite !== null) {
+      scheduleWrite();
     }
-  };
-  document.addEventListener("visibilitychange", onVisibilityChange);
-  window.addEventListener("pagehide", flush);
+  });
 
   // Runs at once with what the signal already holds (the slot read from
   // storage), then on every write — the slot's own ones are recognized and
@@ -182,7 +196,7 @@ export const keepPageOnScreen = ({
       return;
     }
     lastWritten = value;
-    pendingWrite = NOTHING_PENDING;
+    readsToWrite = null;
     clearTimeout(writeTimeout);
     if (
       value === undefined ||
@@ -261,7 +275,7 @@ export const keepPageOnScreen = ({
       // eslint-disable-next-line no-unused-expressions
       routeAction.callSource;
       const action = getActionPrivateProperties(routeAction).currentAction;
-      if (action.params === NO_PARAMS) {
+      if (action.params === NO_PARAMS || isRelationshipRead(action)) {
         continue;
       }
       if (isKeepableRead(action)) {
@@ -288,8 +302,9 @@ export const keepPageOnScreen = ({
     const alwaysMatching = alwaysMatchingSignal.value;
     if (!allowed) {
       forget();
-      pendingWrite = undefined;
-      flush();
+      readsToWrite = null;
+      clearTimeout(writeTimeout);
+      writeNow(undefined);
       return;
     }
     if (!routed) {
@@ -300,15 +315,40 @@ export const keepPageOnScreen = ({
     if (alwaysMatching) {
       alwaysReads = screenReads;
     }
-    const entries = {};
     let landed = false;
-    const collect = (reads) => {
-      const keys = [];
-      for (const read of reads) {
+    const follow = (reads) =>
+      reads.map((read) => {
         const result = read();
         if (result.landed) {
           landed = true;
         }
+        return result;
+      });
+    const screenResults = follow(screenReads);
+    let alwaysResults = null;
+    if (alwaysReads === screenReads) {
+      alwaysResults = screenResults;
+    } else if (alwaysReads) {
+      alwaysResults = follow(alwaysReads);
+    }
+    if (paused) {
+      if (!landed) {
+        return;
+      }
+      paused = false;
+    }
+    readsToWrite = { screenResults, alwaysResults };
+    scheduleWrite();
+  });
+
+  // What a read answered, written out: its rows with their relations inline,
+  // or its value. A read that has not answered in this document keeps what
+  // the previous document kept for it.
+  const buildSlot = ({ screenResults, alwaysResults }) => {
+    const entries = {};
+    const collect = (results) => {
+      const keys = [];
+      for (const result of results) {
         const entry = result.answered
           ? result.readEntry()
           : loadedEntryMap.get(result.key);
@@ -320,37 +360,30 @@ export const keepPageOnScreen = ({
       }
       return keys;
     };
-    const screenKeys = collect(screenReads);
+    const screenKeys = collect(screenResults);
     let alwaysKeys;
-    if (alwaysReads === screenReads) {
+    if (alwaysResults === screenResults) {
       alwaysKeys = screenKeys;
-    } else if (alwaysReads) {
-      alwaysKeys = collect(alwaysReads);
+    } else if (alwaysResults) {
+      alwaysKeys = collect(alwaysResults);
     } else {
       alwaysKeys = loadedAlwaysKeys;
       for (const key of alwaysKeys) {
         entries[key] = loadedEntryMap.get(key);
       }
     }
-    if (paused) {
-      if (!landed) {
-        return;
-      }
-      paused = false;
-    }
     if (screenKeys.length === 0 && alwaysKeys.length === 0) {
-      scheduleWrite(undefined);
-      return;
+      return undefined;
     }
-    scheduleWrite({ entries, screen: screenKeys, always: alwaysKeys });
-  });
+    return { entries, screen: screenKeys, always: alwaysKeys };
+  };
 
   const stop = () => {
     flush();
     stopEffect();
     unsubscribe();
-    document.removeEventListener("visibilitychange", onVisibilityChange);
-    window.removeEventListener("pagehide", flush);
+    stopFlushingAtEnd();
+    stopFollowingFrames();
     withdrawKeptReads();
     if (stopKeepingCurrent === stop) {
       stopKeepingCurrent = null;

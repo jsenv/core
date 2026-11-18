@@ -146,9 +146,11 @@ which are asked for again if the user goes back to them.
 
 A composition lives as long as the document. **Back keeps it; a reload keeps it
 only under `keepPageOnScreen`.** Coming back within the same document finds it
-on its own. A reload, a link opened in another tab, a tab the system discarded
-open a new document, where the list gets back its position (kept under its
-`id`) and nothing to draw there: skeletons, and a first load. A page kept with
+on its own. A reload, or a tab the system discarded in the background and the
+reader came back to, opens a new document, where the list gets back its
+position (kept under its `id`) and nothing to draw there: skeletons, and a first
+load. A link opened in another tab is an arrival: the list opens at its start
+([scroll.md](./scroll.md#where-the-list-opens-and-where-it-is)). A page kept with
 [`keepPageOnScreen`](./resource.md#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)
 writes the ranks around the window each list on screen draws, with their rows,
 and a reload is then the same return after a longer absence.

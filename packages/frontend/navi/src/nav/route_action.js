@@ -9,6 +9,7 @@ import { prerunUnwatched } from "../action/run_unwatched.js";
 import {
   getKeptReadKey,
   isKeepableRead,
+  isRelationshipRead,
   shownRangeReadersSignal,
   takeKeptRead,
 } from "../state/rest/kept_reads.js";
@@ -272,7 +273,8 @@ export const routeAction = (
   };
   const rootAction = rootActionOf(action);
   const keptName = `route_action#${routeActionEntriesSignal.peek().length} ${rootAction.name}`;
-  if (!isKeepableRead(rootAction)) {
+  // A relationship read keeps nothing (see isRelationshipRead).
+  if (!isKeepableRead(rootAction) && !isRelationshipRead(rootAction)) {
     // Before the effect below: it may run the action at once.
     addKeptValueSource(rootAction, (params) =>
       takeKeptRead(getKeptReadKey(keptName, params)),

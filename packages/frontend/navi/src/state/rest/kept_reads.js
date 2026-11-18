@@ -43,8 +43,8 @@ export const takeKeptRead = (key) => {
 
 // The root actions whose answer is rows of a store: a resource's GET and
 // GET_MANY. They are kept as rows, since their value (ids) names rows a new
-// document's store does not hold. Any other route action is kept by its value
-// (see page_kept.js).
+// document's store does not hold. A relationship read is not kept at all (see
+// below). Any other route action is kept by its value (see page_kept.js).
 const keepableReadWeakSet = new WeakSet();
 export const markKeepableRead = (rootAction) => {
   keepableReadWeakSet.add(rootAction);
@@ -52,6 +52,37 @@ export const markKeepableRead = (rootAction) => {
 export const isKeepableRead = (action) => {
   const rootAction = action.rootAction || action;
   return keepableReadWeakSet.has(rootAction);
+};
+// The reads of a relation (`.one()`, `.many()`, `.scopedOne()`,
+// `.scopedMany()`): their value is ids into another store under an owner —
+// neither plain data a new document can draw, nor rows of their own. Kept by
+// value, a new document would read ids naming rows it does not hold, under an
+// owner it may not hold yet.
+const relationshipReadWeakSet = new WeakSet();
+export const markRelationshipRead = (rootAction) => {
+  relationshipReadWeakSet.add(rootAction);
+};
+export const isRelationshipRead = (action) => {
+  const rootAction = action.rootAction || action;
+  return relationshipReadWeakSet.has(rootAction);
+};
+
+// What is kept of a composition moved without an answer: the window a list
+// draws went past a step, or the list trimmed ranks it no longer holds. Said
+// from the list's render, where no signal may be written, to whoever writes
+// the page kept (see page_kept.js), which reads the composition when it next
+// writes.
+const keptFrameMovedCallbackSet = new Set();
+export const noteKeptFrameMoved = () => {
+  for (const callback of keptFrameMovedCallbackSet) {
+    callback();
+  }
+};
+export const observeKeptFrameMoved = (callback) => {
+  keptFrameMovedCallbackSet.add(callback);
+  return () => {
+    keptFrameMovedCallbackSet.delete(callback);
+  };
 };
 
 // The range readers a <List.Items> on screen reads through, each with the number

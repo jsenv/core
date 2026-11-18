@@ -20,6 +20,7 @@ import {
   rearmUrlTarget,
 } from "../url_target/url_target.js";
 import { announceRouting, publishTraversalAsked } from "./before_routing.js";
+import { whenDocumentMayEnd } from "./document_may_end.js";
 import {
   applyNavigationToNavDepth,
   canNavBackSignal,
@@ -570,12 +571,7 @@ export const setupBrowserIntegrationViaHistory = ({
   // The document is leaving, or may be killed in the background: what the
   // entry says about it has to be what the document says (see
   // replaceAddressWhenSettled).
-  window.addEventListener("pagehide", flushPendingReplace);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      flushPendingReplace();
-    }
-  });
+  whenDocumentMayEnd(flushPendingReplace);
 
   window.addEventListener("popstate", (popstateEvent) => {
     if (isTargetWriteInProgress()) {

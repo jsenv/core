@@ -17,11 +17,15 @@
  *
  * Kept per URL rather than per history entry: an entry has no name of its own
  * that survives a reload, and two entries on the same URL are the same place
- * to a reader. Kept in the session too, so a reload lands where the browser
- * would have landed — the flag above is a promise to do the whole job. Only a
- * reload or a back/forward load finds them: a document loaded fresh in the
- * same tab — an address typed, a link from outside — is an arrival, which the
- * browser lands at its top (see documentLoadIsReturn).
+ * to a reader. Kept for the addresses that can still be come back to (see
+ * pruneAddressesLeftBehind), and in the session too, so a reload lands where
+ * the browser would have landed — the flag above is a promise to do the whole
+ * job. Written whenever the document may end (see document_may_end.js): a tab
+ * the system discards in the background is never told it is leaving. Only a
+ * reload, a back/forward load or a discarded tab coming back finds them: a
+ * document loaded fresh in the same tab — an address typed, a link from
+ * outside — is an arrival, which the browser lands at its top (see
+ * documentLoadIsReturn).
  *
  * The document is not the only scrollport of a page. A list scrolling itself
  * (a `<List expandY>` under a search field that stays put) is left and come
@@ -72,6 +76,7 @@ import { buildDeferredBoxesAbove } from "../../box/mount_after_paint.jsx";
 import { afterPaint } from "../../utils/after_paint.js";
 import { decodeUrlPart } from "../decode_url_part.js";
 import { whenPageRendered } from "../rendering_hold.js";
+import { whenDocumentMayEnd } from "./document_may_end.js";
 import {
   activeRouteActionsSignal,
   routeActionYetToAskSignal,
@@ -80,6 +85,8 @@ import { observeRouteRender } from "../route_render.js";
 
 const STORAGE_KEY = "navi_scroll_positions";
 
+// Both maps hold their addresses in the order they were last written, the
+// latest last (see writeLatest).
 const positionByUrl = new Map();
 // Where the document stands, as its scroll events last said, whoever it
 // belongs to: what a url shown without the document moving is given (see
@@ -144,9 +151,13 @@ const keyOf = (url) => {
 
 /**
  * Whether the document was loaded to come back to where the reader was — a
- * reload, a back or a forward into it — rather than sent to its address.
+ * reload, a back or a forward into it, a tab the system discarded and the
+ * reader came back to — rather than sent to its address.
  */
 export const documentLoadIsReturn = () => {
+  if (document.wasDiscarded) {
+    return true;
+  }
   const [navigationEntry] = performance.getEntriesByType("navigation");
   if (!navigationEntry) {
     return false;
@@ -170,7 +181,7 @@ const loadStore = () => {
     return;
   }
   storeLoaded = true;
-  window.addEventListener("pagehide", storePositions);
+  whenDocumentMayEnd(storePositions);
   let stored;
   try {
     stored = window.sessionStorage.getItem(STORAGE_KEY);
@@ -203,8 +214,10 @@ const loadStore = () => {
     positionByUrl.delete(urlArrivedAtByLoad);
     scrollerPositionsByUrl.delete(urlArrivedAtByLoad);
   }
+  pruneAddressesLeftBehind();
 };
 const storePositions = () => {
+  pruneAddressesLeftBehind();
   const scrollers = {};
   for (const [url, positionByName] of scrollerPositionsByUrl) {
     if (positionByName.size > 0) {
@@ -221,6 +234,67 @@ const storePositions = () => {
     );
   } catch {
     // Full, or refused: the session is the only thing lost.
+  }
+};
+
+// A position is kept for an address that can still be come back to. The
+// history entries name most of them, and where the browser says which
+// (window.navigation) every address they hold stays. A few the history no
+// longer names are come back to all the same: a row of tabs replaces the
+// address of the tab left, and pressing that tab again returns to it; a
+// `<Link asReturn>` returns to wherever its address was last left. So the
+// addresses last written stay besides, up to a count, and the rest go — the
+// addresses a settling param wrote on its way, one per item a list passed,
+// that nothing can return to. Without the browser saying which addresses its
+// entries hold, the latest are kept, as many as a long session goes deep.
+const ADDRESSES_UNNAMED_KEPT = 50;
+const ADDRESSES_KEPT = 200;
+const readAddressesNamedByHistory = () => {
+  const navigation = window.navigation;
+  // The API can answer a null entry for a document that plainly has one (iOS
+  // Safari, see via_history.js): read as a browser without it.
+  if (!navigation || !navigation.currentEntry) {
+    return null;
+  }
+  const named = new Set();
+  for (const entry of navigation.entries()) {
+    if (entry.url) {
+      named.add(keyOf(entry.url));
+    }
+  }
+  return named;
+};
+const pruneAddressesLeftBehind = () => {
+  const named = readAddressesNamedByHistory();
+  const shown = readShownUrl();
+  const limit = named ? ADDRESSES_UNNAMED_KEPT : ADDRESSES_KEPT;
+  for (const map of [positionByUrl, scrollerPositionsByUrl]) {
+    let kept = 0;
+    const urlsLatestFirst = Array.from(map.keys()).reverse();
+    for (const url of urlsLatestFirst) {
+      if (url === shown || (named && named.has(url))) {
+        continue;
+      }
+      kept++;
+      if (kept > limit) {
+        map.delete(url);
+      }
+    }
+  }
+  pruneAtSize =
+    Math.max(positionByUrl.size, scrollerPositionsByUrl.size) +
+    ADDRESSES_UNNAMED_KEPT;
+};
+// Written as the latest: what the count above keeps. Pruned as it grows too,
+// for a session that is never hidden — once it has grown past what the last
+// pruning kept, so a history deeper than the count is not pruned at every
+// write.
+let pruneAtSize = ADDRESSES_KEPT + ADDRESSES_UNNAMED_KEPT;
+const writeLatest = (map, url, value) => {
+  map.delete(url);
+  map.set(url, value);
+  if (map.size > pruneAtSize) {
+    pruneAddressesLeftBehind();
   }
 };
 
@@ -254,9 +328,16 @@ export const suspendScrollRecording = () => {
 // startAtTop), and must not be scrolled to where the return was going. So does
 // the reader reaching for the page: where they are is theirs (see
 // installScrollRestoration).
+//
+// Until then it is the position of its url, and nothing scrolling the
+// document is recorded there: the page arriving clamps the offset, and so does
+// the position written into a page still missing what it waits for (see
+// putBackMeanwhile) — clamps, not the reader. A wait that fails ends nothing:
+// the url keeps the position for the visit that brings the page back, and the
+// reader's hand is what ends it.
 let pendingRestoration = null;
-const startRestoration = (position) => {
-  const restoration = { position, due: false };
+const startRestoration = (position, url) => {
+  const restoration = { position, url, due: false };
   pendingRestoration = restoration;
   return restoration;
 };
@@ -377,7 +458,8 @@ const holdScrollRestoration = () => {
  *
  * @param {boolean} held - true while what sets the page's height is missing.
  *   A read that fails leaves it true, and nothing is written: the screen saying
- *   so is not the page the position was taken on.
+ *   so is not the page the position was taken on, and the address keeps its
+ *   position for the visit that brings the page back.
  */
 export const useHoldScrollRestoration = (held) => {
   useLayoutEffect(() => {
@@ -411,7 +493,11 @@ export const installScrollRestoration = ({ readAddress }) => {
       if (suspendCount) {
         return;
       }
-      positionByUrl.set(readShownUrl(), documentOffset);
+      const url = readShownUrl();
+      if (pendingRestoration && pendingRestoration.url === url) {
+        return;
+      }
+      writeLatest(positionByUrl, url, documentOffset);
     },
     { passive: true },
   );
@@ -433,12 +519,12 @@ export const installScrollRestoration = ({ readAddress }) => {
   if (!positionOnLoad) {
     // The first page, where the browser landed it: no scroll event says so
     // (see stayInPlace).
-    positionByUrl.set(urlOnLoad, documentOffset);
+    writeLatest(positionByUrl, urlOnLoad, documentOffset);
     return;
   }
   // What a reload asks for, now that the browser has been told not to do it.
   if (positionOnLoad.x || positionOnLoad.y) {
-    restoreScrollPositionOnLoad(positionOnLoad);
+    restoreScrollPositionOnLoad(positionOnLoad, urlOnLoad);
   }
 };
 
@@ -452,8 +538,8 @@ export const installScrollRestoration = ({ readAddress }) => {
 // Nothing is written when one of them fails: the screen saying so is not the
 // page the position was taken on, and the position stays for the reload that
 // brings the page back.
-const restoreScrollPositionOnLoad = (position) => {
-  const restoration = startRestoration(position);
+const restoreScrollPositionOnLoad = (position, url) => {
+  const restoration = startRestoration(position, url);
   const stopListening = observeRouteRender(() => {
     stopListening();
     putBackOnceAnswered(restoration);
@@ -601,10 +687,10 @@ const restoreScrollPosition = (url) => {
 // A traversal back to `url`. The offset is written once the page returned to is
 // rendered (see whenPageRendered): written sooner, the document still holds the
 // page being left and clamps it to that height. Again once it has answered (see
-// putBackOnceAnswered), when it rendered stand-ins (see putBackMeanwhile). It
-// is read at once all the same — a page left taller than the one arriving is
-// clamped by the render itself, and that clamp is a scroll recorded under the
-// url already returned to.
+// putBackOnceAnswered), when it rendered stand-ins (see putBackMeanwhile). The
+// restoration owns the url's position from here: a page left taller than the
+// one arriving is clamped by the render itself, under the url already
+// returned to.
 export const restoreScrollPositionOnReturn = (url) => {
   pendingRestoration = null;
   const href = keyOf(url);
@@ -613,7 +699,7 @@ export const restoreScrollPositionOnReturn = (url) => {
   if (!position) {
     return;
   }
-  const restoration = startRestoration(position);
+  const restoration = startRestoration(position, href);
   whenPageRendered(() => {
     putBackOnceAnswered(restoration);
   });
@@ -652,7 +738,7 @@ export const startAtTop = (url, { from } = {}) => {
   // scroll event, and a page left without ever being scrolled would have no
   // position to come back to — the return would keep the offset of the page
   // being left.
-  positionByUrl.set(href, { x: 0, y: 0 });
+  writeLatest(positionByUrl, href, { x: 0, y: 0 });
   // A list holding the document on the page arriving has placed it already: a
   // navigation holding the rendering gets here after that render, and nothing
   // owes the list another commit to put it back (see holdDocumentScroll).
@@ -687,8 +773,12 @@ export const isArrival = (url, { from }) => {
 export const stayInPlace = (url) => {
   const href = keyOf(url);
   carryScrollersOnceRendered(href);
-  if (documentOffset !== null && !suspendCount) {
-    positionByUrl.set(href, documentOffset);
+  if (
+    documentOffset !== null &&
+    !suspendCount &&
+    !(pendingRestoration && pendingRestoration.url === href)
+  ) {
+    writeLatest(positionByUrl, href, documentOffset);
   }
 };
 
@@ -783,11 +873,8 @@ export const rememberScrollerPosition = (name, position) => {
   writeScrollerPosition(readShownUrl(), name, position);
 };
 const writeScrollerPosition = (url, name, position) => {
-  let positionByName = scrollerPositionsByUrl.get(url);
-  if (!positionByName) {
-    positionByName = new Map();
-    scrollerPositionsByUrl.set(url, positionByName);
-  }
+  const positionByName = scrollerPositionsByUrl.get(url) || new Map();
+  writeLatest(scrollerPositionsByUrl, url, positionByName);
   positionByName.set(name, position);
   saidByScrollerName.set(name, { url, position });
 };
