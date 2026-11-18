@@ -3221,12 +3221,12 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     // rather than from what is on screen.
     //
     // Letting it focus is both the plain behaviour of a button and what makes
-    // the rest fall into place: the press lands on the chevron, the slide left
-    // behind remembers it (see focusMemory) and hands the keyboard to the slide
-    // arriving, which prefers anything but its own ways out (see
-    // findFocusTargetInSlide) — so one arrives on what there is to do. Coming
-    // back the other way lands on the chevron one left by, which is where the
-    // eye and the hand already are.
+    // the rest fall into place: the press lands on the chevron, and the travel
+    // hands the keyboard to the slide arriving. A chevron is chrome, which no
+    // slide remembers (see focusMemory and rememberFocus): the slide arriving
+    // takes back what it held, or falls back to its ladder (findFocusTarget,
+    // then the chevrons' own "last-resort") — so one arrives on what there is
+    // to do, going either way.
     {...rest}
   >
     {/* An affordance, not a character: it is sized to be aimed at, so it may be

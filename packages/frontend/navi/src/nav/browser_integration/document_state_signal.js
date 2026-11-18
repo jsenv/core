@@ -29,7 +29,8 @@ export const updateDocumentState = (value) => {
  *   themselves), taken as given.
  *
  * `currentState` is what the entry being left holds. `sharedState` always
- * wins: it describes the document, not the entry.
+ * wins: it is what navi itself writes into every entry (where it stands, see
+ * document_back_and_forward.js), never the caller's to say.
  */
 export const resolveEffectiveDocumentState = (
   state,

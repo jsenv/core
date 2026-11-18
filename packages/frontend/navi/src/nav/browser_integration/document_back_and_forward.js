@@ -31,10 +31,9 @@ export const useCanNavForward = () => {
 };
 
 // How many entries of this document stand under the current one, and how high
-// the stack goes above it. Both are unknown for entries this document never
-// created (a fragment navigation makes its own, and the browser stores no
-// state on it): those leave the count as it is, which under-reports rather
-// than promising a screen that is not there.
+// the stack goes above it. Both are unknown for an entry whose state says no
+// depth — one the browser made and nobody wrote since: those leave the count as
+// it is, which under-reports rather than promising a screen that is not there.
 let navDepth = 0;
 let navDepthMax = 0;
 
@@ -62,23 +61,36 @@ export const stateWithNavDepthOnLoad = (state) => {
   return { ...state, [NAV_DEPTH_STATE_KEY]: 0 };
 };
 
-export const applyNavigationToNavDepth = (navigationType, state) => {
+// Where the entry a navigation reaches stands, and how high the stack goes
+// then. Read before the entry is written, since its state carries the depth,
+// and committed once it is (commitNavDepth): a write the browser refuses — a
+// rate limit, a state too large or that cannot be stored — creates no entry,
+// and a back promised on the strength of it would leave the app.
+export const resolveNavDepth = (navigationType, state) => {
   if (navigationType === "push") {
-    navDepth++;
     // A push cuts whatever stood ahead.
-    navDepthMax = navDepth;
-  } else if (navigationType === "replace") {
-    // An entry taking the place of another stands exactly where it stood.
-  } else {
-    // load, reload, traverse: the entry itself says where it stands.
-    const depthInState = readNavDepthInState(state);
-    if (depthInState !== undefined) {
-      navDepth = depthInState;
-      if (navDepth > navDepthMax) {
-        navDepthMax = navDepth;
-      }
-    }
+    return { depth: navDepth + 1, max: navDepth + 1 };
   }
+  if (navigationType === "replace") {
+    // An entry taking the place of another stands exactly where it stood.
+    return { depth: navDepth, max: navDepthMax };
+  }
+  // load, reload, traverse: the entry itself says where it stands.
+  const depthInState = readNavDepthInState(state);
+  if (depthInState === undefined) {
+    return { depth: navDepth, max: navDepthMax };
+  }
+  return {
+    depth: depthInState,
+    max: depthInState > navDepthMax ? depthInState : navDepthMax,
+  };
+};
+export const commitNavDepth = ({ depth, max }) => {
+  navDepth = depth;
+  navDepthMax = max;
   canNavBackSignal.value = navDepth > 0;
   canNavForwardSignal.value = navDepth < navDepthMax;
+};
+export const applyNavigationToNavDepth = (navigationType, state) => {
+  commitNavDepth(resolveNavDepth(navigationType, state));
 };

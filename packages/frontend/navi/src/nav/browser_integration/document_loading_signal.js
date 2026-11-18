@@ -1,6 +1,5 @@
 import { computed, signal } from "@preact/signals";
 
-import { arraySignal } from "../../utils/array_signal.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 
 let DEBUG = false;
@@ -19,68 +18,53 @@ if (document.readyState === "complete") {
   });
 }
 
-const [
-  documentLoadingRouteArraySignal,
-  addToDocumentLoadingRouteArraySignal,
-  removeFromDocumentLoadingRouteArraySignal,
-] = arraySignal([]);
-export { documentLoadingRouteArraySignal };
-export const routingWhile = (fn, routeNames = []) => {
-  if (import.meta.dev && DEBUG && routeNames.length > 0) {
-    console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
+// What keeps the document busy: one entry per routing or per update of the
+// actions started through it, taken out by its own end. Not by name: two runs
+// of one verb (the child of `GAME.GET` two cards read, two unnamed actions)
+// share a name, and the first one to end would say the document idle while the
+// other is still out. The names are there to be read when debugging.
+const routingPendingSignal = signal([]);
+const workPendingSignal = signal([]);
+const whilePending = (pendingSignal, fn, names, label) => {
+  if (names.length === 0) {
+    return fn();
   }
-  addToDocumentLoadingRouteArraySignal(...routeNames);
+  const pending = { names };
+  pendingSignal.value = [...pendingSignal.peek(), pending];
+  if (import.meta.dev && DEBUG) {
+    console.debug(`${label}: pending`, names);
+  }
   return executeWithCleanup(fn, () => {
-    removeFromDocumentLoadingRouteArraySignal(...routeNames);
-    if (import.meta.dev && DEBUG && routeNames.length > 0) {
+    pendingSignal.value = pendingSignal
+      .peek()
+      .filter((pendingEntry) => pendingEntry !== pending);
+    if (import.meta.dev && DEBUG) {
       console.debug(
-        `routingWhile: Removed routes from loading state:`,
-        routeNames,
-        "state after removing:",
-        documentLoadingRouteArraySignal.peek(),
+        `${label}: done`,
+        names,
+        "still pending:",
+        pendingSignal.peek().map((pendingEntry) => pendingEntry.names),
       );
     }
   });
 };
-
-const [
-  documentLoadingActionArraySignal,
-  addToDocumentLoadingActionArraySignal,
-  removeFromDocumentLoadingActionArraySignal,
-] = arraySignal([]);
-export { documentLoadingActionArraySignal };
+export const routingWhile = (fn, routeNames = []) => {
+  return whilePending(routingPendingSignal, fn, routeNames, "routingWhile");
+};
 export const workingWhile = (fn, actionNames = []) => {
-  if (import.meta.dev && DEBUG && actionNames.length > 0) {
-    console.debug(
-      `workingWhile: Adding actions to loading state:`,
-      actionNames,
-    );
-  }
-  addToDocumentLoadingActionArraySignal(...actionNames);
-  return executeWithCleanup(fn, () => {
-    removeFromDocumentLoadingActionArraySignal(...actionNames);
-    if (import.meta.dev && DEBUG && actionNames.length > 0) {
-      console.debug(
-        `routingWhile: Removed action from loading state:`,
-        actionNames,
-        "start after removing:",
-        documentLoadingActionArraySignal.peek(),
-      );
-    }
-  });
+  return whilePending(workPendingSignal, fn, actionNames, "workingWhile");
 };
 
 export const documentIsBusySignal = computed(() => {
   return (
-    documentLoadingRouteArraySignal.value.length > 0 ||
-    documentLoadingActionArraySignal.value.length > 0
+    routingPendingSignal.value.length > 0 || workPendingSignal.value.length > 0
   );
 });
 
 const documentLoadingReasonArraySignal = computed(() => {
   const windowIsLoading = windowIsLoadingSignal.value;
-  const routesLoading = documentLoadingRouteArraySignal.value;
-  const actionsLoading = documentLoadingActionArraySignal.value;
+  const routesLoading = routingPendingSignal.value;
+  const actionsLoading = workPendingSignal.value;
   const reasonArray = [];
   if (windowIsLoading) {
     reasonArray.push("window_loading");

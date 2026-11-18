@@ -1,5 +1,4 @@
 import { findEvent } from "@jsenv/dom";
-import { signal } from "@preact/signals";
 
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
@@ -22,20 +21,21 @@ import {
 import { announceRouting, publishTraversalAsked } from "./before_routing.js";
 import { whenDocumentMayEnd } from "./document_may_end.js";
 import {
-  applyNavigationToNavDepth,
   canNavBackSignal,
-  getNavDepth,
+  commitNavDepth,
   NAV_DEPTH_STATE_KEY,
+  resolveNavDepth,
   stateWithNavDepthOnLoad,
 } from "./document_back_and_forward.js";
 import {
   applyPressWrites,
+  documentStateSignal,
   dropGeneratedIdKeys,
   resolveEffectiveDocumentState,
   updateDocumentState,
   writePressWritesHere,
 } from "./document_state_signal.js";
-import { updateDocumentUrl } from "./document_url_signal.js";
+import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
 import { linkOpensElsewhere } from "./link_elsewhere.js";
@@ -47,6 +47,11 @@ import {
 } from "./link_open.js";
 import { linkAsksForReplace } from "./link_replace.js";
 import { linkAsksForReturn } from "./link_return.js";
+import {
+  isUrlVisited,
+  markUrlAsVisited,
+  visitedUrlsSignal,
+} from "./visited_urls.js";
 
 export const setupBrowserIntegrationViaHistory = ({
   applyActions,
@@ -71,29 +76,12 @@ export const setupBrowserIntegrationViaHistory = ({
 
   const getDocumentState = () => {
     const entryState = readEntryState();
-    return entryState ? { ...entryState } : null;
+    return entryState ? withoutVisitedSet({ ...entryState }) : null;
   };
 
-  const historyStartAtStart = getDocumentState();
-  const visitedUrlSet = historyStartAtStart
-    ? new Set(historyStartAtStart.jsenv_visited_urls || [])
-    : new Set();
-
-  // Create a signal that tracks visited URLs for reactive updates
-  // Using a counter instead of the Set directly for better performance
-  // Links will check isVisited() when this signal changes
-  const visitedUrlsSignal = signal(0);
-
+  // Resolved against the address the document stands at (see readAddress).
   const isVisited = (url) => {
-    url = new URL(url, readAddress()).href;
-    return visitedUrlSet.has(url);
-  };
-  const markUrlAsVisited = (url) => {
-    if (visitedUrlSet.has(url)) {
-      return;
-    }
-    visitedUrlSet.add(url);
-    visitedUrlsSignal.value++;
+    return isUrlVisited(new URL(url, readAddress()).href);
   };
 
   // The one thing the History API cannot say and the Navigation API can: what
@@ -250,21 +238,18 @@ export const setupBrowserIntegrationViaHistory = ({
     let { state } = options;
 
     // Where the entry being reached stands in this document's own stack —
-    // decided before the state that carries it is built (see
-    // document_back_and_forward.js).
-    applyNavigationToNavDepth(navigationType, state);
+    // decided before the state that carries it is built, and committed once
+    // the entry is written: a write the browser refuses throws out of here
+    // with nothing changed (see document_back_and_forward.js).
+    const navDepthReached = resolveNavDepth(navigationType, state);
 
     if (navigationType === "push" || navigationType === "replace") {
-      markUrlAsVisited(url);
       const effectiveState = applyPressWrites(
         resolveEffectiveDocumentState(state, {
           navigationType,
           isArrival: isArrival(url, { from: urlLeft }),
           currentState: getDocumentState(),
-          sharedState: {
-            jsenv_visited_urls: Array.from(visitedUrlSet),
-            [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-          },
+          sharedState: { [NAV_DEPTH_STATE_KEY]: navDepthReached.depth },
         }),
         pressWrites,
       );
@@ -276,12 +261,12 @@ export const setupBrowserIntegrationViaHistory = ({
       } else {
         writeHistoryEntry(navigationType, effectiveState, url);
       }
+      commitNavDepth(navDepthReached);
       rememberEntryIsOfThisDocument();
       updateDocumentUrl(url);
       updateDocumentState(effectiveState);
     } else {
       // traverse / reload: state comes from the history entry, no push/replace needed.
-      markUrlAsVisited(url);
       if (landOn) {
         // The entry the back landed on, written over where it stands with
         // what must outlive the popped one (see navBack's `landOn`) — before
@@ -290,10 +275,7 @@ export const setupBrowserIntegrationViaHistory = ({
         state = resolveEffectiveDocumentState(landOn.state, {
           navigationType: "replace",
           currentState: state,
-          sharedState: {
-            jsenv_visited_urls: Array.from(visitedUrlSet),
-            [NAV_DEPTH_STATE_KEY]: getNavDepth(),
-          },
+          sharedState: { [NAV_DEPTH_STATE_KEY]: navDepthReached.depth },
         });
         writeHistoryEntry("replace", state, url);
         rememberEntryIsOfThisDocument();
@@ -305,6 +287,10 @@ export const setupBrowserIntegrationViaHistory = ({
         writeHistoryEntry("replace", state, url);
         rememberEntryIsOfThisDocument();
       }
+      commitNavDepth(navDepthReached);
+      // The history holds this address already: the entry was there to be
+      // traversed to, or loaded.
+      markUrlAsVisited(url);
       updateDocumentUrl(url);
       updateDocumentState(state);
     }
@@ -451,7 +437,15 @@ export const setupBrowserIntegrationViaHistory = ({
     if (isAnchor) {
       // Fragment navigation belongs to the browser: it owns the indicated
       // part of the document, and taking it over would cost `:target` and the
-      // focus handling that come with it.
+      // focus handling that come with it. The entry it makes is answered once
+      // made (see answerFragmentNavigation).
+      //
+      // A push never waits for a replace that is settling: the browser stacks
+      // the fragment on the address it holds, which must be the one shown.
+      flushPendingReplace();
+      // Firefox fires its "popstate" after this task, and none at all for
+      // the `#id` the address already names — whose entry it still empties.
+      setTimeout(answerFragmentNavigation);
       if (isCurrent) {
         // Except this one, which the browser answers with a scroll and
         // nothing else: same pathname, same hash, so no event and no url
@@ -573,10 +567,57 @@ export const setupBrowserIntegrationViaHistory = ({
   // replaceAddressWhenSettled).
   whenDocumentMayEnd(flushPendingReplace);
 
+  // A fragment navigation within the page shown — a `#id` link, the address
+  // bar, `location.hash` — is the browser's, and makes its entry itself: a new
+  // one for another `#id`, the same one for the `#id` the address already
+  // names, with no state in either case. Its "popstate" is no traversal: the
+  // entry is answered as the push or the replace it is, with navi's state
+  // written onto it (its depth, what is open on the page), the document url
+  // following, nothing routed and no position put back — the page has not
+  // changed, and the browser has just placed the element. Asked by the
+  // "popstate", the "hashchange" and the click, whichever comes first: only an
+  // entry with no state is answered.
+  const isFragmentOfDocumentUrl = (url) => {
+    return urlWithoutHash(url) === urlWithoutHash(documentUrlSignal.peek());
+  };
+  const answerFragmentNavigation = () => {
+    if (window.history.state !== null) {
+      return;
+    }
+    const url = window.location.href;
+    if (!isFragmentOfDocumentUrl(url)) {
+      return;
+    }
+    const navigationType =
+      url === documentUrlSignal.peek() ? "replace" : "push";
+    const navDepthReached = resolveNavDepth(navigationType);
+    const state = {
+      ...withoutVisitedSet(documentStateSignal.peek()),
+      [NAV_DEPTH_STATE_KEY]: navDepthReached.depth,
+    };
+    writeHistoryEntryNow("replace", state, url);
+    commitNavDepth(navDepthReached);
+    rememberEntryIsOfThisDocument();
+    updateDocumentUrl(url);
+    updateDocumentState(state);
+  };
+
   window.addEventListener("popstate", (popstateEvent) => {
     if (isTargetWriteInProgress()) {
       // The fragment navigation navi makes to set `:target` (see
       // url_target.js): the entry keeps its address and its state.
+      return;
+    }
+    if (
+      popstateEvent.state === null &&
+      !backInFlight &&
+      !elidedPressPending &&
+      isFragmentOfDocumentUrl(window.location.href)
+    ) {
+      // The browser's fragment navigation (see answerFragmentNavigation).
+      // Chrome and Safari also fire one for the `#id` the address already
+      // names, with the entry and its state left as they were.
+      answerFragmentNavigation();
       return;
     }
     // The entry a pending replace was for is no longer the current one, and
@@ -605,11 +646,12 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  // A fragment navigation is left to the browser (see the click handler above):
-  // it owns the indicated part of the document, and taking it over would cost
-  // `:target` and the focus handling that come with it. The document url still
-  // has to follow it — nothing else here would notice that it moved.
+  // A fragment navigation is left to the browser (see the click handler above)
+  // and answered as the entry it makes (see answerFragmentNavigation). A
+  // traversal between two fragments of the page is a "popstate" like any
+  // other; the document url follows whichever moved it.
   window.addEventListener("hashchange", () => {
+    answerFragmentNavigation();
     updateDocumentUrl(window.location.href);
   });
 
@@ -726,7 +768,9 @@ export const setupBrowserIntegrationViaHistory = ({
   const init = () => {
     const url = window.location.href;
     const stateOnEntry = window.history.state;
-    const state = stateWithNavDepthOnLoad(dropGeneratedIdKeys(stateOnEntry));
+    const state = stateWithNavDepthOnLoad(
+      withoutVisitedSet(dropGeneratedIdKeys(stateOnEntry)),
+    );
     if (state !== stateOnEntry) {
       // The entry itself has to carry it, not just the document state:
       // getDocumentState() reads the entry back, every state write copies what
@@ -786,6 +830,9 @@ export const setupBrowserIntegrationViaHistory = ({
 const HISTORY_WRITE_BUDGET = 100;
 const HISTORY_WRITE_WINDOW_MS = 10_000;
 const ADDRESS_WRITE_ADVICE = `An address is not a recording of a gesture: a value dragged per frame belongs to the gesture, and the state bound to the url is written once, on release. A state whose every intermediate value is a valid address can declare debounceUrl (milliseconds) instead.`;
+// What an entry's state holds is copied by the browser into each entry, and
+// WebKit counts every pushed state against a budget per document.
+const ENTRY_STATE_ADVICE = `An entry's state (useNavState values, what a link or navTo hands over) must be small and made of what structuredClone can copy: plain objects, arrays, strings, numbers, booleans.`;
 
 // The replace waiting for the state to settle, and the address this document
 // stands at meanwhile. Read by everything here that would otherwise read
@@ -842,14 +889,22 @@ const writeHistoryEntryNow = (navigationType, state, url) => {
       window.history.replaceState(state, null, url);
     }
   } catch (e) {
-    if (e.name !== "SecurityError") {
-      throw e;
+    if (e.name === "SecurityError") {
+      throw new Error(
+        `The browser refused to write the address ${url}: ${e.message}. ${ADDRESS_WRITE_ADVICE}`,
+        { cause: e },
+      );
     }
-    throw new Error(
-      `The browser refused to write the address ${url}: ${e.message}. ${ADDRESS_WRITE_ADVICE}`,
-      { cause: e },
-    );
+    if (e.name === "QuotaExceededError" || e.name === "DataCloneError") {
+      throw new Error(
+        `The browser refused to store the history entry of ${url}: ${e.message}. ${ENTRY_STATE_ADVICE}`,
+        { cause: e },
+      );
+    }
+    throw e;
   }
+  // In the history from now on (see visited_urls.js).
+  markUrlAsVisited(url);
 };
 const noteHistoryWrite = import.meta.dev
   ? (() => {
@@ -875,6 +930,25 @@ const noteHistoryWrite = import.meta.dev
       };
     })()
   : () => {};
+
+const urlWithoutHash = (url) => {
+  const urlObject = new URL(url);
+  urlObject.hash = "";
+  return urlObject.href;
+};
+
+// An entry written by navi up to 0.30.53 holds the tab's visited set (see
+// visited_urls.js), and every state write starts from the state of the entry
+// it leaves: taken out of what is read there, it is copied no further.
+const VISITED_SET_STATE_KEY = "jsenv_visited_urls";
+const withoutVisitedSet = (state) => {
+  if (!state || !Object.hasOwn(state, VISITED_SET_STATE_KEY)) {
+    return state;
+  }
+  const stateWithoutVisitedSet = { ...state };
+  delete stateWithoutVisitedSet[VISITED_SET_STATE_KEY];
+  return stateWithoutVisitedSet;
+};
 
 // Read before the history is written, in both places that ask: a push or a
 // replace onto the url already displayed. Never a traverse — the browser has

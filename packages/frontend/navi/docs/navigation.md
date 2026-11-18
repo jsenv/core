@@ -808,8 +808,11 @@ a list — is an `id` on the element and a `#id` in the link. Nothing else:
 The browser answers a fragment when the document finishes loading and on a
 fragment navigation within the page — both before the data has drawn the element
 — and a navigation navi routes is not a fragment navigation at all. So navi
-answers every navigation it routes to a URL carrying a hash (a `#id` link to the
-page one is already on stays the browser's own, without the wait or the ring):
+answers every navigation it routes to a URL carrying a hash. A `#id` link to the
+page one is already on is the browser's to follow — it jumps, and stacks an
+entry, into which navi writes what is open on the page, so that a back finds the
+page as it was and the back arrow counts it — and navi then answers it like
+any other arrival:
 
 - **it waits for the element, and for the page.** The element must exist and
   show something (`checkVisibility`): one inside a closed tab or a folded
