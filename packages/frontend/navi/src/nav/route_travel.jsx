@@ -384,8 +384,6 @@ export const RouteTravel = ({
     Array.from(row.children).filter((child) =>
       child.hasAttribute("data-route-row-pane"),
     );
-  const pathOf = ({ route, params }) =>
-    new URL(route.buildUrl(params), window.location.href).pathname;
 
   // The pane laid out as the page on screen for the length of a movement, let go of
   // when the row rests. Not what readers are told the page held is
@@ -575,8 +573,8 @@ export const RouteTravel = ({
     const { pages } = latestRef.current;
     const { base, toward, fraction } = readRowFrame(row, panes);
     publishRouteRowMove({
-      basePath: pathOf(pages[panes.indexOf(base)]),
-      towardPath: toward ? pathOf(pages[panes.indexOf(toward)]) : null,
+      basePage: pages[panes.indexOf(base)],
+      towardPage: toward ? pages[panes.indexOf(toward)] : null,
       progress: -fraction,
     });
   };

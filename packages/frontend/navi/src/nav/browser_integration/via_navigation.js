@@ -70,6 +70,7 @@ import {
 import { updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
+import { pressOpensElsewhere } from "./link_elsewhere.js";
 import {
   linkAsksToOpen,
   NAV_STATE_ENTERED_VALUE,
@@ -753,7 +754,7 @@ export const setupBrowserIntegrationViaNavigation = ({
   window.addEventListener(
     "click",
     (e) => {
-      if (e.button !== 0 || e.metaKey || e.defaultPrevented) {
+      if (pressOpensElsewhere(e) || e.defaultPrevented) {
         return;
       }
       if (clickIsSuppressed(e)) {

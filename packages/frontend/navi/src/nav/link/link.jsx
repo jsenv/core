@@ -31,7 +31,6 @@ import { LINK_RETURN_ATTRIBUTE } from "../browser_integration/link_return.js";
 import { PRESSABLE_ATTRIBUTE } from "../transition_press.js";
 import { writeRouteTransitionRequest } from "../route_transition_request.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
-import { BinderItemContext } from "../binder/binder_context.js";
 import { NavContext } from "./nav_context.js";
 import { assertRoute } from "../route.js";
 import { useRouteCurrent } from "../use_route_current.js";
@@ -441,20 +440,21 @@ const LinkStyleCSSVars = {
     color: "--link-color-selected",
   },
 };
-// A link placed inside a binder tab tells that tab whether it is the current
-// one. The binder cannot know: which page an url opens is the link's business,
-// and it is settled before the binder renders anything.
-const useReportCurrentToBinderItem = (current) => {
-  const reportCurrent = useContext(BinderItemContext);
+// A tab tells the <Nav> around it that it became, or stopped being, the
+// current one: it re-renders alone when the address moves, and the row has
+// things to do about it that no render of the row would do in time — bring
+// that tab into sight, move the name its bar wears (see nav.jsx). Said after
+// the commit, once the tab's current state is on the DOM, where the row reads
+// it.
+const useTellNavCurrent = (nav, current) => {
+  const tabCurrentChanged = nav?.tabCurrentChanged;
   useLayoutEffect(() => {
-    if (!reportCurrent) {
+    if (!tabCurrentChanged) {
       return undefined;
     }
-    reportCurrent(current);
-    return () => {
-      reportCurrent(false);
-    };
-  }, [reportCurrent, current]);
+    tabCurrentChanged();
+    return tabCurrentChanged;
+  }, [tabCurrentChanged, current]);
 };
 
 const LinkPseudoClasses = [
@@ -796,7 +796,7 @@ const LinkPlain = (props) => {
   // <Nav> around reads off that container, so nothing here has to be told.
   const innerCurrent =
     current ?? (slide ? nav?.currentSlideArea === slide : isCurrent);
-  useReportCurrentToBinderItem(innerCurrent);
+  useTellNavCurrent(nav, innerCurrent);
   controlHostProps.basePseudoState = {
     ...basePseudoState,
     ":visited": visited,

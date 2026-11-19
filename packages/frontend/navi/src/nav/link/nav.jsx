@@ -11,7 +11,13 @@ import {
   wheelGestureIsTakenFrom,
 } from "@jsenv/dom";
 import { toChildArray } from "preact";
-import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import {
@@ -21,6 +27,8 @@ import {
   SLIDE_STATE_EVENT,
   SLIDE_TOWARD_ATTRIBUTE,
 } from "../../layout/use_slide_container.js";
+import { pageIsAt } from "../route_page.js";
+import { RoutePageContext } from "../route_page_context.js";
 import { followRouteRows } from "../route_row_follow.js";
 import { observeTransitionDestination } from "../transition_destination.js";
 import { NavContext } from "./nav_context.js";
@@ -32,6 +40,21 @@ let navCount = 0;
 // Worn by a nav of routes while a route movement between two of its tabs is
 // pictured (see markIndicatorTakesPart, and the CSS below for what it decides).
 const BETWEEN_TABS_ATTRIBUTE = "data-nav-between-tabs";
+// Worn by the one tab of a nav of routes whose bar wears the row's name (see
+// nameIndicatorTab).
+const NAMED_TAB_ATTRIBUTE = "data-nav-named-tab";
+
+// The tabs of this row the address is on, in the order they stand: its own,
+// not those of a nav nested in it, which answers for its own.
+const currentTabsOf = (navElement) => {
+  const currentTabs = [];
+  for (const element of navElement.querySelectorAll("[data-href-current]")) {
+    if (element.closest(".navi_nav") === navElement) {
+      currentTabs.push(element);
+    }
+  }
+  return currentTabs;
+};
 // What one notch of a wheel that counts in LINES is worth on a row that counts
 // in pixels. A rough line, deliberately: nothing here needs to agree with a
 // paragraph, only to move the row about as far as a notch moves a page.
@@ -66,14 +89,16 @@ const css = /* css */ `
       --nav-current-indicator-size: 2px;
       --nav-current-indicator-color: var(--navi-link-current-indicator-color);
     }
-    /* What the row says about the bar reaches its tabs under the name a tab
-       answers to, so the two natures of row take one declaration: the bar is
-       drawn per tab in a row of routes and once for the whole row in a row of
-       slides, and a caller colouring a tab should not have to know which.
-       A tab that says otherwise for itself is what makes the bar arrive on it
-       in its colour (see paintIndicatorGeometry). */
+    /* What the row says about the bar, its colour and its thickness, reaches
+       its tabs under the name a tab answers to, so the two natures of row take
+       one declaration: the bar is drawn per tab in a row of routes (and once
+       for the whole row while it follows a RouteTravel), once for the whole
+       row in a row of slides, and a caller colouring a tab should not have to
+       know which. A tab that says otherwise for itself is what makes the bar
+       arrive on it in its colour (see paintIndicatorGeometry). */
     .navi_nav .navi_link {
       --link-current-indicator-color: var(--nav-current-indicator-color);
+      --link-current-indicator-size: var(--nav-current-indicator-size);
     }
   }
 
@@ -180,19 +205,23 @@ const css = /* css */ `
      played as a view transition then finds it on both pictures and moves it
      from the tab it was under to the tab it is under, which is all "the bar
      slides" is. The name is the row's (--nav-indicator-name, absent when the
-     row asked for no slide) and only the bar one can see wears it: every tab
-     holds a bar, and a name belongs to one element at a time. */
-  .navi_nav .navi_link[data-href-current] .navi_current_indicator {
+     row asked for no slide) and only the bar of the tab the row chose wears it
+     (see nameIndicatorTab): every tab holds a bar, two of them can be current
+     at once, and a name belongs to one element at a time — worn twice, the
+     browser refuses the whole transition. */
+  .navi_nav
+    .navi_link[data-href-current][data-nav-named-tab]
+    .navi_current_indicator {
     view-transition-name: var(--nav-indicator-name);
   }
   /* Unnamed for a route movement it takes no part in. While the PAGES are the
-     ones moving — a route transition, a route travel — a name lifts the
-     bar out of its page's picture into a picture of its own, and a picture of
-     its own is precisely what does not travel: it stands where it was captured,
-     fading, while the row slides away under it. Right when the row is on both
-     sides and the bar has a tab to glide to; wrong anywhere else, where the bar
-     must leave or arrive with its row. So the name is dropped unless the
-     movement goes from a tab of this row to another one of its tabs (see
+     ones moving, a name lifts the bar out of its page's picture into a picture
+     of its own, and a picture of its own is precisely what does not travel: it
+     stands where it was captured, fading, while the row slides away under it.
+     Right when the row is on both sides and the bar has a tab to glide to;
+     wrong anywhere else, where the bar must leave or arrive with its row. So
+     the name is dropped unless the movement goes from a tab of this row to
+     another one of its tabs, in a row still shown where the movement goes (see
      markIndicatorTakesPart). */
   :root[data-navi-route-transition]
     .navi_nav:not([data-nav-between-tabs])
@@ -464,24 +493,39 @@ const positionOfCurrentIndicator = (currentIndicator, vertical) => {
  * }>}
  * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - the
  *   bar that says which tab one is on, said once here rather than on every
- *   `<Link>`. A link may still say otherwise for itself.
+ *   `<Link>`. A link may still say otherwise for itself. `true` is
+ *   `"bottom"`, or `"left"` for a `vertical` row. Resolved here once, with `currentIndicatorSize`, for every bar the row
+ *   draws: the one under each tab and the one drawn for the whole row while it
+ *   follows a hand.
  *   Its colour belongs to the tab it is under: `currentIndicatorColor` here is
  *   what every tab inherits, and a tab declaring
  *   `--nav-current-indicator-color` for itself is arrived at in its own colour
  *   — the bar changes colour as it travels rather than once it lands.
  * @param {boolean} [props.currentIndicatorSlides=true] - whether that bar
  *   travels from the tab it was under to the tab it is under now, instead of
- *   going out on one and coming back on the other. For a nav made of routes it
- *   does so by being NAMED, which is all the browser needs: any change played as
- *   a view transition animates it on the same clock as everything else in that
- *   transition. Inside a `RouteTravel` that means it follows the pages, and the
- *   thumb dragging them, without either of them being told about the other.
- *   During a route transition or a route travel it keeps the name only for a
- *   movement between two tabs of the row: when the row is on one side only,
- *   the bar leaves or arrives with its row. Any other view transition finds it
- *   named, a picture of its own. For a nav made of slides (`slideContainer`)
- *   the bar is one element for the whole row, and it reads the travel the
- *   container publishes.
+ *   jumping. For a nav made of routes:
+ *   - under a hand moving a `RouteTravel` row, the bar follows the hand between
+ *     the tabs of the two pages the row stands between — a tab is a page when
+ *     its address is that page's, search params it names included, the reading
+ *     RouteTravel itself makes of a pressed link;
+ *   - for a change played as a route transition, the bar is NAMED, which is all
+ *     the browser needs to move it on the same clock as everything else. It
+ *     keeps the name only for a movement between two tabs of a row that is on
+ *     both sides: outside any route, or in a page the movement keeps on screen.
+ *     A row each page renders for itself is another row on the other side, and
+ *     its bar leaves with its page. One tab wears the name, the first current
+ *     one: two current tabs (a frame tab whose route covers the address of its
+ *     child) draw two bars, of which only the first glides, and are warned
+ *     about in dev. Any other view transition finds that bar named, a picture
+ *     of its own.
+ *   `false`: none of this, the bar jumps. For a nav made of slides
+ *   (`slideContainer`) the bar is one element for the whole row and always
+ *   reads the travel the container publishes: this prop does not apply.
+ *
+ *   A row that scrolls (`overflowX`) brings its current tab into sight when it
+ *   changes — a press, Back, a hand on a `RouteTravel` — and when the row
+ *   changes size, never on a plain render: a row pushed by hand to read the
+ *   other tabs stays where it was pushed.
  * @param {string} [props.slideContainer] - the id of a `<SlideContainer>` these
  *   tabs are about: each one says which slide it is (`<Link slide="…">`), the
  *   container says which one is on screen, and pressing a tab travels there.
@@ -516,16 +560,29 @@ export const Nav = ({
   }
   const [currentSlideArea, setCurrentSlideArea] = useState(undefined);
   const slideContainerElementRef = useRef(null);
-  const indicatorPosition = slideContainer
-    ? positionOfCurrentIndicator(currentIndicator, vertical)
-    : null;
-  // A row of routes draws that same bar only while it follows a row scrolling.
+  // Where the bar goes, resolved once for every bar this row draws: the row's
+  // own for slides, the one under each tab for routes (handed to the links
+  // through NavContext), and the row's own again while a row of routes follows
+  // a hand.
+  const resolvedIndicatorPosition = positionOfCurrentIndicator(
+    currentIndicator,
+    vertical,
+  );
+  const indicatorPosition = slideContainer ? resolvedIndicatorPosition : null;
   const rowIndicatorPosition = slideContainer
     ? null
-    : positionOfCurrentIndicator(currentIndicator, vertical);
+    : resolvedIndicatorPosition;
+  const followsRouteRows =
+    Boolean(rowIndicatorPosition) && currentIndicatorSlides;
+  // The page this row is rendered in, if any: whether it is still on screen
+  // where a route movement goes is what says whether the row survives it (see
+  // markIndicatorTakesPart).
+  const routePage = useContext(RoutePageContext);
+  const routePageRef = useRef(null);
+  routePageRef.current = routePage;
 
   // Which tab of this row is the one being shown: the slide the container says
-  // it is on, or, for a row of routes, the link the browser is on.
+  // it is on, or, for a row of routes, the first link the browser is on.
   const getCurrentTabElement = () => {
     const navElement = navRef.current;
     if (!navElement) {
@@ -533,7 +590,7 @@ export const Nav = ({
     }
     const containerElement = slideContainerElementRef.current;
     if (!containerElement) {
-      return navElement.querySelector("[data-href-current]");
+      return currentTabsOf(navElement)[0] ?? null;
     }
     // The tab the trait counts from: the current one, unless a hand has carried
     // the row past it.
@@ -592,8 +649,8 @@ export const Nav = ({
     // which tab is current and which one the travel leans toward. A travel
     // announces its state several times between those two changing — painted
     // each time, the same measurement is paid again on frames the travel is
-    // drawn on. The size observer clears the memo, since the same pair on a
-    // resized row measures differently.
+    // drawn on. The size observer clears the memo, since the same pair
+    // measures differently once the row or a tab has another size.
     const towardAreaNow = containerElement.getAttribute(
       "data-slide-travel-toward",
     );
@@ -633,19 +690,20 @@ export const Nav = ({
   const paintIndicatorGeometryRef = useRef(null);
   paintIndicatorGeometryRef.current = paintIndicatorGeometry;
 
-  // The bar following a row of routes the browser scrolls, between the two tabs
-  // of the pages it stands between. A row this nav holds no tab for is another
-  // nav's to draw.
+  // The bar following a row of routes the browser scrolls, between the tabs of
+  // the two pages it stands between. A tab is a page when its address is that
+  // page's (pageIsAt): the reading RouteTravel makes of a pressed link, so
+  // pages told apart by a search param are told apart here too. A row this nav
+  // holds no tab for is another nav's to draw.
+  // The pages a row publishes stay the same objects for as long as it moves,
+  // so which tabs they are is looked up when they change, not at every scroll.
+  const followedRef = useRef(null);
   useLayoutEffect(() => {
-    if (!rowIndicatorPosition) {
+    if (!followsRouteRows) {
       return undefined;
     }
-    let paintedBase = null;
-    let paintedToward = null;
     const letGo = () => {
       const navElement = navRef.current;
-      paintedBase = null;
-      paintedToward = null;
       navElement?.removeAttribute("data-nav-following-row");
       navElement?.removeAttribute("data-nav-indicator-measured");
       navElement?.style.removeProperty("--slide-travel-progress");
@@ -656,30 +714,47 @@ export const Nav = ({
         return;
       }
       if (!move) {
+        followedRef.current = null;
         letGo();
         return;
       }
-      const tabElements = Array.from(navElement.querySelectorAll(".navi_link"));
-      const tabOf = (path) =>
-        tabElements.find((tabElement) => tabElement.pathname === path);
-      const baseTabElement = tabOf(move.basePath);
-      if (!baseTabElement) {
-        letGo();
-        return;
-      }
-      const towardTabElement = move.towardPath ? tabOf(move.towardPath) : null;
+      let followed = followedRef.current;
       if (
-        baseTabElement !== paintedBase ||
-        towardTabElement !== paintedToward
+        !followed ||
+        followed.basePage !== move.basePage ||
+        followed.towardPage !== move.towardPage
       ) {
-        paintedBase = baseTabElement;
-        paintedToward = towardTabElement;
-        writeIndicatorGeometry(navElement, {
+        const tabElements = Array.from(
+          navElement.querySelectorAll(".navi_link[href]"),
+        );
+        const tabOf = (page) =>
+          tabElements.find((tabElement) => pageIsAt(page, tabElement.href));
+        const baseTabElement = tabOf(move.basePage) ?? null;
+        const towardTabElement = move.towardPage
+          ? (tabOf(move.towardPage) ?? null)
+          : null;
+        followed = {
+          basePage: move.basePage,
+          towardPage: move.towardPage,
           baseTabElement,
           towardTabElement,
           towardIsAfter:
             tabElements.indexOf(towardTabElement) >
             tabElements.indexOf(baseTabElement),
+          painted: false,
+        };
+        followedRef.current = followed;
+      }
+      if (!followed.baseTabElement) {
+        letGo();
+        return;
+      }
+      if (!followed.painted) {
+        followed.painted = true;
+        writeIndicatorGeometry(navElement, {
+          baseTabElement: followed.baseTabElement,
+          towardTabElement: followed.towardTabElement,
+          towardIsAfter: followed.towardIsAfter,
           vertical,
         });
         navElement.setAttribute("data-nav-indicator-measured", "");
@@ -689,9 +764,10 @@ export const Nav = ({
     });
     return () => {
       stopFollowing();
+      followedRef.current = null;
       letGo();
     };
-  }, [rowIndicatorPosition, vertical]);
+  }, [followsRouteRows, vertical]);
   // What the last paint measured for — see the memo at the top of
   // paintIndicatorGeometry.
   const indicatorPaintedForRef = useRef(null);
@@ -748,8 +824,10 @@ export const Nav = ({
       // current tab changes lands ahead of the movement it should have ridden,
       // and the slides then glide towards a row already there. Giving it a
       // frame costs nothing: the slides have not moved either.
-      // Only for a row of slides, and only once — a row of routes has no travel
-      // to ride, and the second look is the one that lands.
+      // Only for a row of slides, and only once — the second look is the one
+      // that lands. A row of routes is not ridden: only its bar follows a hand
+      // on a RouteTravel (see followRouteRows), and the row lands on the tab
+      // when the address gets there.
       if (
         slideContainer &&
         !afterAFrame &&
@@ -897,29 +975,75 @@ export const Nav = ({
     };
   }, []);
 
-  // The row watches its own size and reads itself again when it changes — a
-  // badge count, a font that just arrived, a window resized: what was written
-  // is pixels, where the trait sits and how far the row is scrolled, and
-  // pixels measured on a row of another width are wrong. A row that had no
-  // width at all is the same story with a sharper edge: inside a closed
-  // <dialog> everything measures 0, and the current tab does not change when
-  // the dialog opens, so nothing else would ever look again.
+  // The row watches its own size, and the size of each tab under a bar it
+  // draws itself, and reads itself again when one changes: what was written is
+  // pixels, where the trait sits and how far the row is scrolled, and pixels
+  // measured on a row or a tab of another size are wrong. The row's own box
+  // does not always say it: a row capped at its container's width keeps its
+  // size while a label, a badge count or a font that just arrived widens a
+  // tab, and a row whose tabs share it keeps its size while one of them folds
+  // away — every tab after it moves, and only their sizes tell.
+  // A row that had no width at all is the same story with a sharper edge:
+  // inside a closed <dialog> everything measures 0, and the current tab does
+  // not change when the dialog opens, so nothing else would ever look again.
   // A scroll takes no size from anything, so this stays quiet while the row is
   // being pushed around by hand.
+  const sizeObserverRef = useRef(null);
+  const observedTabsRef = useRef(new Set());
   useLayoutEffect(() => {
-    const sizeObserver = new ResizeObserver(() => {
-      // The same pair of tabs measures differently on a row of another size.
+    const navElement = navRef.current;
+    const sizeObserver = new ResizeObserver((entries) => {
+      // The same pair of tabs measures differently once one of them, or the
+      // row, has another size.
       indicatorPaintedForRef.current = null;
+      if (followedRef.current) {
+        followedRef.current.painted = false;
+      }
       paintIndicatorGeometryRef.current();
-      // What was brought into sight was brought there for another row.
-      tabInSightRef.current = null;
-      scheduleTabScrollSyncRef.current();
+      // What was brought into sight was brought there for another row. A tab
+      // alone changing size leaves the row where it is: it may have been
+      // pushed by hand since.
+      if (entries.some((entry) => entry.target === navElement)) {
+        tabInSightRef.current = null;
+        scheduleTabScrollSyncRef.current();
+      }
     });
-    sizeObserver.observe(navRef.current);
+    sizeObserver.observe(navElement);
+    sizeObserverRef.current = sizeObserver;
     return () => {
       sizeObserver.disconnect();
+      sizeObserverRef.current = null;
+      observedTabsRef.current = new Set();
     };
   }, []);
+  // Which tabs are watched follows the tabs there are, after every commit: a
+  // tab added, removed or replaced.
+  const observeTabSizes = () => {
+    const navElement = navRef.current;
+    const sizeObserver = sizeObserverRef.current;
+    if (!navElement || !sizeObserver) {
+      return;
+    }
+    const tabs = new Set();
+    if (indicatorPosition || followsRouteRows) {
+      for (const tab of navElement.querySelectorAll(
+        indicatorPosition ? "[data-slide-target]" : ".navi_link",
+      )) {
+        tabs.add(tab);
+      }
+    }
+    for (const tab of observedTabsRef.current) {
+      if (!tabs.has(tab)) {
+        sizeObserver.unobserve(tab);
+      }
+    }
+    for (const tab of tabs) {
+      if (!observedTabsRef.current.has(tab)) {
+        sizeObserver.observe(tab);
+      }
+    }
+    observedTabsRef.current = tabs;
+  };
 
   // A row that scrolls sideways, and a mouse that only turns one way. A
   // vertical wheel is left to the vertical axis, which a row of tabs does not
@@ -1009,9 +1133,72 @@ export const Nav = ({
     };
   }, [slideContainer]);
 
-  // Said after every commit: a tab added, removed or renamed moves the trait,
-  // and no observer above watches this row's own children.
+  // The one tab whose bar wears the row's name (see the CSS above): the first
+  // current tab of the row. Written on the DOM by hand rather than rendered: a
+  // route transition photographs the page arriving right after its render,
+  // and the tab current there says so from its own layout effect (see
+  // tabCurrentChanged) — a render of this row would come after the picture.
+  const namedTabRef = useRef(null);
+  const duplicateWarnedRef = useRef(false);
+  const nameIndicatorTab = () => {
+    const navElement = navRef.current;
+    if (!navElement || slideContainer) {
+      return;
+    }
+    const currentTabs = currentTabsOf(navElement);
+    const namedTab = currentTabs[0] ?? null;
+    const previousNamedTab = namedTabRef.current;
+    if (namedTab !== previousNamedTab) {
+      previousNamedTab?.removeAttribute(NAMED_TAB_ATTRIBUTE);
+      namedTab?.setAttribute(NAMED_TAB_ATTRIBUTE, "");
+      namedTabRef.current = namedTab;
+    }
+    if (
+      import.meta.dev &&
+      currentTabs.length > 1 &&
+      rowIndicatorPosition &&
+      !duplicateWarnedRef.current
+    ) {
+      // Looked at again once the tabs re-rendering for one address change have
+      // all said so: the tab leaving and the tab arriving tell this row one
+      // after the other, in whichever order they render.
+      queueMicrotask(() => {
+        const navElementNow = navRef.current;
+        if (!navElementNow || duplicateWarnedRef.current) {
+          return;
+        }
+        const currentTabsNow = currentTabsOf(navElementNow);
+        if (currentTabsNow.length < 2) {
+          return;
+        }
+        duplicateWarnedRef.current = true;
+        console.warn(
+          `A <Nav currentIndicator> holds ${currentTabsNow.length} current tabs (${currentTabsNow.map((tab) => tab.getAttribute("href")).join(", ")}): each draws its bar, and only the first glides to the next tab. Usually a tab whose route covers the addresses below it (a frame route, "/x/") lit beside the tab of its child: \`currentExcept\` on it names the child it does not stand for.`,
+          navElementNow,
+        );
+      });
+    }
+  };
+  const nameIndicatorTabRef = useRef(null);
+  nameIndicatorTabRef.current = nameIndicatorTab;
+
+  // Said by a tab of this row that became, or stopped being, the current one
+  // (see link.jsx): a tab re-renders alone when the address moves, and this
+  // row, whose parent may not render at all, would otherwise hear of it only
+  // at its own next commit or resize. What changes with it is which bar wears
+  // the name, and which tab must be in sight.
+  const tabCurrentChangedRef = useRef(null);
+  if (!tabCurrentChangedRef.current) {
+    tabCurrentChangedRef.current = () => {
+      nameIndicatorTabRef.current();
+      scheduleTabScrollSyncRef.current();
+    };
+  }
+
+  // Said after every commit: a tab added, removed or renamed moves the trait.
   useLayoutEffect(() => {
+    nameIndicatorTab();
+    observeTabSizes();
     paintIndicatorGeometry();
     scheduleTabScrollSync();
   });
@@ -1028,12 +1215,21 @@ export const Nav = ({
         navElement.removeAttribute(BETWEEN_TABS_ATTRIBUTE);
         return;
       }
+      // The row survives the movement: it sits outside any route, or in a
+      // page still on screen where the movement goes. The routes have read
+      // that address already — a movement is announced once the routing is
+      // done, with the render held until its first picture — so the page
+      // answers for the destination. A row each page renders for itself is
+      // another row on the other side: its bar leaves with its page.
+      const page = routePageRef.current;
+      const rowSurvives = !page || page.isShown();
       // From a tab of this row: the row still shows the page being left, and
       // the tab it is on. To a tab of this row: one of its links aims at the
       // page the movement goes to. A row mounted while the movement plays hears
       // nothing here and stays unnamed, rightly: its bar is on the second
       // picture alone, with nothing on the first to glide from.
-      const fromTab = navElement.querySelector("[data-href-current]");
+      nameIndicatorTabRef.current();
+      const fromTab = namedTabRef.current;
       let toTab = null;
       for (const linkElement of navElement.querySelectorAll("a[href]")) {
         if (linkElement.href === destinationUrl) {
@@ -1041,7 +1237,7 @@ export const Nav = ({
           break;
         }
       }
-      if (fromTab && toTab) {
+      if (rowSurvives && fromTab && toTab) {
         navElement.setAttribute(BETWEEN_TABS_ATTRIBUTE, "");
       } else {
         navElement.removeAttribute(BETWEEN_TABS_ATTRIBUTE);
@@ -1054,11 +1250,12 @@ export const Nav = ({
     () => ({
       // The bar belongs to the row itself when the tabs are slides, so the
       // links draw none of their own.
-      currentIndicator: slideContainer ? undefined : currentIndicator,
+      currentIndicator: rowIndicatorPosition ?? undefined,
       slideContainer,
       currentSlideArea,
+      tabCurrentChanged: tabCurrentChangedRef.current,
     }),
-    [currentIndicator, slideContainer, currentSlideArea],
+    [rowIndicatorPosition, slideContainer, currentSlideArea],
   );
 
   children = toChildArray(children);
@@ -1075,7 +1272,8 @@ export const Nav = ({
       data-vertical={vertical ? "" : undefined}
       data-panel-position={panelPosition}
       data-nav-indicator={
-        indicatorPosition ?? rowIndicatorPosition ?? undefined
+        indicatorPosition ??
+        (followsRouteRows ? rowIndicatorPosition : undefined)
       }
       // "write your travel here too": a custom property cannot be read across
       // the DOM, so the container paints its progress onto this element and the
@@ -1100,7 +1298,7 @@ export const Nav = ({
       }
       styleCSSVars={NavStyleCSSVars}
     >
-      {(indicatorPosition || rowIndicatorPosition) && (
+      {(indicatorPosition || followsRouteRows) && (
         <span className="navi_nav_indicator" />
       )}
       <NavContext.Provider value={navContextValue}>

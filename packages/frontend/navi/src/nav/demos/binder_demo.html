@@ -602,7 +602,9 @@
           <Binder>
             <Binder.Item
               value="approved"
-              label={<Link route={APPROVED_ROUTE}>Approved</Link>}
+              route={APPROVED_ROUTE}
+              replace
+              label="Approved"
             >
               <div style={{ width: "360px" }}>
                 These 3 items have been reviewed and approved.
@@ -610,7 +612,9 @@
             </Binder.Item>
             <Binder.Item
               value="pending"
-              label={<Link route={PENDING_ROUTE}>Pending</Link>}
+              route={PENDING_ROUTE}
+              replace
+              label="Pending"
             >
               <div style={{ width: "360px" }}>
                 These 2 items are awaiting review.
@@ -618,7 +622,9 @@
             </Binder.Item>
             <Binder.Item
               value="archived"
-              label={<Link route={ARCHIVED_ROUTE}>Archived</Link>}
+              route={ARCHIVED_ROUTE}
+              replace
+              label="Archived"
             >
               <div style={{ width: "360px" }}>No archived items yet.</div>
             </Binder.Item>

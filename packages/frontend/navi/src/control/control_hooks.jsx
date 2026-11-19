@@ -58,6 +58,7 @@ import {
   useDebugInteraction,
   useDebugUIState,
 } from "@jsenv/navi/src/navi_debug.jsx";
+import { pressOpensElsewhere } from "@jsenv/navi/src/nav/browser_integration/link_elsewhere.js";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { useGeneratedId } from "@jsenv/navi/src/utils/use_generated_id.js";
@@ -519,7 +520,12 @@ export const useControlProps = (
           click: (e) => {
             return {
               name: "click",
-              allowed: () => onLinkInteractionAllowed(e),
+              allowed: () => {
+                if (pressIsTheBrowsers(ref.current, e)) {
+                  return;
+                }
+                onLinkInteractionAllowed(e);
+              },
               prevented: () => {
                 e.preventDefault();
               },
@@ -599,7 +605,12 @@ export const useControlProps = (
             if (actsOnMouseDown) {
               return {
                 name: "mousedown",
-                allowed: () => onButtonInteractionAllowed(e),
+                allowed: () => {
+                  if (pressIsTheBrowsers(ref.current, e)) {
+                    return;
+                  }
+                  onButtonInteractionAllowed(e);
+                },
                 // The press is answered here, refusal included: the click it
                 // leaves behind would otherwise follow the href of a
                 // <Button route>. Not asked about again — a second refusal
@@ -620,7 +631,12 @@ export const useControlProps = (
             }
             return {
               name: "click",
-              allowed: () => onButtonInteractionAllowed(e),
+              allowed: () => {
+                if (pressIsTheBrowsers(ref.current, e)) {
+                  return;
+                }
+                onButtonInteractionAllowed(e);
+              },
               // A refused press keeps nothing of the click's default: the href
               // of a <Button route> (rendered as <a>), a form submit, a
               // popovertarget.
@@ -2537,6 +2553,15 @@ const splitControlProps = (
   }
   return [controlRootProps, controlHostProps];
 };
+// A press on a link the reader sends elsewhere — a new tab, a new window, a
+// download (see pressOpensElsewhere) — is the browser's alone: the reader stays
+// on this page, so nothing the press would do here runs, not the ui action,
+// the command or the action. A button drawn as a link (`<Button route>`) is a
+// link here. A refused press is still refused: only what it would run is left
+// out.
+const pressIsTheBrowsers = (control, event) =>
+  Boolean(control?.matches("a[href]")) && pressOpensElsewhere(event);
+
 // What a press leaving a popup asks for: closing it, or cancelling it. Only on
 // a button or a link running nothing of its own — one with an action writes,
 // wherever it then leads, and on a field or a form `command` is what follows

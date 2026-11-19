@@ -28,8 +28,11 @@ import { toChildArray } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
+import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
+import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
+import { pageIsCurrent } from "../route_page.js";
 import { buildBinderPath } from "./binder_path.js";
-import { BinderItemContext } from "./binder_context.js";
 
 const css = /* css */ `
   @layer navi {
@@ -354,6 +357,10 @@ export const Binder = ({
     const {
       value: itemValue,
       label,
+      route,
+      routeParams,
+      href,
+      replace,
       children: content,
       ...tabProps
     } = child.props;
@@ -361,6 +368,12 @@ export const Binder = ({
       value: itemValue === undefined ? index : itemValue,
       label,
       content,
+      route,
+      routeParams,
+      href,
+      replace,
+      // Where the tab of a routed item leads (see BinderTab).
+      url: route ? route.buildUrl(routeParams) : href,
       // Everything else belongs to the tab: an item is how one styles and
       // configures the control that opens it.
       tabProps,
@@ -370,14 +383,28 @@ export const Binder = ({
   const [valueOwnState, setValueOwnState] = useState(
     defaultValue === undefined ? items[0]?.value : defaultValue,
   );
-  // A tab holding a Link knows it is the current one (its route matches) before
-  // the binder could work it out, and says so — see BinderItemContext.
-  const [reportedValue, setReportedValue] = useState(undefined);
+  // A routed item is open while the address is on its page: the address is the
+  // one owner of that, and pressing its tab is following its link. Read here,
+  // during the render, so the binder renders again when the routes move. Every
+  // item is read even once one answers: reading is what subscribes, and the
+  // item skipped today is the one whose change must be heard tomorrow.
+  let addressValue;
+  for (const item of items) {
+    if (item.url === undefined) {
+      continue;
+    }
+    const atAddress = item.route
+      ? pageIsCurrent({ route: item.route, params: item.routeParams })
+      : getHrefTargetInfo(item.href, documentUrlSignal.value).isCurrent;
+    if (atAddress && addressValue === undefined) {
+      addressValue = item.value;
+    }
+  }
   let wantedValue;
   if (value !== undefined) {
     wantedValue = value;
-  } else if (reportedValue !== undefined) {
-    wantedValue = reportedValue;
+  } else if (addressValue !== undefined) {
+    wantedValue = addressValue;
   } else {
     wantedValue = valueOwnState;
   }
@@ -390,16 +417,6 @@ export const Binder = ({
       setValueOwnState(item.value);
     }
     onChange?.(item.value);
-  };
-  const reportCurrent = (item, current) => {
-    setReportedValue((previous) => {
-      if (current) {
-        return item.value;
-      }
-      // Only the tab that claimed it may withdraw it, otherwise the tabs that
-      // just stopped being current would erase the one that just became it.
-      return previous === item.value ? undefined : previous;
-    });
   };
 
   const vertical = tabsPosition === "left" || tabsPosition === "right";
@@ -425,8 +442,15 @@ export const Binder = ({
       return;
     }
     event.preventDefault();
-    open(items[nextIndex]);
-    tabRefs.current[nextIndex]?.focus();
+    const nextItem = items[nextIndex];
+    const nextTabElement = tabRefs.current[nextIndex];
+    if (nextItem.url === undefined) {
+      open(nextItem);
+    } else {
+      // A routed tab opens by being followed, the way a click on it does.
+      nextTabElement?.click();
+    }
+    nextTabElement?.focus();
   };
 
   return (
@@ -470,7 +494,6 @@ export const Binder = ({
             maxLines={maxLines}
             onOpen={() => open(item)}
             onKeyDown={onKeyDown}
-            onReportCurrent={(current) => reportCurrent(item, current)}
           />
         ))}
       </div>
@@ -486,14 +509,24 @@ export const Binder = ({
  *   position among its siblings.
  * @param {import("preact").ComponentChildren} [props.label] - What the tab
  *   shows.
- * @param {object} [props.route] - Makes the tab a `Link`
- *   to that route, and the binder follows the url: the open item is the one
- *   whose route matches, no `value`/`onChange` needed.
- * @param {string} [props.href] - Same, for a plain url.
+ * @param {object} [props.route] - Makes the tab itself a link to that route's
+ *   page (`<a href role="tab">`), and the binder follows the url: the open item
+ *   is the one whose page the address is on, no `value`/`onChange` needed.
+ *   Opening the tab — a press, Enter, an arrow key landing on it — is
+ *   following that link; a middle click opens the page in a new tab. A plain
+ *   link the routing answers, not a `<Link>`: nothing is fetched ahead on a
+ *   hover, and `<Link>`'s other props (`routeTransition`, `open`, …) are not
+ *   read.
+ * @param {object} [props.routeParams] - The params of that page.
+ * @param {string} [props.href] - Same as `route`, for a plain url.
+ * @param {boolean} [props.replace] - The tab's link takes the place of the
+ *   current history entry instead of stacking onto it, as for `<Link
+ *   replace>`: what a row of tabs usually wants, the keyboard walking across
+ *   the tabs included.
  * @param {import("preact").ComponentChildren} [props.children] - The page.
  *
- * Every other prop goes to the tab (a `Box`, or a `Link` when routed): an item
- * styles and configures the control that opens it.
+ * Every other prop goes to the tab (a `<button>`, or an `<a>` when routed): an
+ * item styles and configures the control that opens it.
  */
 // Read by Binder, never rendered on its own: an item declares a tab AND its
 // page, and the binder needs both before it renders either.
@@ -509,15 +542,24 @@ const BinderTab = ({
   maxLines,
   onOpen,
   onKeyDown,
-  onReportCurrent,
 }) => {
-  const { label, tabProps } = item;
+  const { label, url, replace, tabProps } = item;
   const { maxLines: itemMaxLines = maxLines, onClick, ...rest } = tabProps;
+  // A routed tab is the link to its page, not a button holding one: one press
+  // area, one focus stop, an address in the status bar. Its press is answered
+  // by the routing, like any link's, and the binder follows the address.
+  const elementProps =
+    url === undefined
+      ? { as: "button", type: "button" }
+      : {
+          as: "a",
+          href: url,
+          ...(replace ? { [LINK_REPLACE_ATTRIBUTE]: "" } : null),
+        };
 
   return (
     <Box
-      as="button"
-      type="button"
+      {...elementProps}
       baseClassName="navi_binder_tab"
       pseudoClasses={BINDER_TAB_PSEUDO_CLASSES}
       ref={(element) => {
@@ -528,25 +570,25 @@ const BinderTab = ({
       tabIndex={current ? 0 : -1}
       data-current={current ? "" : undefined}
       onClick={(event) => {
-        onOpen();
+        if (url === undefined) {
+          onOpen();
+        }
         onClick?.(event);
       }}
       onKeyDown={onKeyDown}
       {...rest}
     >
-      <BinderItemContext.Provider value={onReportCurrent}>
-        <span
-          className="navi_binder_tab_label"
-          data-max-lines={itemMaxLines || undefined}
-          style={
-            itemMaxLines > 1
-              ? { "--binder-tab-max-lines": itemMaxLines }
-              : undefined
-          }
-        >
-          {label}
-        </span>
-      </BinderItemContext.Provider>
+      <span
+        className="navi_binder_tab_label"
+        data-max-lines={itemMaxLines || undefined}
+        style={
+          itemMaxLines > 1
+            ? { "--binder-tab-max-lines": itemMaxLines }
+            : undefined
+        }
+      >
+        {label}
+      </span>
     </Box>
   );
 };

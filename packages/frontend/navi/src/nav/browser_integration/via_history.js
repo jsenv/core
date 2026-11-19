@@ -40,7 +40,7 @@ import {
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
 import { linkAsksForDocument } from "./link_document.js";
-import { linkOpensElsewhere } from "./link_elsewhere.js";
+import { linkOpensElsewhere, pressOpensElsewhere } from "./link_elsewhere.js";
 import {
   linkAsksToOpen,
   NAV_STATE_ENTERED_VALUE,
@@ -407,14 +407,9 @@ export const setupBrowserIntegrationViaHistory = ({
     }
   };
   const routeLinkClick = (e, pressWrites) => {
-    if (e.button !== 0) {
-      // Ignore non-left clicks
-      return false;
-    }
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
-      // A modifier asks the browser for something other than this tab: a new
-      // tab (meta on macOS, ctrl elsewhere), a new window (shift), a download
-      // (alt).
+    if (pressOpensElsewhere(e)) {
+      // A new tab, a new window, a download: the browser's (see
+      // link_elsewhere.js).
       return false;
     }
     if (e.defaultPrevented) {

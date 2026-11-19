@@ -556,9 +556,17 @@ The routing takes a plain click that moves this tab, and nothing else. A link
 with `target="_blank"` (or any `target` other than `_self`) opens the app in that
 tab or window, which loads it and routes there; a link with `download` saves its
 address; a click with a modifier key (a new tab, a new window, a download) is the
-browser's. None of them costs the page the reader is on — a half-filled form
+browser's. None of them moves the page the reader is on — a half-filled form
 beside a link to the terms stays filled. Nothing is fetched ahead for such a
 link either: the other tab loads its own code.
+
+A click with a modifier key is the browser's alone: the link's `command`,
+`action` and `uiAction` do not run either, since the reader stays on this page —
+a player opened in a new tab from a sheet leaves the sheet open, where
+`command="--navi-close"` closes it on a plain click. The same holds for a
+`<Button route>`, which is a link. A link that opens elsewhere by what it is
+(`target`, `download`) runs them: that press is the way out, and the sheet
+closing behind a call handed to the phone is what it asks for.
 
 ## The back arrow: `navBack`
 
