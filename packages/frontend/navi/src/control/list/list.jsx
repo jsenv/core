@@ -3691,11 +3691,12 @@ const useListScrollSync = ({
   // one-line items. Which items the screen shows is read off the items drawn
   // either way, not estimated from an average size: items ten times apart in
   // height put the average nowhere near any of them.
-  // It moves once what it keeps ahead of the screen falls under half a screen,
-  // or half of what it keeps there: re-framed, it holds enough ahead that the
-  // next move is a while away, instead of drawing items at every scroll event
-  // while the user waits for them. What it keeps behind is judged the same
-  // way, for the user turning around.
+  // It moves once what it keeps ahead of the screen has dropped by a screen,
+  // or by half of what it keeps there when that is less: re-framed, it holds
+  // enough ahead that the next move is a while away, instead of drawing items
+  // at every scroll event while the user waits for them, and a move draws
+  // about a screen of items, not the whole budget at once. What it keeps
+  // behind is judged the same way, for the user turning around.
   // The budget is `after`, or `initial` while the first picture is (see
   // settleWindow). `force` places it whatever it holds, which is how it leaves
   // a stage; `grow` only adds to what it holds (see the "after slide" effect).
@@ -3849,11 +3850,17 @@ const useListScrollSync = ({
         }
         const roomAhead = forward ? roomAfter : roomBefore;
         const roomBehind = forward ? roomBefore : roomAfter;
-        const halfScreen = screen / 2;
-        const aheadNeeded =
-          halfScreen < aheadSize / 2 ? halfScreen : aheadSize / 2;
-        const behindNeeded =
-          halfScreen < behindSize / 2 ? halfScreen : behindSize / 2;
+        // Slid once the room ahead has dropped, from the lookahead it is
+        // framed with, by a screen — or by half that lookahead when it is less
+        // than two screens, as with a "150%" budget: the slide tops it back up
+        // by that much, so what one commit mounts is
+        // about a screen, whatever the budget. Waiting until it is nearly
+        // used up would mount it all at once: a budget of 100 items with 8 on
+        // screen slid with 3 items left ahead and mounted 66 in one commit.
+        const aheadDrop = screen < aheadSize / 2 ? screen : aheadSize / 2;
+        const behindDrop = screen < behindSize / 2 ? screen : behindSize / 2;
+        const aheadNeeded = aheadSize - aheadDrop;
+        const behindNeeded = behindSize - behindDrop;
         if (roomAhead >= aheadNeeded && roomBehind >= behindNeeded) {
           return true;
         }
@@ -6120,7 +6127,9 @@ const VirtualFiller = ({
             style={{
               "--x-find-line-count": chunk.to - chunk.from,
               "--x-find-line-size":
-                chunk.room === undefined ? lineShare : `${chunk.room}px`,
+                chunk.itemsKnown === 0
+                  ? lineShare
+                  : `calc((${chunk.to - chunk.from - chunk.itemsKnown} * ${lineShare} + ${chunk.roomKnown}px) / ${chunk.to - chunk.from})`,
             }}
           >
             {chunk.text}
@@ -7060,10 +7069,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   `renderSkeleton` is given — the two draw on the same knowledge. A room
  *   measured on an item drawn wins over it, and in development one that
  *   differs from it is reported. Items side by side in a grid (`columns`)
- *   share a line, which keeps `virtualItemSize`. A lookup: it is called at
- *   every render of the run — a window moving, a page landing, the component
- *   around it rendering — for every item outside the window the list has not
- *   measured, so never a layout or style read.
+ *   share a line, which keeps `virtualItemSize`. A lookup, never a layout or
+ *   style read: the rooms of the whole run are summed once per function (what
+ *   the fillers hold is then read from the sums at each window slide), and it
+ *   is asked again for the items drawn or held. So a function defined once,
+ *   not inline at each render: a new one sums the run again.
  * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where items were asked for and never came: given the `error`,
  *   a `retry` to call, and the `start`/`end` of the range that failed — the
@@ -7387,22 +7397,94 @@ const useRunItems = (
     roomAt: roomOf,
     givenRoomAt: givenRoomOf,
   });
-  const readKnownRooms = (from, to) => {
-    const known = { room: 0, count: 0 };
-    if (listItems.roomById.size === 0 && !itemSize) {
-      return known;
+  // The rooms a filler holds, read from what is known rather than by walking
+  // every rank the window leaves out: the run renders at every window slide,
+  // and that must not cost the size of the collection. Two sources, the same
+  // ones roomOf reads one item at a time:
+  // - the rooms the caller gives (itemSize), summed once per itemSize and run:
+  //   a range is then two reads;
+  // - the rooms the list remembers for items it drew (rememberItemRooms),
+  //   which only a held item can carry (roomOf reads them through idAt): the
+  //   items the run holds are walked, bounded by its memory budget, and each
+  //   one's remembered room takes the place of the given one.
+  const givenRoomSumsRef = useRef(null);
+  const readGivenRoomSums = () => {
+    if (!itemSize || itemsPerLine !== 1) {
+      return null;
     }
-    let itemIndex = from;
-    while (itemIndex < to) {
-      const room = roomOf(itemIndex);
-      if (room !== undefined) {
-        known.room += room;
-        known.count++;
-      }
-      itemIndex++;
+    const cached = givenRoomSumsRef.current;
+    if (
+      cached &&
+      cached.itemSize === itemSize &&
+      cached.runStart === runStart &&
+      cached.runEnd === runEnd
+    ) {
+      return cached;
     }
-    return known;
+    const length = runEnd - runStart;
+    const rooms = new Float64Array(length + 1);
+    const counts = new Uint32Array(length + 1);
+    for (let rank = 0; rank < length; rank++) {
+      const room = givenRoomOf(indexOfRank(rank));
+      rooms[rank + 1] = rooms[rank] + (room === undefined ? 0 : room);
+      counts[rank + 1] = counts[rank] + (room === undefined ? 0 : 1);
+    }
+    const sums = { itemSize, runStart, runEnd, rooms, counts };
+    givenRoomSumsRef.current = sums;
+    return sums;
   };
+  // What is known of the rooms of consecutive ranges, one bucket per range
+  // (`edges` holds where each starts, then where the last ends): one pass over
+  // the held items whatever the number of buckets — a filler is one bucket,
+  // find chunks are one each. `bucketOf` tells which bucket an item falls in.
+  const readKnownRoomsBy = (edges, bucketOf) => {
+    const buckets = [];
+    for (let bucket = 0; bucket < edges.length - 1; bucket++) {
+      buckets.push({ room: 0, count: 0 });
+    }
+    if (buckets.length === 0) {
+      return buckets;
+    }
+    const from = edges[0];
+    const to = edges[edges.length - 1];
+    const givenSums = readGivenRoomSums();
+    if (givenSums) {
+      for (let bucket = 0; bucket < buckets.length; bucket++) {
+        const bucketFrom = rankOf(edges[bucket]);
+        const bucketTo = rankOf(edges[bucket + 1]);
+        buckets[bucket].room =
+          givenSums.rooms[bucketTo] - givenSums.rooms[bucketFrom];
+        buckets[bucket].count =
+          givenSums.counts[bucketTo] - givenSums.counts[bucketFrom];
+      }
+    }
+    if (listItems.roomById.size === 0) {
+      return buckets;
+    }
+    store.eachHeld((item, rank) => {
+      const itemIndex = indexOfRank(rank);
+      if (itemIndex < from || itemIndex >= to) {
+        return;
+      }
+      const remembered = listItems.roomById.get(idOf(item, itemIndex));
+      if (remembered === undefined) {
+        return;
+      }
+      const known = buckets[bucketOf(itemIndex)];
+      const given = givenSums ? givenRoomOf(itemIndex) : undefined;
+      if (given === undefined) {
+        known.room += remembered;
+        known.count++;
+      } else {
+        known.room += remembered - given;
+      }
+    });
+    return buckets;
+  };
+  const readKnownRooms = (from, to) =>
+    from < to
+      ? readKnownRoomsBy([from, to], () => 0)[0]
+      : { room: 0, count: 0 };
   useLayoutEffect(() => {
     return () => {
       listItems.dropItemLocator(ownerId);
@@ -7703,24 +7785,40 @@ const useRunItems = (
     group.children.push(itemNode);
   };
   // The text of the items a filler stands for, cut in chunks aligned on the
-  // run's own ranks: the window sliding changes the chunk at its edge and
-  // leaves the others as they are. A chunk's lines are all as tall as the
-  // room its items take in the filler, so it also ends where that room
-  // changes: a match is then found where its item will be drawn.
+  // run's own ranks, and only there: the window sliding changes the chunk at
+  // its edge and leaves the others as they are, and the number of chunks is
+  // bounded by the collection over 64, whatever the rooms of the items. A
+  // chunk is as tall as the rooms of its items together (see readKnownRooms
+  // for what is known of them), its lines sharing that height: a match is
+  // found within its chunk, and the item it names is drawn where it stands
+  // once the window gets there.
   const getFindChunks = (from, to) => {
     if (!findText) {
       return null;
     }
     const chunks = [];
+    const firstChunkIndex = Math.floor(rankOf(from) / FIND_CHUNK_ITEM_COUNT);
+    const chunkOf = (itemIndex) =>
+      Math.floor(rankOf(itemIndex) / FIND_CHUNK_ITEM_COUNT) - firstChunkIndex;
+    const chunkEdges = [];
+    for (let edge = from; edge < to;) {
+      chunkEdges.push(edge);
+      const alignedTo = indexOfRank(
+        (Math.floor(rankOf(edge) / FIND_CHUNK_ITEM_COUNT) + 1) *
+          FIND_CHUNK_ITEM_COUNT,
+      );
+      edge = alignedTo < to ? alignedTo : to;
+    }
+    chunkEdges.push(to);
+    const knownByChunk = from < to ? readKnownRoomsBy(chunkEdges, chunkOf) : [];
     let chunkFrom = from;
     while (chunkFrom < to) {
       const chunkIndex = Math.floor(rankOf(chunkFrom) / FIND_CHUNK_ITEM_COUNT);
       const alignedTo = indexOfRank((chunkIndex + 1) * FIND_CHUNK_ITEM_COUNT);
       const chunkEnd = alignedTo < to ? alignedTo : to;
-      const room = roomOf(chunkFrom);
       const lines = [];
       let lineIndex = chunkFrom;
-      while (lineIndex < chunkEnd && roomOf(lineIndex) === room) {
+      while (lineIndex < chunkEnd) {
         const item = getItemAt(lineIndex);
         // An item not held has nothing to find, but keeps its line: the items
         // after it stay at their place.
@@ -7729,13 +7827,15 @@ const useRunItems = (
         );
         lineIndex++;
       }
+      const known = knownByChunk[chunkOf(chunkFrom)];
       chunks.push({
         from: chunkFrom,
-        to: lineIndex,
-        room,
+        to: chunkEnd,
+        roomKnown: known.room,
+        itemsKnown: known.count,
         text: lines.join("\n"),
       });
-      chunkFrom = lineIndex;
+      chunkFrom = chunkEnd;
     }
     return chunks;
   };
@@ -9333,12 +9433,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   one as `<List.Item>` children are all drawn, whatever this says — a list
  *   with more than a few dozen items gives them to a run (see docs/scroll.md,
  *   "Many rows"). The window keeps three quarters of what the screen leaves of
- *   it ahead of the scroll, and moves once what is left ahead falls under half
- *   a screen or half of that lookahead, whichever is smaller — at "150%", a
- *   fifth of a screen ahead; it has to hold more than the screen shows, with
- *   room for that lookahead — the list warns when it holds no more than the
- *   screen. How much more is measured: fling the list on the slowest device it
- *   runs on.
+ *   it ahead of the scroll, and moves once what is left ahead has dropped by a
+ *   screen, or by half of that lookahead when that is less — at "150%", once a
+ *   fifth of a screen is left ahead. A move draws that much: about a screen of
+ *   items at most, whatever the budget, so one commit never mounts the whole
+ *   lookahead. It has to hold more than the screen shows, with room for that
+ *   lookahead — the list warns when it holds no more than the screen. How much
+ *   more is measured: fling the list on the slowest device it runs on.
  *
  *   `{ initial, after }` for a list whose first picture is taken as it is
  *   built — drawn in the click that opens a popup, or in the update callback

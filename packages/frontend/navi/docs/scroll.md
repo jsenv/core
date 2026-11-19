@@ -512,8 +512,9 @@ scrollbar says how long the collection is and the DOM says how many items fit a
 screen and some. The window slides as the user scrolls, three quarters of what
 the screen leaves of it ahead of the direction the user goes, so the budget has
 to exceed what the scroller shows at once, with room for that lookahead: the
-list warns when it holds no more than the screen. How much room is enough is
-measured, not counted: the lookahead is the time the page has to draw the next
+list warns when it holds no more than the screen. It moves by about a screen
+at a time, less when the lookahead is short: one move mounts a screen of items,
+not the whole budget. How much room is enough is measured, not counted: the lookahead is the time the page has to draw the next
 items before a fling reaches them, so it depends on the device and on what else
 runs as the list scrolls — fling it on the slowest device it runs on.
 
@@ -686,9 +687,13 @@ inside the window has no hidden copy, so every row is found exactly once.
 What it costs, and where it stops:
 
 - **A cost that follows the collection again.** The text of every row outside
-  the window is rebuilt when the window slides (one `findText` call per row)
-  and sits in the DOM as text. Give it to a list a user would search with the
+  the window is rebuilt at every render of the run — the window sliding, a page
+  landing — (one `findText` call per row) and sits in the DOM as text, in one
+  hidden element per 64 rows. Give it to a list a user would search with the
   browser, not to every run.
+- **A match lands near its row, not on it**, when rows differ in height: the 64
+  lines of an element share its height. The window then draws the row where it
+  stands.
 - **One line per row**, and only that line is found while the row is not
   drawn: return what a user would type, not everything the row shows.
 - **What the client holds, no more.** A row a paginated run has not loaded has

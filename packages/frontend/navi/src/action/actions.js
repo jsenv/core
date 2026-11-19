@@ -1780,6 +1780,9 @@ const createActionProxyFromSignal = (
   let currentAction = action;
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
+  // The action the proxy stands for, as a signal: what the proxy shows of it is
+  // read through this (see proxySignal), so only a read follows the target.
+  const currentActionSignal = signal(action);
 
   const createTarget = (params) => {
     // `undefined` is "nothing to ask": no answer is coming to replace a stand-in,
@@ -1831,6 +1834,7 @@ const createActionProxyFromSignal = (
       currentAction = actionTarget;
       currentActionPrivateProperties = getActionPrivateProperties(actionTarget);
     }
+    currentActionSignal.value = currentAction;
 
     actionTargetPreviousWeakRef = actionTarget
       ? new WeakRef(actionTarget)
@@ -1912,26 +1916,18 @@ const createActionProxyFromSignal = (
 
   // Create our own signal for params that we control completely
   const proxyParamsSignal = signal(paramsSignal.value);
-  const proxySignal = (signalPropertyName, propertyName) => {
-    const signalProxy = signal(undefined, readerWatchOptions);
-    let dispose;
-    onActionTargetChange(() => {
-      if (dispose) {
-        dispose();
-        dispose = undefined;
-      }
-      dispose = effect(() => {
-        const currentActionSignal = currentAction[signalPropertyName];
-        const currentActionSignalValue = currentActionSignal.value;
-        signalProxy.value = currentActionSignalValue;
-        if (propertyName) {
-          actionProxy[propertyName] = currentActionSignalValue;
-        }
-      });
-      return dispose;
-    });
-    return signalProxy;
-  };
+  // What the proxy shows of a signal of the action it stands for: a computed of
+  // that signal, through the target — so it follows the target only while
+  // something reads it, and catches up when read again. Held by nothing it
+  // does not read: a target outliving its proxy (the action's own instance for
+  // `undefined`, a binding kept for a primitive, a kept answer) holds no
+  // subscription back to the proxy, its params, or the control those come
+  // from, once that control is gone.
+  const proxySignal = (signalPropertyName) =>
+    computed(
+      () => currentActionSignal.value[signalPropertyName].value,
+      readerWatchOptions,
+    );
 
   // Params bound onto this binding make the action bound to both — these over
   // the ones it follows, as an instance's go over its action's — following the
@@ -1944,12 +1940,7 @@ const createActionProxyFromSignal = (
     isProxy: true,
     callback: undefined,
     params: undefined,
-    isPrerun: undefined,
-    runningState: undefined,
     aborted: undefined,
-    error: undefined,
-    value: undefined,
-    data: undefined,
     completed: undefined,
     prerun: proxyMethod("prerun", { explicitRunIntent: true }),
     run: proxyMethod("run", { explicitRunIntent: true }),
@@ -1988,12 +1979,28 @@ const createActionProxyFromSignal = (
 
     paramsSignal: proxyParamsSignal,
     paramsSettlingSignal,
-    isPrerunSignal: proxySignal("isPrerunSignal", "isPrerun"),
-    runningStateSignal: proxySignal("runningStateSignal", "runningState"),
-    errorSignal: proxySignal("errorSignal", "error"),
-    valueSignal: proxySignal("valueSignal", "value"),
-    dataSignal: proxySignal("dataSignal", "data"),
+    isPrerunSignal: proxySignal("isPrerunSignal"),
+    runningStateSignal: proxySignal("runningStateSignal"),
+    errorSignal: proxySignal("errorSignal"),
+    valueSignal: proxySignal("valueSignal"),
+    dataSignal: proxySignal("dataSignal"),
   });
+  // The same, read as plain properties: what the target holds at this moment,
+  // read from it — the target keeps these up to date itself.
+  const readTargetProperty = (propertyName) => currentAction[propertyName];
+  for (const propertyName of [
+    "isPrerun",
+    "runningState",
+    "error",
+    "value",
+    "data",
+  ]) {
+    Object.defineProperty(actionProxy, propertyName, {
+      configurable: true,
+      enumerable: true,
+      get: readTargetProperty.bind(null, propertyName),
+    });
+  }
   Object.preventExtensions(actionProxy);
 
   // What the proxy shows of the action it stands for is wired BEFORE the
@@ -2011,12 +2018,7 @@ const createActionProxyFromSignal = (
     callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
-    actionProxy.isPrerun = currentAction.isPrerun;
-    actionProxy.runningState = currentAction.runningState;
     actionProxy.aborted = currentAction.aborted;
-    actionProxy.error = currentAction.error;
-    actionProxy.value = currentAction.value;
-    actionProxy.data = currentAction.data;
     actionProxy.completed = currentAction.completed;
     actionProxy.meta = currentAction.meta;
   });
