@@ -38,6 +38,35 @@ export const readStateAsIf = (values, read) => {
     valuesAsIf = previous;
   }
 };
+/**
+ * Makes a signal that is not a state answer readStateAsIf too: read as the
+ * value given for it for the length of one readStateAsIf, as a state is. What
+ * a route says about itself — that it matches, its params — is read this way
+ * when it is preloaded (see statesAt in route.js): the params of a route
+ * action read the route's own params as often as its states.
+ *
+ * @param {import("@preact/signals").Signal} preactSignal
+ */
+export const answerAsIf = (preactSignal) => {
+  const valueDescriptor = Object.getOwnPropertyDescriptor(
+    Object.getPrototypeOf(preactSignal),
+    "value",
+  );
+  Object.defineProperty(preactSignal, "value", {
+    get() {
+      if (valuesAsIf !== null && valuesAsIf.has(preactSignal)) {
+        return valuesAsIf.get(preactSignal);
+      }
+      return valueDescriptor.get.call(preactSignal);
+    },
+    set(newValue) {
+      valueDescriptor.set.call(preactSignal, newValue);
+    },
+    enumerable: true,
+    configurable: true,
+  });
+  return preactSignal;
+};
 let signalIdCounter = 0;
 const generateSignalId = () => {
   const id = signalIdCounter++;

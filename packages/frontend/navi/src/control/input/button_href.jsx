@@ -23,7 +23,10 @@ export const ButtonHrefResolver = (props) => {
 const ButtonWithHref = ({ current, ...props }) => {
   const Next = useNextResolver();
   const { href, target, rel, pseudoState } = props;
-  const isCurrent = useHrefTargetFlag(href, "isCurrent");
+  // Not followed when the caller says whether it is current (a route button).
+  const isCurrent = useHrefTargetFlag(href, "isCurrent", {
+    enabled: current === undefined,
+  });
   const { isSameSite } = getHrefTargetInfo(href, documentUrlSignal.peek());
   return (
     <Next

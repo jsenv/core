@@ -6,7 +6,7 @@
 import { createPubSub } from "@jsenv/dom";
 import { computed, effect, signal, untracked } from "@preact/signals";
 
-import { writeStateFromAddress } from "../state/state_signal.js";
+import { answerAsIf, writeStateFromAddress } from "../state/state_signal.js";
 import { batchWithEffectErrorsApart } from "../utils/batch_with_effect_errors_apart.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
@@ -145,8 +145,9 @@ export const route = (pattern, options = {}) => {
     buildUrl: null,
     relativeUrl: null,
     url: null,
-    matchingSignal: signal(false),
-    rawParamsSignal: signal(ROUTE_NOT_MATCHING_PARAMS),
+    // Read as at the address a preload is for (see statesAt).
+    matchingSignal: answerAsIf(signal(false)),
+    rawParamsSignal: answerAsIf(signal(ROUTE_NOT_MATCHING_PARAMS)),
     visited: false,
     visitedSignal: signal(false),
     paramsSignal: null,
@@ -171,7 +172,8 @@ export const route = (pattern, options = {}) => {
    * read without params — what a link preloads, since it has no state to read
    * the params of. Given params, `{}` included, the address `buildUrl(params)`
    * leads to: every route action of this route reads its params as if the
-   * route matched there (see statesAt).
+   * route matched there — this route's `paramsSignal` and `matchingSignal`, and
+   * its states (see statesAt). Another route reads what it holds now.
    *
    * @param {object} [params]
    */
@@ -453,11 +455,13 @@ export const route = (pattern, options = {}) => {
   });
   // params
   registerSetup(() => {
-    route.paramsSignal = computed(() => {
-      const rawParams = route.rawParamsSignal.value;
-      const resolvedParams = routePattern.resolveParams(rawParams);
-      return resolvedParams;
-    });
+    route.paramsSignal = answerAsIf(
+      computed(() => {
+        const rawParams = route.rawParamsSignal.value;
+        const resolvedParams = routePattern.resolveParams(rawParams);
+        return resolvedParams;
+      }),
+    );
 
     // Keep route.params synchronized with paramsSignal
     // Doing this with the signal instead of in the updateStatus function ensures route.params includes parameters from child routes
@@ -862,10 +866,21 @@ export const preloadState = (signal, value) => {
 // what its state holds there; a weak one not given is back to its default, a url
 // built for another visit never carries it (readSignalForUrlBuild); any other one
 // is carried over by that url and keeps what it holds, so it is left out.
+// And what the route says about itself there: that it matches, and the params
+// that address gives it — a route action's params read the route's own params
+// (paramsSignal) as often as its states, a path param bound to no state too.
 const statesAt = (route, params) => {
   const values = new Map();
-  for (const connection of getRoutePrivateProperties(route).routePattern
-    .connections) {
+  const { routePattern } = getRoutePrivateProperties(route);
+  const rawParamsThere = untracked(() =>
+    routePattern.applyOn(route.buildUrl(params)),
+  );
+  if (rawParamsThere) {
+    values.set(route.matchingSignal, true);
+    values.set(route.rawParamsSignal, rawParamsThere);
+    values.set(route.paramsSignal, routePattern.resolveParams(rawParamsThere));
+  }
+  for (const connection of routePattern.connections) {
     const { paramName, signal } = connection;
     if (!signal) {
       continue;
@@ -1404,6 +1419,7 @@ export const getParamsCacheKey = (params) => {
     const type = typeof value;
     if (
       value !== null &&
+      value !== undefined &&
       type !== "string" &&
       type !== "number" &&
       type !== "boolean"

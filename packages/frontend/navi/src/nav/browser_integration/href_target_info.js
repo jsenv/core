@@ -88,17 +88,49 @@ export const isAnchor = (href) => getHrefTargetInfo(href).isAnchor;
 export const isSameOrigin = (href) => getHrefTargetInfo(href).isSameOrigin;
 export const isSameSite = (href) => getHrefTargetInfo(href).isSameSite;
 
+// The document's address, parsed once per write for every link that compares
+// itself with it: each link parsing it again for itself, at every write, is
+// what an address written at every notch of a wheel multiplies.
+const documentUrlObjectSignal = computed(
+  () => new URL(documentUrlSignal.value),
+);
+const ABSOLUTE_HREF = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
+
 // A field of getHrefTargetInfo that depends on the page one is on (isCurrent,
 // isAnchor), read through a computed of that one boolean: the caller re-renders
 // when it flips, not at every address write — a search param bound to a wheel
 // writes the address at every notch.
-export const useHrefTargetFlag = (href, flagName) => {
-  const flagSignal = useMemo(
-    () =>
-      computed(
-        () => getHrefTargetInfo(href, documentUrlSignal.value)[flagName],
-      ),
-    [href, flagName],
-  );
-  return flagSignal.value;
+// The same answers as getHrefTargetInfo, from the document's address parsed
+// once (above) and an absolute href resolved once per link. Not followed at
+// all where the answer is already known: `enabled: false` (a caller that
+// says for itself whether it is current), and isAnchor for an href holding no
+// fragment.
+export const useHrefTargetFlag = (href, flagName, { enabled = true } = {}) => {
+  const hrefString = href === undefined || href === null ? "" : String(href);
+  const follows =
+    enabled &&
+    hrefString.trim() !== "" &&
+    (flagName !== "isAnchor" || hrefString.includes("#"));
+  const flagSignal = useMemo(() => {
+    if (!follows) {
+      return null;
+    }
+    const absoluteTargetUrl = ABSOLUTE_HREF.test(hrefString)
+      ? new URL(hrefString)
+      : null;
+    return computed(() => {
+      const currentUrl = documentUrlObjectSignal.value;
+      const targetUrl =
+        absoluteTargetUrl || new URL(hrefString, currentUrl.href);
+      if (flagName === "isCurrent") {
+        return currentUrl.href === targetUrl.href;
+      }
+      return (
+        currentUrl.pathname === targetUrl.pathname &&
+        currentUrl.search === targetUrl.search &&
+        targetUrl.hash !== ""
+      );
+    });
+  }, [hrefString, flagName, follows]);
+  return flagSignal ? flagSignal.value : false;
 };

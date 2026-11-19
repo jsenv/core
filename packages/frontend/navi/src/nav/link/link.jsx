@@ -789,7 +789,11 @@ const LinkPlain = (props) => {
   // Re-rendered when one of these flips, not at every address write (see
   // useHrefTargetFlag). Whether the href leaves the site does not depend on
   // the address.
-  const isCurrent = useHrefTargetFlag(href, "isCurrent");
+  // Not followed when it cannot decide: a link told whether it is current (a
+  // route link always is, see LinkWithRoute), a tab for a slide.
+  const isCurrent = useHrefTargetFlag(href, "isCurrent", {
+    enabled: current === undefined && !slide,
+  });
   const isAnchor = useHrefTargetFlag(href, "isAnchor");
   const { isSameSite } = getHrefTargetInfo(href, documentUrlSignal.peek());
   // A tab that is a SLIDE is current when the container is on it — which the

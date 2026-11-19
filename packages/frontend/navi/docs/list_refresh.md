@@ -162,16 +162,16 @@ playing between the two pages: the **source** the list reads through is what
 answers, and it answers the same way whether the user arrived by a link, by
 `history.back()`, or under a route transition.
 
-| The list reads through          | Coming back to it                                                                                                                               |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `routeAction` over `GET_MANY`   | **nothing goes out** — the action holds its response, and `.run()` on a `COMPLETED` action is a no-op; only `.rerun()` goes back to the network |
-| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws                                                     |
+| The list reads through          | Coming back to it                                                                                                                                                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `routeAction` over `GET_MANY`   | **nothing goes out while the answer is held** — `.run()` on a `COMPLETED` instance joins it, only `.rerun()` goes back to the network; held for sure under `keep`, otherwise until the garbage collector takes the instance, and one ask goes out after that |
+| `<List.Items>` over `GET_RANGE` | **one ask goes out** — the reader kept ranks, not rows, and revalidates the window it draws                                                                                                                                                                  |
 
-Both are deliberate: an action that kept its answer has the answer, while a
+Both are deliberate: an action holding its answer has the answer, while a
 composition is a claim about an order that any write elsewhere may have made
 false. What a `GET_MANY` list wants on the way back it has to say itself —
-`.rerun()` when the route becomes current again, or a verb in `rerunOn` if a
-write is what makes it stale.
+`keep` for the answer to be there for sure, `.rerun()` when the route becomes
+current again, or a verb in `rerunOn` if a write is what makes it stale.
 
 A `defineRouteTransition` written for the pair changes none of this: a
 transition states a relation between two pages (see
@@ -181,7 +181,7 @@ decides what the page arriving may ask for. A list that stops refreshing after a
 transition was added most often saw no revisit at all — a back taken before the
 page being opened was ever on screen returns to a list that never left
 ([route_transitions.md](./route_transitions.md#waiting-for-a-navigation-the-address-is-not-the-page));
-otherwise it is a `GET_MANY` list, which never refreshed on its own.
+otherwise it is a `GET_MANY` list, which was never sure to refresh on its own.
 
 ### Watching what the run asks for
 

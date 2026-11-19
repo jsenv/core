@@ -198,8 +198,9 @@ good for `ms` from the moment it landed, and the first screen asking for those
 params after that asks again: a read worth asking at each visit — a
 measurement, a quota — declares a short one.
 A resource's reads declare it on the resource,
-`resource(name, { keep: { GET: { ms } } })`; left out, coming back asks again,
-while the store draws the row it already holds.
+`resource(name, { keep: { GET: { ms } } })`; left out, coming back is the
+undecided case above, and when it asks the store draws the row it already holds
+meanwhile.
 
 ### The in-between states of a gesture are real params
 
@@ -297,10 +298,12 @@ wrong is invisible at the call site and expensive on screen: the request leaves
 with the gesture instead of with the screen, one waterfall behind everything
 else the address needed.
 
-**A route action is a read.** An address asks again on every arrival — a
-reload, a pasted link, a step back — which is what a read is for and what a
-write cannot survive: `POST /users/:id/invitations` hung on `/users/:id` mints a
-token per reload, for ever. A run that writes belongs to the component that
+**A route action is a read.** An address asks again on every new document — a
+reload, a pasted link — and on a move to other params of the route that `keep`
+does not hold; a step back from another page asks again or finds the answer
+still there ([coming back](#nothing-to-ask-and-coming-back)). That is what a read is for and
+what a write cannot survive: `POST /users/:id/invitations` hung on `/users/:id`
+mints a token per reload, for ever. A run that writes belongs to the component that
 decided to write, whatever its parameter, and `{ run: true }` says it — a token
 a share button must already hold when pressed, for instance, since the OS share
 sheet only opens inside the gesture, never after an `await`.

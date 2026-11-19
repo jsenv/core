@@ -480,6 +480,13 @@ export const createRoutePattern = (
     }
     for (const connection of connections) {
       const { paramName } = connection;
+      // A name given already is kept as given (setEntry: first wins), so its
+      // signal can change nothing here: not read, the url does not depend on
+      // it — a link naming the user it leads to is not rebuilt each time the
+      // page's own user changes.
+      if (intended.has(paramName)) {
+        continue;
+      }
       const value = readSignalForUrlBuild(connection);
       if (value !== undefined) {
         setEntry(
@@ -626,11 +633,14 @@ export const createRoutePattern = (
             continue;
           }
           const { paramName } = conn;
-          // read even when the value is not kept: subscribes the caller
-          const value = readSignalForUrlBuild(conn);
+          // A name decided already is kept (setEntry: first wins): its signal
+          // can change nothing here, and is not read. Any other is read even
+          // when its value is not kept: that subscribes the caller to what
+          // would change the url once kept.
           if (intended.has(paramName)) {
             continue;
           }
+          const value = readSignalForUrlBuild(conn);
           if (conn.paramType === "path") {
             if (!reachable || value === undefined) {
               continue;
@@ -805,15 +815,22 @@ export const createRoutePattern = (
    * connection, or the connection's default when no matching pattern does.
    */
   const verifyUrl = (url, intended) => {
-    if (!applyOn(url)) {
+    const ownMatch = applyOn(url);
+    if (!ownMatch) {
       return false; // whatever this url is, it is not one of OUR urls
     }
     const familyRoot = patternObject.familyRoot || patternObject;
     const familyPatterns = [familyRoot, ...familyRoot.descendants];
-    const matchResultMap = new Map();
-    for (const familyPattern of familyPatterns) {
-      matchResultMap.set(familyPattern, familyPattern.applyOn(url));
-    }
+    // Matched once each, and only a pattern that holds a param the url is
+    // checked for: the others are never consulted, and matching the whole
+    // family made every url cost as many matches as the family has routes.
+    const matchResultMap = new Map([[patternObject, ownMatch]]);
+    const matchResultOf = (familyPattern) => {
+      if (!matchResultMap.has(familyPattern)) {
+        matchResultMap.set(familyPattern, familyPattern.applyOn(url));
+      }
+      return matchResultMap.get(familyPattern);
+    };
     for (const [name, entry] of intended) {
       const conn = entry.connection;
       if (!conn) {
@@ -825,16 +842,16 @@ export const createRoutePattern = (
       let reproducedValue;
       let extracted = false;
       for (const familyPattern of familyPatterns) {
-        const matchResult = matchResultMap.get(familyPattern);
-        if (!matchResult) {
-          continue;
-        }
         const holdsParam =
           familyPattern.queryConnectionMap.has(name) ||
           familyPattern.pattern.segments.some(
             (seg) => seg.type === "param" && seg.name === name,
           );
         if (!holdsParam) {
+          continue;
+        }
+        const matchResult = matchResultOf(familyPattern);
+        if (!matchResult) {
           continue;
         }
         if (name in matchResult && matchResult[name] !== undefined) {

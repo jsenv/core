@@ -680,9 +680,12 @@ Off by default, since every page one stops on then costs the reads of two more.
 ```
 
 It is `route.preload(params)` for each of them: every route action of the route
-reads its params as if the address were `route.buildUrl(params)` (a weak state not
-given reads its default, any other one not given keeps what it holds), and the
-instance prerun is the one the arrival runs. A row driven by hand calls it the same
+reads its params as if the address were `route.buildUrl(params)` — the route's own
+`paramsSignal` and `matchingSignal` read as they will there, and so do its states
+(a weak state not given reads its default, any other one not given keeps what it
+holds) — and the instance prerun is the one the arrival runs. Only that route
+answers this way: another route's params, or a `computed` of them, read what they
+hold now. A row driven by hand calls it the same
 way. Don't prerun the actions yourself: their params getters would then be written
 twice, and once one of them changes, the prefetch asks for an instance the arrival
 does not run.

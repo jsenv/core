@@ -198,10 +198,12 @@ const SCOPED_MANY_OPTIONS = new Set([
  *   `.scopedMany()` takes `writes` too, `.scopedMany()` with the plural verbs.
  * @param {{ GET?: { ms?: number, max?: number }, GET_MANY?: { ms?: number, max?: number } }} [restCallbacks.keep] -
  *   how long an answer of a read is trusted, coming back to the same params
- *   within `ms` asking nothing. Left out, coming back asks again: the right
- *   default for anything that moves on its own (a count of registrations), and
- *   worth declaring for what barely does (a description, a finished
- *   tournament). The store keeps the rows either way, and a `GET` draws the row
+ *   within `ms` asking nothing. Left out, nothing is promised: coming back
+ *   finds the answer while its instance is still referenced and asks again
+ *   once it is gone, at a moment nothing in the code decides. Worth declaring
+ *   for what barely moves (a description, a finished tournament), and with a
+ *   short `ms` for what must be asked at each visit (a count of
+ *   registrations). The store keeps the rows either way, and a `GET` draws the row
  *   it holds while its request is out, so a kept answer and a fresh one look
  *   alike: what `keep` saves is the request. Keyed by read, so a list can be
  *   trusted for less time than an item. The rules are createAction's `keep`:
