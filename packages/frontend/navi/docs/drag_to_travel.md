@@ -62,19 +62,25 @@ What stays ours:
   `useSlideContainer` (`current`, `can`, `held`), a `Nav`'s tabs, a `StepList`'s steps
   and the chevrons in `SlideContainer`, so Next pressed during a snap counts from there;
   a link's current state and `routeTravelSettledPageSignal` in `RouteTravel`. A trackpad
-  has no lift, so the nearest page answers. What the state holds waits for rest: the
-  bound signal and `onCurrentChange`, and in `RouteTravel` the address, except where it
-  runs ahead to build a page.
+  has no lift, so the nearest page answers. What the state holds waits for rest in a
+  `SlideContainer`: the bound signal and `onCurrentChange`. A `RouteTravel`'s address
+  goes with the hand: for a tab already built, at the lift, where the snap goes (with
+  a trackpad, which has no lift, at the landing); for a page not there yet — a page
+  of a window, a tab never visited — as soon as the hand has pulled 16px into it,
+  since that is what builds it, so a trackpad stroke across several of those writes
+  one address per page it crosses.
 - **A direction that is refused is the end of the row.** Whatever holds the user
   where they are (a `<Slide required>` waiting for its answer, a `preventNavNext`)
   takes what lies beyond off the row, so nothing can be scrolled to. There is no
   screen walked to and then taken back.
-- **What a box cannot say to a scroller is said per axis.** `travelByDrag` is about
-  a finger, `travelByScroll` about a wheel or a trackpad: off on an axis, that hand
-  is handed on to what scrolls inside, then around.
+- **What a box cannot say to a scroller is said per axis.** In a `SlideContainer`,
+  `travelByDrag` is about a finger, `travelByScroll` about a wheel or a trackpad: off
+  on an axis, that hand is handed on to what scrolls inside, then around. A
+  `RouteTravel` has `travelByDrag` alone, about every hand: off, the row still
+  scrolls for a tab pressed, and no hand moves it.
 
 **`position: sticky` does not stick inside a `RouteTravel` row of two pages or more
-while the document scrolls.** A horizontal scroller cannot let the other axis
+while the document scrolls**, `travelByDrag={false}` or not. A horizontal scroller cannot let the other axis
 through, so the row is what sticky sticks to, and the row never scrolls vertically.
 A page that scrolls by itself inside the row is not concerned.
 

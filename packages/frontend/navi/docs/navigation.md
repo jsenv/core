@@ -459,9 +459,12 @@ local state down through `elementProps`. Pages sharing a layout but no prefix
 injects the active child as its children.
 
 A page names itself with its own `<Head><title>…</title></Head>`, rendered with
-the page: the last `<Head>` mounted holds the document title and the theme
-colour, and one that renders again keeps its place, so a layout's `<Head>` is a
-default under every page.
+the page: the last `<Head>` shown holds the document title and the theme colour,
+and one that renders again keeps its place, so a layout's `<Head>` is a default
+under every page. A page mounted but not on screen — a tab of a `RouteTravel`
+row while another is shown, a page kept while a route transition leaves it —
+says nothing: its `<Head>` steps out, and is the last to arrive again when the
+page is shown.
 
 ### Loading data
 
@@ -589,7 +592,9 @@ by a button, it is a command carrying the fallback:
 
 `<RouteTravel>` wraps the `<Route>` tree of a row of tabs and makes it a row the
 browser scrolls, with one snap point per page: a tab pressed, the back button, and
-a hand pushing the pages:
+a hand pushing the pages. The row's `<Route>` holds the pages themselves, one pane
+each (what is written between them, `<Loading>` and the like, is read through): a
+`<Route>` holding routes of its own has no pane there, and is refused.
 
 ```jsx
 <SectionNav />
@@ -625,8 +630,11 @@ That is the form for pages that are one route with other params, the same compon
 and so only one of it, and for pages that are not children of the box. What a hand
 leaves behind is a picture of it, a clone, in the pane it stood in. `routes` may be
 given again around the page on screen as the reader moves through the list: it is
-taken once the row has come to rest, and nothing is seen moving for it. With fewer
-than two pages, the box is not a scroller at all.
+taken once the row has come to rest, and nothing is seen moving for it. It is a
+window, not the list: a hand reaches the pages beside the one on screen and no
+further, while a render of the box and a travel asked for go over every entry —
+a few pages on each side of the one on screen is the size (2v2 gives seven). With
+fewer than two pages, the box is not a scroller at all, whatever it is made of.
 
 **A neighbour not there yet is empty until the hand has pulled**, a page of a window
 or a tab never visited, and it is the box's background one sees there.

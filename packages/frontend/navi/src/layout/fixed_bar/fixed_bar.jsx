@@ -39,9 +39,10 @@
  *    beside it.
  */
 
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { RoutePageContext } from "../../nav/route_page_context.js";
 import { requestFixedBarSpace, setFixedBarSpace } from "./fixed_bar_space.js";
 
 const css = /* css */ `
@@ -283,6 +284,17 @@ export const FixedBar = ({
     return vertical ? width : height;
   };
 
+  // A bar in a page that is not on screen — a page of a RouteTravel row while
+  // another is shown, one kept while leaving — takes no room: the room is the
+  // page on screen's to give (see route_page_context.js). The page shown again,
+  // its bar measures again.
+  const routePage = useContext(RoutePageContext);
+  const away =
+    routePage !== null &&
+    (routePage.leavingSignal.value || routePage.hasLeft());
+  const awayRef = useRef(away);
+  awayRef.current = away;
+
   // Anything a render can change — a size prop, the children, a theme variable
   // — is measured in that same commit, before paint: no frame where the
   // content sits under the bar, and nothing written from inside an observer.
@@ -291,7 +303,7 @@ export const FixedBar = ({
     if (!barElement) {
       return;
     }
-    setFixedBarSpace(area, barElement, measureSpace(barElement));
+    setFixedBarSpace(area, barElement, away ? null : measureSpace(barElement));
   });
 
   // What no render caused: a font loading late, content arriving from outside,
@@ -303,6 +315,9 @@ export const FixedBar = ({
       return undefined;
     }
     const resizeObserver = new ResizeObserver(() => {
+      if (awayRef.current) {
+        return;
+      }
       requestFixedBarSpace(area, barElement, measureSpace(barElement));
     });
     resizeObserver.observe(barElement);

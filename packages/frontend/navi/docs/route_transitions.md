@@ -542,7 +542,11 @@ What that means for a page and for the application around it:
   arrive.
 - **What it fills outside its own nodes leaves at once.** A `SlotFill` in a page
   kept while leaving steps out of its slot, so a bar each page fills shows the
-  page arriving — or nothing, when that page fills none.
+  page arriving — or nothing, when that page fills none. Its `<Head>` steps out
+  of the stack (title, `theme-color`, the elements it added) and a `FixedBar` in
+  it gives back its room, the same way. A page of a `RouteTravel` row not on
+  screen does as well, and comes back as the last to arrive when it is shown
+  again.
 - **Its popups leave with it.** A popup it holds open is no longer rendered: it is
   photographed on the old side only, leaves with its page, and is closed when the
   page is taken down (see

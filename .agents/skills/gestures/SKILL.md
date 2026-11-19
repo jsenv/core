@@ -161,9 +161,13 @@ Firefox. A big swipe can cross several screens. A mouse does not drag.
 **One page per route, kept.** The router mounts what matches, and a route's actions
 ask only while it does, so a page cannot be built ahead of its address. In a row of
 `<Route>` children each leaf gets a pane (`RouteRowContainer`), built on first match
-and kept: the hand brings back the page itself. A page not on screen is treated like
-one kept while leaving, except that it can come back: `isShown()` false (it does not
-re-render), `leavingSignal` true (it steps out of slots), no `hasLeft()`. It paints at
+and kept: the hand brings back the page itself. The row's pages and its panes are
+the same leaves, read through what is written between them; a `<Route>` holding
+routes inside the row would be pages with no pane, and `collectRoutePages` refuses
+it. A page not on screen is treated like one kept while leaving, except that it can
+come back: `isShown()` false (it does not re-render), `leavingSignal` true (it steps
+out of slots, its `<Head>` out of the title and theme-color stack, a `FixedBar` gives
+back its room), no `hasLeft()`. Shown again, its `<Head>` is the last to arrive. It paints at
 rest: the compositor moves the row before any scroll event reaches the page, and a pane
 that waits for one to show comes in behind an empty strip, 2 to 5 frames of it on a busy
 phone. Its pin (below) is written at the touch, for the same reason. `contain: paint` holds its `position: fixed` content in the pane, which rides
@@ -188,9 +192,12 @@ of the row answers for the page held, even when the address ran ahead to build i
 neighbour. A row moving after a finger has lifted is going where it moves (snapping
 does not turn round, observed in Chrome only), so that first scroll moves the address
 and the tabs. Nothing says when a trackpad's fingers leave: the page nearest the row
-answers through the same hold (`routeTravelSettledPageSignal`), and the address waits
-for the landing, which stays the safety net. A stroke past three pages does not write
-three addresses.
+answers through the same hold (`routeTravelSettledPageSignal`), and for tabs already
+built the address waits for the landing, which stays the safety net. A page not built
+yet (a window's, a tab never visited) is another matter: 16px pulled into it moves the
+address, since that is what builds it, measured from the pane of the address, which
+that move shifts. A trackpad stroke across several such pages writes one address
+per page, and the landing corrects the last one.
 
 **The lift is heard on what the finger touched.** A page changing under the finger takes
 that element out of the document, and the end of the touch still goes there and comes up
@@ -205,6 +212,11 @@ not. A row with fewer than two pages is not a scroller. A page brought in is pin
 at the offset it lands on, with `top` (a transform would capture what it holds in
 `position: fixed`): shifted by the document's offset less that one, it stands on
 screen where it will at rest from the first frame, whatever stands above the row.
+Only the panes the CSS pins are written (`isPinnedByCss`): in a window, the
+neighbours that hold something, a few whatever its length, and one a movement gives
+a neighbour to is pinned in the commit that does, at the movement's offset. The
+frame is read among the columns around the scroll position (`panesNear`), not among
+every pane of a long window.
 The document's offset is written on arrival (`arriveAtScrollPosition`), with
 recording suspended for the movement: clamps are not the reader scrolling.
 

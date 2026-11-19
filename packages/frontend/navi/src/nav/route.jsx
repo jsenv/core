@@ -178,35 +178,46 @@ export const Route = (props) => {
  * The same walk the container does to find the active branch (collectBranches),
  * except that it keeps every leaf rather than the one that matches — and reads
  * no signal, so asking does not subscribe the asker to anything.
+ *
+ * The leaves of the row's container are its pages, and its panes
+ * (RouteRowContainer): one pane per leaf, read by the same walk through what is
+ * written between routes. A <Route> holding routes of its own has no place in
+ * it — it would be one pane for several pages, so a page with no pane — and is
+ * refused here, where the row reads its pages.
  */
 export const collectRoutePages = (children) => {
   const pages = [];
-  const visit = (child) => {
+  const visit = (child, inRow) => {
     if (!child || child === true || child === false) {
       return;
     }
     if (Array.isArray(child)) {
       for (const item of child) {
-        visit(item);
+        visit(item, inRow);
       }
       return;
     }
     if (child.type !== Route) {
       // Something written between routes — <Loading>, <ErrorBoundary>, a box of
       // the app's own. The pages are inside it (see collectBranches).
-      visit(child.props && child.props.children);
+      visit(child.props && child.props.children, inRow);
       return;
     }
     const { children: nodeChildren, route, routeParams } = child.props;
     if (nodeChildren) {
-      visit(nodeChildren);
+      if (inRow) {
+        throw new Error(
+          `${describeContainer(child)} holds routes of its own inside a row of <RouteTravel>, which has one pane per page: its pages would have none. Write them in the row as pages of their own (the section's layout as their element), or give the section a <Route> tree of its own inside one page of the row.`,
+        );
+      }
+      visit(nodeChildren, true);
       return;
     }
     if (route) {
       pages.push({ route, params: routeParams });
     }
   };
-  visit(children);
+  visit(children, false);
   return pages;
 };
 

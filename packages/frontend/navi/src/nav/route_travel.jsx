@@ -277,8 +277,11 @@ const TRAVEL_FRAME_MAX_MS = 1000 / 30;
  *   duration?: string,
  * }>}
  * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
- *   over something longer, in order. Read from the <Route> children by default,
- *   in the order they are written. Given here, the children are one page rendered
+ *   over something longer, in order: a few pages on each side of the one on screen,
+ *   given again as the reader moves. A hand reaches no further than the pages beside
+ *   it, while a render of the box and a travel asked for go over every entry. Read
+ *   from the <Route> children by default, in the order they are written. Given
+ *   here, the children are one page rendered
  *   once, whatever the address, and may be anything: use it when the pages are one
  *   route with other params, or not children of this box. An entry is a route, or
  *   `{ route, params }`.
@@ -332,9 +335,11 @@ export const RouteTravel = ({
   // Counts the movements ended: endMovement renders through it.
   const [restCount, render] = useReducer((count) => count + 1, 0);
 
+  // Children that are one page of a window may be anything, a <Route> tree
+  // included: only a row of <Route> children is read for its pages.
   const pagesFromChildren = useMemo(
-    () => collectRoutePages(children),
-    [children],
+    () => (windowed ? null : collectRoutePages(children)),
+    [windowed, children],
   );
   const pagesFromProp = useMemo(
     () => routesProp && routesProp.map(normalizePage),
@@ -395,22 +400,35 @@ export const RouteTravel = ({
     }
   };
 
-  // Every pane at the offset its page lands on, for those the CSS pins: shifted by
-  // where the reader is less that offset, a page brought in stands on screen where
-  // it will at rest, whatever the document holds above the row. Each pane is its
-  // own page: one come back to lands where it was left, one never read at its top.
-  const pinPanes = (row) => {
+  // Every pane the CSS pins at the offset its page lands on: shifted by where the
+  // reader is less that offset, a page brought in stands on screen where it will
+  // at rest, whatever the document holds above the row. Each pane is its own page:
+  // one come back to lands where it was left, one never read at its top. Only
+  // those the CSS pins (see isPinnedByCss): in a window, the few neighbours that
+  // hold something, whatever the length of the window — the pane of a far page is
+  // an empty column. Returns the offset pinned at, read once: a read after the
+  // first write would lay the row out again. `onlyNew`: the panes not pinned yet,
+  // at the offset the movement pinned the others at (see the render's catch-up).
+  const pinPanes = (row, { offset = window.scrollY, onlyNew = false } = {}) => {
     const { pages } = latestRef.current;
-    // Once: a read after the first write would lay the row out again.
-    const offset = window.scrollY;
     panesOf(row).forEach((pane, index) => {
+      if (!isPinnedByCss(row, pane)) {
+        return;
+      }
+      if (onlyNew && pane.style.getPropertyValue("--navi-route-row-pin")) {
+        return;
+      }
       const landing = landingOf(pages[index]);
       pane.style.setProperty("--navi-route-row-pin", `${offset - landing}px`);
       pane.style.setProperty("--navi-route-row-landing", `${landing}px`);
     });
+    return offset;
   };
   const unpinPanes = (row) => {
     for (const pane of panesOf(row)) {
+      if (!pane.style.getPropertyValue("--navi-route-row-pin")) {
+        continue;
+      }
       pane.style.removeProperty("--navi-route-row-pin");
       pane.style.removeProperty("--navi-route-row-landing");
     }
@@ -449,7 +467,7 @@ export const RouteTravel = ({
       // shorter than the trip) is not the reader scrolling, and the address it
       // would be written against may already be another page's.
       movement.resumeScrollRecording = suspendScrollRecording();
-      pinPanes(row);
+      movement.pinOffset = pinPanes(row);
     }
     return movement;
   };
@@ -796,7 +814,7 @@ export const RouteTravel = ({
       return;
     }
     const panes = panesOf(row);
-    const pane = pageAtRest(row, panes, ROW_READING);
+    const pane = pageAtRest(row, panesNear(row, panes), ROW_READING);
     if (!pane) {
       // A travel a hand took over (a trackpad, a wheel) and left between two pages:
       // sent again, the row then rests.
@@ -1010,7 +1028,11 @@ export const RouteTravel = ({
         // Refused, or sent elsewhere, with the hand perhaps still on the row: its
         // landing decides. Come to rest meanwhile, the row goes back to the address.
         const panesNow = panesOf(row);
-        const paneAtRest = pageAtRest(row, panesNow, ROW_READING);
+        const paneAtRest = pageAtRest(
+          row,
+          panesNear(row, panesNow),
+          ROW_READING,
+        );
         if (!paneAtRest || movement.playing) {
           return;
         }
@@ -1142,6 +1164,16 @@ export const RouteTravel = ({
     });
   }, [prefetch, neighbours, restCount]);
 
+  // A pane a window gives a neighbour to during a movement — the address moved,
+  // and the page beside it with it — is pinned in the commit that fills it, at
+  // the offset the movement pinned the others at.
+  useLayoutEffect(() => {
+    const movement = movementRef.current;
+    if (windowed && movement?.scrollsDocument) {
+      pinPanes(rowRef.current, { offset: movement.pinOffset, onlyNew: true });
+    }
+  });
+
   // A neighbour shows from the first frame the compositor moves the row, before
   // any scroll event, so it has to stand where it lands by then: a finger landing
   // is the last word before that. A trackpad says nothing first, and the pin comes
@@ -1180,8 +1212,9 @@ export const RouteTravel = ({
   const paintsNeighbours = Boolean(renderNeighbour);
 
   const rowContext = useMemo(() => ({ renderNeighbour }), [renderNeighbour]);
-  const rowKind =
-    pages.length < 2 && windowed ? "still" : travelByDrag ? "" : "code";
+  // With fewer than two pages there is nothing to scroll between, whatever the row
+  // is made of: no scroller, so what sticks inside a page sticks to the document.
+  const rowKind = pages.length < 2 ? "still" : travelByDrag ? "" : "code";
   return (
     <div
       {...rest}
@@ -1322,9 +1355,50 @@ const afterFrames = (count, callback) => {
   });
 };
 
+// What the CSS pins (see the pin above): a pane not on screen, and while a
+// movement holds one, every other.
+const isPinnedByCss = (row, pane) =>
+  pane.inert ||
+  (row.hasAttribute("data-route-row-holding") &&
+    !pane.hasAttribute("data-route-row-held"));
+
 // The two pages the row stands between.
-const readRowFrame = (row, panes) =>
-  readRowStretch(row, panes, panes[0], ROW_READING);
+const readRowFrame = (row, panes) => {
+  const near = panesNear(row, panes);
+  return readRowStretch(row, near, near[0], ROW_READING);
+};
+// The panes standing around where the row is scrolled to. A row of routes is one
+// line of columns as wide as the row (`grid-auto-columns: 100%`), so what stands
+// there is in the column the scroll position falls in or the next one: read among
+// those, and one more on each side for what a rounding puts there, rather than
+// among every page of a window over a long list at each scroll event. A column is
+// read where it is written — the render's, a travel's — which lays nothing out; a
+// row whose panes say none (<Route> children, placed in the order they are
+// written) is a row of a few tabs, read whole.
+const panesNear = (row, panes) => {
+  const width = row.clientWidth;
+  if (!width) {
+    return panes;
+  }
+  const column = Math.floor(row.scrollLeft / width) + 1;
+  const near = [];
+  for (const pane of panes) {
+    const paneColumn = columnOf(pane);
+    if (paneColumn === null) {
+      return panes;
+    }
+    if (paneColumn >= column - 1 && paneColumn <= column + 2) {
+      near.push(pane);
+    }
+  }
+  return near.length === 0 ? panes : near;
+};
+const columnOf = (pane) => {
+  const column =
+    pane.style.getPropertyValue(TRAVEL_COLUMN) ||
+    pane.style.getPropertyValue("--navi-route-row-column");
+  return column ? Number(column) : null;
+};
 
 // A page of the row: a route, and the params that say which of its tabs when
 // several of them share it. Written as a bare route by a caller whose tabs are
