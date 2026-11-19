@@ -312,11 +312,11 @@ export const resource = (name, restCallbacks = {}) => {
         enumerable: false,
         configurable: false,
       });
-      for (const setupCallback of setupCallbackSet) {
-        setupCallback(item, answer);
-      }
+      setUpItem(item, setupCallbackSet, answer);
       return item;
     },
+    leaveItem,
+    letsGoOfRows: true,
   });
   const persistence = persist
     ? createResourcePersistence(store, { idKey, name, ...persist })
@@ -465,13 +465,15 @@ const createResource = (
 
     // Reactive reads, not hooks: nothing hook-shaped inside, so a loop or a
     // condition is fine. Each subscribes the render that calls it to what it
-    // returns: the rows asked for, each through a computed of that row (see
-    // itemSignalForId in array_signal_store.js), or the whole store for
-    // `useArray` — a card reading its own row stays still while the page next
-    // to it loads rows of its own. `useAllByIds` skips the ids the store does
-    // not hold.
+    // returns: the rows asked for, each through the signal of that row (see
+    // readItem in array_signal_store.js), or the whole store for `useArray`
+    // — a card reading its own row stays still while the page next to it
+    // loads rows of its own. A row read by id stays in the store while it is
+    // read; `useArray` is what the store holds now, and a row the lists let go
+    // of leaves it (see mayLeave in array_signal_store.js). `useAllByIds`
+    // skips the ids the store does not hold.
     useArray: () => store.arraySignal.value,
-    useById: (id) => store.itemSignalForId(id).value,
+    useById: (id) => store.select(id),
     useAllByIds: (idArray) => {
       const items = [];
       for (const idOrProps of idArray) {
@@ -484,7 +486,7 @@ const createResource = (
         } else if (isProps(idOrProps)) {
           id = idOrProps[idKey];
         }
-        const item = store.itemSignalForId(id).value;
+        const item = store.select(id);
         if (item) {
           items.push(item);
         }
@@ -698,6 +700,15 @@ ${relationLabel} source location: ${declarationSite}`,
     }
     addItemSetup((item, answer) => {
       const childItemIdSignal = signal();
+      // The child a row points at is held in its store (see hold in
+      // array_signal_store.js): it stays there while the row points at it,
+      // and is let go of when the row points elsewhere or leaves.
+      const pointAt = (childItemId) => {
+        const childItemIdBefore = childItemIdSignal.peek();
+        childItemIdSignal.value = childItemId;
+        childStore.hold(childItemId);
+        childStore.release(childItemIdBefore);
+      };
       const updateChildItemId = (value, answer) => {
         const currentChildItemId = childItemIdSignal.peek();
         let childItemProps;
@@ -709,7 +720,7 @@ ${relationLabel} source location: ${declarationSite}`,
           if (currentChildItemId === undefined) {
             return false;
           }
-          childItemIdSignal.value = undefined;
+          pointAt(undefined);
           return true;
         }
         const childItem = answer
@@ -719,7 +730,7 @@ ${relationLabel} source location: ${declarationSite}`,
         if (currentChildItemId === childItemId) {
           return false;
         }
-        childItemIdSignal.value = childItemId;
+        pointAt(childItemId);
         return true;
       };
       updateChildItemId(item[propertyName], answer);
@@ -758,6 +769,9 @@ ${relationLabel} source location: ${declarationSite}`,
       debug(
         `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
       );
+      return () => {
+        childStore.release(childItemIdSignal.peek());
+      };
     });
 
     const createRestActionForOne = (
@@ -918,11 +932,27 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     };
     addItemSetup((item, answer) => {
       const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = createChildIdArrayUpdater(
+      const updateChildItemIdArrayUnheld = createChildIdArrayUpdater(
         childStore,
         childIdKey,
         childItemIdArraySignal,
       );
+      // The children a row points at are held in their store, as `.one()`
+      // holds its child: taken before the ones left are let go of, so a
+      // child the row still points at is never left unheld.
+      const updateChildItemIdArray = (valueArray, answer) => {
+        const idArrayBefore = childItemIdArraySignal.peek();
+        if (!updateChildItemIdArrayUnheld(valueArray, answer)) {
+          return false;
+        }
+        for (const childItemId of childItemIdArraySignal.peek()) {
+          childStore.hold(childItemId);
+        }
+        for (const childItemId of idArrayBefore) {
+          childStore.release(childItemId);
+        }
+        return true;
+      };
       updateChildItemIdArray(item[propertyName], answer);
       const childItemArraySignal = computed(() => {
         const idArray = childItemIdArraySignal.value;
@@ -939,13 +969,23 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
-      syncIdArrayOnRename(childStore, childIdKey, childItemIdArraySignal);
+      const stopSyncingRenames = syncIdArrayOnRename(
+        childStore,
+        childIdKey,
+        childItemIdArraySignal,
+      );
       if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         debug(
           `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
         );
       }
+      return () => {
+        stopSyncingRenames();
+        for (const childItemId of childItemIdArraySignal.peek()) {
+          childStore.release(childItemId);
+        }
+      };
     });
     const createRestActionForMany = (
       verb,
@@ -1281,9 +1321,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       // A stable child object, mutated in place: reactive getters/setters from
       // chained .one() etc. are defined on it once and survive prop updates.
       const childItem = {};
-      for (const childSetup of childSetupCallbackSet) {
-        childSetup(childItem);
-      }
+      setUpItem(childItem, childSetupCallbackSet);
       // `undefined` until something answers for this owner, `null` once an
       // answer says it holds none: a screen tells « not read yet » from
       // « nothing » as it does with an action's data.
@@ -1355,6 +1393,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         },
         set: applyProps,
       });
+      // The child lives inside its owner: it leaves with it.
+      return () => {
+        leaveItem(childItem);
+      };
     });
     const createRestActionForScopedOne = (
       verb,
@@ -1523,16 +1565,17 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     // One owner can be registered under several keys, all pointing to the same scope.
     const scopeMap = new Map();
     const createScope = (ownerKey) => {
+      // Keeps every child it is given (no `letsGoOfRows`): the scope stays
+      // with its owner key, and the owner's collection is what holds them.
       const childStore = arraySignalStore([], childIdKey, {
         name: `${childName}#${ownerKey} store`,
         createItem: (props, answer) => {
           const childItem = {};
           Object.assign(childItem, props);
-          for (const childSetup of childSetupCallbackSet) {
-            childSetup(childItem, answer);
-          }
+          setUpItem(childItem, childSetupCallbackSet, answer);
           return childItem;
         },
+        leaveItem,
       });
       return { childStore, idArraySignal: signal([]) };
     };
@@ -2339,6 +2382,38 @@ const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
+};
+
+// An item's relations, set up as it enters its store. What a setup returns is
+// run when the item leaves (see leaveItem in array_signal_store.js): the
+// children its relations hold in their stores are let go of. Kept on the item
+// itself, so the copies a write makes of it carry it.
+const SYMBOL_ITEM_LEAVE = Symbol("item_leave");
+const setUpItem = (item, setupCallbackSet, answer) => {
+  let leaveCallbackArray = null;
+  for (const setupCallback of setupCallbackSet) {
+    const leave = setupCallback(item, answer);
+    if (leave) {
+      if (!leaveCallbackArray) {
+        leaveCallbackArray = [];
+      }
+      leaveCallbackArray.push(leave);
+    }
+  }
+  if (leaveCallbackArray) {
+    Object.defineProperty(item, SYMBOL_ITEM_LEAVE, {
+      value: leaveCallbackArray,
+    });
+  }
+};
+const leaveItem = (item) => {
+  const leaveCallbackArray = item[SYMBOL_ITEM_LEAVE];
+  if (!leaveCallbackArray) {
+    return;
+  }
+  for (const leave of leaveCallbackArray) {
+    leave();
+  }
 };
 
 // A `.many()` plural write answering `[parentId, childArray]` rather than the

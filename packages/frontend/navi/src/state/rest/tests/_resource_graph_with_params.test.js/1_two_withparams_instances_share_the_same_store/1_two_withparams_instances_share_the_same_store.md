@@ -31,14 +31,14 @@ return { storeAfterAdminLoad, storeAfterGuestLoad };
   ],
   "storeAfterGuestLoad": [
     {
-      "id": 2,
-      "name": "Bob",
-      "role": "guest"
-    },
-    {
       "id": 1,
       "name": "Alice",
       "role": "admin"
+    },
+    {
+      "id": 2,
+      "name": "Bob",
+      "role": "guest"
     }
   ]
 }

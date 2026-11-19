@@ -6626,9 +6626,11 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   same trade the render window makes with the DOM, one order of magnitude
  *   further out. `Infinity` keeps every item the run ever received; `0` keeps
  *   only the ones around the window. Read through a resource's range reader,
- *   an item dropped leaves the run and the ranks the reader keeps, not the
- *   resource's store: the store keeps every row it is given, until a delete or
- *   a reload.
+ *   an item dropped leaves the resource's store as well, a second or two later,
+ *   unless something else holds it: another list, the ranks the reader keeps
+ *   for the list's next mount (trimmed by the same budget), a render reading
+ *   it by id (`useById`), a row pointing at it through a relation. A row an
+ *   action, a pushed message or the app wrote stays for as long as the store.
  * @param {false|(index: number) => any} [props.renderSkeleton]
  *   What to draw for an item the run does not hold, at the room that item will
  *   take: a screen of skeletons alone has no item for the list to hold still,
@@ -6716,7 +6718,11 @@ const ListItemsRun = ({
     onRequestStateChange,
     onCountChange,
   });
-  return useRunItems(store, runProps);
+  const nodes = useRunItems(store, runProps);
+  nodes.push(
+    <ListLeaveWatcher key="navi-list-run-leave" onLeave={store.letGo} />,
+  );
+  return nodes;
 };
 const readerKeyByReader = new WeakMap();
 let readerKeyPrevious = 0;
@@ -7661,7 +7667,21 @@ const useItemStore = ({
       pagesRef.current = composition;
       restored = true;
     } else {
-      pagesRef.current = { byIndex: new Map(), count: undefined };
+      if (composition) {
+        // Not drawn: the items it holds for the run are let go of.
+        composition.byIndex.clear();
+      }
+      // Read through a range reader, the items held by rank are held in the
+      // resource's store too: they stay there while the run holds them, and
+      // leave it once the run let go of them and nothing else holds them
+      // (see createHeldItems in resource_range_reader.js, and letGo below).
+      pagesRef.current = {
+        byIndex:
+          typeof itemsAction === "function" && itemsAction.createHeldItems
+            ? itemsAction.createHeldItems()
+            : new Map(),
+        count: undefined,
+      };
     }
   }
   const pages = pagesRef.current;
@@ -8104,6 +8124,14 @@ const useItemStore = ({
       request.end = -1;
       request.held = -1;
       setFailure(null);
+    },
+    // The run leaving for good — its unmount, never a park, which keeps it
+    // (see ListLeaveWatcher): the items it holds are let go of in the source's
+    // store. What the composition names stays there for the next list.
+    letGo: () => {
+      if (!inMemory) {
+        pages.byIndex.clear();
+      }
     },
     getItem: (index) => pages.byIndex.get(index),
     eachHeld: (visit) => {

@@ -10,6 +10,27 @@ export const primitiveCanBeId = (value) => {
   return false;
 };
 
+// How long a row nothing holds any more stays in its store: between one and
+// two of these (see the sweep below). Long enough for one holder letting go
+// and another taking the row over — a list leaving, the page replacing it
+// reading the same rows — to happen in between.
+const ROW_LEAVE_DELAY = 1000;
+
+// Set while a range answer is written (see readRange in
+// resource_range_reader.js), and so for every child its relations write
+// along: the rows it brings stay for as long as something holds them (see
+// `pinned` below), where a row any other write brings stays for as long as
+// its store.
+let rangeAnswerDepth = 0;
+export const writeRangeAnswer = (write) => {
+  rangeAnswerDepth++;
+  try {
+    return write();
+  } finally {
+    rangeAnswerDepth--;
+  }
+};
+
 export const arraySignalStore = (
   initialArray = [],
   idKey = "id",
@@ -19,6 +40,14 @@ export const arraySignalStore = (
     createItem = (props) => {
       return { ...props };
     },
+    // Called with the item of a row leaving the store, deleted or let go of
+    // (see the sweep below): what the item holds in other stores — the
+    // children its relations point at — is let go of with it.
+    leaveItem,
+    // A row a range answer brings leaves once the holders that took it let go
+    // of it. Without it the store keeps every row it is given: the store of a
+    // scoped relation, whose owner holds all of it.
+    letsGoOfRows = false,
   },
 ) => {
   const store = {
@@ -43,40 +72,166 @@ export const arraySignalStore = (
     return item;
   };
 
-  const arraySignal = signal(initialArray);
-  const derivedSignal = computed(() => {
-    const array = arraySignal.value;
-    const idSet = new Set(); // will be used to detect id changes (deletion, addition)
-    const idMap = new Map(); // used to speep up finding item by id
-    for (const item of array) {
-      const id = item[idKey];
-      idSet.add(id);
-      idMap.set(id, item);
+  // One entry per row, by id, in the order the rows arrived: its item, and a
+  // signal of it that a render reads to follow that row and no other. A write
+  // touches the entries of the rows it names and nothing else, so a page
+  // landing costs the page, whatever the store holds.
+  //
+  // What decides whether a row may leave (see mayLeave):
+  // - `pinned`: written by something else than a range answer (an action's
+  //   answer, a pushed message, the app): kept for as long as the store.
+  // - `taken`: held at least once (see hold). A row a range answer brings and
+  //   nobody takes stays too: read straight from the reader, its ids are kept
+  //   by whoever asked, where the store cannot see them.
+  // - `watched`: a render or an effect follows it.
+  const entryById = new Map();
+  // Bumped by every write that changes the rows. What reads the store as a
+  // whole follows it — the array, a search by another key — and so does a
+  // read of an id the store does not hold, to hear its row arrive.
+  const versionSignal = signal(0);
+  const bumpVersion = () => {
+    versionSignal.value = versionSignal.peek() + 1;
+  };
+  // Built when read: a store nobody reads whole pays nothing for it.
+  const arraySignal = computed(() => {
+    // eslint-disable-next-line no-unused-expressions
+    versionSignal.value;
+    const array = [];
+    for (const entry of entryById.values()) {
+      array.push(entry.item);
     }
-    return [idSet, idMap];
+    return array;
   });
-  const idSetSignal = computed(() => derivedSignal.value[0]);
-  const idMapSignal = computed(() => derivedSignal.value[1]);
-  const previousIdSetSignal = signal(new Set(idSetSignal.peek()));
-  const idChangeCallbackSet = new Set();
-  effect(() => {
-    const idSet = idSetSignal.value;
-    const previousIdSet = previousIdSetSignal.peek();
-    const setCopy = new Set();
-    let modified = false;
-    for (const id of idSet) {
-      if (!previousIdSet.has(id)) {
-        modified = true;
-      }
-      setCopy.add(id);
+  const createItemSignal = (entry, item) => {
+    const itemSignal = signal(item, {
+      watched() {
+        if (entry.itemSignal !== itemSignal) {
+          return;
+        }
+        entry.watched = true;
+        leavingNext.delete(item[idKey]);
+        leavingSoon.delete(item[idKey]);
+      },
+      unwatched() {
+        // A signal the row left (renamed, gone) is not the row's to speak for.
+        if (entry.itemSignal !== itemSignal) {
+          return;
+        }
+        entry.watched = false;
+        noteMayLeave(entry);
+      },
+    });
+    return itemSignal;
+  };
+  const createEntry = (item, pinned) => {
+    const entry = {
+      item,
+      itemSignal: null,
+      pinned,
+      taken: holdCountById.has(item[idKey]),
+      watched: false,
+    };
+    entry.itemSignal = createItemSignal(entry, item);
+    return entry;
+  };
+
+  // How many holders hold each id: the ranks of a list run and of a
+  // composition (see createHeldItems, and resource_range_reader.js), the
+  // parent rows pointing at it through a relation (resource_graph.js). Counted
+  // by id rather than on the entry: a holder may hold an id before its row
+  // arrives, and keeps holding it while its row is gone and comes back.
+  const holdCountById = new Map();
+  const hold = (id) => {
+    if (id === undefined) {
+      return;
     }
-    if (modified) {
-      previousIdSetSignal.value = setCopy;
-      for (const idChangeCallback of idChangeCallbackSet) {
-        idChangeCallback(idSet, previousIdSet);
+    holdCountById.set(id, (holdCountById.get(id) || 0) + 1);
+    const entry = entryById.get(id);
+    if (entry) {
+      entry.taken = true;
+      leavingNext.delete(id);
+      leavingSoon.delete(id);
+    }
+  };
+  const release = (id) => {
+    const count = holdCountById.get(id);
+    if (count === undefined) {
+      // Under an id its row no longer has: the count went with the row when
+      // it was renamed (see replaceItem), and keeps it.
+      return;
+    }
+    if (count > 1) {
+      holdCountById.set(id, count - 1);
+      return;
+    }
+    holdCountById.delete(id);
+    const entry = entryById.get(id);
+    if (entry) {
+      noteMayLeave(entry);
+    }
+  };
+  // A Map of the store's items by rank, holding each item while it is in it:
+  // what a list run keeps of the collection it draws (see useItemStore in
+  // list.jsx). `clear()` lets go of them all, which the run does as it leaves.
+  const createHeldItems = () => new HeldItems(hold, release, idKey);
+
+  const mayLeave = (entry) =>
+    letsGoOfRows &&
+    entry.taken &&
+    !entry.pinned &&
+    !entry.watched &&
+    !holdCountById.has(entry.item[idKey]);
+  // The rows let go of, in two generations: since the last sweep, and before
+  // it. A sweep sends the older ones away if nothing took them back, so a row
+  // leaves between one and two ROW_LEAVE_DELAY after it was last let go of.
+  // It leaves without a word: not a removal (observeRemovals hears deletes,
+  // which a list takes out of the collection), the store forgetting a row it
+  // kept for nobody. Read again by id, the row is absent, as after a reload.
+  let leavingNext = new Set();
+  let leavingSoon = new Set();
+  let sweepTimeout = null;
+  const noteMayLeave = (entry) => {
+    if (!mayLeave(entry)) {
+      return;
+    }
+    leavingNext.add(entry.item[idKey]);
+    if (sweepTimeout === null) {
+      sweepTimeout = setTimeout(sweep, ROW_LEAVE_DELAY);
+    }
+  };
+  const sweep = () => {
+    sweepTimeout = null;
+    const leaving = [];
+    for (const id of leavingSoon) {
+      const entry = entryById.get(id);
+      if (entry && mayLeave(entry)) {
+        leaving.push(entry);
       }
     }
-  });
+    leavingSoon = leavingNext;
+    leavingNext = new Set();
+    if (leavingSoon.size > 0) {
+      sweepTimeout = setTimeout(sweep, ROW_LEAVE_DELAY);
+    }
+    if (leaving.length === 0) {
+      return;
+    }
+    batch(() => {
+      for (const entry of leaving) {
+        entryById.delete(entry.item[idKey]);
+        entry.itemSignal.value = undefined;
+      }
+      bumpVersion();
+      if (leaveItem) {
+        for (const entry of leaving) {
+          leaveItem(entry.item);
+        }
+      }
+    });
+  };
+  for (const item of initialArray) {
+    entryById.set(item[idKey], createEntry(item, true));
+  }
 
   const itemPropertiesObserverSet = new Set();
   const observeItemProperties = (itemSignal, callback, { properties } = {}) => {
@@ -106,22 +261,10 @@ export const arraySignalStore = (
     };
   };
 
-  const itemMatchLifecycleSet = new Set();
-  const registerItemMatchLifecycle = (matchPredicate, { match, nomatch }) => {
-    const matchState = {
-      hasMatched: false,
-      hadMatchedBefore: false,
-    };
-    const itemMatchLifecycle = {
-      matchPredicate,
-      match,
-      nomatch,
-      matchState,
-    };
-    itemMatchLifecycleSet.add(itemMatchLifecycle);
-  };
-
-  const readIdFromItemProps = (props, array) => {
+  // The id of the row `props` name: under idKey, or the row holding the same
+  // value under one of the unique keys — read off the whole store, as only
+  // the id is indexed.
+  const readIdFromItemProps = (props) => {
     let id;
     if (Object.hasOwn(props, idKey)) {
       id = props[idKey];
@@ -145,10 +288,10 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       );
     }
     const uniqueKeyValue = props[uniqueKey];
-    for (const itemCandidate of array) {
-      const uniqueKeyCandidate = itemCandidate[uniqueKey];
+    for (const entry of entryById.values()) {
+      const uniqueKeyCandidate = entry.item[uniqueKey];
       if (uniqueKeyCandidate === uniqueKeyValue) {
-        id = itemCandidate[idKey];
+        id = entry.item[idKey];
         break;
       }
     }
@@ -159,65 +302,48 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     }
     return id;
   };
-
-  effect(() => {
-    const array = arraySignal.value;
-
-    for (const {
-      matchPredicate,
-      match,
-      nomatch,
-      matchState,
-    } of itemMatchLifecycleSet) {
-      let currentlyHasMatch = false;
-
-      // Check if any item currently matches
-      for (const item of array) {
-        if (matchPredicate(item)) {
-          currentlyHasMatch = true;
-          break;
-        }
-      }
-
-      // Handle state transitions
-      if (currentlyHasMatch && !matchState.hasMatched) {
-        // New match found
-        matchState.hasMatched = true;
-        const isRematch = matchState.hadMatchedBefore;
-        if (match) {
-          match(isRematch);
-        }
-      } else if (!currentlyHasMatch && matchState.hasMatched) {
-        // No longer has match
-        matchState.hasMatched = false;
-        matchState.hadMatchedBefore = true;
-        if (nomatch) {
-          nomatch();
-        }
-      }
+  // Read by id, a render follows that row alone — an upsert replaces only the
+  // items it changes (see assign below), so a row nobody wrote stays still
+  // while the rest of the store moves. An id the store does not hold is
+  // followed through the version, until its row arrives.
+  const readItem = (id) => {
+    const entry = entryById.get(id);
+    if (entry) {
+      return entry.itemSignal.value;
     }
-  });
+    // eslint-disable-next-line no-unused-expressions
+    versionSignal.value;
+    return undefined;
+  };
+  const readIdOf = (toMatch) => {
+    if (toMatch === null || typeof toMatch !== "object") {
+      return toMatch;
+    }
+    if (!Object.hasOwn(toMatch, idKey)) {
+      // Found by a unique key, read off the whole store: followed whole.
+      // eslint-disable-next-line no-unused-expressions
+      versionSignal.value;
+    }
+    return readIdFromItemProps(toMatch);
+  };
 
   const select = (...args) => {
-    const array = arraySignal.value;
-    const idMap = idMapSignal.value;
-
     let property;
     let value;
     if (args.length === 1) {
       property = idKey;
-      value = args[0];
-      if (value !== null && typeof value === "object") {
-        value = readIdFromItemProps(value, array);
-      }
+      value = readIdOf(args[0]);
     } else if (args.length === 2) {
       property = args[0];
       value = args[1];
     }
     if (property === idKey) {
-      return idMap.get(value);
+      return readItem(value);
     }
-    for (const itemCandidate of array) {
+    // eslint-disable-next-line no-unused-expressions
+    versionSignal.value;
+    for (const entry of entryById.values()) {
+      const itemCandidate = entry.item;
       const valueCandidate =
         typeof property === "function"
           ? property(itemCandidate)
@@ -229,35 +355,14 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     return null;
   };
   const selectAll = (toMatchArray) => {
-    const array = arraySignal.value;
     const result = [];
-    const idMap = idMapSignal.value;
     for (const toMatch of toMatchArray) {
-      const id =
-        toMatch !== null && typeof toMatch === "object"
-          ? readIdFromItemProps(toMatch, array)
-          : toMatch;
-      const item = idMap.get(id);
+      const item = readItem(readIdOf(toMatch));
       if (item) {
         result.push(item);
       }
     }
     return result;
-  };
-  // A computed of the row with this id, one per id: what a render reads to
-  // follow that row and no other. An upsert replaces only the items it changes
-  // (see assign below), so a row nobody wrote keeps its object, and its
-  // computed stays still while the rest of the store moves — read through
-  // `select`, a render follows the whole store. Kept as long as the store,
-  // like the rows it holds.
-  const itemSignalById = new Map();
-  const itemSignalForId = (id) => {
-    let itemSignal = itemSignalById.get(id);
-    if (!itemSignal) {
-      itemSignal = computed(() => idMapSignal.value.get(id));
-      itemSignalById.set(id, itemSignal);
-    }
-    return itemSignal;
   };
   // A value changes a row when it is another object — the app writing a new
   // one says something changed, and that is taken as said. An answer says it
@@ -274,6 +379,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   const upsertWith = (args, answer) => batch(() => upsertWithNow(args, answer));
   const upsertWithNow = (args, answer) => {
     const valueChanged = answer ? valueChangedByAnswer : valueChangedByWrite;
+    const pins = !letsGoOfRows || rangeAnswerDepth === 0;
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
       for (const itemPropertiesObserver of itemPropertiesObserverSet) {
@@ -389,71 +495,70 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       return itemWithProps;
     };
 
-    const array = arraySignal.peek();
-    if (args.length === 1 && Array.isArray(args[0])) {
-      const propsArray = args[0];
-      if (array.length === 0) {
-        const arrayAllCreated = [];
-        for (const props of propsArray) {
-          const item = createItemFromProps(props, answer);
-          arrayAllCreated.push(item);
-        }
-        arraySignal.value = arrayAllCreated;
-        return arrayAllCreated;
+    let changed = false;
+    // The row's new item in place of the one its entry held. Renamed (its
+    // idKey written), the row moves to its new id with what holds it, and
+    // whoever reads the old id sees it go.
+    const replaceItem = (entry, item) => {
+      const id = entry.item[idKey];
+      const newId = item[idKey];
+      entry.item = item;
+      changed = true;
+      if (newId === id) {
+        entry.itemSignal.value = item;
+        return;
       }
-      let hasNew = false;
-      let hasUpdate = false;
-      const arraySomeUpdated = [];
-      const arrayWithOnlyAffectedItems = [];
-      const existingEntryMap = new Map();
-      let index = 0;
-      while (index < array.length) {
-        const existingItem = array[index];
-        const id = existingItem[idKey];
-        existingEntryMap.set(id, {
-          existingItem,
-          existingItemIndex: index,
-          processed: false,
-        });
-        index++;
+      const itemSignalOfOldId = entry.itemSignal;
+      entryById.delete(id);
+      entry.itemSignal = createItemSignal(entry, item);
+      entry.watched = false;
+      entryById.set(newId, entry);
+      const holdCount = holdCountById.get(id);
+      if (holdCount !== undefined) {
+        holdCountById.delete(id);
+        holdCountById.set(newId, (holdCountById.get(newId) || 0) + holdCount);
       }
-
-      for (const props of propsArray) {
-        const id = readIdFromItemProps(props, array);
-        const existingEntry = existingEntryMap.get(id);
-        if (existingEntry) {
-          const { existingItem } = existingEntry;
-          const itemWithPropsOrItem = assign(existingItem, props);
-          if (itemWithPropsOrItem !== existingItem) {
-            hasUpdate = true;
-          }
-          arraySomeUpdated.push(itemWithPropsOrItem);
-          existingEntry.processed = true;
-          arrayWithOnlyAffectedItems.push(itemWithPropsOrItem);
-        } else {
-          hasNew = true;
-          const item = createItemFromProps(props, answer);
-          arraySomeUpdated.push(item);
-          arrayWithOnlyAffectedItems.push(item);
-        }
+      itemSignalOfOldId.value = undefined;
+    };
+    const write = (entry, props) => {
+      if (pins) {
+        entry.pinned = true;
       }
-
-      for (const [, existingEntry] of existingEntryMap) {
-        if (!existingEntry.processed) {
-          arraySomeUpdated.push(existingEntry.existingItem);
-        }
+      // A row let go of and written again waits again: an answer is taken in
+      // by the list that asked a render later, and the row must still be
+      // there then (see the sweep).
+      const id = entry.item[idKey];
+      if (leavingSoon.delete(id)) {
+        leavingNext.add(id);
       }
-
-      if (hasNew || hasUpdate) {
-        arraySignal.value = arraySomeUpdated;
+      const item = assign(entry.item, props);
+      if (item !== entry.item) {
+        replaceItem(entry, item);
+      }
+      return item;
+    };
+    const insert = (props) => {
+      const item = createItemFromProps(props, answer);
+      entryById.set(item[idKey], createEntry(item, pins));
+      changed = true;
+      return item;
+    };
+    const done = () => {
+      if (changed) {
+        bumpVersion();
         triggerPropertyMutations();
-        return arrayWithOnlyAffectedItems;
       }
-      return arrayWithOnlyAffectedItems;
+    };
+
+    if (args.length === 1 && Array.isArray(args[0])) {
+      const items = [];
+      for (const props of args[0]) {
+        const entry = entryById.get(readIdFromItemProps(props));
+        items.push(entry ? write(entry, props) : insert(props));
+      }
+      done();
+      return items;
     }
-    let existingItem = null;
-    let updatedItem = null;
-    const arraySomeUpdated = [];
     let propertyToMatch;
     let valueToMatch;
     let props;
@@ -465,7 +570,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
           `Expected an object as first argument, got ${firstArg}`,
         );
       }
-      valueToMatch = readIdFromItemProps(firstArg, array);
+      valueToMatch = readIdFromItemProps(firstArg);
       props = firstArg;
     } else if (args.length === 2) {
       propertyToMatch = idKey;
@@ -479,35 +584,35 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       valueToMatch = args[1];
       props = args[2];
     }
-    for (const itemCandidate of array) {
-      const itemCandidateValue =
-        typeof propertyToMatch === "function"
-          ? propertyToMatch(itemCandidate)
-          : itemCandidate[propertyToMatch];
-      if (itemCandidateValue === valueToMatch) {
-        const itemWithPropsOrItem = assign(itemCandidate, props);
-        if (itemWithPropsOrItem === itemCandidate) {
-          existingItem = itemCandidate;
-        } else {
-          updatedItem = itemWithPropsOrItem;
+    if (propertyToMatch === idKey) {
+      const entry = entryById.get(valueToMatch);
+      if (entry) {
+        const item = write(entry, props);
+        done();
+        return item;
+      }
+    } else {
+      const entryMatchingArray = [];
+      for (const entry of entryById.values()) {
+        const itemCandidateValue =
+          typeof propertyToMatch === "function"
+            ? propertyToMatch(entry.item)
+            : entry.item[propertyToMatch];
+        if (itemCandidateValue === valueToMatch) {
+          entryMatchingArray.push(entry);
         }
-        arraySomeUpdated.push(itemWithPropsOrItem);
-      } else {
-        arraySomeUpdated.push(itemCandidate);
+      }
+      if (entryMatchingArray.length > 0) {
+        let item;
+        for (const entry of entryMatchingArray) {
+          item = write(entry, props);
+        }
+        done();
+        return item;
       }
     }
-    if (existingItem) {
-      return existingItem;
-    }
-    if (updatedItem) {
-      arraySignal.value = arraySomeUpdated;
-      triggerPropertyMutations();
-      return updatedItem;
-    }
-    const item = createItemFromProps(props, answer);
-    arraySomeUpdated.push(item);
-    arraySignal.value = arraySomeUpdated;
-    triggerPropertyMutations();
+    const item = insert(props);
+    done();
     return item;
   };
   const upsert = (...args) => upsertWith(args, false);
@@ -528,55 +633,55 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   const drop = (...args) => batch(() => dropNow(...args));
   const dropNow = (...args) => {
     const removedItemArray = [];
-    const triggerRemovedMutations = () => {
+    const remove = (entry) => {
+      entryById.delete(entry.item[idKey]);
+      entry.itemSignal.value = undefined;
+      removedItemArray.push(entry.item);
+    };
+    const done = () => {
       if (removedItemArray.length === 0) {
         return;
       }
-      // we call at the end so that itemWithProps and arraySignal.value was set too
+      bumpVersion();
+      if (leaveItem) {
+        for (const removedItem of removedItemArray) {
+          leaveItem(removedItem);
+        }
+      }
       for (const removalsCallback of removalsCallbackSet) {
         removalsCallback(removedItemArray);
       }
     };
 
-    const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
-      const firstArg = args[0];
-      const arrayWithoutDroppedItems = [];
-      let hasFound = false;
-      const idToRemoveSet = new Set();
       const idRemovedArray = [];
-
-      for (const value of firstArg) {
+      const idRemovedSet = new Set();
+      const idNotFoundArray = [];
+      for (const value of args[0]) {
+        let id;
         if (typeof value === "object" && value !== null) {
-          const id = readIdFromItemProps(value, array);
-          idToRemoveSet.add(id);
-        } else if (!primitiveCanBeId(value)) {
+          id = readIdFromItemProps(value);
+        } else if (primitiveCanBeId(value)) {
+          id = value;
+        } else {
           throw new TypeError(`id to drop must be an id, got ${value}`);
         }
-        idToRemoveSet.add(value);
-      }
-      for (const existingItem of array) {
-        const existingItemId = existingItem[idKey];
-        if (idToRemoveSet.has(existingItemId)) {
-          hasFound = true;
-          idToRemoveSet.delete(existingItemId);
-          idRemovedArray.push(existingItemId);
-          removedItemArray.push(existingItem);
-        } else {
-          arrayWithoutDroppedItems.push(existingItem);
+        const entry = entryById.get(id);
+        if (entry) {
+          remove(entry);
+          idRemovedArray.push(id);
+          idRemovedSet.add(id);
+        } else if (!idRemovedSet.has(id)) {
+          idNotFoundArray.push(id);
         }
       }
-      if (idToRemoveSet.size > 0) {
+      if (idNotFoundArray.length > 0) {
         console.warn(
-          `arraySignalStore.drop: Some ids were not found in the array: ${Array.from(idToRemoveSet).join(", ")}`,
+          `arraySignalStore.drop: Some ids were not found in the array: ${idNotFoundArray.join(", ")}`,
         );
       }
-      if (hasFound) {
-        arraySignal.value = arrayWithoutDroppedItems;
-        triggerRemovedMutations();
-        return idRemovedArray;
-      }
-      return [];
+      done();
+      return idRemovedArray;
     }
     let propertyToMatch;
     let valueToMatch;
@@ -584,7 +689,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       propertyToMatch = idKey;
       valueToMatch = args[0];
       if (valueToMatch !== null && typeof valueToMatch === "object") {
-        valueToMatch = readIdFromItemProps(valueToMatch, array);
+        valueToMatch = readIdFromItemProps(valueToMatch);
       } else if (!primitiveCanBeId(valueToMatch)) {
         throw new TypeError(`id to drop must be an id, got ${valueToMatch}`);
       }
@@ -592,28 +697,33 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       propertyToMatch = args[0];
       valueToMatch = args[1];
     }
-    const arrayWithoutItemToDrop = [];
-    let found = false;
-    let itemDropped = null;
-    for (const itemCandidate of array) {
+    if (propertyToMatch === idKey) {
+      const entry = entryById.get(valueToMatch);
+      if (!entry) {
+        return null;
+      }
+      remove(entry);
+      done();
+      return entry.item[idKey];
+    }
+    const entryMatchingArray = [];
+    for (const entry of entryById.values()) {
       const itemCandidateValue =
         typeof propertyToMatch === "function"
-          ? propertyToMatch(itemCandidate)
-          : itemCandidate[propertyToMatch];
+          ? propertyToMatch(entry.item)
+          : entry.item[propertyToMatch];
       if (itemCandidateValue === valueToMatch) {
-        itemDropped = itemCandidate;
-        found = true;
-      } else {
-        arrayWithoutItemToDrop.push(itemCandidate);
+        entryMatchingArray.push(entry);
       }
     }
-    if (found) {
-      arraySignal.value = arrayWithoutItemToDrop;
-      removedItemArray.push(itemDropped);
-      triggerRemovedMutations();
-      return itemDropped[idKey];
+    if (entryMatchingArray.length === 0) {
+      return null;
     }
-    return null;
+    for (const entry of entryMatchingArray) {
+      remove(entry);
+    }
+    done();
+    return entryMatchingArray[entryMatchingArray.length - 1].item[idKey];
   };
 
   const signalForKey = (key, keyValueSignal) => {
@@ -688,33 +798,70 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     });
   };
 
-  const observeIdChanges = (callback) => {
-    idChangeCallbackSet.add(callback);
-    return () => {
-      idChangeCallbackSet.delete(callback);
-    };
-  };
-
   Object.assign(store, {
     idKey,
     uniqueKeys,
     arraySignal,
     select,
     selectAll,
-    itemSignalForId,
     upsert,
     upsertAnswer,
     drop,
+    hold,
+    release,
+    createHeldItems,
 
     observeItemProperties,
     observeProperties,
     observeRemovals,
-    observeIdChanges,
-    registerItemMatchLifecycle,
     signalForKey,
   });
   return store;
 };
+
+// See createHeldItems above: setting, deleting and clearing hold and let go of
+// the items they put in and take out, so what the map holds is what it holds
+// in the store, whoever writes to it.
+class HeldItems extends Map {
+  constructor(hold, release, idKey) {
+    super();
+    this.holdItem = (item) => {
+      if (item) {
+        hold(item[idKey]);
+      }
+    };
+    this.releaseItem = (item) => {
+      if (item) {
+        release(item[idKey]);
+      }
+    };
+  }
+  set(key, item) {
+    const previous = super.get(key);
+    super.set(key, item);
+    if (item !== previous) {
+      this.holdItem(item);
+      this.releaseItem(previous);
+    }
+    return this;
+  }
+  delete(key) {
+    if (!super.has(key)) {
+      return false;
+    }
+    const previous = super.get(key);
+    super.delete(key);
+    this.releaseItem(previous);
+    return true;
+  }
+  clear() {
+    const items = Array.from(super.values());
+    super.clear();
+    for (const item of items) {
+      this.releaseItem(item);
+    }
+  }
+}
 
 export const syncStoreToSignals = (store, propertyToSignalMap) => {
   const { idKey } = store;

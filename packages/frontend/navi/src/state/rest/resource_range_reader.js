@@ -20,9 +20,12 @@
  * paginated collection the store cannot model, and without it a list that left
  * the screen comes back to skeletons and a request for rows it had a second
  * before. Ids and a count, so nothing here can hold a stale copy of a row, and
- * a row dropped from the store simply stops resolving. A list that comes back
- * draws the composition it left and asks again for the window it draws — the
- * revalidation an invalidation goes through, from a fresh mount.
+ * a row deleted from the store simply stops resolving. Each rank holds its row
+ * in the store (see hold in array_signal_store.js): what a composition names
+ * stays there for the list that comes back, and a rank trimmed away or
+ * invalidated lets go of it. A list that comes back draws the composition it
+ * left and asks again for the window it draws — the revalidation an
+ * invalidation goes through, from a fresh mount.
  *
  * The reader is a function, so a list feeds on it the way it feeds on any other
  * source: `itemsAction={GAME.GET_RANGE.bindParams({ radar })}`.
@@ -48,6 +51,7 @@ import { signal, untracked } from "@preact/signals";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { isSignal } from "../../utils/is_signal.js";
 import { createJsValueWeakMap } from "../../utils/js_value_weak_map.js";
+import { writeRangeAnswer } from "./array_signal_store.js";
 import {
   getKeptReadKey,
   noteKeptFrameMoved,
@@ -106,6 +110,24 @@ export const createRangeReader = (
   const bumpKeptVersion = () => {
     keptVersionSignal.value = keptVersionSignal.peek() + 1;
   };
+  // The ranks of a composition, written and erased with the hold each one
+  // has on its row (see the header).
+  const setRank = (composition, index, id) => {
+    const previousId = composition.idByIndex.get(index);
+    if (previousId === id) {
+      return;
+    }
+    composition.idByIndex.set(index, id);
+    store.hold(id);
+    if (previousId !== undefined) {
+      store.release(previousId);
+    }
+  };
+  const releaseRanks = (idByIndex) => {
+    for (const id of idByIndex.values()) {
+      store.release(id);
+    }
+  };
   // The composition the previous document kept for these params, entering the
   // store and the compositions as if a list had just left it.
   const restoreKeptComposition = (params) => {
@@ -123,8 +145,10 @@ export const createRangeReader = (
     };
     for (const rank of Object.keys(kept.items)) {
       const index = Number(rank);
-      const item = upsertKeptItem(store, kept.items[rank]);
-      composition.idByIndex.set(index, item[store.idKey]);
+      const item = writeRangeAnswer(() =>
+        upsertKeptItem(store, kept.items[rank]),
+      );
+      setRank(composition, index, item[store.idKey]);
       if (composition.keptFrom === undefined || index < composition.keptFrom) {
         composition.keptFrom = index;
       }
@@ -185,7 +209,7 @@ export const createRangeReader = (
           `${actionName} must return { items, start, count }, received ${describeResult(result)}.`,
         );
       }
-      const items = store.upsertAnswer(result.items);
+      const items = writeRangeAnswer(() => store.upsertAnswer(result.items));
       let { start, count } = result;
       if (start === undefined) {
         const startAsked = rangeParams.start;
@@ -214,6 +238,9 @@ export const createRangeReader = (
   // stand for a composition that is gone.
   readRange.invalidationSignal = invalidationSignal;
   readRange.invalidate = () => {
+    for (const composition of compositionSet) {
+      releaseRanks(composition.idByIndex);
+    }
     compositionSet.clear();
     callOffReadsInFlight();
     invalidationSignal.value = invalidationSignal.peek() + 1;
@@ -227,8 +254,13 @@ export const createRangeReader = (
     callOffReadsInFlight();
     invalidationSignal.value = invalidationSignal.peek() + 1;
   };
-  // The rows of a composition, drawn from the store: a rank whose row is gone
-  // from the store resolves to nothing and is asked for again.
+  // What a list holds of the collection it draws, by rank: its rows stay in
+  // the store while the list holds them (see createHeldItems in
+  // array_signal_store.js), and the list lets go of them all as it leaves.
+  readRange.createHeldItems = () => store.createHeldItems();
+  // The rows of a composition, drawn from the store, held for the list that
+  // draws them: a rank whose row is gone from the store resolves to nothing
+  // and is asked for again.
   readRange.readComposition = () => {
     const params = currentParams();
     const composition = untracked(
@@ -237,7 +269,7 @@ export const createRangeReader = (
     if (!composition) {
       return null;
     }
-    const byIndex = new Map();
+    const byIndex = store.createHeldItems();
     untracked(() => {
       for (const [index, id] of composition.idByIndex) {
         const item = store.select(id);
@@ -261,6 +293,9 @@ export const createRangeReader = (
     params = currentParams(),
   }) => {
     let composition = findComposition(params);
+    // Let go of after the ranks written below have taken theirs: a row held
+    // by the ranks dropped and by the ones written is never left unheld.
+    let idByIndexReplaced = null;
     if (!composition) {
       composition = {
         params,
@@ -272,6 +307,7 @@ export const createRangeReader = (
       };
       compositionSet.add(composition);
     } else if (replace) {
+      idByIndexReplaced = composition.idByIndex;
       composition.idByIndex = new Map();
     }
     composition.count = count;
@@ -280,8 +316,11 @@ export const createRangeReader = (
     for (const [index, item] of byIndex) {
       const id = item ? item[store.idKey] : undefined;
       if (id !== undefined) {
-        composition.idByIndex.set(index, id);
+        setRank(composition, index, id);
       }
+    }
+    if (idByIndexReplaced) {
+      releaseRanks(idByIndexReplaced);
     }
     bumpKeptVersion();
   };
@@ -350,17 +389,19 @@ export const createRangeReader = (
   };
   // The same trade a list makes with the rows it holds, applied to what is kept
   // for the next mount. Two lists on one collection each trim by their own
-  // window; the rows a list is drawing stay on its screen regardless — a rank
-  // dropped here is one that gets asked for again after a remount.
+  // window; the rows a list is drawing stay on its screen regardless, and in
+  // the store, which they are held in by the list itself — a rank dropped here
+  // is one that gets asked for again after a remount.
   readRange.trimComposition = (keepFrom, keepTo, budget) => {
     const composition = findComposition(currentParams());
     if (!composition || composition.idByIndex.size <= budget) {
       return;
     }
     let trimmed = false;
-    for (const index of composition.idByIndex.keys()) {
+    for (const [index, id] of composition.idByIndex) {
       if (index < keepFrom || index > keepTo) {
         composition.idByIndex.delete(index);
+        store.release(id);
         trimmed = true;
       }
     }
