@@ -1,11 +1,17 @@
 /**
- * What covers the box a route movement plays in, from INSIDE the document: a
- * sticky row of tabs above a `<RouteTravel>`, a header pinned to the top of a
- * scroller. The element says it is there, this measures what it takes and
- * publishes it under --navi-transition-cover-* — the slot transition_window.js
- * declares and explains, and which nothing but the element covering the box can
- * fill: the safe area answers for what is pinned to the WINDOW's edges, and a
- * sticky row is none of those.
+ * What covers the box a route movement plays in, from INSIDE the document but
+ * outside that box: a status strip sticking under the top bar, a header pinned
+ * above the area the pages live in. The element says it is there, this
+ * measures what it takes and publishes it under --navi-transition-cover-* —
+ * the slot transition_window.js declares and explains, and which nothing but
+ * the element covering the box can fill: the safe area answers for what is
+ * pinned to the WINDOW's edges, and a sticky strip is none of those.
+ *
+ * An element inside the area (data-navi-route-transition-area) covers nothing:
+ * it is part of the pages, photographed with them, and moves with its page.
+ * Counted, it would cut its own pixels out of both pictures, leaving a blank
+ * band where it stands for the length of the movement. It is left out, and
+ * development says so.
  *
  * The pictures of a transition are drawn in the top layer, above every z-index
  * of the document, so a band left uncounted here is a band the pictures slide
@@ -30,6 +36,10 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { installTransitionWindowCss } from "./transition_window.js";
+
+// What the pages live in (route_transition.jsx owns it). Written out rather
+// than imported, as transition_press.js does.
+const AREA_SELECTOR = "[data-navi-route-transition-area]";
 
 const sizeMapByEdge = new Map();
 // What is currently on <html> for each edge (absent = the variable is not set).
@@ -97,6 +107,7 @@ const measureCover = (element, edge) => {
 // The sizes a resize said, written in the frame it produced (see the top of
 // this file). A write for the same element in between is newer and wins.
 const pendingCoverByElement = new Map();
+let insideAreaWarned = false;
 let pendingCoverFrame = null;
 const requestCover = (edge, element, size) => {
   pendingCoverByElement.set(element, { edge, size });
@@ -115,6 +126,16 @@ const requestCover = (edge, element, size) => {
 
 const writeCover = (edge, element, size) => {
   pendingCoverByElement.delete(element);
+  if (size !== null && element.closest(AREA_SELECTOR)) {
+    if (import.meta.dev && !insideAreaWarned) {
+      insideAreaWarned = true;
+      console.warn(
+        `useTransitionCover is given an element inside the element marked data-navi-route-transition-area, so it covers nothing: it is part of the pages, photographed with them, and moves with its page. It is left out of the band the pages are cut at. Give it to what covers the pages from outside the area, or drop the hook.`,
+        element,
+      );
+    }
+    size = null;
+  }
   let sizeMap = sizeMapByEdge.get(edge);
   if (!sizeMap) {
     sizeMap = new Map();

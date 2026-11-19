@@ -79,8 +79,9 @@
  */
 
 /**
- * What covers the box from INSIDE the document: a sticky row of tabs above the
- * pages, a header pinned to the top of a scroller. Declared at zero and
+ * What covers the box from INSIDE the document, outside the box: a status strip
+ * sticking under the top bar, a header above the area (see transition_cover.js,
+ * which leaves out what stands inside the area). Declared at zero and
  * written by whoever covers it, exactly as a fixed bar publishes the room it
  * gives back (layout/safe_area.js).
  *

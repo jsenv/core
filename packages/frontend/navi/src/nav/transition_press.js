@@ -19,11 +19,16 @@
  * plays the press is caught at the document and handed to it when it fell
  * inside its rectangle — which is where the hand thinks it pressed.
  *
- * ASKED FOR, never derived, and that is the whole safety of it: only the
- * application knows the control does not move. One that travels with the pages
- * has a rectangle where it WILL be, not where it is seen, and a press handed to
- * it fires something the reader never aimed at — worse than the press being
- * lost. Hence the dev warning below for a control found inside the area.
+ * Asked for, and then decided for each movement: the application says the
+ * control may keep answering, navi says whether it stands where it is drawn
+ * THIS time (pressLandsOnFurniture, transition_furniture.js). The same bar is
+ * the frame for one pair of states and travels with its page for another, and a
+ * control travelling has a rectangle where it WILL be, not where it is seen: a
+ * press handed to it fires something the reader never aimed at — worse than the
+ * press being lost. So is a press on a control a popup's picture stands over,
+ * or one an open modal holds out of reach at rest: the press goes nowhere
+ * rather than somewhere the reader did not aim. A control inside the area is
+ * never furniture, and is warned about below.
  *
  * The click alone is re-aimed, not the pointer stream that leads to it: what
  * has to survive is the press meaning what it meant, and the press feedback is
@@ -32,6 +37,8 @@
  * pointer behind it would start gestures (a drag, a hold) that no pointerup
  * ever ends.
  */
+
+import { pressLandsOnFurniture } from "./transition_furniture.js";
 
 // Worn by a control that keeps answering while the pages move. Written by
 // <Link pressableDuringRouteTransition> / <Button pressableDuringRouteTransition>,
@@ -91,6 +98,14 @@ const onDocumentClick = (clickEvent) => {
     ) {
       continue;
     }
+    if (
+      !pressLandsOnFurniture(pressable, clientX, clientY) ||
+      isOutOfReach(pressable)
+    ) {
+      // Under the finger in the layout, not where the reader sees it: what is
+      // drawn there is something else, and the press is not this control's.
+      continue;
+    }
     // The document is not where this press was going. Stopped here so the
     // application sees ONE click, on the control it was aimed at, rather than
     // two: this one falling through and the one below.
@@ -101,6 +116,24 @@ const onDocumentClick = (clickEvent) => {
     );
     return;
   }
+};
+
+// What the pointer could not reach at rest either: inert, or outside an open
+// modal. A press dispatched by hand goes through both, so they are asked here.
+const isOutOfReach = (element) => {
+  if (element.closest("[inert]")) {
+    return true;
+  }
+  const modals = document.querySelectorAll(":modal");
+  if (modals.length === 0) {
+    return false;
+  }
+  for (const modal of modals) {
+    if (modal.contains(element)) {
+      return false;
+    }
+  }
+  return true;
 };
 
 // Said once per kind: a control asking for this is one fact about the

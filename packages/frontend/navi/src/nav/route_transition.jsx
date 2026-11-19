@@ -422,6 +422,14 @@ const css = /* css */ `
          paints, so its picture stands over all of them — a page sliding under
          a dialog, not over it (the class comes from layout/popup_css.js).
 
+         A name worn inside a piece of furniture — the indicator a Nav in a
+         bar names for a movement between two of its tabs — is nested in that
+         furniture's group where the browser can (transition_furniture.js
+         writes view-transition-group: contain with the name): drawn over its
+         bar's pictures, travelling with them. Without nested groups it is a
+         group of its own, ranked with everything unclassified, under the
+         pages and its bar.
+
          Ordered here rather than left to the DOM, which decides it otherwise:
          where an application puts its bars relative to the area is its own
          business. A name, a class and \`*\` weigh the same, so the rules are
@@ -2256,7 +2264,7 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
     }
     const unclipped = NESTED_GROUPS_SUPPORTED
       ? ""
-      : " This browser has no nested groups (view-transition-group: contain), so it is not even cut at the pages' edge.";
+      : " This browser has no nested groups (view-transition-group: contain), so it is a group of its own ranked under the pages, hidden wherever they paint.";
     warnOnce(
       "names-escaping-area",
       `"${viewTransitionName}" is a view-transition-name written inside the element marked ${TRANSITION_AREA_ATTRIBUTE}, and the page on the other side of the navigation has nothing of that name. A name lifts its element out of the pages' pictures, in every browser: with nothing to morph into, it stands where it was captured and fades on its own while the pages move.${unclipped} Give that name only for the length of the gesture it serves, or drop it while the pages move: :root[${TRANSITION_ATTRIBUTE}] <that element> { view-transition-name: none } (with !important over an inline name).`,

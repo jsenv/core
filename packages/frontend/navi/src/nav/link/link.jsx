@@ -599,10 +599,12 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   painted where it stands, so nothing hit-tests to it — which is right for
  *   the pages and wrong for the door that opened them: a control in a bar the
  *   two states share is standing exactly where its picture is drawn, and a
- *   press on it is aimed at what the reader can see. Say it there, and only
- *   there: a control that TRAVELS with the pages has a rectangle where it will
- *   be, not where it is seen, and a press handed to it fires something nobody
- *   aimed at.
+ *   press on it is aimed at what the reader can see. A permission: navi hands
+ *   the press over only when, for the movement playing, the control stands
+ *   where it is drawn — in a bar both states share — never when its bar
+ *   travels with a page (the same bar can do either, depending on the two
+ *   pages), under a popup's picture, or out of reach of an open modal. The
+ *   press is then lost rather than handed to what ends up under the finger.
  * @param {boolean} [props.replace] - Go to the destination by TAKING THE PLACE
  *   of the current history entry instead of stacking onto it: the link stays a
  *   link (an address, a middle click, the keyboard, `aria-current`), only the

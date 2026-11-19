@@ -213,8 +213,8 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   the pointer for its whole length, and the door that opened the page — a
  *   button in a bar the two states share, standing exactly where its picture is
  *   drawn — must still close it. What `<Link pressableDuringRouteTransition>`
- *   says, for the other half of a toggle. Only for a control that does not
- *   travel with the pages.
+ *   says, for the other half of a toggle: a permission, which navi uses only
+ *   while the button stands where it is drawn for the movement playing.
  * @param {Function} [action] What the press runs: a button holds no value, so
  *   every press is one call. Inside a `<Form>` or a group it carries the value
  *   around it, merged over the action's bound params — a value that is not an

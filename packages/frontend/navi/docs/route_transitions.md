@@ -286,10 +286,12 @@ page taller than the screen would be watched sliding over them. The bands are
 read, never declared, so furniture that grows, shrinks or unmounts mid-movement
 is followed: the app's **safe area** ([safe_area.md](./safe_area.md)) for
 everything pinned to the window's edges, and **`useTransitionCover(ref, edge)`**
-for what covers the pages from INSIDE the document, which the safe area does not
-count — a sticky row of tabs above them, a header pinned to the top of a scroller
-(`edge` is `"top"` by default). The pictures of a route transition or a travel
-are then cut at that element instead of sliding over it.
+for what covers the pages from inside the document but outside the area, which
+the safe area does not count — a status strip sticking under the top bar, a header
+above the area (`edge` is `"top"` by default). The pictures are then cut at that
+element instead of sliding over it. An element inside the area is part of the
+pages and moves with its page: it covers nothing, and is left out (navi warns in
+development) — counted, it would cut its own pixels out of both pictures.
 
 A page travels the **window** it is seen through, not its own height, and a page
 that was **scrolled** is photographed, and travels, from where the reader was.
@@ -305,7 +307,21 @@ what it paints outside its box (a button standing up out of a tab bar, a shadow)
 is seen for the length of the movement — except over a page **covered** by the
 other one (`cover-*`): the sheet comes over that page's furniture too, so its bars
 go under the pages, and what they paint outside their box is cut by their page for
-those few hundred milliseconds.
+those few hundred milliseconds. A name worn inside a bar — the indicator a `<Nav>`
+in it names for a movement between two of its tabs — is nested in the bar's group
+where the browser can (`view-transition-group: contain`), drawn over the bar and
+travelling with it; without nested groups it is ranked under the pages and its bar,
+and is not seen for the movement.
+
+**Anything else live outside the area is covered.** An element of the
+application's own standing over the pages from outside the area — a toast box, a
+floating button, a mini-player — that is neither a `FixedBar` nor in the top layer
+is painted under the pages' pictures, and hidden by them for the length of the
+movement. `data-navi-furniture` on it makes it furniture: photographed on its own,
+held when both states have it, travelling with its page otherwise, over the pages
+as a bar is. A popup is better in the top layer, where it is furniture already: a
+toast is `layer="top"` with `container="safe-area"` (see
+[safe_area.md](./safe_area.md)).
 
 A bar the application names itself keeps its name and its own keyframes — navi
 names only what is unnamed — but plays on the movement's clock, under the pages.
@@ -324,9 +340,14 @@ at what the reader sees. `pressableDuringRouteTransition` on its `<Link>` or
 `<Button>` (`data-navi-route-transition-pressable` on anything else) keeps it
 answering: the click is caught at the document and handed to it when it fell
 inside its rectangle, and a navigation that is the exact way back of the movement
-playing turns that movement round. Only on furniture that stands still: a control
-travelling with the pages has a rectangle where it will be, not where it is seen
-(navi warns about one inside the area).
+playing turns that movement round. A permission, not a promise: whether the
+control stands where it is drawn is a fact about the movement, and navi hands the
+press over only when it does — in a bar both states share, or on the page being
+left before the page arriving has rendered. Not in a bar travelling with a page
+(the same bar does either, depending on the two pages), whose rectangle is where it
+will be rather than where it is seen; not under a popup's picture; not out of reach
+of an open modal. The press is lost then, rather than handed to whatever ends up
+under the finger. A control inside the area never stands still (navi warns).
 
 Any other navigation landing while a movement plays — two quick backs, a third
 page — does not cut it short: the movement is hurried to where it was going, and
@@ -359,7 +380,7 @@ transition while they do; pages travelling on the document while something else
 is captured on its own — the blank band; and a `view-transition-name` written
 inside the area that only one of the two pages has: with nothing to morph into,
 its element stands still and fades while the pages move, in every browser, and
-without nested groups it is not even clipped (see
+without nested groups it is ranked under the pages, hidden wherever they paint (see
 [view_transitions.md](./view_transitions.md#a-name-is-unique-per-document)). A
 warning here is a bug to fix, not a mechanism to lean on.
 

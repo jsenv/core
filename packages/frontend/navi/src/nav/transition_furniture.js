@@ -90,12 +90,29 @@ import { readBackdropColor } from "./theme_color.js";
 // The browser's top layer: painted above everything the document paints, so
 // outside the area's picture whatever the DOM says.
 const TOP_LAYER_SELECTOR = ":modal, :popover-open";
+// Worn by an element of the application's own that stands over the pages from
+// outside the area — a toast box, a floating button, a mini-player — and asks to
+// be furniture: photographed on its own, held when both states have it,
+// travelling with its page otherwise. Unmarked, anything live outside the area
+// that is neither a fixed bar nor in the top layer is painted under the pages'
+// pictures, and hidden by them for the length of the movement.
+export const FURNITURE_MARKER_ATTRIBUTE = "data-navi-furniture";
 // What counts as furniture: what is pinned to an edge of the window and gives
-// its room back to the content (layout/fixed_bar/fixed_bar.jsx), and what
-// stands over the pages in the top layer. A sticky row inside the pages needs
-// none of this — it lives in the area, so it is already part of the pages' own
-// picture, and so is a popup rendered with layer="local".
-const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECTOR}), .navi_dialog:is(${TOP_LAYER_SELECTOR}), .navi_popup_group:is(${TOP_LAYER_SELECTOR})`;
+// its room back to the content (layout/fixed_bar/fixed_bar.jsx), what stands
+// over the pages in the top layer, and what the application marked. A sticky row
+// inside the pages needs none of this — it lives in the area, so it is already
+// part of the pages' own picture, and so is a popup rendered with layer="local".
+const FURNITURE_SELECTOR = `.navi_fixed_bar, .navi_popover:is(${TOP_LAYER_SELECTOR}), .navi_dialog:is(${TOP_LAYER_SELECTOR}), .navi_popup_group:is(${TOP_LAYER_SELECTOR}), [${FURNITURE_MARKER_ATTRIBUTE}]`;
+// What wears its side as a class of navi's (see FURNITURE_ATTRIBUTE): a popup's
+// class is written by layout/popup_css.js, and a second rule on the same
+// property would replace it.
+const SIDE_CLASSED_SELECTOR = `.navi_fixed_bar, [${FURNITURE_MARKER_ATTRIBUTE}]`;
+const POPUP_SELECTOR = ".navi_popover, .navi_dialog, .navi_popup_group";
+// What a furniture's own named parts are nested in, where the browser can: a
+// part of a bar (the current tab's indicator of a Nav in it, see nav.jsx) is
+// then drawn over its bar's pictures and travels with them, rather than ranked
+// as a group of its own under the bar (see the z-order in route_transition.jsx).
+const GROUP_PROPERTY = "view-transition-group";
 // Worn by the root for the length of a route transition (route_transition.jsx
 // owns it). Written out rather than imported: importing the module that owns
 // it back into this one would close a cycle.
@@ -123,9 +140,8 @@ const WALL_FILTERS_ATTRIBUTE = "data-navi-transition-wall-filters";
 // class is the one captured with the LAST state the element stands in, so a
 // bar only the state being left has keeps "leaving" from the first capture,
 // and a shared one takes "shared" from the second. The z-order in
-// route_transition.jsx is written on these three. Only a bar — a popup's
-// class is written by layout/popup_css.js, and a second rule on the same
-// property would replace it.
+// route_transition.jsx is written on these three. A bar, or what the
+// application marked as furniture — not a popup (see SIDE_CLASSED_SELECTOR).
 const FURNITURE_ATTRIBUTE = "data-navi-transition-furniture";
 // What the wall paints, resolved on the matched element in both cases (the
 // dialog for its ::backdrop, the popover's wall for itself), and what a colour
@@ -145,13 +161,22 @@ const FIXED_BAR_SELECTOR = ".navi_fixed_bar";
 const TRANSITION_FURNITURE_CSS = /* css */ `
   /* Read by the browser at each capture; the group keeps the class of the
      last state the element stands in (see FURNITURE_ATTRIBUTE). */
-  .navi_fixed_bar[data-navi-transition-furniture="leaving"] {
+  :is(
+    .navi_fixed_bar,
+    [data-navi-furniture]
+  )[data-navi-transition-furniture="leaving"] {
     view-transition-class: navi_furniture_leaving;
   }
-  .navi_fixed_bar[data-navi-transition-furniture="arriving"] {
+  :is(
+    .navi_fixed_bar,
+    [data-navi-furniture]
+  )[data-navi-transition-furniture="arriving"] {
     view-transition-class: navi_furniture_arriving;
   }
-  .navi_fixed_bar[data-navi-transition-furniture="shared"] {
+  :is(
+    .navi_fixed_bar,
+    [data-navi-furniture]
+  )[data-navi-transition-furniture="shared"] {
     view-transition-class: navi_furniture_shared;
   }
 
@@ -248,6 +273,11 @@ let nameCount = 0;
 // it must not strip what the new one is wearing.
 let furnitureOwner = null;
 let namedElements = new Set();
+// The side each named element stands on for the movement playing (see
+// FURNITURE_ATTRIBUTE), popups included, and whether the state arriving has
+// rendered yet: what pressLandsOnFurniture reads.
+let sideByElement = new Map();
+let furnitureHeld = false;
 // The rule giving the one-sided bars their movement, written for one movement
 // and taken down with it.
 let travelStyleElement = null;
@@ -276,7 +306,9 @@ export const nameTransitionFurniture = (owner, areaElement) => {
   if (owner !== furnitureOwner) {
     furnitureOwner = owner;
     namedElements = new Set();
+    sideByElement = new Map();
   }
+  furnitureHeld = false;
   nameFurnitureAround(areaElement, "leaving");
   const sources = paintTransitionWalls(areaElement);
   // The state being left has walls: what no picture covers starts dimmed.
@@ -299,11 +331,18 @@ export const holdTransitionFurniture = (owner, areaElement) => {
   if (owner !== furnitureOwner) {
     return;
   }
+  furnitureHeld = true;
   const namesLeaving = [];
   for (const element of namedElements) {
     if (!isRendered(element)) {
       namesLeaving.push(nameByElement.get(element));
-    } else if (element.matches(FIXED_BAR_SELECTOR)) {
+      continue;
+    }
+    sideByElement.set(element, "shared");
+    if (
+      element.matches(SIDE_CLASSED_SELECTOR) &&
+      !element.matches(POPUP_SELECTOR)
+    ) {
       element.setAttribute(FURNITURE_ATTRIBUTE, "shared");
     }
   }
@@ -384,9 +423,16 @@ const nameFurnitureAround = (areaElement, side) => {
       nameByElement.set(element, name);
     }
     element.style.setProperty(NAME_PROPERTY, name);
-    if (element.matches(FIXED_BAR_SELECTOR)) {
+    if (CSS.supports(GROUP_PROPERTY, "contain")) {
+      element.style.setProperty(GROUP_PROPERTY, "contain");
+    }
+    if (
+      element.matches(SIDE_CLASSED_SELECTOR) &&
+      !element.matches(POPUP_SELECTOR)
+    ) {
       element.setAttribute(FURNITURE_ATTRIBUTE, side);
     }
+    sideByElement.set(element, side);
     namedElements.add(element);
     namesAdded.push(name);
   }
@@ -439,17 +485,64 @@ export const releaseTransitionFurniture = (owner) => {
     return;
   }
   furnitureOwner = null;
+  furnitureHeld = false;
   for (const element of namedElements) {
     element.style.removeProperty(NAME_PROPERTY);
+    element.style.removeProperty(GROUP_PROPERTY);
     element.removeAttribute(FURNITURE_ATTRIBUTE);
   }
   namedElements = new Set();
+  sideByElement = new Map();
   if (travelStyleElement) {
     travelStyleElement.remove();
     travelStyleElement = null;
   }
   removeTransitionWalls();
   removeRestWalls();
+};
+
+/**
+ * Whether a press at (x, y) on an element lands where that element is drawn,
+ * for the movement playing — the one fact a press handed over by its rectangle
+ * rests on (see transition_press.js), and a fact about this movement, never
+ * about the element: the element stands in furniture the two states share,
+ * which the browser holds where it stands, or in furniture of the state being
+ * left while the state arriving has not rendered yet, whose picture is the one
+ * it was captured as. Never in furniture only one state has: that travels with
+ * its page, and its rectangle is where it will be, not where it is drawn. Never
+ * under the picture of a popup it is not part of either: a popup stands over
+ * the bars (see the z-order in route_transition.jsx), and the press fell on it.
+ *
+ * @param {Element} element
+ * @param {number} x - clientX of the press
+ * @param {number} y - clientY of the press
+ * @returns {boolean}
+ */
+export const pressLandsOnFurniture = (element, x, y) => {
+  if (!furnitureOwner) {
+    return false;
+  }
+  let furniture = element;
+  while (furniture && !sideByElement.has(furniture)) {
+    furniture = furniture.parentElement;
+  }
+  if (!furniture) {
+    return false;
+  }
+  const side = sideByElement.get(furniture);
+  if (side !== "shared" && !(side === "leaving" && !furnitureHeld)) {
+    return false;
+  }
+  for (const other of namedElements) {
+    if (other.contains(furniture) || !other.matches(TOP_LAYER_SELECTOR)) {
+      continue;
+    }
+    const { left, right, top, bottom } = other.getBoundingClientRect();
+    if (x >= left && x <= right && y >= top && y <= bottom) {
+      return false;
+    }
+  }
+  return true;
 };
 
 // One stand-in per open wall over the pages, and one filter per open wall on
