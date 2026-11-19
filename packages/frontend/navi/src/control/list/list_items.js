@@ -514,6 +514,17 @@ export const createListItems = () => {
       }
       return false;
     },
+    // Whether a run stands for the item at that index: an item of a run, drawn
+    // or not, rather than one declared one by one. What the fillers hold, and
+    // so what the item size measures (see useVirtualItemSizeSignal).
+    isRunIndex: (index) => {
+      for (const locator of locatorByOwner.values()) {
+        if (locator.stands(index)) {
+          return true;
+        }
+      }
+      return false;
+    },
     // The room the item at that index takes: the room it took when it was
     // last drawn, else the room its run is given for it (see List.Items'
     // itemSize), else undefined.
@@ -681,10 +692,17 @@ export const createListItems = () => {
         // stands above it in a group it no longer knows.
         return true;
       }
+      if (scope !== UNGROUPED && groupById.get(scope).continuedSignal.value) {
+        // A group the window cuts goes on above what it draws (see
+        // ListItemGroup's `continued`): its first item drawn has items of
+        // the group before it, as in the list drawn whole.
+        return false;
+      }
       return firstSignal.value === entry.place;
     },
     // What a group knows about its items: how many, and how many of them the
-    // search left out (see ListItemGroup).
+    // search left out (see ListItemGroup), and whether it goes on above what
+    // the window draws of it.
     group: (groupId) => {
       let group = groupById.get(groupId);
       if (!group) {
@@ -692,6 +710,7 @@ export const createListItems = () => {
           firstSignal: signal(-1),
           countSignal: signal(0),
           noMatchCountSignal: signal(0),
+          continuedSignal: signal(false),
         };
         groupById.set(groupId, group);
       }

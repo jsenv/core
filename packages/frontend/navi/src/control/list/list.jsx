@@ -923,17 +923,18 @@ const css = /* css */ `
       display: none;
     }
 
-    /* A group the window cuts: what stands before its first item — the gap
-       and the label — is held by the filler above it, in the room of the item
-       that opens the group (see readItemRooms). Drawn here with room of their
-       own, they would push what is below down as soon as the window cuts a
-       group: when a page lands under a screen of stand-ins. The label is laid
-       over the items instead, in the same cell, which takes no measuring: it
-       holds from the first layout. It still rides the top of the screen; at
-       the edge of the window, off screen, it covers the first item drawn. */
+    /* A group the window cuts: its label is held by the filler above it, in
+       the room of the item that opens the group (see readItemRooms). Drawn
+       here with room of its own, it would push what is below down as soon as
+       the window cuts a group: when a page lands under a screen of stand-ins.
+       The label is laid over the items instead, in the same cell, which takes
+       no measuring: it holds from the first layout. It still rides the top of
+       the screen; at the edge of the window, off screen, it covers the first
+       item drawn. The gap before the group is the gap before that item, as
+       between any two items of the group: what the filler holds ends where
+       the item before it ends. */
     &[data-continued] {
       display: grid;
-      margin-top: calc(-1 * var(--x-list-gap, 0px));
       /* The group's width, never its content's: an implicit (auto) column
          grows to the widest item's min-content and every item follows it,
          where the same items in a block box stay at the list's width. */
@@ -5046,7 +5047,7 @@ const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
   }
   const items = [];
   for (const itemEl of listEl.querySelectorAll(
-    `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
+    `[${LIST_ITEM_INDEX_ATTRIBUTE}], [navi-list-failed-from]`,
   )) {
     if (!isOwnItem(itemEl, listEl)) {
       continue;
@@ -5056,10 +5057,32 @@ const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
       // Not laid out (display: none): it stands nowhere.
       continue;
     }
+    const from = horizontal ? rect.left : rect.top;
+    const to = horizontal ? rect.right : rect.bottom;
+    const failedFrom = itemEl.getAttribute("navi-list-failed-from");
+    if (failedFrom !== null) {
+      // The band standing for items whose page failed: read as those items,
+      // each its share of the band. A window drawing nothing but the band
+      // still knows where it stands, and slides off it like off anything
+      // drawn.
+      const failedIndex = Number(failedFrom);
+      const failedCount = Number(itemEl.getAttribute("navi-list-failed-count"));
+      const share = (to - from) / failedCount;
+      let i = 0;
+      while (i < failedCount) {
+        items.push({
+          index: failedIndex + i,
+          from: from + i * share,
+          to: from + (i + 1) * share,
+        });
+        i++;
+      }
+      continue;
+    }
     items.push({
       index: Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE)),
-      from: horizontal ? rect.left : rect.top,
-      to: horizontal ? rect.right : rect.bottom,
+      from,
+      to,
     });
   }
   if (items.length === 0) {
@@ -5117,14 +5140,20 @@ const readItemRooms = (listEl, horizontal, onRoom) => {
 // where it is painted, which a sticky header stuck to the top of the screen
 // puts thousands of pixels away from its place in the list.
 const readEndBefore = (itemEl, listEl, horizontal) => {
-  let slotEl = itemEl;
-  const groupListEl = itemEl.parentElement;
+  // The separator an item wears stands at the gap above it, and is part of its
+  // room: what stands before the item is what stands before its separator.
+  let slotEl =
+    itemEl.hasAttribute("navi-list-item-separated") &&
+    itemEl.previousElementSibling
+      ? itemEl.previousElementSibling
+      : itemEl;
+  const groupListEl = slotEl.parentElement;
   if (
     groupListEl &&
     groupListEl.classList.contains("navi_list_item_group_list") &&
-    groupListEl.firstElementChild === itemEl
+    groupListEl.firstElementChild === slotEl
   ) {
-    slotEl = groupListEl.closest(".navi_list_item_group") || itemEl;
+    slotEl = groupListEl.closest(".navi_list_item_group") || slotEl;
   }
   const beforeEl = slotEl.previousElementSibling;
   if (beforeEl) {
@@ -5524,24 +5553,80 @@ const getScrollInfo = ({
 
 // Under this, rewriting the size would churn the fillers for a sub-pixel gain.
 const VIRTUAL_ITEM_SIZE_EPSILON = 0.5;
-// Measures the items currently in the DOM, edge to edge: what a filler stands in
-// for is the room a run of items takes together — separators and group labels
-// included — not the height of one <li>. The size of a line of them: one item
-// in a list, the items side by side in a grid (`inLines`), counted where a new
-// line starts.
-const measureItemSize = (listEl, horizontal, inLines) => {
-  let fromSkeletons = false;
-  let itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
-  if (itemEls.length === 0) {
-    fromSkeletons = true;
-    // Nothing real yet: a list that knows how many items it has draws them as
-    // skeletons before it holds any of them, and their height is what it can
-    // reserve room with — a list arriving at its full height rather than
-    // growing into it. They are only ever measured while no real item is there
-    // to be measured instead; once one is, they take the size they are given
-    // (see ListItems) and cannot drag the average.
-    itemEls = listEl.querySelectorAll(`.${SKELETON_LIST_ITEM_CLASS}`);
+// The room each line drawn in a grid takes, said for each item on it: from
+// where the line starts to where the next one does, read only between two
+// lines of the same container that follow each other — nothing that stands for
+// other items (a filler, the failure band) lies between them. A line holding a
+// stand-in is not read: it takes the room it is given. The last line drawn has
+// no line after it to be read up to.
+const readLineRooms = (listEl, horizontal, onRoom) => {
+  const lines = [];
+  let line = null;
+  for (const itemEl of listEl.querySelectorAll(
+    `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
+  )) {
+    if (!isOwnItem(itemEl, listEl)) {
+      continue;
+    }
+    const rect = itemEl.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      line = null;
+      continue;
+    }
+    const from = horizontal ? rect.left : rect.top;
+    const index = Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE));
+    const sameLine =
+      line &&
+      line.containerEl === itemEl.parentElement &&
+      index === line.lastIndex + 1 &&
+      from > line.from - 0.5 &&
+      from < line.from + 0.5;
+    if (!sameLine) {
+      line = {
+        from,
+        firstIndex: index,
+        lastIndex: index,
+        containerEl: itemEl.parentElement,
+        items: [],
+        holdsStandIn: false,
+      };
+      lines.push(line);
+    }
+    line.lastIndex = index;
+    const id = getItemName(itemEl);
+    if (id === null) {
+      line.holdsStandIn = true;
+    } else {
+      line.items.push({ id, index });
+    }
   }
+  let lineIndex = 0;
+  while (lineIndex < lines.length - 1) {
+    const lineNow = lines[lineIndex];
+    const lineNext = lines[lineIndex + 1];
+    lineIndex++;
+    if (
+      lineNow.holdsStandIn ||
+      lineNext.containerEl !== lineNow.containerEl ||
+      lineNext.firstIndex !== lineNow.lastIndex + 1
+    ) {
+      continue;
+    }
+    const room = lineNext.from - lineNow.from;
+    for (const item of lineNow.items) {
+      onRoom(item, room);
+    }
+  }
+};
+// The skeletons drawn while no item is there yet, edge to edge: a list that
+// knows how many items it has draws them before it holds any, and their
+// height is what it can reserve room with — a list arriving at its full height
+// rather than growing into it. The size of a line of them: one in a list, the
+// skeletons side by side in a grid (`inLines`), counted where a new line
+// starts. Only ever the first size: once an item is drawn, its room says more,
+// and the skeletons take the size they are given (see ListItems).
+const measureSkeletonSize = (listEl, horizontal, inLines) => {
+  const itemEls = listEl.querySelectorAll(`.${SKELETON_LIST_ITEM_CLASS}`);
   if (itemEls.length === 0) {
     return null;
   }
@@ -5566,11 +5651,7 @@ const measureItemSize = (listEl, horizontal, inLines) => {
       }
     }
   }
-  return {
-    size: span / lineCount,
-    lineCount,
-    fromSkeletons,
-  };
+  return span / lineCount;
 };
 
 // The size the fillers hold an item at: `virtualItemSize` when given,
@@ -5599,35 +5680,47 @@ const useVirtualItemSizeSignal = (
   if (virtualItemSizeProp && virtualSizeSignal.peek() !== virtualItemSizeProp) {
     virtualSizeSignal.value = virtualItemSizeProp;
   }
-  // Every item ever measured has a say, and an equal one. An average over a
-  // growing sample settles; a running average of the last window measured
-  // chases it, and since the fillers hold (total - window) items, a moving
-  // average moves the whole scrollbar every time the window slides over items
-  // that are a little taller than usual.
+  // Every item ever measured has a say, and an equal one: the room it took
+  // the last time it was drawn, counted once however many renders draw it. An
+  // average over a growing sample settles; a running average of the last
+  // window measured chases it, and since the fillers hold (total - window)
+  // items, a moving average moves the whole scrollbar every time the window
+  // slides over items that are a little taller than usual.
+  //
+  // What is measured is what a filler stands for: the items of the runs,
+  // each read from where the item before it ends (see readItemRooms; a line
+  // in a grid, see readLineRooms), so the gap, separator or label coming with
+  // it counts with it. Never the span from one item to another: what stands
+  // between two drawn items can be a filler, a stand-in or the failure band,
+  // all held at this very size — measured, they would feed it to itself — or
+  // an item declared one by one, which no filler stands for.
   const samplesRef = useRef(null);
   if (!samplesRef.current) {
-    samplesRef.current = { sum: 0, count: 0, fromSkeletons: true };
+    samplesRef.current = { sum: 0, count: 0, roomById: new Map() };
   }
-  const feedSample = (measure) => {
+  const sampleRooms = (listEl) => {
     const samples = samplesRef.current;
-    if (samples.fromSkeletons && !measure.fromSkeletons) {
-      // What an item on its way looks like was a stand-in for what an item looks
-      // like. The first real ones settle the question.
-      samples.sum = 0;
-      samples.count = 0;
-      samples.fromSkeletons = false;
-    } else if (measure.fromSkeletons) {
-      if (!samples.fromSkeletons || samples.count > 0) {
-        // Items on their way are given the size this very estimate holds, so
-        // measuring them again says nothing — and would say it in a loop: the
-        // size sets their height, their height sets the size. They seed it
-        // once, when there is nothing else to go on, and never again.
+    const sample = (item, room) => {
+      if (!listItems.isRunIndex(item.index)) {
         return;
       }
+      const roomBefore = samples.roomById.get(item.id);
+      if (roomBefore === undefined) {
+        samples.count++;
+        samples.sum += room;
+      } else {
+        samples.sum += room - roomBefore;
+      }
+      samples.roomById.set(item.id, room);
+    };
+    if (inLines) {
+      readLineRooms(listEl, horizontal, sample);
+    } else {
+      readItemRooms(listEl, horizontal, sample);
     }
-    samples.sum += measure.size * measure.lineCount;
-    samples.count += measure.lineCount;
-    const next = samples.sum / samples.count;
+    return samples.count === 0 ? null : samples.sum / samples.count;
+  };
+  const feedSample = (next) => {
     const current = virtualSizeSignal.peek();
     if (Math.abs(next - current) > VIRTUAL_ITEM_SIZE_EPSILON) {
       beforeSizeChange();
@@ -5651,11 +5744,9 @@ const useVirtualItemSizeSignal = (
     ref.current
   ) {
     const listEl = ref.current.querySelector(".navi_list");
-    const measure = listEl
-      ? measureItemSize(listEl, horizontal, inLines)
-      : null;
-    if (measure) {
-      feedSample(measure);
+    const average = listEl ? sampleRooms(listEl) : null;
+    if (average !== null) {
+      feedSample(average);
     }
   }
   // Measured only for what reads the size: the fillers of items held off
@@ -5690,15 +5781,27 @@ const useVirtualItemSizeSignal = (
     if (!listEl) {
       return;
     }
-    const measure = measureItemSize(listEl, horizontal, inLines);
-    if (!measure) {
+    const average = sampleRooms(listEl);
+    if (average !== null) {
+      takeFirstSize(listEl, average);
       return;
     }
-    const samples = samplesRef.current;
-    samples.sum = measure.size * measure.lineCount;
-    samples.count = measure.lineCount;
-    samples.fromSkeletons = measure.fromSkeletons;
-    takeFirstSize(listEl, measure.size);
+    // No room read yet: skeletons alone, or a single line of a grid, which
+    // has no line after it to be read up to. Their own size, until the first
+    // room says more (see feedSample).
+    const firstItemEl = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
+    if (firstItemEl) {
+      const rect = firstItemEl.getBoundingClientRect();
+      const size = horizontal ? rect.width : rect.height;
+      if (size > 0) {
+        takeFirstSize(listEl, size);
+      }
+      return;
+    }
+    const skeletonSize = measureSkeletonSize(listEl, horizontal, inLines);
+    if (skeletonSize !== null) {
+      takeFirstSize(listEl, skeletonSize);
+    }
   };
   useLayoutEffect(() => {
     listItems.measureFirstSize();
@@ -5784,7 +5887,8 @@ const UnorderedList = ({
       grid={trackColumns ? true : undefined}
       gridTemplateColumns={trackColumns}
       {...rest}
-      // The gap a group the window cuts takes back (see data-continued).
+      // The gap the items of a group keep between them (see
+      // .navi_list_item_group_list).
       style={withListGap(rest.style, spacing)}
       spacing={spacing}
       baseClassName="navi_list"
@@ -6066,7 +6170,8 @@ const ListItemSkeleton = (props) => {
 // An item the run does not hold yet, drawn with a <List.Item> of the caller's
 // (renderSkeleton) laid out like the item it announces. It stands where that
 // item will be and is none: nothing names it — a position handed out, a
-// selection, a count — and it is measured as a skeleton (see measureItemSize).
+// selection, a count — and it takes the room it is given, never measured as
+// an item's (see readItemRooms).
 // Its box is an item's box, so the layout props it was given land where an
 // item's do.
 const ListItemStandIn = (props) => {
@@ -6173,12 +6278,14 @@ const ListItemUI = (props) => {
   if (props.filtered) {
     return null;
   }
-  const listItemVnode = <ListItemReal {...props} />;
   // The separator an item wears is the one at the gap above it: none when
   // nothing of the list stands above it (see list_items.js).
   if (!separator || listItems.isFirst(idDefault)) {
-    return listItemVnode;
+    return <ListItemReal {...props} />;
   }
+  // Said on the item: the element before it is its own separator, part of
+  // its room (see readEndBefore) — a separator can be any element.
+  const listItemVnode = <ListItemReal {...props} separated />;
   // The gap index, only used as the function-form argument.
   let separatorVnode = resolveSeparatorVnode(separator, props.index - 1);
   if (props.hidden) {
@@ -6208,6 +6315,7 @@ const ListItemReal = (props) => {
     error,
     onErrorDismiss,
     matchInfo,
+    separated,
     children,
     ...rest
   } = props;
@@ -6328,6 +6436,7 @@ const ListItemReal = (props) => {
       id={id}
       navi-list-item-real={itemId}
       navi-list-item-index={rest.index}
+      navi-list-item-separated={separated ? "" : undefined}
       {...rest}
       {...itemColumnsOverrideProps}
       index={undefined}
@@ -6731,10 +6840,12 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   `<List.Group>` whose label (`renderGroupLabel`) stays on screen for as long
  *   as one of them is. The groups are found in the data as it arrives, which is
  *   the only way a list that discovers its items page by page can have any.
- *   A group the render window cuts is laid out by the list, its label over its
- *   first items, so that the label and the gap before it — held in the room of
- *   the item opening the group — take no room twice: what the group element
- *   is given may paint (see `groupProps`), never take room.
+ *   In a list whose items run along y, a group the render window cuts is laid
+ *   out by the list, its label over its first items, so that the label — held
+ *   in the room of the item opening the group — takes no room twice: what the
+ *   group element is given may paint (see `groupProps`), never take room.
+ *   Along x the label of a cut group takes its room, as in a group drawn
+ *   whole.
  * @param {(index: number) => any} [props.groupOfMissing]
  *   The group of an item the run does not hold yet, when the app knows it
  *   before the item arrives (the spans of a thread: past, today, the days
@@ -6804,9 +6915,10 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   `renderSkeleton` is given — the two draw on the same knowledge. A room
  *   measured on an item drawn wins over it, and in development one that
  *   differs from it is reported. Items side by side in a grid (`columns`)
- *   share a line, which keeps `virtualItemSize`. A lookup: it is called while
- *   the run renders, for every item outside the window the list has not
- *   measured, each time the window moves — never a layout or style read.
+ *   share a line, which keeps `virtualItemSize`. A lookup: it is called at
+ *   every render of the run — a window moving, a page landing, the component
+ *   around it rendering — for every item outside the window the list has not
+ *   measured, so never a layout or style read.
  * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where items were asked for and never came: given the `error`,
  *   a `retry` to call, and the `start`/`end` of the range that failed — the
@@ -7049,9 +7161,20 @@ const useRunItems = (
   const indexOfRank = (rank) => rank + runStart;
   const getItemAt = (itemIndex) => store.getItem(rankOf(itemIndex));
   const { itemsPerLine } = renderWindow;
-  const windowFrom =
+  // The part of the list's window this run stands in, never past its own
+  // items: a window beyond the run (a collection emptied while the list was
+  // scrolled — the List cannot tell "not counted yet" from "empty" — or
+  // another run's items) frames none of them, at the run's edge facing it.
+  // Its fillers then hold the run's own items and no more.
+  let windowFrom =
     renderWindow.start > runStart ? renderWindow.start : runStart;
-  const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
+  if (windowFrom > runEnd) {
+    windowFrom = runEnd;
+  }
+  let windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
+  if (windowTo < windowFrom) {
+    windowTo = windowFrom;
+  }
   store.forget(rankOf(windowFrom), rankOf(windowTo));
   listItems.declareWindow(ownerId, windowFrom, windowTo);
 
@@ -7107,6 +7230,7 @@ const useRunItems = (
       });
       return found;
     },
+    stands: (itemIndex) => itemIndex >= runStart && itemIndex < runEnd,
     awaits: (itemIndex) =>
       itemIndex >= runStart &&
       itemIndex < runEnd &&
@@ -7499,6 +7623,12 @@ const useRunItems = (
         <li
           key={`${ownerId}_failure_${failureFrom}`}
           className="navi_list_failed_items"
+          // The items it stands in for, where the window reads it (see
+          // readWindowGeometry).
+          // eslint-disable-next-line react/no-unknown-property
+          navi-list-failed-from={failureFrom}
+          // eslint-disable-next-line react/no-unknown-property
+          navi-list-failed-count={failedItemCount}
           style={{
             "--size-to-fill": `${Math.ceil(failedItemCount / itemsPerLine) * listItems.virtualItemSizeSignal.value}px`,
           }}
@@ -8738,6 +8868,9 @@ export const ListItemGroup = ({
   const groupId = useGeneratedId();
   const listItems = useContext(ListItemsContext);
   const group = listItems.group(groupId);
+  // Said before its items render: the first one drawn of a group the window
+  // cuts is not the group's first, and draws its separator (see isFirst).
+  group.continuedSignal.value = Boolean(continued);
   useLayoutEffect(() => {
     return () => {
       listItems.dropGroup(groupId);
@@ -8904,7 +9037,10 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   item is always in the column its place says, and the fillers hold the room
  *   of the lines it does not draw (`virtualItemSize` is then a line's size).
  *   That count holds only while every item of the run takes one cell: an item
- *   spanning a line, or a `groupBy`, puts the ones after it in other columns.
+ *   spanning a line, or a `groupBy`, puts the ones after it in other columns,
+ *   and so do items declared before the run that do not fill whole lines —
+ *   a filler spans a whole line, so the run's items move to other columns as
+ *   one is drawn before them or not.
  * @param {string} [props.itemColumns]
  *   The columns inside an ITEM: a `grid-template-columns` value each item fills
  *   with its own children, a table whose cells line up down the list. Every item
@@ -9043,10 +9179,12 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   one as `<List.Item>` children are all drawn, whatever this says — a list
  *   with more than a few dozen items gives them to a run (see docs/scroll.md,
  *   "Many rows"). The window keeps three quarters of what the screen leaves of
- *   it ahead of the scroll, and moves once that falls under half a screen; it
- *   has to hold more than the screen shows, with room for that lookahead — the
- *   list warns when it holds no more than the screen. How much more is
- *   measured: fling the list on the slowest device it runs on.
+ *   it ahead of the scroll, and moves once what is left ahead falls under half
+ *   a screen or half of that lookahead, whichever is smaller — at "150%", a
+ *   fifth of a screen ahead; it has to hold more than the screen shows, with
+ *   room for that lookahead — the list warns when it holds no more than the
+ *   screen. How much more is measured: fling the list on the slowest device it
+ *   runs on.
  *
  *   `{ initial, after }` for a list whose first picture is taken as it is
  *   built — drawn in the click that opens a popup, or in the update callback
@@ -9057,9 +9195,9 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   the window is sized on them before the browser paints. A count
  *   (`initial: 6`) is drawn as it is, blind. Opening on a position that says
  *   how many items were on screen (`visibleCount`, see `onScrolledChange`)
- *   draws those first, whatever `initial` says. What the runs ask their
- *   source for is a page (see `<List.Items pageSize>`), whatever either says,
- *   so the first picture costs no second request.
+ *   draws those first, whatever `initial` says. A first window narrower than a
+ *   page asks its source for a page (see `<List.Items pageSize>`), so the
+ *   first picture costs no second request; a wider one is asked for whole.
  * @param {number} [props.virtualItemSize]
  *   The room an item never drawn is held at, in px along the scroll axis: what
  *   the fillers hold for it outside the render window, what a scroll position
@@ -9067,9 +9205,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   (see `renderSkeleton`) — a room counts what stands before the item, a
  *   gap or a separator, so the item's own box takes the rest of it. An item the list has drawn is held at the room it took
  *   then, and an item whose run says its room (`<List.Items itemSize>`) at
- *   that room. Left out, it is the average of the items measured so far — once when
- *   the list mounts, again when a popup around it opens, and after each commit
- *   while items are held off screen. Given, it is the worst case: the size
+ *   that room. Left out, it is the average of the rooms the items of the runs
+ *   took, each item counted once, at the room it last took — measured when
+ *   the list mounts, again when a popup around it opens, and at each render
+ *   of the list while items are held off screen. An item declared one by one,
+ *   a skeleton and the failure band are never measured: no filler stands for
+ *   the first, and the others are held at this very size. Given, it is the
+ *   worst case: the size
  *   every item has, or, in a list whose items differ, the smallest an item can
  *   be (a thread of one-line items and cards: the one-line size) — an item
  *   guessed too small builds one more, an item guessed too big leaves a blank

@@ -586,12 +586,14 @@ of item.
 
 What is drawn, the list measures: the render window is sized on the room the
 items it draws actually take, and an item that leaves the window is held at the
-room it took — the window sliding changes nothing above the screen. What was
-never drawn it cannot measure, so it guesses:
+room it took — the window sliding changes nothing above the screen. Not in a
+grid (`columns`): there a line drawn and left is held at the line size, like
+one never drawn. What was never drawn it cannot measure, so it guesses:
 
 - the fillers hold every item never drawn at one size — `virtualItemSize` when
-  given, the average of the items measured so far otherwise — unless its run
-  says the room it takes (see below). A scroll position inside a filler is
+  given, otherwise the average of the rooms the run's items took, each counted
+  once (an item declared one by one, a skeleton or a failed range is never
+  measured) — unless its run says the room it takes (see below). A scroll position inside a filler is
   read with it too, and an item on its way takes at least that room;
 - when the window reaches past what it has drawn, it weighs the next items like
   the drawn ones next to them, and measures them once they are drawn.
