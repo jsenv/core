@@ -12,7 +12,7 @@ of tabs giving each tab back the offset it was read at: see
 - [1. The document scrolls](#1-the-document-scrolls)
 - [2. A part of the document scrolls](#2-a-part-of-the-document-scrolls)
 - [3. A popup scrolls](#3-a-popup-scrolls)
-- [Many rows: `List.Items` and the render window](#many-rows-listitems-and-the-render-window)
+- [Many items: `List.Items` and the render window](#many-items-listitems-and-the-render-window)
 - [Hover while scrolling](#hover-while-scrolling)
 - [The list border](#the-list-border)
 
@@ -87,8 +87,9 @@ container that scrolls under it says so with `data-navi-safe-area`: see
 [A document wider than the screen](./safe_area.md#a-document-wider-than-the-screen)
 for the one way to turn that container into a scroller by accident.
 
-A `List` in this case takes `scroller="document"` (in dev it warns when it finds
-itself inside a scrollport anyway, and names the element).
+A `List` in this case takes `scroller="document"` (in dev, once it has a sticky
+header, footer or group label, it warns when a scroll container closer to it
+would catch them, and names the element).
 
 ## 2. A part of the document scrolls
 
@@ -106,11 +107,11 @@ list's own — is not the one most call sites want:
 > bounded parent).
 
 A `"self"` list inside a scrolling box nests a second scroller sized on its
-own — and a virtualized run holds the room of every row it stands for, so the
-popup or panel around it is sized on that rather than on the rows drawn.
+own — and a virtualized run holds the room of every item it stands for, so the
+popup or panel around it is sized on that rather than on the items drawn.
 
 `scroller` also names the box the render window follows (see
-[Many rows](#many-rows-listitems-and-the-render-window)). A `"self"` list given
+[Many items](#many-items-listitems-and-the-render-window)). A `"self"` list given
 no height scrolls nothing; the window then follows whatever box does show the
 list, and dev warns when nothing scrolls it at all — a recovery, not the shape
 to aim for. When `"parent"` (found by measuring) is still not the box you mean,
@@ -214,7 +215,7 @@ can carry both:
   the item takes over where it lands. A source paginated by offset needs it.
 
 ```jsx
-// my row in a ranking read by start/end: the rank says where it stands
+// my item in a ranking read by start/end: the rank says where it stands
 <Button
   command="--navi-scroll:smooth"
   commandFor="ranking"
@@ -316,31 +317,31 @@ as it would mounting there.
 
 ### A search moves the list, and gives it back
 
-A list that is being searched has to move: the rows the user is after have just
+A list that is being searched has to move: the items the user is after have just
 been promoted to the top, and a view left where it was shows none of them. What
 makes that possible is `searchText` on the `List` — without it the list sees new
 children and nothing else.
 
-- **While the search is on**, the list scrolls back to its first row every time
-  the best matches change (as many top rows as the window draws, by id and
+- **While the search is on**, the list scrolls back to its first item every time
+  the best matches change (as many top items as the window draws, by id and
   `matchInfo.matchScore`), so a letter that promotes nobody new leaves the list
   where the user put it.
 - **When the search is emptied**, the list returns to the offset it was at when
   the search started, render window included.
 
-Both rest on each row knowing where it stands, which for rows declared one by
+Both rest on each item knowing where it stands, which for items declared one by
 one is the order they are written in. Two things are needed for that, and the
 list warns in dev when the second is missing:
 
-- **a stable `key` on every row**, which is what says a row moved rather than a
-  row changed;
-- **the rows as the list's own children**. The places are read off the children
-  the list is given, so a component of yours rendering the rows is one child
-  however many rows come out of it — they all take the same place. Hand the
-  list the rows, or a `<List.Items>`.
+- **a stable `key` on every item**, which is what says an item moved rather
+  than an item changed;
+- **the items as the list's own children**. The places are read off the
+  children the list is given, so a component of yours rendering the items is
+  one child however many items come out of it — they all take the same place.
+  Hand the list the items, or a `<List.Items>`.
 
-A row selected during the search does not hold the view: emptying the search
-takes the list back to where it was, which may be nowhere near that row.
+An item selected during the search does not hold the view: emptying the search
+takes the list back to where it was, which may be nowhere near that item.
 
 The offset is given back once, in the frame after the search empties, and then
 forgotten. A list under a `display: none` at that moment cannot scroll, so it has
@@ -353,9 +354,9 @@ keep the place across a hide, empty the search once the list is shown again.
 ### Loading: two different situations
 
 `loading` (with `loadingFallback`, `loadingSkeletonCount`, `renderSkeleton`)
-says "I have nothing at all to show yet": placeholder rows stand in for the
-whole list. `<List.Items count>` says "I know how many rows are coming": the
-rows not held yet are skeletons in their own place, at their own size (see
+says "I have nothing at all to show yet": placeholder items stand in for the
+whole list. `<List.Items count>` says "I know how many items are coming": the
+items not held yet are skeletons in their own place, at their own size (see
 [What the list knows, and what it guesses](#what-the-list-knows-and-what-it-guesses)),
 asked for as they enter the render window — a list that knows its count has no
 use for the first one. A run that does not know it learns it from its first
@@ -411,7 +412,7 @@ The body grows here, which it never does on its own: not to push a footer
 down, but to bound a list that is itself the scrolling area. It still scrolls
 when what stays put outgrows it (the keyboard up). `scroller="parent"` is the
 shape when there is no frame to keep and the field may scroll away with the
-rows. The field goes in the body, never in the header of a docked sheet: that
+items. The field goes in the body, never in the header of a docked sheet: that
 header is its swipe grip.
 
 ### `scrollCapture`
@@ -490,14 +491,14 @@ pressed in the popup never walks the slides behind it (see
 Reference: `src/layout/slide_container.jsx`, and the "One slide much taller
 than the others" case in `src/layout/demos/8_slide_container_demo.html`.
 
-## Many rows: `List.Items` and the render window
+## Many items: `List.Items` and the render window
 
 What a list costs must not follow the size of its collection: the browser
-paints nothing until the render that draws the rows has ended, so forty rows
-given to a list that opens in a click are forty rows drawn before anything is
+paints nothing until the render that draws the items has ended, so forty items
+given to a list that opens in a click are forty items drawn before anything is
 seen, for a screen that shows a dozen.
 
-So the rule: **rows as `<List.Item>` children are all drawn**, and that is the
+So the rule: **items as `<List.Item>` children are all drawn**, and that is the
 right shape only for a list the caller knows to be short — a menu, a settings
 sheet, a handful of tabs. A collection whose size the caller does not decide
 (users, messages, search results, anything read from a resource) goes to a run:
@@ -535,11 +536,11 @@ the cards, and nobody scrolls to the thirtieth; a count right for the cards
 leaves blank screens when a fling crosses the one-line items. With a size, the
 window weighs the items it draws (see below).
 
-A run whose rows all fit the window is just rows: nothing is virtualized, and
-it costs what the same rows would as children. There is no reason to hold back
+A run whose items all fit the window is just items: nothing is virtualized, and
+it costs what the same items would as children. There is no reason to hold back
 from it for a list that might grow.
 
-What an item outside the window holds is not lost with its row: a selection
+What an item outside the window holds is not lost when it is not drawn: a selection
 keeps the items it does not draw (`--navi-select` reaches them by id), and a
 group keeps the keys of named controls that are not there
 ([control_object.md](./control_object.md#a-control-that-is-not-there)).
@@ -554,7 +555,7 @@ list opens, follow from what it knows when it mounts:
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | nothing                                                           | skeletons where the list opens, the scrollbar a guess (up to there and a page past it) | the window, naming the item it opens on — and again if the answer ends the collection inside it |
 | how many items there are (`count`)                                | skeletons where the list opens, the scrollbar right                                    | the window                                                                                      |
-| the composition it left (Back; a reload under `keepPageOnScreen`) | the rows from before, `refreshing`                                                     | the window, read again                                                                          |
+| the composition it left (Back; a reload under `keepPageOnScreen`) | the items from before, `refreshing`                                                    | the window, read again                                                                          |
 
 So `count` is worth giving when the app already has it: a total shown
 elsewhere, a profile saying how many games there are. It is not worth a request
@@ -640,9 +641,11 @@ cards land). So `renderSkeleton` draws each index at the room its item will
 take, from what is known before the data — the same knowledge `itemSize` gives
 the fillers. Items that cannot be told apart before they arrive are better
 drawn at one height than announced by skeletons that guess. And anything drawn
-above the screen that changes size afterwards — an image without its
-dimensions, a block that expands — moves the screen the same way, which nothing
-puts back during a fling on iOS: reserve its room.
+above the screen that changes size afterwards, on its own — an image without its
+dimensions, a block that expands — moves the screen the same way, and the list
+does not put it back: it puts the screen back around what it draws, and when
+the box that scrolls it changes size, never for an item growing in a list the
+user is reading. Reserve its room.
 
 The window's own guess past what it has drawn is the one that is not the worst
 case, on purpose. Guessing the smallest there walks into cards at the one-line
@@ -655,8 +658,8 @@ measured and extended on the next frame.
 
 A popup's content is built in the click that opens it (see
 [popup_open.md](./popup_open.md)), and a page coming back in a route transition
-is built in the transition's update callback: rows below the fold cost the same
-there as rows on screen, and delay the movement. `renderBudget` takes
+is built in the transition's update callback: items below the fold cost the
+same there as items on screen, and delay the movement. `renderBudget` takes
 `{ initial, after }` for exactly this: `initial` for the picture the browser
 paints first, counted from the item the list opens on, and `after` from the
 paint on. `initial: "100%"` is the screen and nothing more, whatever the items
@@ -675,8 +678,8 @@ painted.
 
 ### Cmd/Ctrl + F: `findText`
 
-The browser's find in page searches the DOM, and a row outside the render
-window is not in it: Cmd/Ctrl + F finds the rows on screen and a few around
+The browser's find in page searches the DOM, and an item outside the render
+window is not in it: Cmd/Ctrl + F finds the items on screen and a few around
 them, nothing else.
 
 ```jsx
@@ -687,24 +690,24 @@ them, nothing else.
 />
 ```
 
-With `findText`, the fillers carry the text of the rows they stand for, inside
+With `findText`, the fillers carry the text of the items they stand for, inside
 `hidden="until-found"` elements: on a match the browser scrolls there and the
-render window, following that scroll like any other, draws the row. A row
-inside the window has no hidden copy, so every row is found exactly once.
+render window, following that scroll like any other, draws the item. An
+item inside the window has no hidden copy, so every item is found exactly once.
 
 What it costs, and where it stops:
 
-- **A cost that follows the collection again.** The text of every row outside
+- **A cost that follows the collection again.** The text of every item outside
   the window is rebuilt at every render of the run — the window sliding, a page
-  landing — (one `findText` call per row) and sits in the DOM as text, in one
-  hidden element per 64 rows. Give it to a list a user would search with the
+  landing — (one `findText` call per item) and sits in the DOM as text, in one
+  hidden element per 64 items. Give it to a list a user would search with the
   browser, not to every run.
-- **A match lands near its row, not on it**, when rows differ in height: the 64
-  lines of an element share its height. The window then draws the row where it
+- **A match lands near its item, not on it**, when items differ in height: the
+  64 lines of an element share its height. The window then draws the item where it
   stands.
-- **One line per row**, and only that line is found while the row is not
-  drawn: return what a user would type, not everything the row shows.
-- **What the client holds, no more.** A row a paginated run has not loaded has
+- **One line per item**, and only that line is found while the item is not
+  drawn: return what a user would type, not everything the item shows.
+- **What the client holds, no more.** An item a paginated run has not loaded has
   no text to be found by.
 - **Chrome 102, Firefox 148, Safari 26.2.** Elsewhere the attribute reads as a
   plain `hidden`: find stops at the window, as without `findText`.
@@ -712,8 +715,8 @@ What it costs, and where it stops:
 Two things not to write beside it:
 
 - **A transparent copy of the list's text laid over it** (a `<textarea>`, a
-  `<div>` in `color: transparent`): every row in the window is then found
-  twice, and the copy only lines up with rows of one fixed height.
+  `<div>` in `color: transparent`): every item in the window is then found
+  twice, and the copy only lines up with items of one fixed height.
 - **A `beforematch` listener moving the window**: the list re-renders after the
   event, which removes the element before the browser has scrolled to it. The
   browser's own scroll is what moves the window.
@@ -880,9 +883,9 @@ ancestor rule covers it too. In JS the same fact reads as `isScrolling()` /
 
 ### In a `List`: nothing to do
 
-`List` rows leave hit-testing while anything scrolling them moves — its own
+`List` items leave hit-testing while anything scrolling them moves — its own
 scroll box, the panel around it, the page. `hoverWhileScrolling` opts back in.
-The default costs one thing: right after a scroll, the row under the pointer
+The default costs one thing: right after a scroll, the item under the pointer
 lights up only once the pointer moves by a pixel.
 
 ## The list border
@@ -891,8 +894,8 @@ Not scroll, but the same family of problem — a reasonable default nobody knows
 can be removed.
 
 A `<List>` frames itself (`--list-border-width-default: 1px`): "a list is a box
-with rows in it, it says where it starts and where it ends". Inside a popup or a
-card, that frame is already the container's, and two frames around the same rows
+with items in it, it says where it starts and where it ends". Inside a popup or
+a card, that frame is already the container's, and two frames around the same items
 read as a box in a box. `borderWidth="0"` removes it — the prop writes
 `--list-border-width` inline, which wins over the `-default`. A list that is
 itself the content of a `[popover]`/`<dialog>` already drops the default on its
@@ -900,23 +903,25 @@ own.
 
 ### Without a border, no corner
 
-The default radius is the border's, and the frame (not the scroll box) clips
-the rows to its curve. A list given `border="none"`, `border="0"` or
-`borderWidth="0"`, and no `borderRadius`, is marked `data-borderless`: it has
-no radius, and its frame stops clipping, because rounding the corners was that
-clip's only job. The scroll box still clips: a badge crossing the list's edge
-is still cut there, and `overflow="visible"` remains the only way to let
-content out.
+The default radius is the border's. A list given `border="none"`, `border="0"`
+or `borderWidth="0"`, and no `borderRadius`, is marked `data-borderless` and
+drops its radius with its border: no curve is drawn that the items would not
+follow. That is all the attribute does.
 
-- An explicit `borderRadius` keeps both the curve and the frame's clip: a
-  borderless list painting a background of its own may want that surface
-  rounded, with the rows clipped to it.
+The frame clips nothing: it draws its border and background, rounded, and the
+scroll box inside it clips square. A badge crossing the list's edge is cut
+there, and `overflow="visible"` remains the only way to let content out. An
+item with a background in a corner covers the inside of the curve, and past a
+radius of about 3.4 times the border width its square corner shows outside it.
+That is deliberate: a rounded clip around a scroll box makes every touch scroll
+wait for the main thread
+([mobile_touch.md](./mobile_touch.md#a-rounded-clip-makes-the-scroll-wait-for-the-main-thread)).
+
+- An explicit `borderRadius` keeps the curve on a borderless list painting a
+  surface of its own, and the items are not clipped to it: an item painting a
+  background at a corner (a selected one, a card) shows square over the curve.
+  An item meant to follow the curve rounds its own corners.
 - Only the props turn it on. A border removed from CSS (the popup's own
   `-default`, an app class) keeps the default radius.
-
-The curve cuts whatever sits on it: a selected row's background follows the
-corner, and rows that are framed cards themselves lose their outer corners
-whenever the list's radius is larger than theirs. At a fractional pixel ratio,
-the frame's clip can also blur the last row's bottom edge.
 
 Reference: `src/control/list/list.jsx` (the `.navi_list_container` CSS).

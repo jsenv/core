@@ -15,6 +15,7 @@
 
 import {
   createAction,
+  defineRouteDefaultTransition,
   defineRouteTransition,
   Link,
   List,
@@ -40,11 +41,16 @@ while (i < 500) {
   i++;
 }
 
+// `transition`: false, true (a movement defined on the pair), or "default"
+// (the default every navigation takes, ordered by history — the shape an app
+// sliding on every push has).
 export const start = ({ transition }) => {
   const LIST_ROUTE = route("");
   const ITEM_ROUTE = route("/item/:itemId");
   setupRoutes([LIST_ROUTE, ITEM_ROUTE]);
-  if (transition) {
+  if (transition === "default") {
+    defineRouteDefaultTransition({ type: "slide-x", direction: "history" });
+  } else if (transition) {
     defineRouteTransition(LIST_ROUTE, ITEM_ROUTE, "slide-x");
   }
 

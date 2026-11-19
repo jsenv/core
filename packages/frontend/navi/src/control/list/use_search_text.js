@@ -83,8 +83,9 @@ export const useSearchText = (
 
 const buildMatchInfo = (searchText, items, matchFn) => {
   // scoreEntries: [score, bucket][] kept sorted desc by score.
-  // New distinct score values are inserted via bisect — O(1) in practice
-  // since there are very few distinct scores (today just 0 and 1).
+  // New distinct score values are inserted via bisect, then spliced in: a
+  // handful of distinct scores (applySearch's levels times createSearch's
+  // priorities), so a small array.
   const scoreEntries = []; // [score, bucket][]
   const nonMatched = [];
 

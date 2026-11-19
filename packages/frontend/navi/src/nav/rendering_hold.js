@@ -1,5 +1,7 @@
 /**
- * The document's rendering, held for the one frame a view transition needs.
+ * The document's rendering, held for the one frame a view transition needs —
+ * and, for a movement turned round, until its pictures are back home (see
+ * releaseReverting in route_transition.jsx).
  *
  * The browser does not take the picture of the page being left when a
  * transition is ASKED for — it takes it at the next frame, just before running
@@ -47,6 +49,12 @@
  * another waits for its picture skips that one, and the browser still runs the
  * skipped one's update callback — which gives back its own share, and must not
  * let go of the picture the other is still waiting for.
+ *
+ * Net: src/nav/tests/rendering_hold.test.js (shares, the routing hold taken
+ * over, a drain that throws), tests/route_transition_list_revisit (a movement's
+ * hold, a movement turned round inside it, a press inside the held frame) and
+ * tests/route_tabs (the routing hold). Nothing exercises flushSyncRendering
+ * under a hold, nor a popup lifted out of its anchor.
  */
 
 import { Component, options } from "preact";

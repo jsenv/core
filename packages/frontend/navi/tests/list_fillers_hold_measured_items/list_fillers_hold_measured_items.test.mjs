@@ -22,35 +22,21 @@
  * the screen.
  */
 
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
-import { chromium } from "playwright";
 
-const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  keepProcessAlive: false,
-  clientAutoreload: false,
-  http2: false,
-  port: 0,
-  plugins: [jsenvPluginPreact()],
-});
+import {
+  configureBrowserSnapshots,
+  createEngineTests,
+  startNaviDevServer,
+} from "../browser_harness.mjs";
 
-const browser = await chromium.launch({ headless: true });
-
-// The dev server fills its own cache directory while cooking the page; those
-// files are not what this test is about.
-snapshotTests.prefConfigure({
-  filesystemActions: {
-    "**/.jsenv/": "ignore",
-  },
-});
+const devServer = await startNaviDevServer();
+configureBrowserSnapshots();
+const { testInEngines, closeBrowsers } = createEngineTests();
 
 const STEP = 300;
 
-const openThread = async (search = "", { phone } = {}) => {
+const openThread = async (browser, search = "", { phone } = {}) => {
   const page = await browser.newPage({
     viewport: { width: 390, height: 844 },
     isMobile: phone,
@@ -101,7 +87,8 @@ const scrollBy = async (page, stepCount, delta) => {
 
 // A finger thrown up the screen (or down it), the way DevTools' touch
 // emulation turns a mouse drag into one: pressed, moved faster and faster for
-// nine frames, lifted. The browser flings on from there. Not awaited: under
+// nine frames, lifted. The browser flings on from there: each throw moves the
+// finger FINGER_TRAVEL px, and what the page travels past that is momentum. Not awaited: under
 // the emulation, the events are not acknowledged until the gesture is over,
 // and some are still pending when the page closes, which rejects them.
 const fling = async (cdp, direction) => {
@@ -127,98 +114,120 @@ const fling = async (cdp, direction) => {
   await wait(1800);
 };
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// 6 + 6.5k px for k = 0..8
+const FINGER_TRAVEL = 288;
 
 const readTopRow = (page) => page.evaluate(() => window.readTopRow()); // eslint-disable-line no-undef
 
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("down through the cards, back up over them, then back into them", async () => {
-      const { page, errors } = await openThread();
-      try {
-        const down = await scrollBy(page, 30, STEP);
-        const topRowThere = await readTopRow(page);
-        const scrollThere = await page.evaluate(() => window.readScroll()); // eslint-disable-line no-undef
-        const furtherDown = await scrollBy(page, 10, STEP);
-        const up = await scrollBy(page, 30, -STEP);
-        await page.evaluate((top) => window.jumpTo(top), scrollThere); // eslint-disable-line no-undef
-        const topRowBackThere = await readTopRow(page);
-        const findLines = await page.evaluate(() => window.checkFindLines()); // eslint-disable-line no-undef
-        return {
-          down: { ...down, then_further: furtherDown },
-          up,
-          back_into_them: {
-            scroll: scrollThere,
-            top_row_on_the_way_down: topRowThere,
-            top_row_jumping_back: topRowBackThere,
-          },
-          find_lines_of_items_drawn_before: {
-            checked: findLines.checked,
-            away_from_where_their_item_was_drawn: findLines.off,
-          },
-          errors,
-        };
-      } finally {
-        await page.close();
-      }
-    });
-    test("six flings down the thread on a phone, three back up", async () => {
-      const { page, errors } = await openThread("", { phone: true });
-      try {
-        const cdp = await page.context().newCDPSession(page);
-        await cdp.send("Emulation.setEmitTouchEventsForMouse", {
-          enabled: true,
-          configuration: "mobile",
-        });
-        await page.evaluate(() => window.startFrames()); // eslint-disable-line no-undef
-        let index = 0;
-        while (index < 6) {
-          await fling(cdp, "down");
-          index++;
+    testInEngines(
+      test,
+      "down through the cards, back up over them, then back into them",
+      async ({ browser }) => {
+        const { page, errors } = await openThread(browser);
+        try {
+          const down = await scrollBy(page, 30, STEP);
+          const topRowThere = await readTopRow(page);
+          const scrollThere = await page.evaluate(() => window.readScroll()); // eslint-disable-line no-undef
+          const furtherDown = await scrollBy(page, 10, STEP);
+          const up = await scrollBy(page, 30, -STEP);
+          await page.evaluate((top) => window.jumpTo(top), scrollThere); // eslint-disable-line no-undef
+          const topRowBackThere = await readTopRow(page);
+          const findLines = await page.evaluate(() => window.checkFindLines()); // eslint-disable-line no-undef
+          return {
+            down: { ...down, then_further: furtherDown },
+            up,
+            back_into_them: {
+              scroll: scrollThere,
+              top_row_on_the_way_down: topRowThere,
+              top_row_jumping_back: topRowBackThere,
+            },
+            find_lines_of_items_drawn_before: {
+              checked: findLines.checked,
+              away_from_where_their_item_was_drawn: findLines.off,
+            },
+            errors,
+          };
+        } finally {
+          await page.close();
         }
-        const down = await page.evaluate(() => window.stopFrames()); // eslint-disable-line no-undef
-        await page.evaluate(() => window.startFrames()); // eslint-disable-line no-undef
-        index = 0;
-        while (index < 3) {
-          await fling(cdp, "up");
-          index++;
+      },
+    );
+    // DevTools' touch emulation is a CDP domain: Chromium only.
+    testInEngines(
+      test,
+      "six flings down the thread on a phone, three back up",
+      async ({ browser }) => {
+        const { page, errors } = await openThread(browser, "", { phone: true });
+        try {
+          const cdp = await page.context().newCDPSession(page);
+          await cdp.send("Emulation.setEmitTouchEventsForMouse", {
+            enabled: true,
+            configuration: "mobile",
+          });
+          await page.evaluate(() => window.startFrames()); // eslint-disable-line no-undef
+          let index = 0;
+          while (index < 6) {
+            await fling(cdp, "down");
+            index++;
+          }
+          const down = await page.evaluate(() => window.stopFrames()); // eslint-disable-line no-undef
+          await page.evaluate(() => window.startFrames()); // eslint-disable-line no-undef
+          index = 0;
+          while (index < 3) {
+            await fling(cdp, "up");
+            index++;
+          }
+          const up = await page.evaluate(() => window.stopFrames()); // eslint-disable-line no-undef
+          return {
+            down: {
+              reached_the_cards: down.scrollY > 30 * 38,
+              // The regime the case is named after: drags alone reach the
+              // cards (6 x 288px), so the page must have travelled on after
+              // the finger, or nothing here was a fling.
+              flung_past_the_finger: down.scrollY > 6 * FINGER_TRAVEL + 1000,
+              frames_where_the_rows_jump: down.jumps,
+            },
+            up: {
+              came_back_up: up.scrollY < down.scrollY,
+              flung_past_the_finger:
+                down.scrollY - up.scrollY > 3 * FINGER_TRAVEL + 500,
+              frames_where_the_rows_jump: up.jumps,
+            },
+            errors,
+          };
+        } finally {
+          await page.close();
         }
-        const up = await page.evaluate(() => window.stopFrames()); // eslint-disable-line no-undef
-        return {
-          down: {
-            reached_the_cards: down.scrollY > 30 * 38,
-            frames_where_the_rows_jump: down.jumps,
-          },
-          up: {
-            came_back_up: up.scrollY < down.scrollY,
-            frames_where_the_rows_jump: up.jumps,
-          },
-          errors,
-        };
-      } finally {
-        await page.close();
-      }
-    });
-    test("opening at the end, then up over cards never drawn", async () => {
-      const { page, errors } = await openThread("?open=end");
-      try {
-        // A screen and a half of cards, sized on the cards drawn there and not
-        // on the one-line items the first commit draws before the runs have
-        // said how many items there are.
-        const opening = await page.evaluate(() => window.readOpening()); // eslint-disable-line no-undef
-        const up = await scrollBy(page, 20, -STEP);
-        return {
-          opening,
-          items_above_still_guessed:
-            up.steps_changing_what_is_above_the_screen > 0 ||
-            up.written_back_px > 0,
-          errors,
-        };
-      } finally {
-        await page.close();
-      }
-    });
+      },
+      { engines: ["chromium"] },
+    );
+    testInEngines(
+      test,
+      "opening at the end, then up over cards never drawn",
+      async ({ browser }) => {
+        const { page, errors } = await openThread(browser, "?open=end");
+        try {
+          // A screen and a half of cards, sized on the cards drawn there and not
+          // on the one-line items the first commit draws before the runs have
+          // said how many items there are.
+          const opening = await page.evaluate(() => window.readOpening()); // eslint-disable-line no-undef
+          const up = await scrollBy(page, 20, -STEP);
+          return {
+            opening,
+            items_above_still_guessed:
+              up.steps_changing_what_is_above_the_screen > 0 ||
+              up.written_back_px > 0,
+            errors,
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
   });
 } finally {
-  await browser.close();
+  await closeBrowsers();
   devServer.stop();
 }

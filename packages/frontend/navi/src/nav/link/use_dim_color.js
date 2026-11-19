@@ -16,7 +16,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *    fully visible for accessibility
  */
 export const useDimColorWhen = (elementRef, shouldDim) => {
-  const shouldDimPreviousRef = useRef();
+  // Not dimmed at mount: a link that is not dimmed writes nothing.
+  const shouldDimPreviousRef = useRef(false);
   useLayoutEffect(() => {
     const element = elementRef.current;
     const shouldDimPrevious = shouldDimPreviousRef.current;

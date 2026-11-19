@@ -76,6 +76,7 @@ The last character of a pattern is part of what the route stands for:
 - `route("/map")` is a **page**: it matches `/map` and nothing below it.
 - `route("/map/")` is a **frame**: it matches `/map` and every address below it,
   `/map/flow` and `/map/isochrone/compare` included. The root `/` is always one.
+  `route("")` is the root as a page: it matches `/` alone.
 
 A frame is what stays on screen while one moves below it: the map under its
 panels, an admin shell around its sections. A page is one screen among others,
@@ -767,7 +768,8 @@ Five cases, and they are not a policy to configure but five different facts:
   positions are written whenever the document may end (hidden, frozen or left),
   not only when it is left.
 
-Where the browser exposes its stack (the Navigation API), **a `<Link>` or a
+Where the browser exposes its stack (the Navigation API — not iOS Safari, whose
+`navigation.currentEntry` is null: every link stacks there), **a `<Link>` or a
 `navTo()` whose destination is the entry right next to the current one becomes a
 real traversal**: a "back" link to the page one just came from behaves as a back
 — no A, B, A, B… growth, and the scroll comes back — and one step forward too.

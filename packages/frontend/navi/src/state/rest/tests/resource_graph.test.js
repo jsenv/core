@@ -1,4 +1,7 @@
 import { snapshotTests } from "@jsenv/snapshot";
+
+import { createAction } from "../../../action/actions.js";
+import { isKeepableRead, isRelationshipRead } from "../kept_reads.js";
 import { resource } from "../resource_graph.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
@@ -68,5 +71,34 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const storeAfterDelete = captureState();
 
     return { storeBeforeDelete, storeAfterDelete };
+  });
+
+  // What a page kept for the next document writes of each read (see
+  // page_kept.js): a resource's own read as rows, a relation's read not at
+  // all — its value names rows of another store, under an owner — anything
+  // else by its value.
+  test("reads of a relation are told apart from reads kept by value", () => {
+    const SESSION = resource("session");
+    const USER = resource("user", { GET: async ({ id }) => ({ id }) });
+    const USER_SESSION = USER.one("session", SESSION, {
+      GET: async ({ id }) => ({ id, session: { id: 10 } }),
+    });
+    const USER_FRIENDS = USER.scopedMany("friends", {
+      GET_MANY: async ({ id }) => [id, []],
+    });
+    const COUNT = createAction(async () => 3);
+    const readOf = (action) => ({
+      kept_as_rows: isKeepableRead(action),
+      relationship: isRelationshipRead(action),
+    });
+    return {
+      "USER.GET": readOf(USER.GET),
+      "USER.one(session).GET": readOf(USER_SESSION.GET),
+      "USER.scopedMany(friends).GET_MANY": readOf(USER_FRIENDS.GET_MANY),
+      "USER.scopedMany(friends).GET_MANY bound": readOf(
+        USER_FRIENDS.GET_MANY.bindParams({ id: 1 }),
+      ),
+      "createAction": readOf(COUNT),
+    };
   });
 });

@@ -432,8 +432,9 @@ const css = /* css */ `
 
          Ordered here rather than left to the DOM, which decides it otherwise:
          where an application puts its bars relative to the area is its own
-         business. A name, a class and \`*\` weigh the same, so the rules are
-         read in the order they are written. */
+         business. A name and a class weigh what a type selector does and
+         \`*\` weighs nothing, so the \`*\` rule is written first, where any
+         other rule overrides it. */
       &::view-transition-group(*) {
         z-index: 0;
       }
@@ -1966,9 +1967,7 @@ const playTransition = (
     }
     if (areaElement) {
       holdTransitionFurniture(transition, areaElement);
-      holdTransitionWindow(transition, areaElement, areaStateBefore, {
-        furnitureLive: false,
-      });
+      holdTransitionWindow(transition, areaElement, areaStateBefore);
     }
   });
   const end = () => {

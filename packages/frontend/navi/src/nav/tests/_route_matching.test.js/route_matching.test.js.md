@@ -10,6 +10,8 @@
 - [menu matching deep](6_menu_matching_deep/6_menu_matching_deep.md)
 - [trailing slash vs not trailing slash](7_trailing_slash_vs_not_trailing_slash/7_trailing_slash_vs_not_trailing_slash.md)
 - [root with trailing slash should match](8_root_with_trailing_slash_should_match/8_root_with_trailing_slash_should_match.md)
+- [a malformed escape is routed, never thrown](9_a_malformed_escape_is_routed__never_thrown/9_a_malformed_escape_is_routed__never_thrown.md)
+- [a literal that is not ascii matches the url it builds](10_a_literal_that_is_not_ascii_matches_the_url_it_builds/10_a_literal_that_is_not_ascii_matches_the_url_it_builds.md)
 
 ---
 

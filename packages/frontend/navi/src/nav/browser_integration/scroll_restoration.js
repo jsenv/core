@@ -69,6 +69,11 @@
  * url under the same document, so the arrival — and the deafness the swap
  * needs, see suspendScrollRecording — is asked for by the row itself (see
  * route_travel.jsx).
+ *
+ * Net: tests/list_reload_held_on_an_item (a named scroller after a reload, a
+ * tab discarded in the background). Nothing exercises the document's position
+ * after a back, and this module does not load in node: it imports
+ * box/mount_after_paint.jsx.
  */
 
 import { effect, signal } from "@preact/signals";
@@ -611,13 +616,18 @@ const stayForLateAsks = (restoration) => {
     let running = false;
     let starting = false;
     for (const routeAction of activeRouteActionsSignal.value) {
+      // The state first: the data of an action neither running nor about to
+      // is not followed.
+      const runningState = routeAction.runningStateSignal.value;
+      if (runningState !== RUNNING && runningState !== IDLE) {
+        continue;
+      }
       if (routeAction.dataSignal.value !== undefined) {
         continue;
       }
-      const runningState = routeAction.runningStateSignal.value;
       if (runningState === RUNNING) {
         running = true;
-      } else if (runningState === IDLE) {
+      } else {
         // Asking, and run by an effect of the same batch that has not run yet.
         starting = true;
       }

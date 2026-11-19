@@ -15,6 +15,7 @@ import {
   setupRoutes,
   stateSignal,
   useAsyncData,
+  whenPageAtRest,
 } from "@jsenv/navi";
 import { render } from "preact";
 
@@ -108,6 +109,9 @@ const App = () => {
     </Route>
   );
 };
+
+// What the suite waits on before reading the page (see browser_harness.mjs).
+window.whenPageAtRest = whenPageAtRest;
 
 render(
   <Loading fallback={<p id="loading_fallback">loading…</p>}>

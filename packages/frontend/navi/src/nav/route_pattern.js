@@ -1,6 +1,11 @@
 /**
  * Custom route pattern matching system.
  * Not built on URLPattern: matching here is simpler and more predictable.
+ *
+ * Net: src/nav/tests (node: matching, malformed addresses included, url
+ * building, params, url sync), tests/route_tabs,
+ * tests/route_transition_list_revisit and tests/browser_integration_contract
+ * (browser).
  */
 
 import { globalSignalRegistry } from "../state/state_signal.js";
@@ -1787,6 +1792,11 @@ const extractSearchParams = (urlObj, queryConnectionMap) => {
     }
     const decodedValue = decodeSearchPart(rawValue);
     if (signalType === "number" || signalType === "float") {
+      // `?n` or `?n=` says no number (Number("") would read 0): the state
+      // keeps its default.
+      if (decodedValue === "") {
+        continue;
+      }
       const numberValue = Number(decodedValue);
       params[key] = isNaN(numberValue) ? decodedValue : numberValue;
     } else if (signalType === "boolean") {
@@ -1859,10 +1869,12 @@ const buildHierarchicalQueryParams = (
   debug(`Building params for ${originalPattern}`);
   debug(`parsedPattern:`, parsedPattern.original);
   debug(`params:`, params);
-  debug(
-    `ancestorPatterns:`,
-    ancestorPatterns.map((p) => p.urlPatternRaw),
-  );
+  if (DEBUG) {
+    debug(
+      `ancestorPatterns:`,
+      ancestorPatterns.map((p) => p.urlPatternRaw),
+    );
+  }
 
   // Step 1: Add query parameters from ancestor patterns (oldest to newest)
   // This ensures ancestor parameters come first in their declaration order
@@ -1882,10 +1894,12 @@ const buildHierarchicalQueryParams = (
 
   // Step 2: Add query parameters from current pattern
   if (parsedPattern.queryParams) {
-    debug(
-      `Processing current pattern query params:`,
-      parsedPattern.queryParams.map((q) => q.name),
-    );
+    if (DEBUG) {
+      debug(
+        `Processing current pattern query params:`,
+        parsedPattern.queryParams.map((q) => q.name),
+      );
+    }
 
     for (const queryParam of parsedPattern.queryParams) {
       const paramName = queryParam.name;

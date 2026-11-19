@@ -37,6 +37,11 @@ import { isSignal } from "../utils/is_signal.js";
  * Only actions declaring a verb (`meta.verb`, which every resource action
  * has) are subject to the policy: a plain `createAction` may not touch the
  * network at all, and navi has no way to tell.
+ *
+ * Net: src/state/rest/tests/resource_graph_range.test.js (a range read under a
+ * policy, reads kept in the store or let out). Nothing exercises an action's
+ * run or rerun held by the policy, nor a control answering its read-only
+ * message.
  */
 
 const WRITE_VERB_SET = new Set(["POST", "PUT", "PATCH", "DELETE"]);

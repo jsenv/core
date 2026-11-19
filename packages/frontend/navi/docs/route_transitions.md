@@ -283,8 +283,9 @@ so they are cut: at the area's own bounds, at the app's rectangle (the glass
 beside an app narrowed with `--navi-app-max-width`), and at the bands the
 furniture keeps free — the area runs under the fixed bars by design, and uncut, a
 page taller than the screen would be watched sliding over them. The bands are
-read, never declared, so furniture that grows, shrinks or unmounts mid-movement
-is followed: the app's **safe area** ([safe_area.md](./safe_area.md)) for
+read, never declared, so furniture that shrinks or unmounts mid-movement is
+followed, and furniture that grows is followed up to the band the state being
+left kept free: the app's **safe area** ([safe_area.md](./safe_area.md)) for
 everything pinned to the window's edges, and **`useTransitionCover(ref, edge)`**
 for what covers the pages from inside the document but outside the area, which
 the safe area does not count — a status strip sticking under the top bar, a header
@@ -298,7 +299,9 @@ that was **scrolled** is photographed, and travels, from where the reader was.
 
 Each **fixed bar around the area is photographed on its own**, and whether it is
 the frame or part of what changes is derived from the pair of states: a bar
-**both states have** holds where it stands while the pages move behind it (a bar
+**both states have** — the same element, carried from one side to the other; a
+bar each page renders for itself is another bar on each side — holds where it
+stands while the pages move behind it (a bar
 whose content changes with the route cross-fades, unnamed); a bar **one state
 has** travels with the page that has it, by the keyframes that page leaves or
 arrives by, instead of appearing or vanishing in a frame — a full-screen wizard
@@ -525,7 +528,8 @@ its response, on the way back as on the way in — a page wanting fresh data say
 `GET_RANGE` still revalidates the window it draws when mounted again (see
 [list_refresh.md](./list_refresh.md#who-decides-the-re-read--and-who-does-not)).
 What a transition holds is the document's **rendering**, while the page being
-left is photographed, and it gives it back in the same callback: nothing waits on
+left is photographed, and it gives it back in the same callback (a movement
+turned round holds it until its pictures are back home): nothing waits on
 it, nothing is skipped because of it. The one thing that makes a revisit differ
 under a movement is a back taken before the page being opened has rendered — see
 [below](#waiting-for-a-navigation-the-address-is-not-the-page).
@@ -612,6 +616,11 @@ left, and both sides of the movement show the new one. Read it in the render
 (`{countSignal.value}`), which navi holds. A popup lifted out of its anchor is
 photographed the same way, the page around it included (see
 [popup_lift.md](./popup_lift.md)).
+
+preact/compat's `flushSync` lets go of that hold for the length of its
+callback: called after a navigation, before the picture is taken, it draws
+everything owed, the page arriving included, and the movement shows it on both
+sides. Flush before navigating, not after; dev warns when it happens.
 
 ## Waiting for a navigation: the address is not the page
 

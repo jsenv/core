@@ -48,6 +48,12 @@
  * the scroll position written at every frame (playTravel), after ending a snap a
  * hand has left running (takeRowFromHand). Whatever else follows, the trait under a
  * tab bar first, follows the row through route_row_follow.js.
+ *
+ * Net: tests/route_travel (presses inside a glide, the row at rest: the live
+ * page's column, nothing of the movement left). Nothing exercises a hand on
+ * the row (a touch landing between two pages, the pin of a touch), an
+ * `onTravel` refusing, a row of pages declared as children, or a row whose
+ * `routes` empties.
  */
 
 import { useLayoutEffect, useMemo, useReducer, useRef } from "preact/hooks";

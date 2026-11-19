@@ -42,6 +42,8 @@
 - [datetime-local signal in route param should not cause cycle error](38_datetime-local_signal_in_route_param_should_not_cause_cycle_error/38_datetime-local_signal_in_route_param_should_not_cause_cycle_error.md)
 - [array signal - itemType number survives the url round trip](39_array_signal_-_itemtype_number_survives_the_url_round_trip/39_array_signal_-_itemtype_number_survives_the_url_round_trip.md)
 - [array signal - empty value against a non-empty default](40_array_signal_-_empty_value_against_a_non-empty_default/40_array_signal_-_empty_value_against_a_non-empty_default.md)
+- [a write made in reaction to an arrival reaches the address](41_a_write_made_in_reaction_to_an_arrival_reaches_the_address/41_a_write_made_in_reaction_to_an_arrival_reaches_the_address.md)
+- [the history a write asks for holds from an effect](42_the_history_a_write_asks_for_holds_from_an_effect/42_the_history_a_write_asks_for_holds_from_an_effect.md)
 
 ---
 

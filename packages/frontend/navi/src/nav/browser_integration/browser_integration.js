@@ -89,13 +89,16 @@ const applyRouting = (
   return updateActionsResult;
 };
 
-// via_navigation.js is ready and implements the same contract, but history is
-// the integration every browser gets today: Firefox has no window.navigation,
-// and one implementation serving everyone beats two serving each their half —
-// what the API uniquely offers (reading the stack) via_history.js already
-// borrows. Flip this to try the other one; it falls back by itself where the
-// API is missing.
-const USE_NAVIGATION_API = false;
+// via_navigation.js answers the same contract on the Navigation API, and is
+// meant to take over; history is the integration every browser gets today:
+// Firefox has no window.navigation, and the two still differ where the
+// contract test says so (tests/browser_integration_contract). A page asks for
+// the other one before navi loads, with
+// `globalThis.__NAVI_BROWSER_INTEGRATION__ = "navigation"` — how that test runs
+// the same sequences on both; it falls back by itself where the API is
+// missing.
+const USE_NAVIGATION_API =
+  globalThis.__NAVI_BROWSER_INTEGRATION__ === "navigation";
 
 const setupBrowserIntegration =
   USE_NAVIGATION_API && window.navigation

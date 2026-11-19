@@ -106,6 +106,12 @@ meaning. _Reference: `definePseudoClass(":focus-visible", …)` in
   marks, the retry.
 - `src/utils/focus/use_auto_focus.js` — what writes `navi-autofocus`, and why
   the native attribute is not used.
+- `src/utils/focus/focus_hand_over.js` — the steps a box showing one part at a
+  time (a SlideContainer's slides, a RouteTravel row's panes) hands the
+  keyboard over in.
+- `src/nav/route_focus.js` — the router as the owner of the keyboard for what
+  it shows: an arrival gives it, a return gives it back, prepared before the
+  navigation's first write and landed once its renders settle.
 - `src/box/pseudo_styles.js` — `isKeyboardModality`, `isEditableTarget`, and
   the enriched `:focus` / `:focus-visible`.
 - `docs/autofocus.md` — the same decisions told to whoever uses navi.

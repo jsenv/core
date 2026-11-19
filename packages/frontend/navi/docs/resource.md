@@ -312,8 +312,12 @@ const GAME = resource("game", {
 ```
 
 The callback receives the bound params merged with the range the list asks for
-(`start`, `end`, `limit`, `before`, `after`, `around`), and `{ signal }`,
-aborted when the list stops wanting those rows. `end` is the last place asked
+(`start`, `end`, `limit`, `before`, `after`, `around`, `count`) — a bound param
+of one of these names is replaced by the range's — and `{ signal }`, aborted
+when the window moves on before the slice arrives, and when a write moves the
+collection (the slice is then asked again). A list that leaves — unmounted, or
+drawing another collection — lets it finish, and the answer is kept for the
+next list of that collection. `end` is the last place asked
 for, included, as in `Range: items=0-99`: `limit` is `end - start + 1`, and an
 API whose end is excluded is called with `start + limit`. It returns a range the
 way a `Content-Range` does: **`{ items, start, count }`** — these rows, at this
@@ -362,8 +366,8 @@ not on a relation.
 
 A reader bound to other params is another collection, and the run draws it
 from its first item — it needs no `key` for that. A param following what is
-typed then makes one collection per key, and one request each, the server
-receiving every one even when the list calls it off. `debounce` on the run
+typed then makes one collection per key, and one request each, each one sent
+and answered. `debounce` on the run
 waits for the reader to hold still, and keeps the collection from before drawn
 meanwhile, `refreshing`:
 
@@ -433,6 +437,12 @@ hook (a `.map()` over them is fine), and each subscribes the render that calls
 it to what it returns: a card reading its own row stays still while other rows
 of the store are written. An entry of `useAllByIds` given by a unique key rather
 than by id is found by reading the whole store, and that read follows it too.
+
+The store keeps what something holds, not everything ever read: a row a
+`GET_RANGE` brought leaves it a second or two after nothing holds it anymore —
+the list that drew it, the composition naming it, a render or an effect reading
+it, a write of its own — without a removal anyone hears. `useArray()` shrinks
+as lists let go of their rows, and lists the rows in the order they arrived.
 
 A row counts as written only when something in it changed:
 

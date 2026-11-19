@@ -1,6 +1,6 @@
 import { humanize } from "@jsenv/humanize";
 import { snapshotTests } from "@jsenv/snapshot";
-import { batch } from "@preact/signals";
+import { batch, effect, signal } from "@preact/signals";
 
 import { globalSignalRegistry, stateSignal } from "../../state/state_signal.js";
 import { route, setRouteIntegration, setupRoutes } from "../route.js";
@@ -2422,6 +2422,89 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
       return results;
     } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
+
+  // What an effect writes in reaction to a pass — a filter arriving by the
+  // address sends the list back to its first page — is a write of its own: it
+  // reaches the address from inside the pass, and the pass itself writes
+  // nothing back.
+  test("a write made in reaction to an arrival reaches the address", () => {
+    const filterSignal = stateSignal("all", { id: "reaction_filter" });
+    const pageSignal = stateSignal(1, { id: "reaction_page", type: "number" });
+    const LIST_ROUTE = route("/list", {
+      searchParams: { filter: filterSignal, page: pageSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([LIST_ROUTE]);
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url, options) => {
+        navToCalls.push({
+          url: url.replace(baseUrl, ""),
+          replace: Boolean(options?.replace),
+        });
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    let filterSeen = filterSignal.peek();
+    const dispose = effect(() => {
+      const filter = filterSignal.value;
+      if (filter !== filterSeen) {
+        filterSeen = filter;
+        pageSignal.value = 1;
+      }
+    });
+    try {
+      updateRoutes(`${baseUrl}/list?filter=open&page=3`);
+      return {
+        nav_to_calls: navToCalls,
+        url: LIST_ROUTE.url.replace(baseUrl, ""),
+      };
+    } finally {
+      dispose();
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
+
+  // The history a write asks for (`set(value, { history })`) is the write's,
+  // wherever it is made: from an effect too.
+  test("the history a write asks for holds from an effect", () => {
+    const tabSignal = stateSignal("info", { id: "asked_tab" });
+    const PAGE_ROUTE = route("/page", { searchParams: { tab: tabSignal } });
+    const { updateRoutes, clearRoutes } = setupRoutes([PAGE_ROUTE]);
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url, options) => {
+        navToCalls.push({
+          url: url.replace(baseUrl, ""),
+          replace: Boolean(options?.replace),
+        });
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    const modeSignal = signal("a");
+    const dispose = effect(() => {
+      if (modeSignal.value === "b") {
+        // declared "replace" (the default), asked "push" for this write
+        tabSignal.set("members", { history: "push" });
+      }
+    });
+    try {
+      updateRoutes(`${baseUrl}/page`);
+      modeSignal.value = "b";
+      return {
+        nav_to_calls: navToCalls,
+        url: PAGE_ROUTE.url.replace(baseUrl, ""),
+      };
+    } finally {
+      dispose();
       clearRoutes();
       globalSignalRegistry.clear();
       setRouteIntegration(null);

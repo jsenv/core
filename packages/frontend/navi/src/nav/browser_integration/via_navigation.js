@@ -1,12 +1,26 @@
 /**
  * The same integration as via_history.js, written on the Navigation API.
  *
- * PREPARED, NOT PLUGGED: history is the integration every browser gets today,
- * because Firefox has no `window.navigation` and one implementation serving
- * everyone beats two serving each their half. This file exists so the switch
- * is a one-line decision (see browser_integration.js) rather than a project;
- * it implements the exact contract of setupBrowserIntegrationViaHistory and is
- * verified against the same demos when flipped on.
+ * Maintained, and meant to take over from via_history.js; history is the
+ * integration every browser gets today, because Firefox has no
+ * `window.navigation`. The contract is the one setupBrowserIntegrationViaHistory
+ * keeps, and tests/browser_integration_contract runs the same presses on both
+ * (a page asks for this one with `globalThis.__NAVI_BROWSER_INTEGRATION__ =
+ * "navigation"`, see browser_integration.js). Where the two still differ, as
+ * that test shows them, this file is the one to bring in line:
+ * - a press redirected to the address on display stacks an entry (history
+ *   writes the press writes in place and stacks nothing);
+ * - a press an ancestor cancels in the bubble phase does not navigate (history
+ *   routes it from the link's own listener);
+ * - useNavState's push, a navigate to the address on display with
+ *   `history: "auto"`, becomes a replace: no entry, and the back that should
+ *   close the popup leaves the page;
+ * - a press on a fragment of the page leaves navi's depth where it was, and
+ *   the back from it is not announced;
+ * - reload() routes without announcing it;
+ * - in WebKit, a back after two pushes leaves navi's depth one too deep;
+ * - the current anchor's rearm checks metaKey only (history: ctrl, shift and
+ *   alt too).
  *
  * What the API changes, and what it does not:
  *

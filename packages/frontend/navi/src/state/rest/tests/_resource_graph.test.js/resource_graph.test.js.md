@@ -6,6 +6,7 @@
 - [PUT updates a resource](2_put_updates_a_resource/2_put_updates_a_resource.md)
 - [PATCH updates a resource](3_patch_updates_a_resource/3_patch_updates_a_resource.md)
 - [DELETE removes a resource](4_delete_removes_a_resource/4_delete_removes_a_resource.md)
+- [reads of a relation are told apart from reads kept by value](5_reads_of_a_relation_are_told_apart_from_reads_kept_by_value/5_reads_of_a_relation_are_told_apart_from_reads_kept_by_value.md)
 
 ---
 

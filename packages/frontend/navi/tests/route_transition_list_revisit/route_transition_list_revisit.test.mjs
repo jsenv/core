@@ -24,13 +24,17 @@
  */
 
 // ten revisits per page, each waiting for a transition to have played
-// and a revalidation to have had time to ask
-"jsenv:allocate 90s";
+// and a revalidation to have had time to ask, in each engine
+"jsenv:allocate 240s";
 
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
-import { chromium } from "playwright";
+
+import {
+  configureBrowserSnapshots,
+  createEngineTests,
+  ENGINES,
+  startNaviDevServer,
+} from "../browser_harness.mjs";
 
 const clientDirectoryUrl = import.meta.resolve("./client/");
 // Every url the app routes to is served the app's html, the way a real server
@@ -43,7 +47,13 @@ const jsenvPluginRouteFallback = () => {
         return null;
       }
       const { pathname, search } = new URL(reference.url);
-      for (const name of ["plain", "animated", "plain_wm", "animated_wm"]) {
+      for (const name of [
+        "plain",
+        "animated",
+        "animated_default",
+        "plain_wm",
+        "animated_wm",
+      ]) {
         if (pathname.includes(`/client/${name}/item/`)) {
           return `${clientDirectoryUrl}${name}/${name}.html${search}`;
         }
@@ -53,18 +63,11 @@ const jsenvPluginRouteFallback = () => {
   };
 };
 
-const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  keepProcessAlive: false,
-  clientAutoreload: false,
-  http2: false,
-  port: 0,
-  plugins: [jsenvPluginPreact(), jsenvPluginRouteFallback()],
+const devServer = await startNaviDevServer({
+  plugins: [jsenvPluginRouteFallback()],
 });
-
-const browser = await chromium.launch({ headless: true });
+const pageUrlOf = (name, search = "") =>
+  `${devServer.origin}/tests/route_transition_list_revisit/client/${name}/${name}.html${search}`;
 
 // The movement is what the two mounts differ by, so a mount that played none
 // would make the comparison say nothing: the attribute the root wears for the
@@ -143,6 +146,7 @@ const OPEN_ROW = "[data-testid=item_open]";
 // and the screen still shows the other. A back from there returns from
 // nowhere — nothing unmounted, so nothing remounts.
 const openAndComeBack = async (
+  browser,
   name,
   { search = "", rushBack = false } = {},
 ) => {
@@ -153,10 +157,7 @@ const openAndComeBack = async (
   try {
     // The run's budget ("jsenv:allocate") is the limit: under a full test run
     // the first load, which cooks all of navi, outlasts Playwright's 30s.
-    await page.goto(
-      `${devServer.origin}/tests/route_transition_list_revisit/client/${name}/${name}.html${search}`,
-      { timeout: 0 },
-    );
+    await page.goto(pageUrlOf(name, search), { timeout: 0 });
     await page.waitForSelector(OPEN_ROW);
     await settle(page);
     const onFirstLoad = await readAsks(page);
@@ -219,21 +220,15 @@ const openAndComeBack = async (
   }
 };
 
-// The dev server fills its own cache directory while cooking the pages; those
-// hundreds of files are not what this test is about.
-snapshotTests.prefConfigure({
-  filesystemActions: {
-    "**/.jsenv/": "ignore",
-  },
-});
+configureBrowserSnapshots();
 
-// Each mount lives on its own page with its own counters, so all eight are
-// walked at once and the fixed waits they are made of overlap instead of
-// adding up. The outcome is held behind a function: a walk that fails does so
-// inside the test that reads it, not as a rejection racing ahead of every
-// test.
-const walk = (name, options) => {
-  const promise = openAndComeBack(name, options).then(
+// Each mount lives on its own page with its own counters, so the mounts of an
+// engine are walked at once and the fixed waits they are made of overlap
+// instead of adding up. The outcome is held behind a function: a walk that
+// fails does so inside the test that reads it, not as a rejection racing ahead
+// of every test.
+const walk = (browser, name, options) => {
+  const promise = openAndComeBack(browser, name, options).then(
     (value) => ({ value }),
     (error) => ({ error }),
   );
@@ -244,6 +239,122 @@ const walk = (name, options) => {
     }
     return value;
   };
+};
+
+// Turning a movement round inside it: back, forward, back (and once more
+// forward) while the push still plays — history keys pressed fast, a toggle
+// link pressed three times. The movement takes one hold on the document's
+// rendering at its first way back; every later turn must leave nothing taken,
+// or the app stops drawing for the rest of the session — the address says one
+// page, the screen keeps the other, and a press changes nothing. So the walk
+// ends on a press made after it: it must draw the page it opens.
+//
+// Each turn is asked when the previous one has landed in the history
+// (popstate), which is a few milliseconds: all of them inside the movement,
+// and none of them taken back by the next before the browser applied it.
+const turnRound = async (browser, name, turns) => {
+  const page = await browser.newPage();
+  await watchTransitions(page);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const movementOver = () =>
+    page.waitForFunction(
+      () =>
+        // eslint-disable-next-line no-undef
+        !document.documentElement.hasAttribute("data-navi-route-transition"),
+      null,
+      { timeout: 4000 },
+    );
+  const shows = async () => {
+    await movementOver().catch(() => {});
+    await page.waitForTimeout(100);
+    return page.evaluate(() => ({
+      // eslint-disable-next-line no-undef
+      path: window.location.pathname.replace(/^.*\/client\/[^/]+\//, "/"),
+      // eslint-disable-next-line no-undef
+      list: Boolean(document.querySelector("#list_page")),
+      // eslint-disable-next-line no-undef
+      item: Boolean(document.querySelector("#item_page")),
+      // eslint-disable-next-line no-undef
+      movement_on_root: document.documentElement.hasAttribute(
+        "data-navi-route-transition",
+      ),
+    }));
+  };
+  try {
+    await page.goto(pageUrlOf(name), { timeout: 0 });
+    await page.waitForSelector(OPEN_ROW);
+    await page.locator(OPEN_ROW).first().click();
+    await page.waitForFunction(() =>
+      // eslint-disable-next-line no-undef
+      document.documentElement.hasAttribute("data-navi-route-transition"),
+    );
+    const turnsInMovement = await page.evaluate(
+      (count) =>
+        new Promise((resolve) => {
+          /* eslint-disable no-undef */
+          let done = 0;
+          const inMovement = [];
+          const turn = () => {
+            if (done === count) {
+              window.removeEventListener("popstate", onPopstate);
+              resolve(inMovement);
+              return;
+            }
+            inMovement.push(
+              document.documentElement.hasAttribute(
+                "data-navi-route-transition",
+              ),
+            );
+            if (done % 2 === 0) {
+              history.back();
+            } else {
+              history.forward();
+            }
+            done++;
+          };
+          const onPopstate = () => {
+            turn();
+          };
+          window.addEventListener("popstate", onPopstate);
+          turn();
+          /* eslint-enable no-undef */
+        }),
+      turns,
+    );
+    const after_turns = await shows();
+    // a press after the turns, to the other page
+    const landsOnList = turns % 2 === 1;
+    let pressed_after;
+    if (landsOnList) {
+      pressed_after = await page
+        .locator(OPEN_ROW)
+        .first()
+        .click({ timeout: 2000 })
+        .then(() => page.waitForSelector("#item_page", { timeout: 4000 }))
+        .then(
+          () => "item page drawn",
+          () => "nothing drawn",
+        );
+    } else {
+      await page.goBack();
+      pressed_after = await page
+        .waitForSelector("#list_page", { timeout: 4000 })
+        .then(
+          () => "list page drawn",
+          () => "nothing drawn",
+        );
+    }
+    return {
+      turns_asked_while_the_push_played: turnsInMovement.every(Boolean),
+      after_turns,
+      pressed_after,
+      after_press: await shows(),
+      errors,
+    };
+  } finally {
+    await page.close();
+  }
 };
 
 // A rushed back races the single frame where rendering is held, and which side
@@ -289,72 +400,110 @@ const summarizeRushedRevisits = (walkResult) => {
   };
 };
 
+const { browserOf, closeBrowsers } = createEngineTests();
+// The walks of an engine, started once, by the first test that reads them.
+const walksByEngine = new Map();
+const walksOf = async (engine) => {
+  let walks = walksByEngine.get(engine);
+  if (!walks) {
+    // The rushed pair is not in this batch: a rushed back is a race against
+    // the single frame where rendering is held, and the load of seven pages
+    // cooking and walking at once is enough to push `goBack` past that frame.
+    // It runs in its own test, on a machine this batch has left quiet.
+    const browser = await browserOf(engine);
+    walks = {
+      plain: walk(browser, "plain"),
+      animated: walk(browser, "animated"),
+      animated_default: walk(browser, "animated_default"),
+      plain_held: walk(browser, "plain", { search: "?at=item_400" }),
+      animated_held: walk(browser, "animated", { search: "?at=item_400" }),
+      plain_wm: walk(browser, "plain_wm"),
+      animated_wm: walk(browser, "animated_wm"),
+    };
+    walksByEngine.set(engine, walks);
+  }
+  return walks;
+};
+
 try {
-  // The rushed pair is not in this batch: a rushed back is a race against the
-  // single frame where rendering is held, and the load of six pages cooking
-  // and walking at once is enough to push `goBack` past that frame. It runs
-  // in the last test, on a machine this batch has left quiet.
-  const walks = {
-    plain: walk("plain"),
-    animated: walk("animated"),
-    plain_held: walk("plain", { search: "?at=item_400" }),
-    animated_held: walk("animated", { search: "?at=item_400" }),
-    plain_wm: walk("plain_wm"),
-    animated_wm: walk("animated_wm"),
-  };
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("a list revisited ten times, with and without a movement on the pair", async () => {
-      return {
-        without_transition: await walks.plain(),
-        with_transition: await walks.animated(),
-      };
-    });
+    // Engine after engine, so the walks of one do not load the machine the
+    // other one's movements are timed on.
+    for (const engine of ENGINES) {
+      test(`a list revisited ten times, with and without a movement on the pair (${engine})`, async () => {
+        const walks = await walksOf(engine);
+        return {
+          without_transition: await walks.plain(),
+          with_transition: await walks.animated(),
+          // the default movement every navigation takes, ordered by history
+          with_default_transition: await walks.animated_default(),
+        };
+      });
 
-    // The same walk on a list held on a row the URL names: the window it comes
-    // back to is decided in the same frames as the re-read, which is where a
-    // hold and an ask can pass each other.
-    test("a list held on a row named by the url, revisited ten times", async () => {
-      return {
-        without_transition: await walks.plain_held(),
-        with_transition: await walks.animated_held(),
-      };
-    });
+      // The same walk on a list held on a row the URL names: the window it
+      // comes back to is decided in the same frames as the re-read, which is
+      // where a hold and an ask can pass each other.
+      test(`a list held on a row named by the url, revisited ten times (${engine})`, async () => {
+        const walks = await walksOf(engine);
+        return {
+          without_transition: await walks.plain_held(),
+          with_transition: await walks.animated_held(),
+        };
+      });
 
-    // The opposite decor, and the one a report came from: ONE row, the page as
-    // the scroller, the list opening on its last rows, and a count known from
-    // elsewhere before any row is drawn. Nothing is virtualized away here — no
-    // window ever has to move — which exercises the other half of the run.
-    test("a one-row list against the document scroller, revisited ten times", async () => {
-      return {
-        without_transition: await walks.plain_wm(),
-        with_transition: await walks.animated_wm(),
-      };
-    });
+      // The opposite decor, and the one a report came from: ONE row, the page
+      // as the scroller, the list opening on its last rows, and a count known
+      // from elsewhere before any row is drawn. Nothing is virtualized away
+      // here — no window ever has to move — which exercises the other half of
+      // the run.
+      test(`a one-row list against the document scroller, revisited ten times (${engine})`, async () => {
+        const walks = await walksOf(engine);
+        return {
+          without_transition: await walks.plain_wm(),
+          with_transition: await walks.animated_wm(),
+        };
+      });
 
-    // Back pressed the instant the URL changes, which no thumb can do and a
-    // test does by default: `waitForURL` resolves while the rendering is still
-    // held, so the page being left is still the page on screen. Under a
-    // movement the list is then never unmounted — `same_node_on_each_revisit`
-    // says so, it is the same element — and a list that never left has no
-    // revisit to make. Without a movement nothing is held, the page has
-    // already changed by then, and the walk is a real one.
-    //
-    // This is the whole of a bug report we received, and it is a test writing
-    // a navigation that cannot happen rather than anything navi does wrong.
-    // Waiting for the arriving page instead of for its address is the fix, and
-    // the three tests above are what that looks like.
-    test("back pressed before the page being opened has rendered", async () => {
-      const [without_transition, with_transition] = await Promise.all([
-        openAndComeBack("plain_wm", { rushBack: true }),
-        openAndComeBack("animated_wm", { rushBack: true }),
-      ]);
-      return {
-        without_transition: summarizeRushedRevisits(without_transition),
-        with_transition: summarizeRushedRevisits(with_transition),
-      };
-    });
+      // Back pressed the instant the URL changes, which no thumb can do and a
+      // test does by default: `waitForURL` resolves while the rendering is
+      // still held, so the page being left is still the page on screen. Under
+      // a movement the list is then never unmounted — `same_node_on_each_revisit`
+      // says so, it is the same element — and a list that never left has no
+      // revisit to make. Without a movement nothing is held, the page has
+      // already changed by then, and the walk is a real one.
+      //
+      // This is the whole of a bug report we received, and it is a test
+      // writing a navigation that cannot happen rather than anything navi
+      // does wrong. Waiting for the arriving page instead of for its address
+      // is the fix, and the three tests above are what that looks like.
+      test(`back pressed before the page being opened has rendered (${engine})`, async () => {
+        const browser = await browserOf(engine);
+        const [without_transition, with_transition] = await Promise.all([
+          openAndComeBack(browser, "plain_wm", { rushBack: true }),
+          openAndComeBack(browser, "animated_wm", { rushBack: true }),
+        ]);
+        return {
+          without_transition: summarizeRushedRevisits(without_transition),
+          with_transition: summarizeRushedRevisits(with_transition),
+        };
+      });
+
+      test(`a movement turned round inside it (${engine})`, async () => {
+        const browser = await browserOf(engine);
+        return {
+          "back, forward, back": {
+            on_the_pair: await turnRound(browser, "animated", 3),
+            default_movement: await turnRound(browser, "animated_default", 3),
+          },
+          "back, forward, back, forward": {
+            on_the_pair: await turnRound(browser, "animated", 4),
+            default_movement: await turnRound(browser, "animated_default", 4),
+          },
+        };
+      });
+    }
   });
 } finally {
-  await browser.close();
+  await closeBrowsers();
   devServer.stop();
 }

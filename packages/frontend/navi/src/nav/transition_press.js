@@ -157,7 +157,7 @@ const warnAboutPressablesThatMove = (areaElement) => {
     }
     warnOnce(
       "inside-area",
-      `A control asking to stay pressable during a route transition stands inside the pages (the element marked ${AREA_ATTRIBUTE}, or the box of a RouteTravel), and the pages are what moves: its rectangle says where it will BE, not where it is drawn, so a press aimed at what is on screen would be handed to whatever ends up under the finger. Only the furniture around the pages stands still for the length of a movement.`,
+      `A control asking to stay pressable during a route transition stands inside the pages (the element marked ${AREA_ATTRIBUTE}), and the pages are what moves: its rectangle says where it will BE, not where it is drawn, so a press aimed at what is on screen would be handed to whatever ends up under the finger. Only the furniture around the pages stands still for the length of a movement.`,
     );
     return;
   }

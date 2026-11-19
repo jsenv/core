@@ -64,6 +64,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {boolean|object} [params.serverTiming={ minDuration: 0.5 }] - server-timing response headers; `minDuration` (ms) drops entries that took less (0 when run by the test plan, so tests see every entry).
  * @param {boolean|object} [params.ribbon=true] - The "ribbon" overlay marking the page as non-production. As an object: `text` (defaults to `"DEV"`), `color` (background, defaults to `"orange"`), `textColor` (defaults to dark or light depending on `color`), `href` (turns the ribbon into a link; only then does it capture clicks), `target` (defaults to `"_blank"`), `position` (`"top-right"` (default), `"top-left"`, `"bottom-right"`, `"bottom-left"` draw a diagonal corner ribbon; `"top"`, `"bottom"` draw a full width band), `htmlInclude` (defaults to `"/**\/*.html"`).
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
+ * @param {boolean} [params.dependencyStatus=true] - The overlay saying a dependency installed in node_modules is not the version the package declares. It covers the page and takes its presses: a browser test that drives a page — and is not about that check — turns it off, or a version bump elsewhere in a workspace fails its clicks.
  * @param {boolean} [params.modulepreload=false] - Send `Link: <url>; rel=modulepreload` response headers listing the static import graph of a page (as far as the graph knows it). Off by default, to enable once the server runs on http/2 or http/3: over http/1.1 the preloads take the 6 connections per origin ahead of the render-blocking scripts, and pages get slower (the why, with measures, in jsenv_plugin_modulepreload.js).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
  * @param {object} [params.patches] - Text patches applied to files as they are served, as `{ file: [{ from, to }] }`. A key is a url pattern relative to sourceDirectoryUrl (`"./main.js"`) or a path inside a package (`"preact/dist/preact.mjs"`, found in node_modules the way node does). Each `from` must occur exactly once in the file, otherwise the file fails to load and says which patch did not apply.
@@ -125,6 +126,7 @@ export const startDevServer = async ({
   packageConditions,
   packageConditionsConfig,
   supervisor = true,
+  dependencyStatus = true,
   magicExtensions,
   magicDirectoryIndex,
   directoryListing,
@@ -341,11 +343,13 @@ export const startDevServer = async ({
       clientAutoreload,
       clientAutoreloadOnServerRestart,
       modulepreload,
-      dependencyStatus: {
-        dependencyProblemEventEmitter,
-        getDependencyProblems: dependencyWatcher.getProblems,
-        getDependencyWatchInfo: dependencyWatcher.getWatchInfo,
-      },
+      dependencyStatus: dependencyStatus
+        ? {
+            dependencyProblemEventEmitter,
+            getDependencyProblems: dependencyWatcher.getProblems,
+            getDependencyWatchInfo: dependencyWatcher.getWatchInfo,
+          }
+        : null,
       cacheControl,
       ribbon,
       dropToOpen,

@@ -10,10 +10,15 @@
 
 "jsenv:allocate 60s";
 
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
-import { chromium } from "playwright";
+
+import {
+  configureBrowserSnapshots,
+  createEngineTests,
+  openPage as openHarnessPage,
+  startNaviDevServer,
+  whenPageAtRest,
+} from "../browser_harness.mjs";
 
 const clientHtmlFileUrl = import.meta.resolve("./client/route_tabs.html");
 // Every url the app routes to is served the app's html, the way a real server
@@ -35,19 +40,10 @@ const jsenvPluginRouteFallback = () => {
   };
 };
 
-const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  keepProcessAlive: false,
-  clientAutoreload: false,
-  http2: false,
-  port: 0,
-  plugins: [jsenvPluginPreact(), jsenvPluginRouteFallback()],
+const devServer = await startNaviDevServer({
+  plugins: [jsenvPluginRouteFallback()],
 });
 const pageUrl = `${devServer.origin}/tests/route_tabs/client/route_tabs.html`;
-
-const browser = await chromium.launch({ headless: true });
 
 const readPage = (page) => {
   return page.evaluate(() => {
@@ -65,15 +61,12 @@ const readPage = (page) => {
     /* eslint-enable no-undef */
   });
 };
-// The action resolves in 50ms; leave it room to settle so what is snapshotted
-// is the state the tab ends up in, not a state on the way there.
-const settle = (page) => page.waitForTimeout(300);
+// What is snapshotted is the state the tab ends up in, once its action has
+// answered and the page painted it, not a state on the way there.
+const settle = (page) => whenPageAtRest(page);
 
-const openPage = async (url) => {
-  const page = await browser.newPage();
-  // The run's budget ("jsenv:allocate") is the limit: under a full test run the
-  // first load, which cooks all of navi, outlasts Playwright's 30s.
-  await page.goto(url, { timeout: 0 });
+const openPage = async (browser, url) => {
+  const { page } = await openHarnessPage(browser, url);
   await settle(page);
   return page;
 };
@@ -90,50 +83,54 @@ const clickTab = async (page, tabText) => {
   return readPage(page);
 };
 
-// The dev server fills its own cache directory while cooking the page; those
-// hundreds of files are not what this test is about.
-snapshotTests.prefConfigure({
-  filesystemActions: {
-    "**/.jsenv/": "ignore",
-  },
-});
+configureBrowserSnapshots();
+const { testInEngines, closeBrowsers } = createEngineTests();
 
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("tab switching on a single route", async () => {
-      const page = await openPage(pageUrl);
-      try {
-        return {
-          at_start: await readPage(page),
-          // a tab whose action runs
-          candidate: await clickTab(page, "candidate"),
-          // the tab whose action has nothing to do: the page must stay
-          done: await clickTab(page, "done"),
-          // and back, to check the selection follows both ways
-          to_come: await clickTab(page, "to_come"),
-          candidate_again: await clickTab(page, "candidate"),
-        };
-      } finally {
-        await page.close();
-      }
-    });
+    testInEngines(
+      test,
+      "tab switching on a single route",
+      async ({ browser }) => {
+        const page = await openPage(browser, pageUrl);
+        try {
+          return {
+            at_start: await readPage(page),
+            // a tab whose action runs
+            candidate: await clickTab(page, "candidate"),
+            // the tab whose action has nothing to do: the page must stay
+            done: await clickTab(page, "done"),
+            // and back, to check the selection follows both ways
+            to_come: await clickTab(page, "to_come"),
+            candidate_again: await clickTab(page, "candidate"),
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
 
-    test("direct load on a tab, then leaving and coming back", async () => {
-      const page = await openPage(
-        `${devServer.origin}/tests/route_tabs/client/games/me/done`,
-      );
-      try {
-        return {
-          direct_load_done: await readPage(page),
-          home: await clickTab(page, "home"),
-          back_to_done: await clickTab(page, "done"),
-        };
-      } finally {
-        await page.close();
-      }
-    });
+    testInEngines(
+      test,
+      "direct load on a tab, then leaving and coming back",
+      async ({ browser }) => {
+        const page = await openPage(
+          browser,
+          `${devServer.origin}/tests/route_tabs/client/games/me/done`,
+        );
+        try {
+          return {
+            direct_load_done: await readPage(page),
+            home: await clickTab(page, "home"),
+            back_to_done: await clickTab(page, "done"),
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
   });
 } finally {
-  await browser.close();
+  await closeBrowsers();
   devServer.stop();
 }

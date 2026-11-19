@@ -80,9 +80,10 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  * action_run_effect.js), resources (state/rest) and every control's `action`
  * prop. Its own unit tests cover almost none of that, so a change here is
  * verified against the consumers' nets: tests/route_tabs and
- * tests/route_transition_list_revisit (browser), src/state/rest/tests and
- * src/nav/tests (node) — src/action/*.test.js alone proves nothing about
- * routing or lists.
+ * tests/route_transition_list_revisit (route actions), tests/deferred_command_target
+ * (a control's `action`, a command deferred behind it) — browser — and
+ * src/state/rest/tests (resources, node). src/action/*.test.js alone proves
+ * nothing about routing or lists, and src/nav/tests never loads this file.
  */
 
 // Params waiting to settle exist only under a debounced binding; every other

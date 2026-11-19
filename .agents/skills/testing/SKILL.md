@@ -33,6 +33,18 @@ without it you test the stale `dist/` bundle instead of your source edits.
   whose snapshot was not rewritten and committed fails there, so run the test
   locally first and commit the diff you read.
 
+## Browser suites of navi
+
+`packages/frontend/navi/tests/browser_harness.mjs` is what every browser suite
+there starts from: the dev server without the dependency overlay
+(`dependencyStatus: false` — it takes every press when a workspace package is
+bumped before its dependents), each test once per engine, chromium and webkit,
+its snapshot named after it (`NAVI_TEST_ENGINES=chromium` narrows a run), the
+page's errors and unhandled rejections, and waits on what navi says
+(`whenPageAtRest`, which the page exposes as `window.whenPageAtRest`) rather
+than a sleep. A list says nothing when its asks are settled: a list suite still
+waits a time, and says so.
+
 ## Debug logging in tests
 
 - `DEBUG=true` output appears in the snapshot markdown files, not the terminal.

@@ -56,7 +56,7 @@ const StatsPage = () => {
 const Heading = ({ level = 2, id, children }) => {
   const Tag = `h${level}`;
   return (
-    <Tag id={id}>
+    <Tag>
       <Link anchor revealOnInteraction href={`#${id}`}>
         #
       </Link>

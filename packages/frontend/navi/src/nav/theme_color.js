@@ -44,7 +44,13 @@ export const pushHeadThemeColors = () => {
       queueRender();
     },
     remove: () => {
-      headEntries.splice(headEntries.indexOf(themeColors), 1);
+      // Removed twice (a cleanup run again) is removed once: indexOf -1 would
+      // take someone else's entry, the last one.
+      const index = headEntries.indexOf(themeColors);
+      if (index === -1) {
+        return;
+      }
+      headEntries.splice(index, 1);
       queueRender();
     },
   };
@@ -110,7 +116,11 @@ export const pushPopupThemeColor = ({
   popupLayers.push(layer);
   queueRender();
   return () => {
-    popupLayers.splice(popupLayers.indexOf(layer), 1);
+    const index = popupLayers.indexOf(layer);
+    if (index === -1) {
+      return;
+    }
+    popupLayers.splice(index, 1);
     queueRender();
   };
 };

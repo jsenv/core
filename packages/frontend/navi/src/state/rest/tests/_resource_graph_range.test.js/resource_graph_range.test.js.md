@@ -5,6 +5,10 @@
 - [GET_RANGE completes the range from what was asked](1_get_range_completes_the_range_from_what_was_asked/1_get_range_completes_the_range_from_what_was_asked.md)
 - [GET_RANGE binds params and passes the range signal](2_get_range_binds_params_and_passes_the_range_signal/2_get_range_binds_params_and_passes_the_range_signal.md)
 - [GET_RANGE refuses a result that is not a range](3_get_range_refuses_a_result_that_is_not_a_range/3_get_range_refuses_a_result_that_is_not_a_range.md)
+- [GET_RANGE under a network policy](4_get_range_under_a_network_policy/4_get_range_under_a_network_policy.md)
+- [GET_RANGE asked again when the collection moves during the read](5_get_range_asked_again_when_the_collection_moves_during_the_read/5_get_range_asked_again_when_the_collection_moves_during_the_read.md)
+- [GET_RANGE answer carries the params it was asked under](6_get_range_answer_carries_the_params_it_was_asked_under/6_get_range_answer_carries_the_params_it_was_asked_under.md)
+- [rows a list let go of leave the store](7_rows_a_list_let_go_of_leave_the_store/7_rows_a_list_let_go_of_leave_the_store.md)
 
 ---
 

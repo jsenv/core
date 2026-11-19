@@ -227,7 +227,7 @@ export const collectRoutePages = (children) => {
 /**
  * Whether the next container down is a row a hand scrolls: every page has a
  * place on it from the start, and the browser moves between them (see
- * RouteTravel's `nativeScroll`). Told to one container, not to the pages it holds.
+ * RouteTravel). Told to one container, not to the pages it holds.
  * False, or `{ renderNeighbour }`.
  */
 export const RouteRowContext = createContext(false);

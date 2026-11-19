@@ -173,7 +173,9 @@ useTransitionCover(bannerRef);
 
 `useTransitionCover` publishes the strip's height, so the pictures of a route
 movement are cut under it rather than sliding over it, and a page fitting the
-free band leaves room for it ([above](#a-page-that-fits-the-free-band)). An anchor's
+free band leaves room for it ([above](#a-page-that-fits-the-free-band)). Only
+outside the area the pages live in: a strip inside it is part of the pages and
+moves with them, so nothing is published for it, and dev warns. An anchor's
 `scroll-margin` adds only what `:root`'s `scroll-padding` does not hold already
 — the strip's own height, a few pixels of air — never the bar or the band.
 

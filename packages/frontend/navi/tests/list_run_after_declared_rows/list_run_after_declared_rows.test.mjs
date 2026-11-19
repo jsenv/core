@@ -16,33 +16,19 @@
  * three — where the run sits in the list is the list's business.
  */
 
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
-import { chromium } from "playwright";
 
-const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  keepProcessAlive: false,
-  clientAutoreload: false,
-  http2: false,
-  port: 0,
-  plugins: [jsenvPluginPreact()],
-});
+import {
+  configureBrowserSnapshots,
+  createEngineTests,
+  startNaviDevServer,
+} from "../browser_harness.mjs";
 
-const browser = await chromium.launch({ headless: true });
+const devServer = await startNaviDevServer();
+configureBrowserSnapshots();
+const { testInEngines, closeBrowsers } = createEngineTests();
 
-// The dev server fills its own cache directory while cooking the page; those
-// files are not what this test is about.
-snapshotTests.prefConfigure({
-  filesystemActions: {
-    "**/.jsenv/": "ignore",
-  },
-});
-
-const readLists = async () => {
+const readLists = async (browser) => {
   const page = await browser.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -57,7 +43,8 @@ const readLists = async () => {
     await page.waitForSelector("#alone li", { timeout: 0 });
     // A second ask, when there is one, goes out on the render that follows the
     // first answer: long enough after it that "not yet" and "never" cannot be
-    // read as the same thing.
+    // read as the same thing. A list says nothing when its asks are settled,
+    // so this one wait is a time.
     await page.waitForTimeout(500);
     const read = async (listId) => ({
       rows_drawn: await page
@@ -82,11 +69,13 @@ const readLists = async () => {
 
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("a run alone, after one declared row, after two", async () => {
-      return await readLists();
-    });
+    testInEngines(
+      test,
+      "a run alone, after one declared row, after two",
+      async ({ browser }) => readLists(browser),
+    );
   });
 } finally {
-  await browser.close();
+  await closeBrowsers();
   devServer.stop();
 }

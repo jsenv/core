@@ -263,13 +263,13 @@ export const routeAction = (
     }
     return paramsEffect ? paramsEffect() : true;
   };
+  // The params getter is not read off its route: the signals it reads are
+  // then nothing this action follows.
   const readParamsAsked = () => {
-    const matching = routeMatchingSignal.value;
-    const params = readParams();
-    if (!matching) {
+    if (!routeMatchingSignal.value) {
       return null;
     }
-    return params;
+    return readParams();
   };
   const rootAction = rootActionOf(action);
   const keptName = `route_action#${routeActionEntriesSignal.peek().length} ${rootAction.name}`;

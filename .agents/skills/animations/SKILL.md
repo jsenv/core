@@ -182,10 +182,9 @@ so it can only be called by whoever owns the change:
   it decides to leave it. _Reference: `beginTransition` in route_transition.jsx._
 - **Start it with the function `ensureDocumentStartViewTransition()` returns**
   (navi/src/transition): it installs the API where missing, runs the update
-  whatever happens, swallows the rejection a _skipped_ transition produces (two
-  updates close together are normal; the raw API turns the second into an
-  unhandled error), and releases a transition a finger is holding first (see
-  "A hold is not yours" below).
+  whatever happens, and swallows the rejection a _skipped_ transition produces
+  (two updates close together are normal; the raw API turns the second into an
+  unhandled error).
 - **Keep the page out of it**: `:root { view-transition-name: none }`. The UA
   names the root `root`, so by default the whole document is replaced by a
   picture for the duration — and a captured element stops rendering live and
@@ -462,6 +461,12 @@ tests a browser.
 
 ## A movement a finger drives, when only the state has the second picture
 
+navi has no such movement since 0.30.0: a hand moves a `RouteTravel` row, a
+scroller the browser plays, where every page it crosses is mounted (the
+[gestures skill](../gestures/SKILL.md)). What follows is what the view
+transition it replaced taught, kept for the day a movement has to be scrubbed
+again; nothing in navi exercises it.
+
 Some movements show two states at once while only one of them can exist in the
 DOM: a router mounts the page that matches the URL and nothing else, and a
 swipe between two of them needs both. The way out is not to mount what does not
@@ -546,8 +551,8 @@ Traps:
   the page cannot be touched again. Release at the single place that knows a
   transition is about to start — for navi, the function
   `ensureDocumentStartViewTransition()` returns, which every transition navi
-  starts goes through and which releases what `holdViewTransition` registered
-  (`start_view_transition_polyfill.js`).
+  starts goes through (`start_view_transition_polyfill.js`); it holds nothing
+  today.
 - **The pictures are not on screen from the call to `finished`**: the capture
   frame and the frame after the pictures drop are live
   ([view_transitions.md](../../../packages/frontend/navi/docs/view_transitions.md#two-frames-show-the-live-document)).
@@ -568,7 +573,8 @@ scroller (the [gestures skill](../gestures/SKILL.md))._
 | A wheel gliding to a row                             | rAF loop + spring           | The target moves while it plays; a fixed-duration animation cannot be re-aimed                                          |
 | Rows appearing/leaving/reordering                    | View transitions            | The change is a DOM mutation; nothing else animates a row that stops existing                                           |
 | A dragged clone                                      | `position: fixed` + popover | The top layer puts it over everything without bidding on z-index                                                        |
-| Two states only one of which can be mounted (routes) | Scrubbed view transition    | The picture of the "before" is the only place the second state exists                                                   |
+| Two states only one of which can be mounted (routes) | View transition             | The picture of the "before" is the only place the second state exists                                                   |
+| Pages a hand pushes along a row (RouteTravel)        | A row the browser scrolls   | Every page it crosses is mounted; a scroll is what a hand already moves (the gestures skill)                            |
 | A state flip (colour, opacity, frost)                | CSS transition              | Nothing to interrupt, nothing to await                                                                                  |
 
 ## First paint

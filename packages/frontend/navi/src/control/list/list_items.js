@@ -29,6 +29,11 @@ import { batch, signal } from "@preact/signals";
 // that it renders nothing (filtered out by a search), and the entries after it
 // may have been handed back unchanged. The first mounted entry of a scope is
 // kept as a signal each of them reads; when it leaves, they are rendered again.
+//
+// Net: src/control/list/tests/list_items.test.js (the groups' registry, in
+// Preact's unmount order), and every list suite in tests/ (list_*,
+// route_transition_list_revisit, whose _wm mounts draw groups). Nothing
+// exercises a selectable list, the keyboard or a search on a run.
 
 const UNGROUPED = Symbol("ungrouped");
 
@@ -433,6 +438,7 @@ export const createListItems = () => {
     // Asked by a filler drawn before there was an item size (see
     // VirtualFiller); set by the list, which owns the measure.
     measureFirstSize: () => {},
+    forgetSizeSamples: () => {},
     roomById,
     renderSkeleton: undefined,
     // The children a walk stands over, in order — said in one call, before any

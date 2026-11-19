@@ -303,9 +303,10 @@ below, though: the obvious ones hide the race.
 **Chrome**: drive DevTools' touch emulator, which goes through Chrome's
 gesture detector with the **mobile** configuration (8px slop):
 
-- a full browser: Chrome (`chromium.launch({ channel: "chrome" })`), headless
-  or not, or a headed Chromium (`headless: false`) — Playwright's default
-  headless shell delivers nothing through this path;
+- any of Playwright's Chromiums: its default headless shell, Chrome
+  (`chromium.launch({ channel: "chrome" })`) or a headed one. The shell
+  delivers the touches and flings like Chrome: a throw of 288px under the
+  finger travels about 800px more once lifted, in both;
 - on a CDP session, `Emulation.setEmitTouchEventsForMouse({ enabled: true,
 configuration: "mobile" })`, then `Input.dispatchMouseEvent` with
   `mousePressed` / `mouseMoved` / `mouseReleased` (`buttons: 1` while down). The
@@ -345,6 +346,8 @@ them exactly as on a phone:
   `pointerMove` with `origin: "viewport"`, a `pointerDown`, one `pointerMove`
   per frame (`duration: 16`), a `pointerUp` — then `DELETE /session/<id>/actions`,
   without which the `pointerup`, `touchend` and click are never delivered;
+- the Simulator's window must be on screen, in the current Space: otherwise
+  the actions are accepted and no touch arrives;
 - **a native scroll hangs the actions call**, and every call after it. Treat the
   hang as the observation — "Safari took the touch" — put a timeout on every
   call, then recover with `xcrun simctl terminate <udid> com.apple.mobilesafari`

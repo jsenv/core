@@ -23,31 +23,19 @@
  * the first picture is painted, reaches past the first page by a few items.
  */
 
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
-import { chromium } from "playwright";
 
-const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  keepProcessAlive: false,
-  clientAutoreload: false,
-  http2: false,
-  port: 0,
-  plugins: [jsenvPluginPreact()],
-});
+import {
+  configureBrowserSnapshots,
+  createEngineTests,
+  startNaviDevServer,
+} from "../browser_harness.mjs";
 
-const browser = await chromium.launch({ headless: true });
-
-// The dev server fills its own cache directory while cooking the page; those
-// files are not what this test is about.
-snapshotTests.prefConfigure({
-  filesystemActions: {
-    "**/.jsenv/": "ignore",
-  },
-});
+const devServer = await startNaviDevServer();
+configureBrowserSnapshots();
+const { testInEngines, closeBrowsers } = createEngineTests();
+const pageUrlOf = (query) =>
+  `${devServer.origin}/tests/list_reload_held_on_an_item/client/main.html?${query}`;
 
 const SETUPS = {
   knowing_nothing: "",
@@ -81,18 +69,18 @@ const evaluateUnlessFrozen = (page, fn) =>
     new Promise((resolve) => setTimeout(() => resolve("frozen"), 4000)),
   ]);
 
-const openPage = async (query) => {
+const openPage = async (browser, query, { initScript } = {}) => {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 900 },
   });
+  if (initScript) {
+    await page.addInitScript(initScript.fn, initScript.arg);
+  }
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   // The run's budget ("jsenv:allocate") is the limit: under a full test run the
   // first load, which cooks all of navi, outlasts Playwright's 30s.
-  await page.goto(
-    `${devServer.origin}/tests/list_reload_held_on_an_item/client/main.html?${query}`,
-    { timeout: 0 },
-  );
+  await page.goto(pageUrlOf(query), { timeout: 0 });
   await page.waitForSelector("[navi-list-item-real]");
   await page.waitForTimeout(500);
   return { page, errors };
@@ -123,8 +111,8 @@ const scrollTo = async (page, where) => {
   await page.waitForTimeout(1000);
 };
 
-const leaveThenReload = async (query, where) => {
-  const { page, errors } = await openPage(query);
+const leaveThenReload = async (browser, query, where) => {
+  const { page, errors } = await openPage(browser, query);
   try {
     await scrollTo(page, where);
     const leftOn = await page.evaluate(readPlace);
@@ -141,18 +129,90 @@ const leaveThenReload = async (query, where) => {
   }
 };
 
-const reloadEverySetup = async (where) => {
+const reloadEverySetup = async (browser, where) => {
   const result = {};
   for (const [name, query] of Object.entries(SETUPS)) {
-    result[name] = await leaveThenReload(query, where);
+    result[name] = await leaveThenReload(browser, query, where);
   }
   return result;
 };
 
-const openOn = async (index) => {
+// A tab the system discards in the background never fires pagehide: what it
+// keeps of its positions is written when it goes to the background, and the
+// document opened when the reader comes back is a return (wasDiscarded). The
+// discarded tab is played as a new document given the session storage the
+// first one left, and `document.wasDiscarded`.
+/* eslint-disable no-undef */
+const readKeptPositions = () => {
+  const stored = sessionStorage.getItem("navi_scroll_positions");
+  if (!stored) {
+    return "nothing kept";
+  }
+  const { scrollers } = JSON.parse(stored);
+  const kept = Object.values(scrollers || {})
+    .map((byName) => byName.author_list)
+    .filter(Boolean)
+    .map((position) => position.id);
+  return kept.length ? kept.join(", ") : "nothing kept";
+};
+const goToTheBackground = () => {
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    get: () => "hidden",
+  });
+  document.dispatchEvent(new Event("visibilitychange"));
+};
+const comeBackDiscarded = (storage) => {
+  for (const [key, value] of Object.entries(storage)) {
+    sessionStorage.setItem(key, value);
+  }
+  Object.defineProperty(Document.prototype, "wasDiscarded", {
+    configurable: true,
+    get: () => true,
+  });
+};
+/* eslint-enable no-undef */
+const discardInTheBackground = async (browser, where) => {
+  const { page, errors } = await openPage(browser, SETUPS.knowing_nothing);
+  let storage;
+  let result;
+  try {
+    await scrollTo(page, where);
+    const leftOn = await page.evaluate(readPlace);
+    const keptBeforeBackground = await page.evaluate(readKeptPositions);
+    await page.evaluate(goToTheBackground);
+    const keptInTheBackground = await page.evaluate(readKeptPositions);
+    storage = await page.evaluate(() => ({ ...sessionStorage }));
+    result = {
+      left_on: leftOn,
+      kept_before_the_background: keptBeforeBackground,
+      kept_in_the_background: keptInTheBackground,
+    };
+  } finally {
+    await page.close({ runBeforeUnload: false });
+  }
+  const comeBack = await openPage(browser, SETUPS.knowing_nothing, {
+    initScript: { fn: comeBackDiscarded, arg: storage },
+  });
+  try {
+    await comeBack.page.waitForTimeout(1500);
+    return {
+      ...result,
+      back_on: await comeBack.page.evaluate(readPlace),
+      errors: [...errors, ...comeBack.errors],
+    };
+  } finally {
+    await comeBack.page.close();
+  }
+};
+
+const openOn = async (browser, index) => {
   const result = {};
   for (const name of ["knowing_nothing", "knowing_its_count"]) {
-    const { page, errors } = await openPage(`${SETUPS[name]}&open=${index}`);
+    const { page, errors } = await openPage(
+      browser,
+      `${SETUPS[name]}&open=${index}`,
+    );
     try {
       await page.waitForTimeout(1000);
       result[name] = {
@@ -169,11 +229,22 @@ const openOn = async (index) => {
 
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("left at the end, reloaded", () => reloadEverySetup("end"));
-    test("left in the middle, reloaded", () => reloadEverySetup(9000));
-    test("opened on an item never drawn", () => openOn(300));
+    testInEngines(test, "left at the end, reloaded", ({ browser }) =>
+      reloadEverySetup(browser, "end"),
+    );
+    testInEngines(test, "left in the middle, reloaded", ({ browser }) =>
+      reloadEverySetup(browser, 9000),
+    );
+    testInEngines(test, "opened on an item never drawn", ({ browser }) =>
+      openOn(browser, 300),
+    );
+    testInEngines(
+      test,
+      "left in the middle, the tab discarded in the background",
+      ({ browser }) => discardInTheBackground(browser, 9000),
+    );
   });
 } finally {
-  await browser.close();
+  await closeBrowsers();
   devServer.stop();
 }

@@ -1033,8 +1033,8 @@ const css = /* css */ `
      either, and the change simply happens.
 
      Named for a change of the list's own, and for that alone: while the PAGES
-     are the ones moving — a route transition, a route travel — the list is part
-     of what travels, and a picture of its own is precisely what does not
+     are the ones moving — a route transition (a RouteTravel row is a scroll
+     and photographs nothing) — the list is part of what travels, and a picture of its own is precisely what does not
      travel. A page is carried by its own picture; anything named inside it is
      lifted out of that picture into a group of its own, which stays where it
      was captured while the page slides away under it. So the names are dropped
@@ -1098,17 +1098,22 @@ const parseRenderBudget = (value, fallback) => {
   if (value === undefined) {
     return fallback;
   }
+  let budget = null;
   if (typeof value === "number") {
-    return { value, unit: "item" };
-  }
-  if (typeof value === "string") {
+    budget = { value, unit: "item" };
+  } else if (typeof value === "string") {
     const match = RENDER_BUDGET_PATTERN.exec(value.trim());
     if (match) {
-      return { value: Number(match[1]), unit: match[2] || "item" };
+      budget = { value: Number(match[1]), unit: match[2] || "item" };
     }
   }
+  // A window of nothing draws nothing to measure, so it never moves: the list
+  // would stay blank for good.
+  if (budget && budget.value > 0) {
+    return budget;
+  }
   console.warn(
-    `List: renderBudget ${JSON.stringify(value)} is not understood; it takes a number of items or a size: "100item", "300px", "150%" (of the box that scrolls the list).`,
+    `List: renderBudget ${JSON.stringify(value)} is not understood; it takes a number of items or a size greater than 0: "100item", "300px", "150%" (of the box that scrolls the list).`,
   );
   return fallback;
 };
@@ -2068,8 +2073,11 @@ const useListScrollSync = ({
       return;
     }
     captureAnchor();
-    // What was measured is the room of an item alone on its line.
+    // What was measured is the room of an item alone on its line, and the
+    // size estimated from the lines drawn: lines of another length hold
+    // another room.
     listItems.roomById.clear();
+    listItems.forgetSizeSamples();
     itemsPerLineRef.current = itemsPerLineNow;
     setItemsPerLine(itemsPerLineNow);
   };
@@ -2711,9 +2719,13 @@ const useListScrollSync = ({
       // search just started -> save the currently scrolled item id to restore later
       const currentScroll = currentScrollRef.current;
       savedScrollRef.current = currentScroll;
-      debugScroll(
-        `Saving scroll: { top: ${currentScroll.top}, renderWindowStart: ${currentScroll.renderWindow.start}, renderWindowEnd: ${currentScroll.renderWindow.end} }`,
-      );
+      // A list never shown nor scrolled (inside a closed dialog) has no scroll
+      // noted: nothing to put back when the search is emptied.
+      if (currentScroll) {
+        debugScroll(
+          `Saving scroll: { top: ${currentScroll.top}, renderWindowStart: ${currentScroll.renderWindow.start}, renderWindowEnd: ${currentScroll.renderWindow.end} }`,
+        );
+      }
     }
     // -> scroll to the top
     scrollToItem(visibleItems[0], {
@@ -2954,14 +2966,14 @@ const useListScrollSync = ({
       return;
     }
     // Asked to glide, the list glides whatever scroll-behavior says — and
-    // never for someone who asked for less motion.
-    if (
-      place.smooth &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
+    // never for someone who asked for less motion, whatever scroll-behavior
+    // says either.
+    if (place.smooth) {
       scrollerEl.scrollTo({
         ...axis.scrollToOptions(to),
-        behavior: "smooth",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
       });
       return;
     }
@@ -4674,7 +4686,8 @@ const getScrollerAttribute = (scroller) => {
 };
 
 // A radius asked for explicitly is kept: a borderless list painting a
-// background of its own may want that surface rounded, and clipped to it.
+// background of its own may want that surface rounded (the items are not
+// clipped to it, see the frame's CSS).
 const isBorderless = ({ border, borderWidth, borderRadius }) => {
   if (borderRadius !== undefined) {
     return false;
@@ -5060,7 +5073,12 @@ const getListVisibleRange = (viewportRect, listRect, axis) => {
 // the scroll axis. A binary search over their boxes: the items stand in
 // document order along that axis, so their far edges only grow.
 const findItemsFrom = (listEl, from, axis) => {
-  const itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
+  // The items of a list nested in one of these wear the same attribute: they
+  // are not this list's, and their boxes are not in its order.
+  const itemEls = Array.prototype.filter.call(
+    listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR),
+    (itemEl) => isOwnItem(itemEl, listEl),
+  );
   let low = 0;
   let high = itemEls.length;
   while (low < high) {
@@ -5896,6 +5914,11 @@ const useVirtualItemSizeSignal = (
   // list until there is one, and first by a filler drawn without it, whose
   // layout effect runs ahead of the list's: those read the list's geometry,
   // which is then already the one holding the room of the items left out.
+  // Lines of another length (see updateItemsPerLine): what was sampled no
+  // longer says anything about the rooms to come.
+  listItems.forgetSizeSamples = () => {
+    samplesRef.current = { sum: 0, count: 0, roomById: new Map() };
+  };
   listItems.measureFirstSize = () => {
     if (!firstSizeWanted()) {
       return;
@@ -6336,17 +6359,22 @@ const ListItemStandIn = (props) => {
     </Box>
   );
 };
+let listItemIdWarned = false;
 const ListItemUI = (props) => {
-  // A stable id/index only matters when the item's identity must survive
-  // reordering — i.e. it is selectable (selected/pointed state) or participates
-  // in a matching system (search reorders items). A purely presentational,
-  // static list doesn't need either, so don't nag about them there.
-  const identityMatters =
-    props.selectable || Boolean(props.matchInfo) || props.value !== undefined;
-  if (identityMatters && props.id === undefined) {
-    console.warn(
-      "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
-    );
+  // A stable id only matters when the item's identity must survive reordering:
+  // it carries a value or takes part in a search, which reorders items. A
+  // purely presentational, static list needs none, so it is not nagged. (A
+  // selectable item has one already: ListItemSelectable gives its own.) Said
+  // once, in dev.
+  if (import.meta.dev && !listItemIdWarned && props.id === undefined) {
+    const identityMatters =
+      Boolean(props.matchInfo) || props.value !== undefined;
+    if (identityMatters) {
+      listItemIdWarned = true;
+      console.warn(
+        "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
+      );
+    }
   }
   const idDefault = useGeneratedId();
   props.id = props.id || idDefault;
@@ -6775,7 +6803,9 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   `false` for an item that is only there to be read, and nothing otherwise.
  * @param {any} [props.value]
  *   The JS value emitted by the list's action/uiAction when this item is
- *   selected. Can be any type (string, number, object…).
+ *   selected. Can be any type (string, number, object…), compared by `===`:
+ *   an object value must be the same object at every render — a store item,
+ *   not a copy rebuilt from the JSON.
  * @param {boolean} [props.selected]
  *   Controlled selected state. Pass `selected === value` (single) or
  *   `selected.includes(value)` (multiple) from parent state. `defaultSelected`
@@ -6822,8 +6852,8 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  * @param {boolean} [props.filtered]
  *   Excluded from the visible count and removed from the DOM entirely.
  * @param {boolean} [props.hidden]
- *   Excluded from the visible count (no virtual scroll height) but kept in the
- *   DOM, invisible and inert — layout is preserved.
+ *   Excluded from the visible count but kept in the DOM, invisible and inert:
+ *   it keeps its place and is measured like any item — layout is preserved.
  * @param {{match: boolean, matchScore?: number, matchRanges?: Array<[number, number]>}} [props.matchInfo]
  *   Participation in a matching system (search, filter…): the object
  *   useSearchText's getItemMatchInfo(item) returns, or any object shaped the
@@ -6947,7 +6977,8 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  * array is another collection; with `itemsAction`, another reader is — a
  * reader bound to other params (`bindParams({ q })` with another `q`). A param
  * held in a signal changes what the reader reads without changing the reader:
- * give the run a `key` that follows it.
+ * give the run a `key` that follows it. So does a plain function given as
+ * `itemsAction`: another function is not another collection.
  *
  * An item says what it is where it is drawn: `renderItem` returns a
  * `<List.Item>` carrying its own props (`selectable`, `value`, `selected`…),
@@ -7418,9 +7449,11 @@ const useRunItems = (
       let found = null;
       store.eachHeld((item, rank) => {
         const itemIndex = indexOfRank(rank);
-        if (found === null && String(idOf(item, itemIndex)) === name) {
+        if (String(idOf(item, itemIndex)) === name) {
           found = itemIndex;
+          return true; // found: the rest is not visited
         }
+        return false;
       });
       return found;
     },
@@ -8202,7 +8235,7 @@ const useItemStore = ({
     ) {
       warnedRef.current = true;
       console.warn(
-        `<List.Items itemsAction> received a plain function, not a range reader: this list starts from zero on every mount (no composition kept), hears nothing when a write moves the collection (no invalidation), and keeps everything it loads (no memory budget). Pass RESOURCE.GET_RANGE.bindParams(...) itself; a collection held in memory goes through items={users}. To be told what the run is doing, use onRequestStateChange rather than wrapping it.`,
+        `<List.Items itemsAction> received a plain function, not a range reader: this list starts from zero on every mount (no composition kept), hears nothing when a write moves the collection (no invalidation), and keeps everything it loads (no memory budget). Another function is not another collection either: the run keeps the items it holds, so give <List.Items> a key that follows what the function reads. Pass RESOURCE.GET_RANGE.bindParams(...) itself; a collection held in memory goes through items={users}. To be told what the run is doing, use onRequestStateChange rather than wrapping it.`,
       );
     }
   }
@@ -8704,9 +8737,12 @@ const useItemStore = ({
       }
     },
     getItem: (index) => pages.byIndex.get(index),
+    // Stops at the first visit answering true.
     eachHeld: (visit) => {
       for (const [index, item] of pages.byIndex) {
-        visit(item, index);
+        if (visit(item, index) === true) {
+          return;
+        }
       }
     },
     holds: (index) => pages.byIndex.has(index),
@@ -9011,6 +9047,22 @@ const useItemStore = ({
         request.revalidating = revalidating;
         debugAsk("sent");
         const done = (page) => {
+          // A slice that does not say where it lands lands where it was asked
+          // for, as the resource's reader reads it (see readRange); one asked
+          // for from the end cannot say so by itself: a failure of the source.
+          if (
+            page &&
+            !Array.isArray(page) &&
+            page.start === undefined &&
+            start < 0
+          ) {
+            failed(
+              new TypeError(
+                `itemsAction must say where the range lands (start), it was asked for start=${start}.`,
+              ),
+            );
+            return;
+          }
           const current = generation === request.generation;
           if (current) {
             request.busy = false;
@@ -9030,7 +9082,7 @@ const useItemStore = ({
             return;
           }
           const pageItems = Array.isArray(page) ? page : page.items;
-          const pageStart = Array.isArray(page) ? 0 : (page.start ?? 0);
+          const pageStart = Array.isArray(page) ? 0 : (page.start ?? start);
           const pageCount = Array.isArray(page)
             ? pageItems.length
             : (page.count ?? pageStart + pageItems.length);
@@ -9135,6 +9187,9 @@ const useItemStore = ({
  *   hiddenWhileEmpty — the group leaves the flow (`display: none`) while it
  *                      holds no real item — a search that emptied it, items not
  *                      arrived yet
+ *   labelSticky      — `false` keeps the label in the flow: it leaves with
+ *                      what stands above the group (default `true`, it sticks
+ *                      while its group is on screen)
  *   continued        — set by a run of items, not by callers: the group began
  *                      before the first item drawn ("above" the render window,
  *                      or in a "hole" of items not held), and what stands
@@ -9352,9 +9407,9 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   to a line goes in `columns`.
  * @param {string} [props.overflow]
  *   `"visible"` lets the items paint outside the list — a check in an item's
- *   corner, a badge crossing the edge. A list clips by default, which is what
- *   its rounded corners and its scroll box need, and the two cannot both be
- *   true: asking for visible gives up the clipping, corners included.
+ *   corner, a badge crossing the edge. A list's scroll box clips by default,
+ *   square (the frame's rounded corners clip nothing), and scrolling needs
+ *   that clip: asking for visible gives it up.
  * @param {boolean|import("preact").ComponentChildren|((gapIndex: number) => any)} [props.separator]
  *   What is drawn between two items: `true` for the default line, a node, or a
  *   function given the gap's index (0 for the first one).
@@ -9385,8 +9440,9 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   there is nothing to show at all: `"skeleton"` renders
  *   `loadingSkeletonCount` placeholder items (look:
  *   `renderSkeleton`), `"loader"` a single centered spinner, and
- *   anything else is rendered as-is in an item of its own. A falsy value
- *   displays nothing. A list read a slice at a time has no use for this — see
+ *   anything else is rendered as-is in an item of its own. A falsy value draws
+ *   no placeholder: the list is taken as empty while it loads, and shows its
+ *   empty `fallback`, as `loadingSkeletonCount={0}` does. A list read a slice at a time has no use for this — see
  *   `<List.Items count>`, whose not-yet-loaded items are drawn as skeletons in
  *   place, one per item, virtualized like the rest.
  * @param {number} [props.loadingSkeletonCount=3]
@@ -9526,11 +9582,13 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   warns when nothing scrolls it at all.
  *
  *   `"parent"` finds that ancestor by measuring: the nearest one whose content
- *   actually overflows it, the page if none does. Declaring `overflow` is not
- *   enough to be picked (a box with `overflow-x: auto` that grows with its
- *   content computes `overflow-y: auto` without ever scrolling), and the
- *   answer is taken again as the geometry moves, so an ancestor that starts to
- *   scroll once it fills up is picked up then. When that is still not the box
+ *   actually overflows it. Declaring `overflow` is not enough to be picked over
+ *   it (a box with `overflow-x: auto` that grows with its content computes
+ *   `overflow-y: auto` without ever scrolling); while no ancestor overflows
+ *   yet, the nearest one declaring an overflow stands in — the box that will
+ *   scroll once it fills up — and the page when there is none. The answer is
+ *   taken again as the geometry moves, so an ancestor that starts to scroll
+ *   once it fills up is picked up then. When that is still not the box
  *   you mean, say so: `"document"`, or the element itself (a ref works) —
  *   nothing is guessed then.
  * @param {boolean} [props.hoverWhileScrolling=false]

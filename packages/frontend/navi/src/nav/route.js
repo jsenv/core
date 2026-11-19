@@ -57,6 +57,8 @@ const ROUTE_OPTIONS = new Set([
  *   routes declaring it, the most specific one, whatever the order given to
  *   setupRoutes. It is said here rather than as a dynamic default on the
  *   signal because a signal and the route declaring it cannot name each other.
+ *   Declare that state `weak`, or a link to one page built on the other
+ *   carries the value it holds there (`/alerts/create?step=recap`).
  *   Writing one changes that param alone: the other pairs of the address,
  *   another route's or none's (`utm_source`), stay as they were written.
  *   Writing one AMENDS the history entry one is on — a param qualifies the
@@ -651,8 +653,9 @@ let droppingRouteSet = null;
  *
  * Asked at the door of every navigation, before the url is written anywhere —
  * an address that only sends elsewhere must not become a page, an entry in the
- * history, or a route anything can see matching. Answered without reading a
- * single signal: the url alone says it.
+ * history, or a route anything can see matching. Answered from the url, plus
+ * what the target's own url carries: its non-weak states, as a link to it
+ * would.
  *
  * The chain is followed here rather than by letting each redirection navigate
  * in turn, so one navigation happens and the addresses in between leave no
@@ -1426,7 +1429,9 @@ export const getParamsCacheKey = (params) => {
     ) {
       return null;
     }
-    key += `${name}=${type}:${value}\n`;
+    // JSON for the value: a string holding a line break cannot pass for two
+    // entries.
+    key += `${name}=${type}:${JSON.stringify(value)}\n`;
   }
   return key;
 };

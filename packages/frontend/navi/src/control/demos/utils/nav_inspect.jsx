@@ -29,12 +29,7 @@ const navEntriesSignal = signal([
 
 const formatState = (state) => {
   if (!state) return null;
-  const display = { ...state };
-  // jsenv_visited_urls is an internal implementation detail — collapse it.
-  if (Array.isArray(display.jsenv_visited_urls)) {
-    display.jsenv_visited_urls = `[${display.jsenv_visited_urls.length} url(s)]`;
-  }
-  return JSON.stringify(display, null, 2);
+  return JSON.stringify(state, null, 2);
 };
 
 const baseDir = window.location.pathname.replace(/\/[^/]*$/, "/");

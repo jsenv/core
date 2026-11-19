@@ -26,33 +26,19 @@
  * - Nothing reaches the window, and no dev warning fires, in any of it.
  */
 
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { snapshotTests } from "@jsenv/snapshot";
-import { chromium } from "playwright";
 
-const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
-  sourceDirectoryUrl: import.meta.resolve("../../"),
-  keepProcessAlive: false,
-  clientAutoreload: false,
-  http2: false,
-  port: 0,
-  plugins: [jsenvPluginPreact()],
-});
+import {
+  configureBrowserSnapshots,
+  createEngineTests,
+  startNaviDevServer,
+} from "../browser_harness.mjs";
 
-const browser = await chromium.launch({ headless: true });
+const devServer = await startNaviDevServer();
+configureBrowserSnapshots();
+const { testInEngines, closeBrowsers } = createEngineTests();
 
-// The dev server fills its own cache directory while cooking the page; those
-// files are not what this test is about.
-snapshotTests.prefConfigure({
-  filesystemActions: {
-    "**/.jsenv/": "ignore",
-  },
-});
-
-const open = async (search) => {
+const open = async (browser, search) => {
   // A phone's screen, where 14 rows of 58px stand 32px short of it.
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const warnings = [];
@@ -75,8 +61,8 @@ const open = async (search) => {
 // resizes they deliver, the commits those cause.
 const settle = (page) => page.evaluate(() => window.waitFrames(10)); // eslint-disable-line no-undef
 
-const readMount = async (search) => {
-  const { page, warnings } = await open(search);
+const readMount = async (browser, search) => {
+  const { page, warnings } = await open(browser, search);
   try {
     return {
       first_commit: await page.evaluate(() => window.firstCommit), // eslint-disable-line no-undef
@@ -93,51 +79,57 @@ const readMount = async (search) => {
 
 try {
   await snapshotTests(import.meta.url, ({ test }) => {
-    test("a long list scrolling the page", async () => {
-      return await readMount("?case=long");
-    });
+    testInEngines(test, "a long list scrolling the page", ({ browser }) =>
+      readMount(browser, "?case=long"),
+    );
 
     // Where the report's list was when it raised the error: coming back to a
     // row far down, the page scrolled thousands of pixels.
-    test("the same list opening on a row far down", async () => {
-      return await readMount("?case=long&open=member_80");
-    });
+    testInEngines(
+      test,
+      "the same list opening on a row far down",
+      ({ browser }) => readMount(browser, "?case=long&open=member_80"),
+    );
 
-    test("an empty list", async () => {
-      return await readMount("?case=empty");
-    });
+    testInEngines(test, "an empty list", ({ browser }) =>
+      readMount(browser, "?case=empty"),
+    );
 
-    test("a list outgrowing the screen, then fitting it again", async () => {
-      const { page, warnings } = await open("?case=grow");
-      try {
-        const readPage = () =>
-          page.evaluate(() => ({
-            /* eslint-disable no-undef */
-            list_height: window.readList().height,
-            page_scrolls:
-              document.scrollingElement.scrollHeight > window.innerHeight,
-            /* eslint-enable no-undef */
-          }));
-        const fitting = await readPage();
-        await page.evaluate(() => window.grow(1200)); // eslint-disable-line no-undef
-        await settle(page);
-        const outgrown = await readPage();
-        await page.evaluate(() => window.grow(0)); // eslint-disable-line no-undef
-        await settle(page);
-        const fittingAgain = await readPage();
-        return {
-          fitting,
-          outgrown,
-          fitting_again: fittingAgain,
-          errors: await page.evaluate(() => window.errors), // eslint-disable-line no-undef
-          warnings,
-        };
-      } finally {
-        await page.close();
-      }
-    });
+    testInEngines(
+      test,
+      "a list outgrowing the screen, then fitting it again",
+      async ({ browser }) => {
+        const { page, warnings } = await open(browser, "?case=grow");
+        try {
+          const readPage = () =>
+            page.evaluate(() => ({
+              /* eslint-disable no-undef */
+              list_height: window.readList().height,
+              page_scrolls:
+                document.scrollingElement.scrollHeight > window.innerHeight,
+              /* eslint-enable no-undef */
+            }));
+          const fitting = await readPage();
+          await page.evaluate(() => window.grow(1200)); // eslint-disable-line no-undef
+          await settle(page);
+          const outgrown = await readPage();
+          await page.evaluate(() => window.grow(0)); // eslint-disable-line no-undef
+          await settle(page);
+          const fittingAgain = await readPage();
+          return {
+            fitting,
+            outgrown,
+            fitting_again: fittingAgain,
+            errors: await page.evaluate(() => window.errors), // eslint-disable-line no-undef
+            warnings,
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
   });
 } finally {
-  await browser.close();
+  await closeBrowsers();
   devServer.stop();
 }

@@ -131,7 +131,7 @@ So a `current`, a `selected` per row, or a `value` computed from what the picker
 holds is not "being explicit": it is a second answer to a question already
 answered, and the one that goes stale — the picker's value moves on a cancel, a
 `--navi-update`, a signal written elsewhere, and none of those pass through that
-prop. The list marks the selected row itself (`aria-selected`); anything extra
+prop. The list marks the selected item itself (`data-selected`); anything extra
 hangs off that marker in CSS.
 
 ## A button that proposes a value is `--navi-update`
@@ -490,8 +490,8 @@ choice moves to another row but never goes away.
 </List>
 ```
 
-An answer that is the others together ("both") is a row of its own, not two
-rows held at once; what it lights in the others hangs off `aria-selected` in
+An answer that is the others together ("both") is an item of its own, not two
+items held at once; what it lights in the others hangs off `data-selected` in
 CSS.
 
 ## Clearing, resetting, and what is shown meanwhile

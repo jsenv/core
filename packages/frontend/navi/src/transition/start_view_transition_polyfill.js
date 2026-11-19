@@ -17,7 +17,9 @@
  *   for something that is not an error at all — two updates close together is
  *   normal in a list that is being edited, and a phone locks its screen.
  *
- * navi calls it from wherever it animates a DOM change itself (see list.jsx),
+ * navi calls it wherever it plays a view transition — a route transition, a
+ * popup lifted out of its anchor, a list's items, a dragged item put back
+ * (route_transition.jsx, popup_lift.js, list.jsx, interaction_drag.js) —
  * which is why an application using navi finds the API already there.
  *
  *   const startViewTransition = ensureDocumentStartViewTransition();

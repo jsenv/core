@@ -153,4 +153,15 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ["민수", "김민수"],
     ]);
   });
+
+  test("letters written as two", () => {
+    // œ, æ and ß decompose to nothing: typed as two letters, they are found,
+    // and the range covers the one letter they are written with.
+    return displayTable([
+      ["coeur", "Cœur de lion"],
+      ["laetitia", "Lætitia Martin"],
+      ["strasse", "Hauptstraße"],
+      ["cœur", "Coeur de lion"],
+    ]);
+  });
 });

@@ -42,10 +42,11 @@ it was captured, fading, while the pages slide away under it — right for a mor
 between the two pages, wrong for anything that belongs to its page. navi's own
 components drop their names for such movements: `Nav` names its current-tab bar
 only for a movement between two tabs of its own row (`currentIndicatorSlides`),
-and `List` unnames its rows for the length of any route transition or travel. A
-name the app puts inside the pages is given only for the gesture it serves, or
-dropped while they move: `view-transition-name: none` under
-`:root:is([data-navi-route-transition], [data-navi-route-travel])`. Without nested
+and `List` unnames its items for the length of any route transition. A name the
+app puts inside the pages is given only for the gesture it serves, or dropped
+while they move: `view-transition-name: none` under
+`:root[data-navi-route-transition]`. A `RouteTravel` row is a scroll the browser
+plays, and photographs nothing: a name under it is left alone. Without nested
 groups it also escapes the pages' clip. navi warns about a name inside a
 transition area that only one of the two pages has: with nothing to morph into,
 it can only be this trap.
@@ -92,6 +93,9 @@ A skip rejects `viewTransition.ready`, with a stackless DOMException —
 message each engine words its own way. `viewTransition.finished` still FULFILLS on
 a skip: the end state is reached, only the animation is not. `finished` (and
 `updateCallbackDone`) reject for one reason only, the update callback throwing.
+And `finished` settles only once the promise the update callback returns has
+settled: a callback that never settles leaves `finished` waiting, even after
+`ready` rejected with its timeout.
 So a skip is told by that outcome, never by its text: `ready` rejecting while
 `updateCallbackDone` fulfills — which is how navi's function tells it.
 

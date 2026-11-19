@@ -760,8 +760,10 @@ const LinkPlain = (props) => {
 
     children,
   } = props;
-  if (anchor && !props.id) {
-    props.id = href.slice(1);
+  // The anchor is named after its fragment: `#x`, or `/page#x`.
+  const hashIndex = href ? href.indexOf("#") : -1;
+  if (anchor && !props.id && hashIndex > -1) {
+    props.id = href.slice(hashIndex + 1);
   }
   // A document link leads out of the routes, so there is nothing there to
   // prefetch — and the address would otherwise be preloaded against the very
@@ -839,7 +841,7 @@ const LinkPlain = (props) => {
           <EmailSvg />
         </Icon>
       );
-    } else if (href?.includes("github.com")) {
+    } else if (isGithubHref(href)) {
       innerEndIcon = (
         <Icon>
           <LinkGithubSvg />{" "}
@@ -901,7 +903,17 @@ const LinkPlain = (props) => {
   // interception looks for it (see link_document.js).
   const documentRequest = isDocument ? { [LINK_DOCUMENT_ATTRIBUTE]: "" } : null;
 
-  const innerChildren = children || (hrefFallback ? hrefText : children);
+  // `0` is content: only no content at all falls back to the address.
+  const hasChildren =
+    children !== undefined &&
+    children !== null &&
+    children !== false &&
+    children !== "";
+  const innerChildren = hasChildren
+    ? children
+    : hrefFallback
+      ? hrefText
+      : children;
   const startIconEl = startIcon;
   const endIconEl = innerEndIcon;
   const badgeLabelling = resolveBadgeLabel({
@@ -1086,3 +1098,17 @@ const LinkCurrentIndicator = () => {
   return <span className="navi_current_indicator" />;
 };
 markAsOutsideTextFlow(LinkCurrentIndicator);
+
+// A link to GitHub by its host, not by a substring a path may hold.
+const isGithubHref = (href) => {
+  if (!href) {
+    return false;
+  }
+  let hostname;
+  try {
+    hostname = new URL(href, window.location.href).hostname;
+  } catch {
+    return false;
+  }
+  return hostname === "github.com" || hostname.endsWith(".github.com");
+};

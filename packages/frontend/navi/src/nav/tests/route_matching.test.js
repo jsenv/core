@@ -437,4 +437,65 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  // An address with a % that escapes nothing (a lone %, a cut UTF-8 sequence)
+  // is routed whole: a path segment naming no text matches no param, a search
+  // key or value is kept as written, and the route matching before is not
+  // left matching.
+  test("a malformed escape is routed, never thrown", () => {
+    const USER_ROUTE = route("/users/:id");
+    const CGU_ROUTE = route("/cgu");
+    const { updateRoutes, clearRoutes } = setupRoutes([USER_ROUTE, CGU_ROUTE]);
+    const routeTo = (path) => {
+      updateRoutes(`${baseUrl}/cgu`);
+      let threw = null;
+      try {
+        updateRoutes(`${baseUrl}${path}`);
+      } catch (e) {
+        threw = String(e);
+      }
+      return {
+        threw,
+        user: getMatchParams(USER_ROUTE),
+        cgu_matching: CGU_ROUTE.matching,
+      };
+    };
+    try {
+      return {
+        "/users/50%": routeTo("/users/50%"),
+        "/users/%C3": routeTo("/users/%C3"),
+        "/cgu?q=100%": routeTo("/cgu?q=100%"),
+        "/cgu?x%=1": routeTo("/cgu?x%=1"),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  // A literal is compared as the text it says, and built as an address can
+  // carry it: a route matches the url it builds.
+  test("a literal that is not ascii matches the url it builds", () => {
+    const SETTINGS_ROUTE = route("/réglages");
+    const SPACE_ROUTE = route("/a b");
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      SETTINGS_ROUTE,
+      SPACE_ROUTE,
+    ]);
+    try {
+      const settingsUrl = SETTINGS_ROUTE.buildUrl();
+      updateRoutes(settingsUrl);
+      const settings = {
+        url: settingsUrl,
+        matching: SETTINGS_ROUTE.matching,
+      };
+      const spaceUrl = SPACE_ROUTE.buildUrl();
+      updateRoutes(spaceUrl);
+      const space = { url: spaceUrl, matching: SPACE_ROUTE.matching };
+      return { settings, space };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

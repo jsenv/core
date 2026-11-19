@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <title>route travel, a window over a list</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .bar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 1;
+        display: flex;
+        padding: 12px;
+        gap: 12px;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+      .counter {
+        flex: 1;
+        text-align: center;
+      }
+      .box {
+        min-height: 100dvh;
+        padding-top: 48px;
+      }
+      .card {
+        margin: 8px 12px;
+        padding: 14px 12px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./main.jsx"></script>
+  </body>
+</html>

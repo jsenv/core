@@ -200,29 +200,32 @@ window.askLog = [];
 </NaviDebug>;
 ```
 
-One line per pass of the run, whatever the outcome — so no line for a revisit
-means the run never rendered:
+One line per pass of the run, whatever the outcome — a pass replaced before its
+turn logs nothing, and the ask a window sends once it stands still logs a line
+of its own — so no line at all for a revisit means the run never rendered:
 
 ```
 ask 0-49: sent (revalidating=true holdPending=false count=412)
 ask -1--1: nothing missing (revalidating=false holdPending=false count=412)
-ask 0-49: held on a row not reached yet (revalidating=true holdPending=true count=412)
+ask 0-49: held on an item not reached yet (revalidating=true holdPending=true count=412)
 ```
 
-| outcome                              | what it means                                                                                           |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `sent`                               | the range on the line went out                                                                          |
-| `nothing missing`                    | the run holds every row it draws and has nothing to revalidate                                          |
-| `held on a row not reached yet`      | the list is on its way somewhere the window does not frame; only the row it is held on can be asked for |
-| `already revalidating`               | a revalidation sent since the collection last moved is in flight                                        |
-| `a request still covers this window` | what is in flight is still what the list would draw                                                     |
-| `this range was asked for already`   | asking again could only produce the same answer                                                         |
+| outcome                                                    | what it means                                                                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `sent`                                                     | the range on the line went out                                                                                                       |
+| `nothing missing`                                          | the run holds every item it draws and has nothing to revalidate                                                                      |
+| `held on an item not reached yet`                          | the list is on its way somewhere the window does not frame; only the item it is held on can be asked for                             |
+| `the list is moving its window`                            | the list moved its window after this render: the run asks in the list's next pass                                                    |
+| `the window outruns the pages: asked once it stands still` | the window left the last page less than 300ms after it was sent: the ask goes out 150ms after the window stops, on a line of its own |
+| `already revalidating`                                     | a revalidation sent since the collection last moved is in flight                                                                     |
+| `a request still covers this window`                       | what is in flight is still what the list would draw                                                                                  |
+| `this range was asked for already`                         | asking again could only produce the same answer                                                                                      |
 
 The state that decides is on the line: `revalidating` — the run knows what it
 holds is from before, so a revisit showing `revalidating=false` never restored a
 composition, a different problem from `revalidating=true` and no `sent`;
 `holdPending` — the list is held somewhere it has not reached; `count` — how
-many rows the run stands for, `undefined` before its first answer.
+many items the run stands for, `undefined` before its first answer.
 
 ## `rerunOn`, verb by verb
 

@@ -253,7 +253,9 @@ export const foldForSearch = (value) => {
   // (no mark of its own) and nothing grows (a Hangul syllable, a letter whose
   // lower case takes two), so the folded string has the value's length and
   // its positions are the value's own — no table to keep.
-  const folded = source.normalize("NFD").replace(MARKS, "").toLowerCase();
+  const folded = foldLigatures(
+    source.normalize("NFD").replace(MARKS, "").toLowerCase(),
+  );
   if (folded.length === source.length && !MARK.test(source)) {
     return { source, folded, starts: null, ends: null };
   }
@@ -279,8 +281,14 @@ export const foldForSearch = (value) => {
 };
 const MARKS = /\p{Mn}/gu;
 const MARK = /\p{Mn}/u;
+// Letters written as two that no decomposition splits: "coeur" finds "Cœur",
+// "strasse" finds "Straße".
+const LIGATURES = /[œæß]/g;
+const LIGATURE_LETTERS = { œ: "oe", æ: "ae", ß: "ss" };
+const foldLigatures = (text) =>
+  text.replace(LIGATURES, (ligature) => LIGATURE_LETTERS[ligature]);
 const foldChar = (char) =>
-  char.normalize("NFD").replace(MARKS, "").toLowerCase();
+  foldLigatures(char.normalize("NFD").replace(MARKS, "").toLowerCase());
 const foldText = (text) => {
   let folded = "";
   for (const char of text) {

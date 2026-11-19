@@ -3,6 +3,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { useDisplayedLayoutEffect } from "@jsenv/navi/src/utils/use_displayed_layout_effect.js";
+import { useLayoutEffect } from "preact/hooks";
 
 export const ListItemHeaderOrFooterResolver = (props) => {
   const Next = useNextResolver();
@@ -34,6 +35,7 @@ const ListItemHeader = (props) => {
     },
     [],
   );
+  useSizeForgottenAtUnmount(ref, "--list-header-height", "--list-header-width");
 
   return (
     <Next
@@ -63,6 +65,7 @@ const ListItemFooter = (props) => {
     },
     [],
   );
+  useSizeForgottenAtUnmount(ref, "--list-footer-height", "--list-footer-width");
 
   return (
     <Next
@@ -72,4 +75,20 @@ const ListItemFooter = (props) => {
       baseClassName="navi_list_item_footer"
     />
   );
+};
+
+// The room the part took, which the items keep free for it (their
+// scroll-margin): given back when the part goes. The list it was measured in is
+// taken at mount, since a ref is null by the time the cleanup runs.
+const useSizeForgottenAtUnmount = (ref, heightProperty, widthProperty) => {
+  useLayoutEffect(() => {
+    const listContainerEl = ref.current?.closest(".navi_list_container");
+    return () => {
+      if (!listContainerEl) {
+        return;
+      }
+      listContainerEl.style.removeProperty(heightProperty);
+      listContainerEl.style.removeProperty(widthProperty);
+    };
+  }, []);
 };
