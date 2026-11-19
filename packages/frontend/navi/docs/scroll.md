@@ -125,7 +125,14 @@ whatever the screen it was saved on. "Reopen a thread where I left it" is
 already provided; keep the position whole, its `visibleCount` sizes the first
 paint. A `defaultScrolled` that changes before anyone has moved the list is
 followed — a place read from an answer that refreshes (yesterday's "today", then
-today's) — and it is compared by value, so it can be computed at every render. A list with an `id` also **comes back where it was** when its screen is
+today's) — and it is compared by value, so it can be computed at every render.
+`scrolled` is compared by value too: the list goes back there each time it
+names another place, and a place written inline is one place. Either way the
+list is held there until something else moves it: the user scrolling it — a
+press or a key that moves nothing ends nothing — a script, or the list moving
+on its own account (a search's best matches changing, the keyboard moving to an
+item). A `scrolled` naming an item that turns out not to exist holds the list at
+`defaultScrolled` instead: back at its start, by default. A list with an `id` also **comes back where it was** when its screen is
 left and come back to, or the page reloaded, the way the page does (its `id`
 must name one list of the app, see [below](#a-list-that-comes-back-one-id-one-list)):
 where it opens is the address's, not the mount's, so a list that stayed mounted
@@ -156,7 +163,8 @@ as on a return. Meanwhile it neither says nor keeps where it is.
 A table of contents beside a long list, a "back to today" button: the press
 sends the list to a place with `--navi-scroll`, and the list goes there the way
 `scrolled` takes it — asked for by name when it is not fetched yet, measured,
-and held until the user reaches for the list:
+and held until something else moves it (a hand on the list stops a glide on its
+way):
 
 ```jsx
 <Button command="--navi-scroll:smooth" commandFor="feed" value={{ id: dayId }}>
@@ -250,7 +258,7 @@ that depends on:
 
 When the value changes after mount (compared by value, so an array can be written
 at every render), the list goes back to its start in the box `scroller` names,
-before the paint, and stays there while answers land, until the user reaches for
+before the paint, and stays there while answers land, until the user moves
 it. Its window moves in the same render: nothing is drawn or fetched at the place
 it leaves. Coming back is not a change: a list mounting, or still mounted when
 the address it was left at is returned to, comes back where it was there.

@@ -43,12 +43,14 @@ export const createListItems = () => {
   // an attribute: what is drawn is from before, and the app may want to say so
   // without taking anything away.
   const refreshingSignal = signal(0);
-  // Bumped each time the list is held somewhere anew — opened on a place, given
-  // another `scrolled`, sent by a press. Each hold on an item no run holds is
-  // asked for by name once per run, and a run says which hold its answer was
-  // for by this number (see useRequestMissing). A signal because a press that
-  // moves no window would otherwise render no run to ask.
-  const holdArmedSignal = signal(0);
+  // Bumped each time the hold changes: the list held somewhere anew — opened on
+  // a place, given another `scrolled`, sent by a press — or let go of. Each
+  // hold on an item no run holds is asked for by name once per run, and a run
+  // says which hold its answer was for by this number (see useRequestMissing).
+  // A signal because neither a press that moves no window nor a hand stopping
+  // the list where it is renders a run: one would never ask by name, the other
+  // never ask for the window it was holding back while the list was on its way.
+  const holdSignal = signal(0);
   // The slots each walk declared, in order, by the slot the walk stands in
   // (null for the list's own children). Together they are a tree: a group's
   // items live inside the group's slot.
@@ -391,7 +393,7 @@ export const createListItems = () => {
     totalSignal,
     pagesSignal,
     refreshingSignal,
-    holdArmedSignal,
+    holdSignal,
     // The entries that are items, in place order — every one drawn, and the
     // ones that show — and what the search made of them. Written once per
     // frame.
@@ -409,10 +411,13 @@ export const createListItems = () => {
     // they are.
     pageSize: 0,
     scrolled: "start",
-    // The list holds itself at `scrolled` until the user takes it over.
+    // The list holds itself at `scrolled` until the user takes it over. Said
+    // by the list's render, and by the hold ending between two (see letGo),
+    // with holdSignal.
     heldSomewhere: false,
     // The list is on its way somewhere: what the window frames is not what it
-    // is about to frame, so a run must not fetch for it (see holdWindow).
+    // is about to frame, so a run must not fetch for it (see holdWindow). Said
+    // like heldSomewhere.
     holdPending: false,
     // Called by a run just before items land in it: what is on screen must not
     // move because something arrived above it. Set by the list itself, with
