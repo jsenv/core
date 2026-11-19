@@ -51,33 +51,28 @@ export const ensureDocumentStartViewTransition = () => {
 let lastViewTransition = null;
 export const peekLastViewTransition = () => lastViewTransition;
 
+// "Skipped" is an outcome, not a failure — and it is told by its outcome, not
+// by its wording, which each engine writes its own way. The update callback is
+// the application's: when it throws, that error rejects `updateCallbackDone`,
+// and keeps travelling from there, once. `ready` and `finished` reject with it
+// too, and say nothing more. `ready` rejecting while the callback went through
+// is a skip, whatever the reason the browser gives — another transition
+// starting, `skipTransition()`, the document hidden mid-movement, the viewport
+// resized under it — except a callback taking too long: the browser gave up on
+// the page frozen for seconds, which development says.
 const startViewTransition = (updateCallback) => {
   const viewTransition = document.startViewTransition(updateCallback);
-  viewTransition.updateCallbackDone.catch(ignoreSkip);
-  viewTransition.ready.catch(ignoreSkip);
-  viewTransition.finished.catch(ignoreSkip);
+  viewTransition.updateCallbackDone.catch((e) => {
+    throw e;
+  });
+  viewTransition.ready.catch((e) => {
+    if (import.meta.dev && e && e.name === "TimeoutError") {
+      console.warn(
+        `A view transition was given up on: its update callback took too long, and the page stood frozen meanwhile. Whatever it awaits must resolve without a frame. (${e.message})`,
+      );
+    }
+  });
+  viewTransition.finished.catch(() => {});
   lastViewTransition = viewTransition;
   return viewTransition;
-};
-
-// "Skipped" is an outcome, not a failure — anything else is still a real error
-// and must keep travelling. The browser skips for three reasons and names them
-// differently: `skipTransition()` / another transition starting is an
-// "AbortError" that says skipped, while a document hidden mid-movement, a
-// snapshot containing block that changed size (address bar folding, keyboard
-// opening) and the DOM-update timeout are "InvalidStateError"s that say
-// aborted. All three are recognized by the message: the name alone would let
-// an update callback throwing its own InvalidStateError pass for a skip.
-const ignoreSkip = (e) => {
-  if (e && e.name === "AbortError") {
-    return;
-  }
-  if (
-    e &&
-    typeof e.message === "string" &&
-    /^Transition was (?:skipped|aborted)/.test(e.message)
-  ) {
-    return;
-  }
-  throw e;
 };

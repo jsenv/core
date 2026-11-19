@@ -37,6 +37,7 @@ import { signal } from "@preact/signals";
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
+import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
 import {
@@ -515,6 +516,10 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
     const url = event.destination.url;
     const navigationType = event.navigationType;
+    if (event.hasUAVisualTransition) {
+      // Shown moving by the browser already (see page_change.js).
+      noteShownByBrowser();
+    }
 
     // Before anything is announced or committed: where this url really leads.
     // A push can be declined and re-asked; a traversal the browser has already

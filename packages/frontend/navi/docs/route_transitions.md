@@ -29,6 +29,7 @@ transition), `route_transition_fixed_bars/route_transition_fixed_bars.html`
 - [Waiting for a navigation: the address is not the page](#waiting-for-a-navigation-the-address-is-not-the-page)
 - [What a transition costs](#what-a-transition-costs)
 - [The rest, briefly](#the-rest-briefly)
+- [When nothing plays](#when-nothing-plays)
 
 ## What a transition is for
 
@@ -126,8 +127,11 @@ Two recommendations that matter more than the individual choices:
 
 ## A default transition — when
 
-`defineRouteDefaultTransition("cross-fade")` plays on every navigation no relation
-was written for. Two situations, two answers:
+`defineRouteDefaultTransition("cross-fade")` plays on every navigation that puts
+another page on screen and no relation was written for — not on one that keeps
+the page (a search param written at each keystroke or each frame of a drag, a
+layer opening over the page), nor at a load or a reload. Two situations, two
+answers:
 
 - **App-shaped UI** (bars, tabs, pages one goes into): not a directionless one.
   The silence between sibling tabs is part of the grammar, and such a default
@@ -244,6 +248,10 @@ a page reached from anywhere (the author of a place's sheet, from the place) say
 `routeTransition={{ direction: "forward" }}`, and the back undoes exactly that —
 no reverse pair to write, none to collide with the other pages reaching the
 place.
+
+A back the browser has shown moving itself plays nothing more: a swipe in
+Safari, where its own picture of the page slid in under the finger (see
+[When nothing plays](#when-nothing-plays)).
 
 The relations alone answer a traversal that retraces no remembered crossing:
 several entries at once, or an entry another document wrote. A link to the page
@@ -655,6 +663,24 @@ then, inside the update callback. Anything beyond that is avoidable:
   pictures only.
 - The URL leads: transitions play on navigations somebody else started (a
   `<Link>`, the back button, `history.back()`). Nothing here navigates.
-- A browser without view transitions navigates with a cut. The app must remain
-  fully usable that way — which it is, if the transitions state relations rather
-  than carry information.
+- A browser without view transitions navigates with a cut (see below). The app
+  must remain fully usable that way — which it is, if the transitions state
+  relations rather than carry information.
+
+## When nothing plays
+
+navi plays no movement — a navigation cuts, a RouteTravel row or a
+SlideContainer lands where it goes at once — for:
+
+- **someone whose system asks for less motion** (`prefers-reduced-motion:
+reduce`), as every other movement of navi;
+- **a back the browser has shown moving already**: a swipe in Safari, where its
+  own picture of the page arriving slid in (`hasUAVisualTransition`) — played
+  again, the page left would come back to slide off a second time. A popup the
+  back closes closes without its exit, as it does when the page changes;
+- **a load or a reload**: there is no page being left to photograph;
+- **a browser without view transitions**.
+
+The navigation is still decided: the entry a push creates remembers what would
+have played, and a back retraces it wherever a movement may play. Nothing is held,
+measured or photographed for a navigation that cuts.

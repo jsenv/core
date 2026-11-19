@@ -64,7 +64,7 @@ import {
   RouteRowContext,
   RouteRowNeighbour,
 } from "./route.jsx";
-import { notePageChange } from "./page_change.js";
+import { mayAnimateMovement, notePageChange } from "./page_change.js";
 import { whenPageAtRest } from "./route_action.js";
 import { pageIsAt, pageIsCurrent } from "./route_page.js";
 import { publishRouteRowMove } from "./route_row_follow.js";
@@ -635,7 +635,9 @@ export const RouteTravel = ({
       movement.playing = null;
     }
     const from = row.scrollLeft;
-    const { durationMs } = latestRef.current;
+    // Played only when navi may (see mayAnimateMovement): otherwise the row is
+    // where it goes at once, as for a travel of no duration.
+    const durationMs = mayAnimateMovement() ? latestRef.current.durationMs : 0;
     // One box in `duration` is the pace: what is left of a travel picked up on the
     // way takes what is left of the time. Never slower: two boxes are not made to drag.
     const boxes = Math.abs(pane.offsetLeft - from) / row.clientWidth;

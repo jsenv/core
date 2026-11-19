@@ -4,6 +4,11 @@
  * the browser, a view transition walked back from where its curve has it.
  */
 
+// Whether whoever looks asked their system for less motion. Read at the moment
+// a movement would start, so a setting changed meanwhile is followed.
+export const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 // A CSS duration read as a number of milliseconds.
 export const durationToMs = (duration) => {
   const number = parseFloat(duration);

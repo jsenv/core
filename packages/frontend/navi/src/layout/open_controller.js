@@ -16,7 +16,10 @@ import {
   whenBackLanded,
 } from "../nav/browser_integration/browser_integration.js";
 import { documentUrlSignal } from "../nav/browser_integration/document_url_signal.js";
-import { isRenderingPageChange } from "../nav/page_change.js";
+import {
+  isRenderingPageChange,
+  isRenderingShownByBrowser,
+} from "../nav/page_change.js";
 import { preloadState } from "../nav/route.js";
 import {
   warnSignalAsState,
@@ -1187,8 +1190,10 @@ export const useOpenPropsEffectOnOpenController = (
     // link inside the popup leading away, a back to the page it stood over.
     // The page changing is its movement, so it has none of its own — a route
     // transition carries it with its page, and without one it cuts with the
-    // page (see page_change.js).
-    const carriedByPageChange = isRenderingPageChange();
+    // page (see page_change.js). So is a back the browser has shown moving: its
+    // picture of the page without the popup already slid in.
+    const carriedByPageChange =
+      isRenderingPageChange() || isRenderingShownByBrowser();
 
     if (isFirstRun) {
       // "interaction" is said even over what the caller holds reading open: a

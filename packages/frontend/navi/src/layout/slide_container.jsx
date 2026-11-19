@@ -95,7 +95,10 @@ import {
 } from "@jsenv/dom";
 import { onNaviCommand } from "../control/commands.js";
 import { warnSignalCollision } from "../control/control_value.js";
-import { isRenderingPageChange } from "../nav/page_change.js";
+import {
+  isRenderingPageChange,
+  mayAnimateMovement,
+} from "../nav/page_change.js";
 import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
 import {
@@ -1488,7 +1491,9 @@ export const SlideContainer = ({
       writeHeading(null);
     }
     const realPlaceOf = (area) => placeOf.get(area) || { x: 0, y: 0 };
-    const durationMs = durationToMs(duration);
+    // Played only when navi may (see mayAnimateMovement): otherwise the
+    // slides land where they go, as for a travel of no duration.
+    const durationMs = mayAnimateMovement() ? durationToMs(duration) : 0;
     // A change of slide the page changing carries is no travel: the page is
     // the movement, and the slides land where the address puts them (see
     // page_change.js). A travel still playing is cut on the spot, and the
@@ -2507,7 +2512,7 @@ export const SlideContainer = ({
     containerEl.scrollTo({
       left: currentElement.offsetLeft,
       top: currentElement.offsetTop,
-      behavior: "smooth",
+      behavior: mayAnimateMovement() ? "smooth" : "instant",
     });
   };
 

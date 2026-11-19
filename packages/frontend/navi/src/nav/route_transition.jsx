@@ -115,7 +115,11 @@ import { NAV_DEPTH_STATE_KEY } from "./browser_integration/document_back_and_for
 import { documentStateSignal } from "./browser_integration/document_state_signal.js";
 import { documentUrlSignal } from "./browser_integration/document_url_signal.js";
 import { Box } from "../box/box.jsx";
-import { isRenderingPageChange, notePageChange } from "./page_change.js";
+import {
+  isRenderingPageChange,
+  mayAnimateMovement,
+  notePageChange,
+} from "./page_change.js";
 import { keepLeavingPages, observeRouteRender } from "./route.jsx";
 import { pageIsCurrent } from "./route_page.js";
 import { routeTransitionPlayingSignal } from "./route_transition_playing.js";
@@ -163,6 +167,9 @@ import {
 } from "../transition/view_transition_revert.js";
 
 const startViewTransition = ensureDocumentStartViewTransition();
+// A browser without view transitions runs the polyfill: the change, and no
+// picture of what it leaves, so nothing to move between.
+const viewTransitionsPlay = !document.startViewTransition.isPolyfill;
 
 const TRANSITION_ATTRIBUTE = "data-navi-route-transition";
 const TRANSITION_TYPE_ATTRIBUTE = "data-navi-route-transition-type";
@@ -1094,8 +1101,10 @@ export const defineRouteTransition = (from, to, transition) => {
 };
 
 /**
- * What plays on a navigation no relation was written for: every route change
- * then plays this transition, and the written relations keep their own.
+ * What plays on a navigation no relation was written for: every navigation
+ * that puts another page on screen then plays this transition — not one that
+ * keeps the page (a search param written at each keystroke, a layer opening
+ * over it), nor a load or a reload — and the written relations keep their own.
  *
  * A default has no direction — nothing says which of two arbitrary pages is
  * "before" the other — so give it a movement that does not need one:
@@ -1106,8 +1115,7 @@ export const defineRouteTransition = (from, to, transition) => {
  * and every back one level up. A push plays forward, a traversal retraces its
  * crossing or, with none remembered, plays back when it lands lower in the
  * history and forward when it lands higher, and a replace — the same level —
- * plays nothing. It plays only when the page changes: a push that opens a
- * layer over the page keeps the page. The relations written still answer
+ * plays nothing. The relations written still answer
  * first, and a page written from anywhere then answers for its way out only
  * on a back — a link out of it is a push like any other (see findRelation).
  *
@@ -1363,6 +1371,12 @@ const rebuildWatcher = () => {
     if (fromIndex === index) {
       return;
     }
+    if (!routingNavigation) {
+      // Not a navigation: a page's own lifecycle moved the index — a fallback
+      // wired as its container mounts, unwired as it unmounts or parks (see
+      // route_fallback.js). Where the document stands is all there is to know.
+      return;
+    }
     // A page of a relation can be a param: a move between two of them is a
     // page change the path does not show (see page_change.js).
     notePageChange();
@@ -1453,6 +1467,11 @@ let navigationFromUrl = null;
 // as the entry it came from (see recordCrossing).
 let navigationFromDepth;
 let navigationAnimated = false;
+// Whether the navigation now landing may move at all (see navigationMayMove).
+let navigationCut = false;
+// Between the two ends of a navigation (see observeBeforeRouting): the only
+// time a page index moving is a navigation.
+let routingNavigation = false;
 // "push", "replace", "traverse", … — a push is the one navigation that creates
 // the entry a crossing is recorded on.
 let navigationType = null;
@@ -1465,6 +1484,19 @@ let navigationHistoryDirection;
 // has been decided, and for a navigation nothing was said about.
 let navigationDecision = null;
 
+// Whether a navigation may move at all: navi may play a movement for it (see
+// mayAnimateMovement — not for someone who asked for less motion, nor for a
+// traversal the browser has shown moving), on a browser that can take its
+// pictures, between two pages — a load or a reload leaves none to photograph.
+// One that may not is still decided: its entry records what it would have
+// played, which a traversal back retraces where movements may play (see
+// recordCrossing). It holds nothing, photographs nothing, and cuts.
+const navigationMayMove = (type) =>
+  viewTransitionsPlay &&
+  type !== "load" &&
+  type !== "reload" &&
+  mayAnimateMovement();
+
 // The two ends of every navigation, watched from here on. The picture of the
 // page being left has to be honest, so rendering is held from before the
 // navigation's first write (see rendering_hold.js) — but only when something
@@ -1472,9 +1504,11 @@ let navigationDecision = null;
 // asked for holds nothing. It is given back at the far end, which is also the
 // one moment the DEFAULT can decide: every relation has had its say by then.
 observeBeforeRouting((details) => {
+  routingNavigation = true;
   navigationAnimated = false;
   navigationDecision = null;
   navigationType = details.navigationType;
+  navigationCut = !navigationMayMove(navigationType);
   navigationUrl = details.url;
   navigationFromUrl = documentUrlSignal.peek();
   // Read before the document state moves, so the state peeked is the entry
@@ -1505,6 +1539,14 @@ observeBeforeRouting((details) => {
   ) {
     return;
   }
+  if (navigationCut) {
+    // Nothing will be photographed. A movement still on screen is taken off
+    // at once, or its pictures would go on playing over the page arriving.
+    if (currentTransition && currentTransition.viewTransition) {
+      currentTransition.viewTransition.skipTransition();
+    }
+    return;
+  }
   holdRenderingForRouting();
   // Said HERE, before the relations have their say: what is on screen may be
   // this navigation's own way back, and that is a fact about the two ends of
@@ -1528,6 +1570,9 @@ observeTraversalAsked((details) => {
   ) {
     return;
   }
+  if (!navigationMayMove("traverse")) {
+    return;
+  }
   holdRenderingForRouting();
 });
 observeAfterRouting(() => {
@@ -1549,14 +1594,15 @@ observeAfterRouting(() => {
   navigationFromDepth = undefined;
   navigationType = null;
   navigationHistoryDirection = undefined;
-  // A default reading the history plays between two pages a level apart: not
-  // on a replace, and not on a navigation that keeps the page — a push
-  // opening a layer over it moves the layer, not the page (see
-  // page_change.js).
+  // A default is about pages: it plays when the navigation puts another page
+  // on screen, not on one that keeps it — a search param bound to a signal,
+  // written at each keystroke or at each frame of a drag, a push opening a
+  // layer over the page, which moves the layer (see page_change.js). Reading
+  // the history, it plays between two pages a level apart: not on a replace.
   const base =
     defaultTransition &&
-    (!defaultTransition.readsHistory ||
-      (historyDirection !== null && isRenderingPageChange()))
+    isRenderingPageChange() &&
+    (!defaultTransition.readsHistory || historyDirection !== null)
       ? defaultTransition
       : null;
   if (!navigationAnimated && (request || base)) {
@@ -1593,6 +1639,8 @@ observeAfterRouting(() => {
     recordCrossing({ url, fromDepth, decision: navigationDecision });
   }
   navigationDecision = null;
+  navigationCut = false;
+  routingNavigation = false;
   releaseRoutingRenderingHold();
 });
 
@@ -1702,6 +1750,10 @@ let currentTransition = null;
 const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
   navigationAnimated = true;
   navigationDecision = { type, direction, duration };
+  if (navigationCut) {
+    // Decided, recorded, not played (see navigationMayMove).
+    return;
+  }
   // The two ends of the crossing, kept for the length of the movement: they are
   // what lets the navigation after this one be recognised as its way back (see
   // turnRunningTransitionRound) — and what it decided, which that way back
@@ -1850,37 +1902,11 @@ const playTransition = (
       removeTransitionValue(TRANSITION_DURATION_PROPERTY);
     };
   }
-  // What the browser ACTUALLY captured, read once the pictures exist: it is
-  // the only place the silent misconfigurations show. They are all about the
-  // same thing — a movement playing on pictures that are not the pages.
   const viewTransitionReady = () => {
     // Read before anything below writes to the document.
     placeTransitionWindow(transition, AREA_NAME);
     startTransitionFurniture(transition, { duration: transition.duration });
-    const capturedNames = capturedViewTransitionNames();
-    if (areaElements.length > 0) {
-      if (!capturedNames.has(AREA_NAME)) {
-        warnOnce(
-          "area-not-captured",
-          `The element marked ${TRANSITION_AREA_ATTRIBUTE} was not captured, so the movement plays on nothing. An element is captured only if it generates a box: \`display: contents\` (or an element not rendered) cannot be the area — its rectangle is what gets photographed and clipped.`,
-        );
-      }
-      warnAboutNamesEscapingArea(areaElement, capturedNames);
-      return;
-    }
-    for (const name of capturedNames.keys()) {
-      if (name === "root") {
-        continue;
-      }
-      // Something stands still while the whole document travels under it. The
-      // root picture spans the viewport and has a HOLE where that thing was
-      // captured, so what crosses the screen is a blank band.
-      warnOnce(
-        "pages-travel-under-named-elements",
-        `The movement plays on the whole document while "${name}" is captured on its own, so a blank band travels where it stands. Wrap the pages in <RouteTransitionArea> (or mark their element with ${TRANSITION_AREA_ATTRIBUTE}) so the movement plays on them rather than on the document.`,
-      );
-      break;
-    }
+    warnAboutCapture(areaElements, areaElement);
   };
   const viewTransition = startViewTransition(async () => {
     // The picture the browser is about to take must be of the page that was
@@ -2120,6 +2146,40 @@ const absoluteUrl = (url) =>
 // A transition skipped by another one starting is an outcome, not a failure.
 const ignoreSkipped = () => {};
 
+// What the browser ACTUALLY captured, read once the pictures exist: it is the
+// only place the silent misconfigurations show. They are all about the same
+// thing — a movement playing on pictures that are not the pages. Development
+// only: reading the pictures, and the area's styles when a name pairs with
+// nothing, is work a production build has nobody to tell about.
+const warnAboutCapture = import.meta.dev
+  ? (areaElements, areaElement) => {
+      const capturedNames = capturedViewTransitionNames();
+      if (areaElements.length > 0) {
+        if (!capturedNames.has(AREA_NAME)) {
+          warnOnce(
+            "area-not-captured",
+            `The element marked ${TRANSITION_AREA_ATTRIBUTE} was not captured, so the movement plays on nothing. An element is captured only if it generates a box: \`display: contents\` (or an element not rendered) cannot be the area — its rectangle is what gets photographed and clipped.`,
+          );
+        }
+        warnAboutNamesEscapingArea(areaElement, capturedNames);
+        return;
+      }
+      for (const name of capturedNames.keys()) {
+        if (name === "root") {
+          continue;
+        }
+        // Something stands still while the whole document travels under it.
+        // The root picture spans the viewport and has a HOLE where that thing
+        // was captured, so what crosses the screen is a blank band.
+        warnOnce(
+          "pages-travel-under-named-elements",
+          `The movement plays on the whole document while "${name}" is captured on its own, so a blank band travels where it stands. Wrap the pages in <RouteTransitionArea> (or mark their element with ${TRANSITION_AREA_ATTRIBUTE}) so the movement plays on them rather than on the document.`,
+        );
+        break;
+      }
+    }
+  : () => {};
+
 // The names the browser captured, read off the pictures themselves: what was
 // asked for in CSS and what was taken are not the same question (see
 // viewTransitionReady). Each with the states it was taken in: a name taken in
@@ -2160,13 +2220,18 @@ const NESTED_GROUPS_SUPPORTED = window.CSS.supports(
   "view-transition-group",
   "contain",
 );
+// The names looked for already: found inside the area, which was said, or not
+// found there — a bar the application names on purpose outside it. Either
+// way, the answer is the same at the next navigation.
+const namesLookedFor = new Set();
 const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
   const unpairedNames = new Set();
   for (const [name, states] of capturedNames) {
     if (
       name === "root" ||
       name === AREA_NAME ||
-      name.startsWith(FURNITURE_NAME_PREFIX)
+      name.startsWith(FURNITURE_NAME_PREFIX) ||
+      namesLookedFor.has(name)
     ) {
       continue;
     }
@@ -2174,6 +2239,7 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
       continue;
     }
     unpairedNames.add(name);
+    namesLookedFor.add(name);
   }
   // A name captured next to the area is not necessarily inside it — a bar the
   // application animates on the same clock is named on purpose. The subtree is

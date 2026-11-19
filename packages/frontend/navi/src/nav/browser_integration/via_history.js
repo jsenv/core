@@ -3,6 +3,7 @@ import { findEvent } from "@jsenv/dom";
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
+import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
 import {
@@ -625,6 +626,11 @@ export const setupBrowserIntegrationViaHistory = ({
     dropPendingReplace();
     const url = window.location.href;
     const state = popstateEvent.state;
+    if (popstateEvent.hasUAVisualTransition) {
+      // The browser has shown this traversal moving already (see
+      // page_change.js): what navi would play for it is played no more.
+      noteShownByBrowser();
+    }
     const landOn = landOnPending;
     landOnPending = null;
     const elidedPress = elidedPressPending;

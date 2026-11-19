@@ -72,8 +72,8 @@ The document's rendering is suspended for the whole update callback, from the
 capture of the old state to the capture of the new one. Nothing paints, and
 `requestAnimationFrame` does not tick in there: awaiting a frame inside the
 callback awaits something that cannot happen, until the browser gives up on the
-transition entirely (`Transition was aborted because of timeout in DOM update`).
-Await a microtask, a task or a render — never a frame.
+transition entirely (a `TimeoutError`, which navi's function says in
+development). Await a microtask, a task or a render — never a frame.
 
 **In a sub-document the suspension takes the scrollbar with it**: an iframe's
 scrollbar is painted by the framed document, so it goes and comes back for the
@@ -86,11 +86,14 @@ suspect the frame before the code when a scrollbar blinks.
 There is only ever one transition per document, so another one starting SKIPS
 this one — as does the document going hidden or its snapshot containing block
 changing size mid-movement (a phone's address bar folding, its keyboard opening).
-A skip rejects `viewTransition.ready`, with a stackless DOMException (`AbortError`
-"skipped", or `InvalidStateError` "aborted because of invalid state").
-`viewTransition.finished` still FULFILLS on a skip: the end state is reached, only
-the animation is not. `finished` (and `updateCallbackDone`) reject for one reason
-only, the update callback throwing.
+A skip rejects `viewTransition.ready`, with a stackless DOMException —
+`AbortError` for another transition starting or `skipTransition()`,
+`InvalidStateError` for the document hidden or the viewport resized — whose
+message each engine words its own way. `viewTransition.finished` still FULFILLS on
+a skip: the end state is reached, only the animation is not. `finished` (and
+`updateCallbackDone`) reject for one reason only, the update callback throwing.
+So a skip is told by that outcome, never by its text: `ready` rejecting while
+`updateCallbackDone` fulfills — which is how navi's function tells it.
 
 So ending a transition means handling both ways of `finished` — `.finally()` does
 not handle a rejection, an unhandled one is what it leaves behind, and

@@ -32,6 +32,7 @@
  * effect ran.
  */
 
+import { prefersReducedMotion } from "../utils/css_timing.js";
 import { whenPageRendered } from "./rendering_hold.js";
 
 let renderingPageChange = false;
@@ -47,3 +48,36 @@ export const notePageChange = () => {
 };
 
 export const isRenderingPageChange = () => renderingPageChange;
+
+// A traversal the browser has shown moving already: a back swiped in Safari,
+// where its own picture of the entry reached slid in under the finger
+// (PopStateEvent.hasUAVisualTransition). Played again, the page left would come
+// back to slide off a second time. For a layer it is the same as the page
+// changing (see above): it lands where the address puts it. Noted by the
+// integration as the traversal is announced, and lasting like the page change.
+let renderingShownByBrowser = false;
+
+export const noteShownByBrowser = () => {
+  if (renderingShownByBrowser) {
+    return;
+  }
+  renderingShownByBrowser = true;
+  whenPageRendered(() => {
+    renderingShownByBrowser = false;
+  });
+};
+
+export const isRenderingShownByBrowser = () => renderingShownByBrowser;
+
+/**
+ * Whether navi may play a movement of its own for what is being rendered: a
+ * route's transition, a row travelling to its page (RouteTravel), a slide
+ * (SlideContainer). Not for someone who asked their system for less motion,
+ * nor for a navigation the browser has shown moving already. The answer is the
+ * one place this is decided; every movement asks it as it would start, and a
+ * movement that may not play lands where it goes at once — what it would have
+ * played is still what the navigation decided (a route's crossing is recorded
+ * all the same, see route_transition.jsx).
+ */
+export const mayAnimateMovement = () =>
+  !renderingShownByBrowser && !prefersReducedMotion();
