@@ -40,6 +40,7 @@ import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
+import { isUrlOfThisDocument } from "../route_pattern.js";
 import {
   isTargetWriteInProgress,
   rearmUrlTarget,
@@ -501,6 +502,11 @@ export const setupBrowserIntegrationViaNavigation = ({
       !isReloadFromNavigationAPI
     ) {
       // window.location.reload(): the full document reload it asks for.
+      return;
+    }
+    if (!isUrlOfThisDocument(event.destination.url)) {
+      // Outside the directory the document's addresses start in (see
+      // setBaseUrl): another document of this origin, left to the browser.
       return;
     }
     if (event.sourceElement && linkAsksForDocument(event.sourceElement)) {

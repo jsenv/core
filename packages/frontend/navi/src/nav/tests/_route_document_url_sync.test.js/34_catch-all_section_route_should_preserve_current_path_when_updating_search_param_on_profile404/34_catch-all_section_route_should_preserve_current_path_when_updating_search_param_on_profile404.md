@@ -34,9 +34,9 @@ try {
 ```js
 {
   "nav_calls": [
-    "http://127.0.0.1/profile?filter=active"
+    "http://127.0.0.1/profile/404?filter=active"
   ],
-  "stays_on_profile_404_path": false
+  "stays_on_profile_404_path": true
 }
 ```
 

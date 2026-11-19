@@ -6,6 +6,7 @@ import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
+import { isUrlOfThisDocument } from "../route_pattern.js";
 import {
   forgetScrollersOnArrival,
   hasScrollPositionToReturnTo,
@@ -433,6 +434,11 @@ export const setupBrowserIntegrationViaHistory = ({
       getHrefTargetInfo(href);
     if (isEmpty || !isSameOrigin) {
       // Let link to other origins be handled by the browser
+      return false;
+    }
+    if (!isUrlOfThisDocument(href)) {
+      // Outside the directory the document's addresses start in (see
+      // setBaseUrl): another document of this origin, the browser's to load.
       return false;
     }
     if (isAnchor) {

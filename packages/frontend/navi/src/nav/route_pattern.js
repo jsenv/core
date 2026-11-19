@@ -5,6 +5,7 @@
 
 import { globalSignalRegistry } from "../state/state_signal.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { amendSearch } from "./amend_search.js";
 import { decodeUrlPart } from "./decode_url_part.js";
 
 const DEBUG =
@@ -49,6 +50,42 @@ setBaseUrl(
       ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
       : window.location.origin,
 );
+
+// The pathname of an address of this document, as the routes read it: what
+// stands below the directory of the base url (see setBaseUrl), "" for the
+// document itself — or null for an address outside that directory, another
+// document's even on this origin (an app beside its admin panel).
+const readPathnameInsideBase = (urlObj, base, baseFile) => {
+  const pathname = urlObj.pathname;
+  if (!base) {
+    return pathname;
+  }
+  const basePathname = new URL(base).pathname;
+  const baseDir = basePathname.endsWith("/")
+    ? basePathname
+    : basePathname.substring(0, basePathname.lastIndexOf("/") + 1);
+  if (pathname.startsWith(baseDir)) {
+    return pathname.slice(baseDir.length);
+  }
+  if (`${pathname}/` === baseDir) {
+    return "";
+  }
+  if (baseFile && pathname === new URL(baseFile).pathname) {
+    return "";
+  }
+  return null;
+};
+/**
+ * Whether an address is one of this document's: below the directory of its
+ * base url (see setBaseUrl). An address outside it is another document's, even
+ * on this origin: no route matches it, and a link to it is left to the browser
+ * (see the integrations), as a link to another origin is.
+ *
+ * @param {string} url
+ * @returns {boolean}
+ */
+export const isUrlOfThisDocument = (url) =>
+  readPathnameInsideBase(new URL(url, baseUrl), baseUrl, baseFileUrl) !== null;
 
 /**
  * The single place where "this param was not provided, take the signal value"
@@ -136,7 +173,6 @@ export const createRoutePattern = (
   const parsedPattern = parsePattern(cleanPattern, {
     pathConnectionMap,
     queryConnectionMap,
-    paramConstraintMap,
   });
   if (import.meta.dev) {
     warnOnParamConstraintWithoutSegment(paramConstraintMap, parsedPattern);
@@ -231,7 +267,7 @@ export const createRoutePattern = (
 
     // Include active non-default parameters from child routes for URL optimization
     // Only include from child routes that would actually match the current parameters
-    const childPatternObjs = patternObject.children;
+    const childPatternObjs = patternObject.descendants;
     for (const childPatternObj of childPatternObjs) {
       // Check if this child route would match the current resolved parameters
       // by simulating URL building and seeing if the child segments align
@@ -256,7 +292,7 @@ export const createRoutePattern = (
             let canReachThroughIntermediates = false;
 
             // Look for intermediate routes that could bridge the gap
-            const intermediateRoutes = patternObject.children;
+            const intermediateRoutes = patternObject.descendants;
             for (const intermediateRoute of intermediateRoutes) {
               // Check if intermediate route has a parameter at this position
               const intermediateSegment = intermediateRoute.pattern.segments[i];
@@ -410,7 +446,7 @@ export const createRoutePattern = (
       }
       let found = null;
       const visit = (patternObj) => {
-        for (const child of patternObj.children) {
+        for (const child of patternObj.directChildren) {
           if (found) {
             return;
           }
@@ -576,8 +612,10 @@ export const createRoutePattern = (
       }
       return true;
     };
+    // Each route below once, a route before the ones below it: a param
+    // value one of them carries is known when a deeper literal asks for it.
     const visitDescendants = (patternObj) => {
-      for (const child of patternObj.children) {
+      for (const child of patternObj.directChildren) {
         const reachable = isDescendantReachable(child);
         if (reachable) {
           reachableDescendants.add(child);
@@ -770,19 +808,8 @@ export const createRoutePattern = (
     if (!applyOn(url)) {
       return false; // whatever this url is, it is not one of OUR urls
     }
-    const familyPatterns = [];
-    const seen = new Set();
-    const visit = (patternObj) => {
-      if (seen.has(patternObj)) {
-        return;
-      }
-      seen.add(patternObj);
-      familyPatterns.push(patternObj);
-      for (const child of patternObj.children) {
-        visit(child);
-      }
-    };
-    visit(patternObject.familyRoot || patternObject);
+    const familyRoot = patternObject.familyRoot || patternObject;
+    const familyPatterns = [familyRoot, ...familyRoot.descendants];
     const matchResultMap = new Map();
     for (const familyPattern of familyPatterns) {
       matchResultMap.set(familyPattern, familyPattern.applyOn(url));
@@ -913,7 +940,9 @@ export const createRoutePattern = (
   };
 
   const buildMostPreciseUrl = (params = {}) => {
-    const { intended, reachableDescendants } = buildIntendedState(params);
+    return buildMostPreciseUrlFor(buildIntendedState(params));
+  };
+  const buildMostPreciseUrlFor = ({ intended, reachableDescendants }) => {
     // ancestors: start at the immediate parent, climb while urls keep round-
     // tripping, keep the highest one ("/" is never a target)
     let ancestorUrl = null;
@@ -949,7 +978,7 @@ export const createRoutePattern = (
     let current = patternObject;
     let descendantUrl = null;
     descend: while (true) {
-      for (const child of current.children) {
+      for (const child of current.descendants) {
         if (!reachableDescendants.has(child)) {
           continue;
         }
@@ -978,11 +1007,13 @@ export const createRoutePattern = (
     );
   };
 
-  // Returns the pathname that this route's own literal prefix resolves to.
+  // Returns the pathname that this route's own literal prefix resolves to,
+  // spelled as a url built for it is: without the trailing slash the builder
+  // drops (see buildUrlFromPattern), so a frame's bare address has one form.
   // For route "/": "/"
-  // For route "/profile/": "/profile/"
+  // For route "/profile/": "/profile"
   // For route "/map/isochrone/compare": "/map/isochrone/compare"
-  // For route "/map/isochrone/:tab=/": "/map/isochrone/" (literal prefix before first param)
+  // For route "/map/isochrone/:tab=/": "/map/isochrone" (literal prefix before first param)
   const getOwnBasePathname = () => {
     const segments = parsedPattern.segments;
     if (segments.length === 0) {
@@ -998,7 +1029,7 @@ export const createRoutePattern = (
     if (literalSegments.length === 0) {
       return new URL(resolveRouteUrl("/")).pathname;
     }
-    const prefix = `/${literalSegments.join("/")}/`;
+    const prefix = `/${literalSegments.join("/")}`;
     return new URL(resolveRouteUrl(prefix)).pathname;
   };
 
@@ -1066,29 +1097,68 @@ export const createRoutePattern = (
     return paramsWithPath;
   };
 
+  // The search names a url built for this route decides — written, or left
+  // out at their default: those of the state it builds from (the names it was
+  // given, its own, what it carries for the routes around it), and every one
+  // its own pattern and the ancestors covering it declare.
+  const searchNamesDecidedBy = (intended) => {
+    const names = new Set(intended.keys());
+    for (const name of queryConnectionMap.keys()) {
+      names.add(name);
+    }
+    let ancestor = patternObject.parent;
+    while (ancestor) {
+      if (coversAddressesBelow(ancestor)) {
+        for (const name of ancestor.queryConnectionMap.keys()) {
+          names.add(name);
+        }
+      }
+      ancestor = ancestor.parent;
+    }
+    return names;
+  };
+
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
     params = carryOverWeakParams(params);
     if (currentUrl) {
       params = carryOverPathParams(currentUrl, params);
     }
-    const relativeBuiltUrl = buildMostPreciseUrl(params);
+    const intendedState = buildIntendedState(params);
+    const relativeBuiltUrl = buildMostPreciseUrlFor(intendedState);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);
     }
     const absoluteBuiltUrl = resolveRouteUrl(relativeBuiltUrl);
-    const builtPathname = new URL(absoluteBuiltUrl).pathname;
-    const currentPathname = new URL(currentUrl).pathname;
-    if (builtPathname === currentPathname) {
-      return absoluteBuiltUrl;
+    const builtUrlObject = new URL(absoluteBuiltUrl);
+    const currentUrlObject = new URL(currentUrl);
+    const builtPathname = builtUrlObject.pathname;
+    const currentPathname = currentUrlObject.pathname;
+    // The address amended in place: every route matching it still does, so
+    // the search pairs this write does not decide — another route's, or no
+    // route's (utm_source, a share ref) — are kept as written.
+    const amendSearchOf = (urlObject) => {
+      const searchNamesDecided = searchNamesDecidedBy(intendedState.intended);
+      const builtSearch = builtUrlObject.search;
+      urlObject.search = amendSearch(
+        currentUrlObject.search,
+        (name) => searchNamesDecided.has(name),
+        builtSearch ? builtSearch.slice(1).split("&") : [],
+      );
+      return urlObject.href;
+    };
+    // "/map" and "/map/" are one address, written as the builder spells it
+    if (
+      builtPathname === currentPathname ||
+      `${builtPathname}/` === currentPathname
+    ) {
+      return amendSearchOf(builtUrlObject);
     }
     const ownBasePathname = getOwnBasePathname();
     if (builtPathname === ownBasePathname) {
       // Catch-all: the route resolved to its own base pathname but the current URL
-      // sits on a different path that this trailing-slash route caught.  Keep the
+      // sits on a deeper path that this trailing-slash route caught.  Keep the
       // current pathname and only update the search string.
-      const correctedUrl = new URL(currentUrl);
-      correctedUrl.search = new URL(absoluteBuiltUrl).search;
-      return correctedUrl.href;
+      return amendSearchOf(currentUrlObject);
     }
     // Ancestor optimisation or descendant selection — trust buildMostPreciseUrl.
     return absoluteBuiltUrl;
@@ -1103,7 +1173,11 @@ export const createRoutePattern = (
     queryConnectionMap, // Separate map for query parameters
     paramConstraintMap, // Which values each param accepts (Map<paramName, test>)
     parsedPattern,
-    children: [],
+    // Every route below this one (see isChildPattern), and those of them
+    // standing right below it — whose parent it is: computed by
+    // setupRoutePatterns.
+    descendants: [],
+    directChildren: [],
     parent: null,
     familyRoot: null, // Topmost ancestor, computed during setupPatterns
     depth: 0, // Will be calculated after relationships are built
@@ -1166,12 +1240,20 @@ const detectSignals = (routePattern) => {
   const signalConnections = [];
   let updatedPattern = routePattern;
 
-  // Look for path signals: :paramName={navi_state_signal:id}
-  const signalParamRegex = /(:)(\w+)(=)?(\{navi_state_signal:[^}]+\})/g;
+  // Look for path signals: :paramName={navi_state_signal:id}, or
+  // :paramName?={navi_state_signal:id} for a param the address may leave out.
+  const signalParamRegex = /(:)(\w+)(\?)?(=)?(\{navi_state_signal:[^}]+\})/g;
   let match;
 
   while ((match = signalParamRegex.exec(routePattern)) !== null) {
-    const [fullMatch, prefix, paramName, equalSign, signalString] = match;
+    const [
+      fullMatch,
+      prefix,
+      paramName,
+      optionalMark,
+      equalSign,
+      signalString,
+    ] = match;
 
     // Emit warning if equal sign is missing
     if (!equalSign) {
@@ -1195,7 +1277,10 @@ const detectSignals = (routePattern) => {
 
     if (signalData) {
       const { signal, options } = signalData;
-      updatedPattern = updatedPattern.replace(fullMatch, `:${paramName}`);
+      updatedPattern = updatedPattern.replace(
+        fullMatch,
+        `:${paramName}${optionalMark || ""}`,
+      );
       signalConnections.push({
         paramName,
         signal,
@@ -1279,14 +1364,7 @@ const warnOnParamConstraintWithoutSegment = (
 /**
  * Parse a route pattern string into structured segments
  */
-const parsePattern = (
-  pattern,
-  {
-    pathConnectionMap,
-    queryConnectionMap,
-    paramConstraintMap = EMPTY_PARAM_CONSTRAINT_MAP,
-  },
-) => {
+const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
   // Build queryParams from queryConnectionMap
   const queryParams = [];
   for (const [paramName, connection] of queryConnectionMap) {
@@ -1336,28 +1414,18 @@ const parsePattern = (
       // Parameter segment
       const paramName = seg.slice(1).replace("?", ""); // Remove : and optional ?
 
-      // Check if parameter should be optional:
-      // 1. Explicitly marked with ?
-      // 2. Has a default value
-      // 3. Connected signal has undefined value and no explicit default (allows /map to match /map/:panel)
-      //    — unless the param is constrained: "no segment" is not one of the values it accepts
+      // Whether the address may stop before it is declared, never read off a
+      // value: written `:name?`, or given a default the bare address stands
+      // for (see phase 4c of setupRoutePatterns, which settles that against
+      // a page at the bare address). The value the signal holds when the
+      // route is created says nothing — it would make the same pattern match
+      // differently with a signal bound or not, and from one session to the
+      // next with a persisted one.
       const connection =
         pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
       const hasDefault =
         connection && connection.getDefaultValue() !== undefined;
-      let isOptional = seg.endsWith("?") || hasDefault;
-
-      if (!isOptional && !paramConstraintMap.has(paramName)) {
-        // Check if connected signal has undefined value (making parameter optional for index routes)
-        if (
-          connection &&
-          connection.signal &&
-          readSignalForUrlBuild(connection) === undefined &&
-          !hasDefault
-        ) {
-          isOptional = true;
-        }
-      }
+      const isOptional = seg.endsWith("?") || hasDefault;
 
       return {
         type: "param",
@@ -1415,65 +1483,6 @@ const checkIfLiteralCanBeOptionalWithPatternObj = (
 };
 
 /**
- * Helper function to try extracting parameters from child routes for remaining URL segments
- */
-const tryExtractChildParameters = (
-  childPattern,
-  remainingSegments,
-  existingParams,
-) => {
-  const childParsedPattern = childPattern.pattern;
-
-  // For child patterns, we need to check if they can provide additional parameters
-  // by matching segments that come after what the parent matched
-
-  // The child pattern might have literals that were already matched by the parent
-  // We need to find where in the child pattern we should start matching the remaining segments
-  let remainingIndex = 0;
-  const childParams = {};
-
-  // Simple approach: look for parameter segments in the child pattern that could
-  // match our remaining segments, but skip literals that were likely matched by parent
-  for (let i = 0; i < childParsedPattern.segments.length; i++) {
-    const segment = childParsedPattern.segments[i];
-
-    if (segment.type === "param" && remainingIndex < remainingSegments.length) {
-      // Check if this parameter segment could match a remaining URL segment
-      // We need to verify that this parameter isn't already captured by parent
-      if (!(segment.name in existingParams)) {
-        const urlSegment = remainingSegments[remainingIndex];
-        const paramValue = decodeUrlPart(urlSegment);
-        if (paramValue === null) {
-          return null;
-        }
-        const paramConstraint = childPattern.paramConstraintMap.get(
-          segment.name,
-        );
-        if (paramConstraint && !paramConstraint(paramValue)) {
-          return null; // the child declines this value, it cannot explain these segments
-        }
-        childParams[segment.name] = paramValue;
-        remainingIndex++;
-      }
-    } else if (
-      segment.type === "literal" &&
-      remainingIndex < remainingSegments.length
-    ) {
-      // Check if this literal matches remaining segments
-      const urlSegment = remainingSegments[remainingIndex];
-      if (decodeUrlPart(urlSegment) === segment.value) {
-        remainingIndex++;
-      }
-      // Note: we don't return null if literal doesn't match, because it might be
-      // a literal that was already consumed by the parent pattern
-    }
-  }
-
-  // Return extracted parameters if we found any
-  return Object.keys(childParams).length > 0 ? childParams : null;
-};
-
-/**
  * Match a URL against a parsed pattern
  */
 const matchUrl = (
@@ -1490,19 +1499,12 @@ const matchUrl = (
 ) => {
   // Parse the URL
   const urlObj = new URL(url, baseUrl);
-  let pathname = urlObj.pathname;
-  const originalPathname = pathname; // Store original pathname before baseUrl processing
-
-  // If baseUrl is provided, calculate the pathname relative to the baseUrl's directory
-  if (baseUrl) {
-    const baseUrlObj = new URL(baseUrl);
-    // if the base url is a file, we want to be relative to the directory containing that file
-    const baseDir = baseUrlObj.pathname.endsWith("/")
-      ? baseUrlObj.pathname
-      : baseUrlObj.pathname.substring(0, baseUrlObj.pathname.lastIndexOf("/"));
-    if (pathname.startsWith(baseDir)) {
-      pathname = pathname.slice(baseDir.length);
-    }
+  const originalPathname = urlObj.pathname; // Store original pathname before baseUrl processing
+  // Relative to the directory of the base url; an address outside it is
+  // another document's (see isUrlOfThisDocument).
+  let pathname = readPathnameInsideBase(urlObj, baseUrl, baseFileUrl);
+  if (pathname === null) {
+    return null;
   }
 
   // Handle root route - only matches empty path or just "/"
@@ -1543,11 +1545,6 @@ const matchUrl = (
         .filter((s) => s !== "")
     : pathname.split("/").filter((s) => s !== "");
 
-  // Handle trailing slash flexibility: if pattern has trailing slash but URL doesn't (or vice versa)
-  // and we're at the end of segments, allow the match
-  const urlHasTrailingSlash = pathname.endsWith("/") && pathname !== "/";
-  const patternHasTrailingSlash = parsedPattern.trailingSlash;
-
   const params = {};
   let urlSegmentIndex = 0;
 
@@ -1584,14 +1581,10 @@ const matchUrl = (
           // Optional parameter - don't add default here, let resolveParams handle it
           continue;
         }
-        // Required parameter missing - but check if we can use trailing slash logic
-        // If this is the last segment and we have a trailing slash difference, it might still match
-        const isLastSegment = i === parsedPattern.segments.length - 1;
-        if (isLastSegment && patternHasTrailingSlash && !urlHasTrailingSlash) {
-          // Pattern expects trailing slash segment, URL doesn't have it - allow missing optional param
-          continue;
-        }
-        return null; // Required parameter missing
+        // Required, whatever the trailing slash: "/map" and "/map/" are one
+        // address, and a frame "/map/:panel/" covers it only when its param
+        // is declared optional (see parsePattern).
+        return null;
       }
 
       // Capture URL segment as parameter value
@@ -1620,25 +1613,25 @@ const matchUrl = (
     return null; // Pattern without trailing slash/wildcard should not match extra segments
   }
 
-  // If there are remaining URL segments and we have descendant routes,
-  // try to capture parameters from descendant routes
-  if (
-    urlSegmentIndex < urlSegments.length &&
-    patternObj &&
-    patternObj.children
-  ) {
-    const remainingSegments = urlSegments.slice(urlSegmentIndex);
-
-    // Try to match remaining segments against child routes to extract their parameters
-    for (const childPattern of patternObj.children) {
-      const childParams = tryExtractChildParameters(
-        childPattern,
-        remainingSegments,
-        params,
-      );
-      if (childParams) {
-        Object.assign(params, childParams);
-        break; // Found a matching child pattern
+  // The address goes on below this route: the path params it names there are
+  // those of the routes below that match it themselves — never guessed from
+  // where their segments might line up, which would hand a sibling section's
+  // segment to a param it does not have, and keep it said when that route
+  // does not match.
+  if (urlSegmentIndex < urlSegments.length && patternObj) {
+    for (const childPattern of patternObj.descendants) {
+      const childParams = childPattern.applyOn(url);
+      if (!childParams) {
+        continue;
+      }
+      for (const segment of childPattern.pattern.segments) {
+        if (
+          segment.type === "param" &&
+          !(segment.name in params) &&
+          segment.name in childParams
+        ) {
+          params[segment.name] = childParams[segment.name];
+        }
       }
     }
   }
@@ -2023,12 +2016,17 @@ const buildUrlFromPattern = (
 };
 
 /**
- * Check if childPattern is a child route of parentPattern
- * This determines parent-child relationships for signal clearing behavior.
+ * Whether childPattern stands below parentPattern: every segment of the parent
+ * is a segment of the child, a param of the parent standing for any value.
+ * What the parent says reaches the child — its search params, when it covers
+ * the addresses below it (see coversAddressesBelow).
  *
- * Route families vs parent-child relationships:
- * - Different families: preserve signals (e.g., "/" and "/settings")
- * - Parent-child: clear signals when navigating to parent (e.g., "/settings" and "/settings/:tab")
+ * A route at the root ("/", "") has no segment to compare, so it stands above
+ * every other one. Which places belong together — the families the URL→state
+ * sync reads to decide what leaving a page clears — is decided without it
+ * (see Phase 2b of setupRoutePatterns): "/settings" and "/settings/:tab" are one
+ * family, "/settings" and "/games/:gameId" two, whether a route at "/" exists
+ * or not.
  *
  * E.g., "/admin/settings/:tab" is a child of "/admin/:section/"
  * Also, "/admin/?tab=something" is a child of "/admin/"
@@ -2119,16 +2117,29 @@ export const setupRoutePatterns = (routePatterns) => {
       if (!routePattern.parent || otherSegmentCount > currentSegmentCount) {
         routePattern.parent = otherRoutePattern;
       }
-      otherRoutePattern.children.push(routePattern);
+      otherRoutePattern.descendants.push(routePattern);
+    }
+  }
+  for (const routePattern of routePatternSet) {
+    if (routePattern.parent) {
+      routePattern.parent.directChildren.push(routePattern);
     }
   }
   // Phase 2b: Compute family roots. Two patterns are in the same family when
   // their parent chains meet — one is ancestor of the other, or they share a
-  // common ancestor. Each pattern has a single parent, so that is exactly:
-  // same topmost ancestor (familyRoot equality).
+  // common ancestor — below the root: a route at the root ("/" carrying the
+  // search params of every page, "" the start page) stands above every other
+  // only because it has no segment to compare, and says nothing about which
+  // places belong together. Declaring one must not change what leaving a page
+  // does to its params (see the URL→state sync in route.js). Each pattern has
+  // a single parent, so that is exactly: same topmost ancestor short of the
+  // root (familyRoot equality).
   for (const routePattern of routePatternSet) {
     let root = routePattern;
-    while (root.parent) {
+    while (
+      root.parent &&
+      getPathSegmentCount(root.parent.originalPattern) > 0
+    ) {
       root = root.parent;
     }
     routePattern.familyRoot = root;
@@ -2210,7 +2221,7 @@ export const setupRoutePatterns = (routePatterns) => {
   // Stored as a Map<segmentIndex, conn[]> for O(1) lookup by position.
   for (const routePattern of routePatternSet) {
     const descendantPathSignalsByIndex = new Map();
-    const collectDescendantPathSignals = (patternObj) => {
+    const collectPathSignals = (patternObj) => {
       for (const conn of patternObj.connections) {
         if (conn.paramType === "path") {
           const paramSegment = patternObj.pattern.segments.find(
@@ -2227,11 +2238,11 @@ export const setupRoutePatterns = (routePatterns) => {
           }
         }
       }
-      for (const child of patternObj.children) {
-        collectDescendantPathSignals(child);
-      }
     };
-    collectDescendantPathSignals(routePattern);
+    collectPathSignals(routePattern);
+    for (const descendant of routePattern.descendants) {
+      collectPathSignals(descendant);
+    }
     routePattern.descendantPathSignals = descendantPathSignalsByIndex;
   }
   // Phase 4b: Flag path params whose values are ALSO declared as literal routes

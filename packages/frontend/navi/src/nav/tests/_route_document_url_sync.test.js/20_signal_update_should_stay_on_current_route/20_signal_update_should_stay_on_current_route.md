@@ -89,7 +89,7 @@ try {
     "current_url": "/map",
     "panel_signal_value": undefined,
     "map_route_matching": true,
-    "panel_route_matching": true,
+    "panel_route_matching": false,
     "flow_route_matching": false,
     "navToCalls": []
   },
@@ -97,12 +97,12 @@ try {
     "lon_signal_value": 20,
     "panel_signal_value": undefined,
     "map_route_matching": true,
-    "panel_route_matching": true,
+    "panel_route_matching": false,
     "flow_route_matching": false,
     "navToCalls": [
       {
         "url": "http://127.0.0.1/map?lon=20",
-        "callReason": 'lon signal change on route "/map/:panel/"'
+        "callReason": 'lon signal change on route "/map/"'
       }
     ]
   },
@@ -111,7 +111,7 @@ try {
   "actual_nav_calls": [
     {
       "url": "http://127.0.0.1/map?lon=20",
-      "callReason": 'lon signal change on route "/map/:panel/"'
+      "callReason": 'lon signal change on route "/map/"'
     }
   ],
   "compatibility_analysis": {

@@ -92,14 +92,14 @@ try {
     "current_url": "/dashboard",
     "tab_signal_value": undefined,
     "dashboard_route_matching": true,
-    "dashboard_tab_route_matching": true,
+    "dashboard_tab_route_matching": false,
     "navToCalls": []
   },
   "after_updating_lon": {
     "lon_signal_value": 20,
     "tab_signal_value": undefined,
     "dashboard_route_matching": true,
-    "dashboard_tab_route_matching": true,
+    "dashboard_tab_route_matching": false,
     "navToCalls": [
       "http://127.0.0.1/dashboard?lon=20"
     ]

@@ -10,7 +10,7 @@ import { writeStateFromAddress } from "../state/state_signal.js";
 import { batchWithEffectErrorsApart } from "../utils/batch_with_effect_errors_apart.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { warnUnknownOptions } from "../utils/warn_unknown_options.js";
-import { decodeUrlPart } from "./decode_url_part.js";
+import { amendSearch } from "./amend_search.js";
 import {
   createRoutePattern,
   resolveRouteUrl,
@@ -35,9 +35,12 @@ const ROUTE_OPTIONS = new Set([
  * Declares a route from an url pattern.
  *
  * @param {string} pattern - The url pattern, where `:name` is a path param and
- *   `:name=${signal}` binds that param to a signal. A pattern ending in `/` is a
- *   frame: it matches every address below it too, and its search params hold
- *   there (see docs/navigation.md, "A page or a frame: the trailing slash").
+ *   `:name=${signal}` binds that param to a signal. A param is required: the
+ *   address may stop before it only when it is written `:name?` (`:name?=${signal}`)
+ *   or has a default (see docs/navigation.md, "Which values a param accepts").
+ *   A pattern ending in `/` is a frame: it matches every address below it too,
+ *   and its search params hold there (see docs/navigation.md, "A page or a
+ *   frame: the trailing slash").
  * @param {object} [options]
  * @param {Object<string, import("@preact/signals").Signal | {signal: import("@preact/signals").Signal, default?: any}>} [options.searchParams]
  *   Search params this route two-way syncs with, by name. The signal and the url
@@ -50,9 +53,12 @@ const ROUTE_OPTIONS = new Set([
  *   `{ signal, default }` says what that state is worth ON THIS ROUTE: the same
  *   step opens a creation wizard on its first question and an edition one on
  *   its summary, each address staying clean on the step its page opens on. One
- *   state, and the page one is on decides where it starts — which is why this
- *   is said here rather than as a dynamic default on the signal: a signal and
- *   the route declaring it cannot name each other.
+ *   state, and the page one is on decides where it starts — of the matching
+ *   routes declaring it, the most specific one, whatever the order given to
+ *   setupRoutes. It is said here rather than as a dynamic default on the
+ *   signal because a signal and the route declaring it cannot name each other.
+ *   Writing one changes that param alone: the other pairs of the address,
+ *   another route's or none's (`utm_source`), stay as they were written.
  *   Writing one AMENDS the history entry one is on — a param qualifies the
  *   screen, it is not a place, and one entry per write turns a single
  *   back-press into as many as the user moved. A state whose values ARE places
@@ -64,10 +70,7 @@ const ROUTE_OPTIONS = new Set([
  *   be the `oneOf` of the signal bound to that param), or a predicate. A route
  *   whose param declines the segment does not match at all: no signal is
  *   written, `<Route fallback>` is reachable, and `/:gameId` can sit at the root
- *   without swallowing `/cgu`. A constrained param is also required — no segment
- *   is not one of the values it accepts — so `/:gameId` does not match `/`,
- *   unless its default stands for the bare address (see docs/navigation.md,
- *   "Declaring the sections is what makes them places").
+ *   without swallowing `/cgu`.
  *
  *   Constrain the shape, not the existence: whether that game exists is for the
  *   route action and the page to answer, on a route that did match.
@@ -710,9 +713,7 @@ const resolveRedirectionOnce = (url) => {
   }
   return buildRedirectionUrl(redirectingRoute, redirectingRouteParams);
 };
-// The query is edited as written rather than rebuilt through URLSearchParams,
-// which would rewrite every param kept ("?weather" into "?weather=", commas
-// encoded — see extractSearchParams).
+// The query is edited as written (see amendSearch).
 const dropSearchParamsOnce = (url) => {
   const urlObject = new URL(url);
   if (!urlObject.search) {
@@ -725,16 +726,13 @@ const dropSearchParamsOnce = (url) => {
     if (!routePattern.applyOn(url, { exact: true })) {
       continue;
     }
-    const pairs = urlObject.search.slice(1).split("&");
-    const pairsKept = pairs.filter((pair) => {
-      const eqIndex = pair.indexOf("=");
-      const key = eqIndex > -1 ? pair.slice(0, eqIndex) : pair;
-      return !dropSearchParams.includes(decodeUrlPart(key) ?? key);
-    });
-    if (pairsKept.length === pairs.length) {
+    const searchKept = amendSearch(urlObject.search, (name) =>
+      dropSearchParams.includes(name),
+    );
+    if (searchKept === urlObject.search) {
       continue;
     }
-    urlObject.search = pairsKept.length ? `?${pairsKept.join("&")}` : "";
+    urlObject.search = searchKept;
     return urlObject.href;
   }
   return null;
@@ -1073,6 +1071,12 @@ This prevents cross-test pollution and ensures clean state.`,
         const matchingRawParamsArray = [];
         const paramNameDeclaredByMatchingRouteSet = new Set();
         const matchingFamilyRootSet = new Set();
+        // One state, one reading per pass: among the matching routes declaring
+        // it, the most specific (deepest) one reads it from the address — the
+        // route a write of it lands on (see writeValueInUrl). Its default is
+        // the one an address silent about it opens on, whatever the order the
+        // routes were given to setupRoutes in.
+        const readingBySignal = new Map();
         for (const matchingRoute of matchingRouteSet) {
           matchingRawParamsArray.push(matchingRoute.rawParamsSignal.value);
           const matchingPattern =
@@ -1084,6 +1088,16 @@ This prevents cross-test pollution and ensures clean state.`,
             paramNameDeclaredByMatchingRouteSet.add(paramName);
           }
           matchingFamilyRootSet.add(matchingPattern.familyRoot);
+          for (const connection of matchingPattern.connections) {
+            const reading = readingBySignal.get(connection.signal);
+            if (reading && reading.depth >= matchingPattern.depth) {
+              continue;
+            }
+            readingBySignal.set(connection.signal, {
+              connection,
+              depth: matchingPattern.depth,
+            });
+          }
         }
 
         for (const {
@@ -1182,6 +1196,9 @@ This prevents cross-test pollution and ensures clean state.`,
               continue;
             }
 
+            if (readingBySignal.get(paramSignal).connection !== connection) {
+              continue;
+            }
             // URL -> Signal sync: When route matches, ensure signal matches URL state
             // URL is the source of truth for explicit parameters
             const value = paramSignal.peek();

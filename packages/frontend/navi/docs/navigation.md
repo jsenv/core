@@ -95,6 +95,14 @@ and its address does not open on the default section. Details in
 [Search params](#search-params) and in
 [Declaring the sections](#declaring-the-sections-is-what-makes-them-places).
 
+A frame's own address is one address however it is typed: `/map` and `/map/`
+match the same routes, and a url built for it is written `/map`. A frame whose
+pattern goes on with a param, `/map/:panel/`, has that bare address only if the
+param may be absent (see [Which values a param accepts](#which-values-a-param-accepts)).
+Below the frame, at an address no deeper route declares (`/profile/404` under
+`/profile/`), writing one of its search params keeps that address: only the
+search changes.
+
 ### A document that is not at the root: `setBaseUrl`
 
 A second document in the same site — an admin panel at `/admin/admin.html`
@@ -105,6 +113,11 @@ every address below it.** jsenv's dev server already does — an address it find
 no file for is answered with the closest html file above it, `<dirname>.html`
 included, so `/admin/places/42` is served `/admin/admin.html` — and any other
 host needs the same rule.
+
+An address outside the base — `/` or `/places/42` for that admin — is not this
+document's: no route matches it, not even the one at `/`, and a link to it is
+left to the browser, which loads the document answering there. Such a link needs
+nothing more than its `href`.
 
 ### A section is allowed to be a route of its own
 
@@ -181,6 +194,25 @@ export const ADMIN_SETTINGS_ROUTE = route(`/admin/settings/:tab=${tabSignal}`);
 // ADMIN_ROUTE.buildUrl() → /admin/settings/advanced — "admin, where you left it"
 ```
 
+#### What a path param holds once its page is left
+
+While its route matches, a path param's signal is what the address says. Once
+the route stops matching, it depends on where the reader went:
+
+- to a page of the **same family** — routes standing one below the other, like
+  `/games/:gameId` and `/games/:gameId/chat`, or two sections under one frame,
+  `/admin/users/:id` and `/admin/groups/:gid` under `/admin/` — a param without
+  a default goes back to `undefined`: the family's address no longer names it;
+- to a page of **another family**, it keeps its value: a link built from the
+  signal (`GAME_ROUTE.buildUrl()` from the settings) reopens the same game.
+
+A route at the root (`/`, `""`) stands above every other one but says nothing
+about which belong together: declaring one changes none of this. A param with a
+default keeps its value in both cases, and a `weak` one goes back to its default
+in both. So a signal read away from its page holds what another family's page
+left in it: code that acts on it (a route action, a highlight) asks whether its
+route matches first.
+
 ### Which values a param accepts
 
 A param says which segments it accepts, and a segment it declines is not a
@@ -202,11 +234,23 @@ export const GAME_ROUTE = route(`/:gameId=${gameIdSignal}`, {
 
 This is what lets a param sit at the root without swallowing every single-segment
 address: `/cgu` stays another route's url, `<Route fallback>` is reachable, and
-no signal is written for a url this route has nothing to do with. A constrained
-param is also **required**: `/:gameId` does not match `/` — unless its default
-stands for the bare address, as `/games/me` does for `/games/me/:section` (see
-[Declaring the sections](#declaring-the-sections-is-what-makes-them-places)).
-The accepted forms are in `route()`'s JSDoc.
+no signal is written for a url this route has nothing to do with. The accepted
+forms are in `route()`'s JSDoc.
+
+A param is **required** unless the route says otherwise: `/:gameId` does not
+match `/`, `/users/:id` does not match `/users`, whatever the signal bound to it
+holds. Two declarations let the address stop before it:
+
+- `:name?` — ``route(`/users/:id?=${userIdSignal}`)`` matches `/users` too, with
+  `id` absent;
+- a default, which the bare address then stands for, as `/games/me` does for
+  `/games/me/:section` (see
+  [Declaring the sections](#declaring-the-sections-is-what-makes-them-places),
+  where a page at the bare address and a literal for the default make it
+  required again).
+
+An address that ends where a required param starts is no address of that route:
+it goes to another route, or to `<Route fallback>`.
 
 A segment that names no text — a `%` not followed by two hex digits, a link cut
 inside `%C3%A9`, a Latin-1 `%E9` — is a value no param accepts: the route does
@@ -227,11 +271,13 @@ not-found screen and offer a way out:
 //    and "no route matched" is a worse answer than "this game is gone"
 ```
 
-Constraining is also the fix when several routes match one url and bind the
-**same signal** on a param of the same name: they all write it, in declaration
-order, the last one winning (`/:gameId/:state` matches `/games/W-ABC234PQ` and
-writes `"games"` into a `gameIdSignal` it shares). Where a param genuinely cannot
-be constrained, the routes must not share a signal.
+When several routes match one url and bind the **same signal**, the most
+specific one — the deepest, the one a write of it lands on — reads it from the
+address: `/games/:gameId` over `/:gameId/:state` on `/games/W-ABC234PQ`, whatever
+the order given to `setupRoutes`; of two equally deep, the first declared.
+Constraining is still the fix for the one that would read a wrong value:
+`/:gameId/:state` should not match `/games/W-ABC234PQ` at all. Where a param
+genuinely cannot be constrained, the routes must not share a signal.
 
 ### An address that only sends elsewhere
 
@@ -325,6 +371,11 @@ Writing it AMENDS the history entry one is on rather than stacking a new one: a
 param that qualifies a screen is not a place, and one entry per write turns a
 single back-press into as many as the user moved. A state whose values ARE places
 says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
+
+A write changes the params it is about and nothing else: on
+`/places/clubs?view=map&utm_source=newsletter`, writing the clubs' `q` keeps the
+`view` of `/places/:section` and the `utm_source` no route declares, each as it
+was written, in its place.
 
 One answer may be kept as several params — a level and its reach,
 `?levels=…&level_exact=…` — and drawn by one control whose value is the object.
@@ -990,7 +1041,10 @@ route("/alerts/:alertId/edit", {
 
 Everything that asks "is this the default" then asks the route one is on: both
 addresses stay clean on the step they open on, and going from one to the other
-moves the step with it. Two containers on one screen are two signals — the one
+moves the step with it. Where two matching routes declare the state — a frame
+and a page below it, `/games/` defaulting to `"list"` and `/games/:gameId` to
+`"infos"` — the route one is on is the most specific of them: `/games/W-ABC`
+opens on `"infos"`, whatever the order given to `setupRoutes`. Two containers on one screen are two signals — the one
 holding the route's signal owns the param; a gallery of wizards side by side
 hands each a `useSignal` of its own, and nothing goes into the address.
 

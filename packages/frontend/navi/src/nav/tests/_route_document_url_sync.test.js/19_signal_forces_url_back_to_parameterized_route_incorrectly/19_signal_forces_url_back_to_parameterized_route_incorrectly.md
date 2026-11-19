@@ -100,7 +100,7 @@ try {
   "after_map_nav": {
     "panel_signal_value": undefined,
     "map_route_matching": true,
-    "panel_route_matching": true,
+    "panel_route_matching": false,
     "localStorage_value": "isochrone",
     "nav_to_calls": []
   },
