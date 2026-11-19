@@ -5,7 +5,7 @@ return rank("bob mar", [
   "Bob Martin", // first word at start
   "Mar Bob", // second word at start
   "Jean Bob du Mar", // both words inside
-  "Bob xyz", // one word missing → no match
+  "Bob xyz", // "mar" missing → no match
 ]);
 ```
 
@@ -19,7 +19,7 @@ return rank("bob mar", [
 ├───────────────────┼───────────────────────┼───────┤
 │ "Jean Bob du Mar" │ "Jean [Bob] du [Mar]" │ 0.625 │
 ├───────────────────┼───────────────────────┼───────┤
-│ "Bob xyz"         │ "[Bob] xyz"           │ 0.375 │
+│ "Bob xyz"         │ null                  │ -     │
 └───────────────────┴───────────────────────┴───────┘
 ```
 

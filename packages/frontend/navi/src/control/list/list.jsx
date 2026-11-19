@@ -6,7 +6,7 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { cloneElement, Component, createContext } from "preact";
+import { Component, createContext } from "preact";
 import {
   useContext,
   useLayoutEffect,
@@ -43,6 +43,7 @@ import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { openCallout } from "../rules/callout/callout.js";
 import { findControlHost, isControlRoot } from "../control_dom.js";
+import { ReadOnlyContext, ReadOnlyMessageContext } from "../control_context.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
@@ -552,10 +553,10 @@ const css = /* css */ `
     }
 
     /* An item that cannot be acted on right now (see ListItemReal): it says so
-       by dimming, and stops taking clicks — including on the buttons it holds,
-       which is the whole point (the item is what is read-only, not one of its
-       parts). Positioned so the loading outline it may draw has a box to sit
-       on. */
+       by dimming, and stops taking orders — including through the buttons it
+       holds, which is the whole point (the item is what is read-only, not one
+       of its parts). Positioned so the loading outline it may draw has a box
+       to sit on. */
     /* Same inline callout as the list's own error (.navi_list_error), scoped to
        one item. The message takes the room, the way out sits at the end. */
     .navi_list_item_error_message {
@@ -681,8 +682,19 @@ const css = /* css */ `
      set): a grid track only ever spans the single column it is placed in
      by default, so without this it would collapse into just the first
      column's width instead of the full row. */
-  .navi_list[navi-box-flow="grid"] > .navi_separator {
+  .navi_list[navi-box-flow="grid"] > .navi_separator,
+  .navi_list[navi-box-flow="grid"]
+    > [data-list-separator-hidden]
+    > .navi_separator {
     grid-column: 1 / -1;
+  }
+
+  /* The separator of a hidden item, hidden with it: the wrapper has no box, so
+     the separator keeps its place in the flow and its height, and the
+     visibility it takes from here hides whatever it is made of. */
+  [data-list-separator-hidden] {
+    display: contents;
+    visibility: hidden;
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered.
@@ -4388,7 +4400,10 @@ const useDuplicateHeaderWarning = (ref) => {
  * shadow or a stacking order has to depend on.
  *
  * So the list says it, on the three parts it makes sticky: `navi-stuck` while a
- * part sits at the edge it sticks to, gone while it rides along in the flow.
+ * part stands away from its place in the flow — held at the edge it sticks to
+ * while what is under it scrolls — and gone while it is where the flow puts it.
+ * Not "at the edge": a header at the top of a list that has not scrolled is AT
+ * that edge, and at its place in the flow too, with nothing passing under it.
  * The list is the right place for it because it is the only one that knows
  * WHICH box its parts stick to — an app writing this outside would listen to
  * the window and be right only for `scroller="document"` (see getScrollerEl,
@@ -4401,9 +4416,9 @@ const useDuplicateHeaderWarning = (ref) => {
  * about a part being stuck.
  */
 // Fractional layout is the rule, not the exception — zoom, screen density, a
-// scroller at a half-pixel offset. A part at its sticky offset can render a
-// fraction short of it, and without this slack it reads as being at rest: a
-// bug that shows up on one machine and not the next.
+// scroller at a half-pixel offset. A part at its place in the flow can render
+// a fraction away from it, and without this slack it reads as stuck: a bug
+// that shows up on one machine and not the next.
 const STUCK_SLACK = 1;
 // Which edge a part sticks to: the edge the list scrolls FROM for the header
 // and a group label, the one it scrolls toward for the footer.
@@ -4413,40 +4428,54 @@ const getStickyEdge = (partEl, horizontal) => {
   }
   return horizontal ? "left" : "top";
 };
-// A sticky inset is measured from the scrollport — the padding box of the
-// scroller, or the viewport when the page scrolls. getScrollerViewportRect
-// gives the border box; the borders come off here, since a scroller with one
-// would otherwise read as a pixel of scrolling already done.
-const getScrollportRect = (scrollerEl) => {
-  const rect = getScrollerViewportRect(scrollerEl);
-  if (scrollerEl === document.scrollingElement) {
-    return rect;
-  }
-  const top = rect.top + scrollerEl.clientTop;
-  const left = rect.left + scrollerEl.clientLeft;
-  return {
-    top,
-    left,
-    bottom: top + scrollerEl.clientHeight,
-    right: left + scrollerEl.clientWidth,
-  };
-};
-const isPartStuck = (partEl, edge, scrollportRect) => {
-  // The inset is read computed, not from the rule: --list-group-label-top and
-  // the FixedBar space behind it are what put the label where it sticks.
-  const declared = parseFloat(getComputedStyle(partEl)[edge]);
-  const inset = Number.isFinite(declared) ? declared : 0;
-  const rect = partEl.getBoundingClientRect();
+// Whether a part stands away from its place in the flow. Each part has one the
+// box holding it decides: the header comes first in the list (order: -2), a
+// group label first in its group, the footer last in the list (order: 2). So
+// its place is that box's content edge, less its own margin — what sticky can
+// only move it away from. A box that is itself the scroller holds its content
+// where its scroll offset puts it.
+const readPartStuck = (partEl, edge, scrollerEl) => {
+  const boxEl = partEl.parentElement;
+  const boxRect = boxEl.getBoundingClientRect();
+  const boxStyle = getComputedStyle(boxEl);
+  const partStyle = getComputedStyle(partEl);
+  const partRect = partEl.getBoundingClientRect();
+  const scrolls = boxEl === scrollerEl;
+  const lengthOf = (value) => parseFloat(value) || 0;
   if (edge === "top") {
-    return rect.top - scrollportRect.top <= inset + STUCK_SLACK;
+    const flowTop =
+      boxRect.top +
+      boxEl.clientTop +
+      lengthOf(boxStyle.paddingTop) +
+      lengthOf(partStyle.marginTop) -
+      (scrolls ? boxEl.scrollTop : 0);
+    return partRect.top - flowTop > STUCK_SLACK;
   }
   if (edge === "left") {
-    return rect.left - scrollportRect.left <= inset + STUCK_SLACK;
+    const flowLeft =
+      boxRect.left +
+      boxEl.clientLeft +
+      lengthOf(boxStyle.paddingLeft) +
+      lengthOf(partStyle.marginLeft) -
+      (scrolls ? boxEl.scrollLeft : 0);
+    return partRect.left - flowLeft > STUCK_SLACK;
   }
   if (edge === "bottom") {
-    return scrollportRect.bottom - rect.bottom <= inset + STUCK_SLACK;
+    const flowBottom =
+      boxRect.top +
+      boxEl.clientTop +
+      (scrolls ? boxEl.scrollHeight - boxEl.scrollTop : boxEl.clientHeight) -
+      lengthOf(boxStyle.paddingBottom) -
+      lengthOf(partStyle.marginBottom);
+    return flowBottom - partRect.bottom > STUCK_SLACK;
   }
-  return scrollportRect.right - rect.right <= inset + STUCK_SLACK;
+  const flowRight =
+    boxRect.left +
+    boxEl.clientLeft +
+    (scrolls ? boxEl.scrollWidth - boxEl.scrollLeft : boxEl.clientWidth) -
+    lengthOf(boxStyle.paddingRight) -
+    lengthOf(partStyle.marginRight);
+  return flowRight - partRect.right > STUCK_SLACK;
 };
 const useStuckStickyParts = (
   ref,
@@ -4462,7 +4491,16 @@ const useStuckStickyParts = (
     if (!listContainerEl) {
       return;
     }
-    const partEls = listContainerEl.querySelectorAll(STICKY_LIST_PART_SELECTOR);
+    // This list's own parts: a list nested in one of its items answers for
+    // its parts, against its own scroller.
+    const partEls = [];
+    for (const partEl of listContainerEl.querySelectorAll(
+      STICKY_LIST_PART_SELECTOR,
+    )) {
+      if (partEl.closest(".navi_list_container") === listContainerEl) {
+        partEls.push(partEl);
+      }
+    }
     if (partEls.length === 0) {
       return;
     }
@@ -4470,16 +4508,16 @@ const useStuckStickyParts = (
     if (!scrollerEl) {
       return;
     }
-    // One rect per RENDERED part: virtualization already bounds how many of
+    // One reading per RENDERED part: virtualization already bounds how many of
     // them exist, which is what keeps this affordable on every scroll event.
-    const scrollportRect = getScrollportRect(scrollerEl);
-    for (const partEl of partEls) {
-      const edge = getStickyEdge(partEl, horizontal);
-      partEl.toggleAttribute(
-        "navi-stuck",
-        isPartStuck(partEl, edge, scrollportRect),
-      );
-    }
+    // Every part read before any is written: an attribute written is a style
+    // the next reading would have to resolve again.
+    const stuckList = partEls.map((partEl) =>
+      readPartStuck(partEl, getStickyEdge(partEl, horizontal), scrollerEl),
+    );
+    partEls.forEach((partEl, index) => {
+      partEl.toggleAttribute("navi-stuck", stuckList[index]);
+    });
   };
 
   // Every commit, because a virtualized list changes which parts exist without
@@ -5181,6 +5219,13 @@ const readEndBefore = (itemEl, listEl, horizontal) => {
     itemEl.previousElementSibling
       ? itemEl.previousElementSibling
       : itemEl;
+  // A hidden item's separator stands in a wrapper with no box of its own: the
+  // box is the separator's, the place in the flow the wrapper's.
+  const slotBoxEl =
+    slotEl.hasAttribute("data-list-separator-hidden") &&
+    slotEl.firstElementChild
+      ? slotEl.firstElementChild
+      : slotEl;
   const groupListEl = slotEl.parentElement;
   if (
     groupListEl &&
@@ -5195,9 +5240,9 @@ const readEndBefore = (itemEl, listEl, horizontal) => {
     if (beforeRect.width === 0 && beforeRect.height === 0) {
       return null;
     }
-    const slotRect = slotEl.getBoundingClientRect();
+    const slotRect = slotBoxEl.getBoundingClientRect();
     const containerStyle = window.getComputedStyle(slotEl.parentElement);
-    const slotStyle = window.getComputedStyle(slotEl);
+    const slotStyle = window.getComputedStyle(slotBoxEl);
     const beforeStyle = window.getComputedStyle(beforeEl);
     // A gap the browser computes as "normal" is none in a flex or grid list.
     const lengthOf = (value) => parseFloat(value) || 0;
@@ -6323,26 +6368,31 @@ const ListItemUI = (props) => {
     return null;
   }
   // The separator an item wears is the one at the gap above it: none when
-  // nothing of the list stands above it (see list_items.js).
+  // nothing of the list stands above it (see list_items.js), nor when the
+  // separator says none for that gap.
   if (!separator || listItems.isFirst(idDefault)) {
+    return <ListItemReal {...props} />;
+  }
+  // The gap index, only used as the function-form argument.
+  const separatorVnode = resolveSeparatorVnode(separator, props.index - 1);
+  if (isNoSeparator(separatorVnode)) {
     return <ListItemReal {...props} />;
   }
   // Said on the item: the element before it is its own separator, part of
   // its room (see readEndBefore) — a separator can be any element.
   const listItemVnode = <ListItemReal {...props} separated />;
-  // The gap index, only used as the function-form argument.
-  let separatorVnode = resolveSeparatorVnode(separator, props.index - 1);
-  if (props.hidden) {
-    // An item kept in the DOM but hidden keeps its separator, hidden with it:
-    // the point of keeping an item that matches nothing is that nothing moves,
-    // and a divider that leaves takes its own height away.
-    separatorVnode = cloneElement(separatorVnode, {
-      style: VISIBILITY_HIDDEN_STYLE,
-    });
-  }
   return (
     <>
-      {separatorVnode}
+      {props.hidden ? (
+        // An item kept in the DOM but hidden keeps its separator, hidden with
+        // it: the point of keeping an item that matches nothing is that
+        // nothing moves, and a divider that leaves takes its own height away.
+        // Wrapped rather than restyled: a separator is any children — a
+        // string, a list of nodes — and its own style stays its own.
+        <span data-list-separator-hidden="">{separatorVnode}</span>
+      ) : (
+        separatorVnode
+      )}
       {listItemVnode}
     </>
   );
@@ -6418,6 +6468,18 @@ const ListItemReal = (props) => {
   // see the press either: it is the ITEM that is unavailable, not one of its
   // parts.
   const blocked = loading || readOnly;
+  // …and handed to the controls the item holds, read-only in the item's words:
+  // a press is one way in, the keyboard is another (Enter, Space on a focused
+  // button or link), and each control refuses through its own gate whichever
+  // way it is asked. Busy is handed as read-only too: busy from above only
+  // concerns the control whose press a run is wearing, and an item whose fate is
+  // in flight must not take another order from any of them.
+  const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const readOnlyMessageFromAbove = useContext(ReadOnlyMessageContext);
+  const readOnlyHandedDown = blocked ? true : readOnlyFromAbove;
+  const readOnlyMessageHandedDown = blocked
+    ? listItemBlockedMessage(loading, props)
+    : readOnlyMessageFromAbove;
   // The primary button only: a right (or middle) click asks the browser for its
   // own menu — copying the item's text, opening a link it holds in a tab — and
   // none of that acts on the item, so a busy item has no reason to swallow it.
@@ -6529,7 +6591,11 @@ const ListItemReal = (props) => {
       onClickCapture={
         blocked
           ? (event) => {
-              if (!pressStartedHereRef.current) {
+              // A click no press made (the keyboard, detail 0) is not the one
+              // a press here left behind, whatever a press that never ended in
+              // a click left in the ref: the control it reaches refuses it
+              // itself (see the read-only handed down below).
+              if (!pressStartedHereRef.current || event.detail === 0) {
                 return;
               }
               pressStartedHereRef.current = false;
@@ -6562,7 +6628,11 @@ const ListItemReal = (props) => {
         </>
       ) : (
         <ListItemPositionContext.Provider value={position}>
-          {children}
+          <ReadOnlyContext.Provider value={readOnlyHandedDown}>
+            <ReadOnlyMessageContext.Provider value={readOnlyMessageHandedDown}>
+              {children}
+            </ReadOnlyMessageContext.Provider>
+          </ReadOnlyContext.Provider>
         </ListItemPositionContext.Provider>
       )}
       {/* Drawn on top of the item, taking no space: the item keeps whatever
@@ -6686,7 +6756,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   and calls it.
  * @param {boolean|"adding"|"removing"|"updating"} [props.loading]
  *   The item is waiting on something: it draws a loading outline and, like
- *   readOnly, stops taking clicks. Works on any item, not only a selectable
+ *   readOnly, takes no order. Works on any item, not only a selectable
  *   one — a list is edited item by item. Rather than true, say WHAT it is
  *   waiting for, which is what a press on it then answers: "adding" (joining
  *   the list), "removing" (leaving it), "updating" (being saved where it is).
@@ -6696,8 +6766,13 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   ("le choix est en cours d'enregistrement", "la sélection…" in a `multiple`
  *   list), and needs no `loading` for that.
  * @param {boolean} [props.readOnly]
- *   The item cannot be acted on: dimmed and click-through-proof, buttons inside
- *   it included.
+ *   The item cannot be acted on: dimmed, a press on it is swallowed and
+ *   answered by the item, and the navi controls it holds (a Button, a Link, a
+ *   field) are read-only too, so the keyboard reaching one — Enter, Space —
+ *   is refused by that control, in the item's words (`readOnlyMessage`, or
+ *   `busyMessage` while loading): its `action` and `command` do not run, and
+ *   an `onClick` of the app's own runs as on any read-only control. Markup of
+ *   your own (a plain `<a>`, a `<button>`) is held for the pointer only.
  * @param {boolean} [props.filtered]
  *   Excluded from the visible count and removed from the DOM entirely.
  * @param {boolean} [props.hidden]
@@ -9023,6 +9098,12 @@ export const ListItemGroup = ({
 // The `separator` prop accepts `true` (the default divider), a vnode, or a
 // function receiving the gap index — this turns any of them into the vnode to
 // render at that gap.
+// Nothing at a gap: what the function returns for a gap that has none.
+const isNoSeparator = (separatorVnode) =>
+  separatorVnode === null ||
+  separatorVnode === undefined ||
+  separatorVnode === false ||
+  separatorVnode === "";
 const resolveSeparatorVnode = (separator, gapIndex) => {
   if (separator === true) {
     return <Separator margin="0" />;

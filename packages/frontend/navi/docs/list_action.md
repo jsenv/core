@@ -73,7 +73,12 @@ row claims.
 a checkbox, a picker — it has a place to draw a spinner and an anchor to hang a
 callout on, and it is what the user pressed. The row itself is the fallback, for
 a row that holds nothing but text: it draws a loading outline, swallows presses
-(its buttons included) and opens the sentence itself.
+(its buttons included) and opens the sentence itself. The controls it holds are
+handed its state as read-only, so the keyboard does not get round it: Enter or
+Space on a button inside a busy or read-only row is refused by that button, in
+the row's sentence — its `action` and `command` do not run (an `onClick` of your
+own runs, as on any read-only control). Markup of your own (a plain `<a>`, a
+`<button>`) is held for the pointer only.
 
 That is why a selectable row does not answer a press twice. It swallows the
 press so nothing inside it acts, then asks the control it carries to explain —

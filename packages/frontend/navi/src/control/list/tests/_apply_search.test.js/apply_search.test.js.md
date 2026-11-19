@@ -14,6 +14,8 @@
 - [acronym matching](10_acronym_matching/10_acronym_matching.md)
 - [acronym with accent folding](11_acronym_with_accent_folding/11_acronym_with_accent_folding.md)
 - [acronym single char is skipped](12_acronym_single_char_is_skipped/12_acronym_single_char_is_skipped.md)
+- [every word must match](13_every_word_must_match/13_every_word_must_match.md)
+- [ranges in a value written decomposed](14_ranges_in_a_value_written_decomposed/14_ranges_in_a_value_written_decomposed.md)
 
 ---
 

@@ -6,7 +6,7 @@
 return displayTable([
   ["a     b", "a     b value"], // literal phrase matches
   ["a     b", "a b c"], // literal not found → word loop matches both
-  ["a     b", "a c"], // only "a" matches → partial
+  ["a     b", "a c"], // "b" missing → no match
   ["a     b", "xyz"], // no match
 ]);
 ```
@@ -19,7 +19,7 @@ return displayTable([
 ├───────────┼─────────────────┼───────────────────┤
 │ "a     b" │ "a b c"         │ "[a] [b] c"       │
 ├───────────┼─────────────────┼───────────────────┤
-│ "a     b" │ "a c"           │ "[a] c"           │
+│ "a     b" │ "a c"           │ null              │
 ├───────────┼─────────────────┼───────────────────┤
 │ "a     b" │ "xyz"           │ null              │
 └───────────┴─────────────────┴───────────────────┘

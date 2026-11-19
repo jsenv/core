@@ -37,7 +37,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ["rachel gue", "Rachel Guérin"], // with accent folding
       ["martin bob", "Bob Martin"], // words in reverse order
       ["Bob Mar", "Bob Martin"], // case-exact multi-word
-      ["bob xyz", "Bob Martin"], // one word matches (OR) → partial match
+      ["bob xyz", "Bob Martin"], // "xyz" missing → no match
     ]);
   });
 
@@ -47,7 +47,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "Bob Martin", // starts with (case-insensitive)
       "Jean-bob Dupont", // after word boundary (case-exact)
       "Jean-Bob Dupont", // after word boundary (case-insensitive)
-      "Jacobin", // mid-word → lowest match
+      "Jacobin", // no "bob" in it → no match
       "Alice", // no match
     ]);
   });
@@ -57,7 +57,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "Bob Martin", // first word at start
       "Mar Bob", // second word at start
       "Jean Bob du Mar", // both words inside
-      "Bob xyz", // one word missing → no match
+      "Bob xyz", // "mar" missing → no match
     ]);
   });
 
@@ -77,12 +77,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return displayTable([
       ["a     b", "a     b value"], // literal phrase matches
       ["a     b", "a b c"], // literal not found → word loop matches both
-      ["a     b", "a c"], // only "a" matches → partial
+      ["a     b", "a c"], // "b" missing → no match
       ["a     b", "xyz"], // no match
     ]);
   });
 
   test("only spaces as search", () => {
+    // No text to look for: every value matches, nothing is highlighted.
     return displayTable([
       [" ", "Bob"],
       [" ", " Bob"],
@@ -127,6 +128,29 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return displayTable([
       ["b", "Bob Martin"], // phrase match (not acronym)
       ["z", "Bob Martin"], // no match
+    ]);
+  });
+
+  test("every word must match", () => {
+    // A word typed narrows the results: "marie d" keeps the Maries holding a
+    // "d", not every value holding a "d".
+    return displayTable([
+      ["marie", "Marie Curie"],
+      ["marie", "Marie Dupont"],
+      ["marie d", "Marie Curie"], // "d" missing → no match
+      ["marie d", "Marie Dupont"],
+      ["marie d", "Paul Dupont"], // "marie" missing → no match
+    ]);
+  });
+
+  test("ranges in a value written decomposed", () => {
+    // Ranges are positions in the value as given: a decomposed "é" takes its
+    // accent along, a Hangul syllable is found by its letters.
+    return displayTable([
+      ["rin", "Guérin Rachel".normalize("NFD")],
+      ["gue", "Guérin Rachel".normalize("NFD")],
+      ["rachel", "Guérin Rachel".normalize("NFD")],
+      ["민수", "김민수"],
     ]);
   });
 });

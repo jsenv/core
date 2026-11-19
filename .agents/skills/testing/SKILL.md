@@ -24,9 +24,14 @@ without it you test the stale `dist/` bundle instead of your source edits.
 
 - Tests generate markdown files containing inputs, outputs, and debug logs.
 - Snapshots live in `_test-name.test.js/` directories alongside test files.
-- **Snapshot tests do not "fail"** — they pass and update their snapshots
-  automatically. The verification IS reading the snapshot diff: expected
-  changes are kept, an unexplained one is a regression to fix before moving on.
+- **Snapshot tests do not "fail" locally** — they pass and update their
+  snapshots automatically. The verification IS reading the snapshot diff:
+  expected changes are kept, an unexplained one is a regression to fix before
+  moving on.
+- **With `CI` set they throw on a diff** (`throwWhenDiff` in @jsenv/snapshot):
+  the workflows set it, and `npm run test:ci` does the same locally. A change
+  whose snapshot was not rewritten and committed fails there, so run the test
+  locally first and commit the diff you read.
 
 ## Debug logging in tests
 

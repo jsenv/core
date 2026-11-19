@@ -6,7 +6,7 @@ return rank("bob", [
   "Bob Martin", // starts with (case-insensitive)
   "Jean-bob Dupont", // after word boundary (case-exact)
   "Jean-Bob Dupont", // after word boundary (case-insensitive)
-  "Jacobin", // mid-word → lowest match
+  "Jacobin", // no "bob" in it → no match
   "Alice", // no match
 ]);
 ```
