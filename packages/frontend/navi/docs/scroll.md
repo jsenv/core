@@ -744,15 +744,18 @@ whatever `loading` says afterwards.
 - **Skeletons at the size of their item**, and `itemSize` when the items above
   the screen come in sizes the data tells apart before it arrives (see
   [What the list knows, and what it guesses](#what-the-list-knows-and-what-it-guesses)).
-- **A stable `id` on every item.** The run keys its rows on `item.id` — it is
-  what addresses a row from outside (`--navi-select`, `scrolled={{ id }}`), and
-  what tells a row that moved from a row that changed.
-- **A stable `renderItem`.** The run hands preact the vnode it drew for an item
-  last time, so an unchanged row is not walked again — only for the same
-  function as last time: `renderItem` written inline in a component that
-  re-renders is a new function each time, and every row is redrawn with it.
-  Define it outside the component, or `useCallback` it, and let it read the
-  item and the index it is given rather than closing over state.
+- **A stable `id` on every item.** The run keys its items on `item.id` — it is
+  what addresses an item from outside (`--navi-select`, `scrolled={{ id }}`),
+  and what tells an item that moved from an item that changed.
+- **A stable `renderItem`.** While an item stays in the window, the run hands
+  preact the vnode it drew for it last time, so the window sliding does not
+  walk it again — only for the same function as last time: `renderItem`
+  written inline in a component that re-renders is a new function each time,
+  and every item is redrawn with it. Define it outside the component, or
+  `useCallback` it, and let it read the item and the index it is given rather
+  than closing over state. An item that leaves the window and comes back is
+  drawn anew whatever the function: the run lets go of what it drew for an
+  item once the item is no longer drawn.
 
 The rest — `virtualItemSize`, the room an item not drawn is held at (uniform
 items, or the smallest one of a mixed list — the worst case, see above), a

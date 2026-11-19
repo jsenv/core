@@ -6532,11 +6532,13 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   while the run reads the collection again — the list carries
  *   `navi-refreshing` for the same reason. `state.refreshError` is what the
  *   last reading again failed with, `null` once one answers: the items stay
- *   as they were. What it returns is kept per item
- *   and handed back as long as the function, the item, its index and
- *   its state are the same: an inline `renderItem` in a component that
- *   re-renders redraws every row. What changes inside a row is read in the
- *   row's own component, or listed in `useCallback`'s deps.
+ *   as they were. What it returns is kept for each
+ *   item drawn and handed back as long as the function, the item, its index
+ *   and its state are the same: an inline `renderItem` in a component that
+ *   re-renders redraws every item. What changes inside an item is read in
+ *   the item's own component, or listed in `useCallback`'s deps. Kept while
+ *   the item is drawn and not after: an item coming back into the render
+ *   window is drawn anew.
  * @param {(item: any, index: number) => string} [props.findText]
  *   The text of an item as the browser's find in page (Cmd/Ctrl + F) sees it
  *   while the item is not drawn — without it, find reaches only the items in the
@@ -6623,7 +6625,10 @@ const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
  *   on screen are dropped (and asked for again if the user goes back) — the
  *   same trade the render window makes with the DOM, one order of magnitude
  *   further out. `Infinity` keeps every item the run ever received; `0` keeps
- *   only the ones around the window.
+ *   only the ones around the window. Read through a resource's range reader,
+ *   an item dropped leaves the run and the ranks the reader keeps, not the
+ *   resource's store: the store keeps every row it is given, until a delete or
+ *   a reload.
  * @param {false|(index: number) => any} [props.renderSkeleton]
  *   What to draw for an item the run does not hold, at the room that item will
  *   take: a screen of skeletons alone has no item for the list to hold still,
@@ -6820,21 +6825,31 @@ const useRunItems = (
   const slotId = useContext(ListSlotContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
-  // The vnode drawn for an item, kept by its data: a run rendering again (its window
-  // moving, its first paint's budget giving way to the full one) hands preact
-  // the same vnode for an item that has not changed, and preact leaves that
-  // item's whole subtree alone. Only for a `renderItem` that is the same
+  // What is drawn for an item, kept by its data: a run rendering again (its
+  // window moving, its first paint's budget giving way to the full one) hands
+  // preact the same vnode for an item that has not changed, and preact leaves
+  // that item's whole subtree alone. Only for a `renderItem` that is the same
   // function as last time — a new one may close over new state — and for an
   // item at the same index, in the same state (refreshing, refresh error):
   // everything the function is given.
-  const itemVnodesRef = useRef(null);
-  if (
-    !itemVnodesRef.current ||
-    itemVnodesRef.current.renderItem !== renderItem
-  ) {
-    itemVnodesRef.current = { renderItem, byItem: new Map() };
-  }
-  const itemVnodesByItem = itemVnodesRef.current.byItem;
+  // What is kept is the item's wrapper (its context provider) with the item
+  // inside, never the item's vnode alone in a fresh wrapper: preact clones a
+  // vnode it has rendered before, so the item's vnode would be cloned at every
+  // run render, and the one kept — the child of every wrapper drawn since —
+  // would keep pointing at the wrapper it was first drawn in, and from there
+  // at that render's whole output: every item drawn before it, back to the
+  // first render, DOM and components included. The wrapper handed back whole
+  // is skipped by preact as it is, and the item inside is the one in the tree.
+  // Kept for the items the last render drew, and for them only: an item
+  // leaving the window is unmounted, and one coming back is mounted anew
+  // whatever it is handed, so an entry kept past the window would save
+  // nothing and hold the item for as long as the run lives.
+  const itemNodesRef = useRef(null);
+  const itemNodesDrawnBefore =
+    itemNodesRef.current && itemNodesRef.current.renderItem === renderItem
+      ? itemNodesRef.current.byItem
+      : null;
+  const itemNodesByItem = new Map();
   const renderItemSkeleton =
     renderSkeleton === undefined ? listItems.renderSkeleton : renderSkeleton;
   // An item on its way takes the room the list reserves for it: anything else
@@ -7387,44 +7402,45 @@ const useRunItems = (
       itemIndex++;
       continue;
     }
-    let itemVnode;
-    let itemContextValue;
-    const itemVnodeKept = itemVnodesByItem.get(item);
+    let itemNode;
+    const itemNodeKept = itemNodesDrawnBefore
+      ? itemNodesDrawnBefore.get(item)
+      : undefined;
     if (
-      itemVnodeKept &&
-      itemVnodeKept.itemIndex === itemIndex &&
-      itemVnodeKept.refreshing === renderItemState.refreshing &&
-      itemVnodeKept.refreshError === renderItemState.refreshError
+      itemNodeKept &&
+      itemNodeKept.itemIndex === itemIndex &&
+      itemNodeKept.refreshing === renderItemState.refreshing &&
+      itemNodeKept.refreshError === renderItemState.refreshError
     ) {
-      itemVnode = itemVnodeKept.vnode;
-      itemContextValue = itemVnodeKept.itemContextValue;
+      itemNode = itemNodeKept.node;
+      itemNodesByItem.set(item, itemNodeKept);
     } else {
-      itemVnode = renderItem(item, itemIndex, renderItemState);
-      // Kept with the vnode, for the same reason: a context value that is a
-      // fresh object on every render forces every consumer of it to render,
-      // which is the item's own chain — the vnode handed back unchanged would
+      const itemVnode = renderItem(item, itemIndex, renderItemState);
+      // The context value is kept with the item, inside its wrapper: a fresh
+      // object on every render would force every consumer of it to render,
+      // which is the item's own chain — the item handed back unchanged would
       // then buy nothing.
-      itemContextValue = { id: key, index: itemIndex, item, ownerId };
-      itemVnodesByItem.set(item, {
-        vnode: itemVnode,
-        itemContextValue,
+      itemNode = itemVnode ? (
+        <ListRunItemContext.Provider
+          key={key}
+          value={{ id: key, index: itemIndex, item, ownerId }}
+        >
+          {itemVnode}
+        </ListRunItemContext.Provider>
+      ) : null;
+      itemNodesByItem.set(item, {
+        node: itemNode,
         itemIndex,
         refreshing: renderItemState.refreshing,
         refreshError: renderItemState.refreshError,
       });
     }
-    if (itemVnode) {
-      pushItem(
-        <ListRunItemContext.Provider key={key} value={itemContextValue}>
-          {itemVnode}
-        </ListRunItemContext.Provider>,
-        item,
-        itemIndex,
-        groupKey,
-      );
+    if (itemNode) {
+      pushItem(itemNode, item, itemIndex, groupKey);
     }
     itemIndex++;
   }
+  itemNodesRef.current = { renderItem, byItem: itemNodesByItem };
   closeGroup();
   if (runEnd > windowTo) {
     const known = readKnownRooms(windowTo, runEnd);

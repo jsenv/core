@@ -216,22 +216,24 @@ export const createListItems = () => {
   // moves it at once, no recount needed — the first can only ever move up.
   const staleScopes = new Set();
   const scopeOf = (groupId) => (groupId === undefined ? UNGROUPED : groupId);
-  const groupOf = (groupId) => {
-    let group = groupById.get(groupId);
-    if (!group) {
-      group = {
-        firstSignal: signal(-1),
-        countSignal: signal(0),
-        noMatchCountSignal: signal(0),
-      };
-      groupById.set(groupId, group);
+  // A group is known from the render of its wrapper (`group()`) until the
+  // wrapper's cleanup (`dropGroup()`), and only then: preact runs that cleanup
+  // before its items', so the items' own leaving reads a group already gone,
+  // and has no first to leave there. A read that brought the group back would
+  // keep it for as long as the list lives — its id is never dropped again.
+  const firstSignalOf = (scope) => {
+    if (scope === UNGROUPED) {
+      return firstStandingSignal;
     }
-    return group;
+    const group = groupById.get(scope);
+    return group ? group.firstSignal : null;
   };
-  const firstSignalOf = (scope) =>
-    scope === UNGROUPED ? firstStandingSignal : groupOf(scope).firstSignal;
   const refreshFirst = (scope) => {
     staleScopes.delete(scope);
+    const firstSignal = firstSignalOf(scope);
+    if (!firstSignal) {
+      return;
+    }
     let first = -1;
     const consider = (place) => {
       if (place !== undefined && (first === -1 || place < first)) {
@@ -258,7 +260,7 @@ export const createListItems = () => {
         }
       }
     }
-    firstSignalOf(scope).value = first;
+    firstSignal.value = first;
   };
   const markStale = (scope) => {
     if (staleScopes.has(scope)) {
@@ -273,7 +275,8 @@ export const createListItems = () => {
   };
   const leaveFirst = (entry) => {
     const scope = scopeOf(entry.groupId);
-    if (firstSignalOf(scope).peek() === entry.place) {
+    const firstSignal = firstSignalOf(scope);
+    if (firstSignal && firstSignal.peek() === entry.place) {
       markStale(scope);
     }
   };
@@ -629,8 +632,8 @@ export const createListItems = () => {
         entry = { ownerId, place, groupId, data, mounted, visible, item };
         entryById.set(entryId, entry);
       }
-      if (mounted) {
-        const firstSignal = firstSignalOf(scopeOf(groupId));
+      const firstSignal = mounted ? firstSignalOf(scopeOf(groupId)) : null;
+      if (firstSignal) {
         const first = firstSignal.peek();
         if (first === -1 || place < first) {
           firstSignal.value = place;
@@ -665,11 +668,30 @@ export const createListItems = () => {
       if (staleScopes.has(scope)) {
         refreshFirst(scope);
       }
-      return firstSignalOf(scope).value === entry.place;
+      const firstSignal = firstSignalOf(scope);
+      if (!firstSignal) {
+        // Its group's wrapper ran its cleanup and has not rendered since,
+        // while the entry renders: a Suspense park runs every cleanup, and the
+        // reveal renders again only what changed. Nothing the list knows of
+        // stands above it in a group it no longer knows.
+        return true;
+      }
+      return firstSignal.value === entry.place;
     },
     // What a group knows about its items: how many, and how many of them the
     // search left out (see ListItemGroup).
-    group: (groupId) => groupOf(groupId),
+    group: (groupId) => {
+      let group = groupById.get(groupId);
+      if (!group) {
+        group = {
+          firstSignal: signal(-1),
+          countSignal: signal(0),
+          noMatchCountSignal: signal(0),
+        };
+        groupById.set(groupId, group);
+      }
+      return group;
+    },
     dropGroup: (groupId) => {
       groupById.delete(groupId);
       staleScopes.delete(groupId);
