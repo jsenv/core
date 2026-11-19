@@ -47,6 +47,12 @@ const isRestorableAutofocus = (el) => {
   return value === "last-resort" || value === "restore";
 };
 
+// What a transfer searches: one container, or the elements a route page renders
+// side by side, since a page has no element of its own (see route.jsx). Each
+// root is read in turn, as a container would read its children.
+const rootsOf = (containerEl) =>
+  Array.isArray(containerEl) ? containerEl : [containerEl];
+
 const clearAutofocusRestore = (containerEl) => {
   const restoreId = containerEl.getAttribute("navi-autofocus-restore");
   if (restoreId === null) {
@@ -166,7 +172,10 @@ export const markAutofocusRestoreOnClose = (
  * same about its own contents, and those contents being tried first (step 2
  * walks them) is exactly what makes the container a last resort.
  *
- * @param {HTMLElement} containerEl
+ * @param {HTMLElement|HTMLElement[]} containerEl - the container, or the
+ *   elements a route page renders, read one after the other: each one's own mark
+ *   comes after the marks inside it, as for a container, and the first one
+ *   answering a step answers it.
  * @param {object} [options]
  * @param {boolean} [options.skipFirstFocusable]
  *   Drops step 2 — the focus then goes where something ASKED for it, or to the
@@ -222,11 +231,13 @@ export const findFocusTarget = (
   // The container's own mark comes last among the asked, and querySelectorAll
   // does not return it: a surface saying "the keyboard stops on me" is answered
   // by anything inside it that named itself, the more precise answer winning.
-  const askedList = Array.from(
-    containerEl.querySelectorAll(`[navi-autofocus]`),
-  );
-  if (containerEl.matches?.(`[navi-autofocus]`)) {
-    askedList.push(containerEl);
+  const roots = rootsOf(containerEl);
+  const askedList = [];
+  for (const root of roots) {
+    askedList.push(...root.querySelectorAll(`[navi-autofocus]`));
+    if (root.matches?.(`[navi-autofocus]`)) {
+      askedList.push(root);
+    }
   }
   for (const asked of askedList) {
     if (skip(asked)) {
@@ -242,18 +253,23 @@ export const findFocusTarget = (
     }
   }
   if (!skipFirstFocusable) {
-    const focusable = findFocusable(containerEl, { exclude: skip });
-    if (focusable) {
-      return { target: focusable, reason: "first focusable element" };
+    for (const root of roots) {
+      const focusable = findFocusable(root, { exclude: skip });
+      if (focusable) {
+        return { target: focusable, reason: "first focusable element" };
+      }
     }
   }
-  const lastResorts = Array.from(
-    containerEl.querySelectorAll(`[navi-autofocus="last-resort"]`),
-  );
-  if (containerEl.matches?.(`[navi-autofocus="last-resort"]`)) {
-    // Last of all: querySelectorAll only looks at descendants, and the
-    // container is the outermost last resort there is.
-    lastResorts.push(containerEl);
+  const lastResorts = [];
+  for (const root of roots) {
+    lastResorts.push(
+      ...root.querySelectorAll(`[navi-autofocus="last-resort"]`),
+    );
+    if (root.matches?.(`[navi-autofocus="last-resort"]`)) {
+      // After what it holds: querySelectorAll only looks at descendants, and
+      // the root is the outermost last resort there is in it.
+      lastResorts.push(root);
+    }
   }
   const deepestLastResort = lastResorts.find(
     (candidate) =>
@@ -311,6 +327,11 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
      * back.
      */
     transferFocus: (transferEvent, containerEl, { getDelay } = {}) => {
+      // A route page hands over the elements it renders, having none of its own:
+      // its restore is the link it was left by (see route_focus.js), and there
+      // is no element to write that nothing was placed on, so neither mark is
+      // read nor written there.
+      const isContainer = !Array.isArray(containerEl);
       // Where the keyboard is a virtual one, an arrival lands on what ASKED for
       // the focus, or on the surface — never on the first focusable that
       // happens to be there. That element costs the top of what just arrived
@@ -328,8 +349,12 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       const skipFirstFocusable = coarsePointerSignal.value;
       let target;
       let reason;
-      containerEl.removeAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE);
-      const lastFocused = clearAutofocusRestore(containerEl);
+      if (isContainer) {
+        containerEl.removeAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE);
+      }
+      const lastFocused = isContainer
+        ? clearAutofocusRestore(containerEl)
+        : null;
       if (lastFocused) {
         // Through findFocusable: what was remembered may have become a wrapper
         // since (or stopped taking focus at all), and what is inside it is then
@@ -347,7 +372,9 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
           target = found.target;
         }
       }
-      if (!target) {
+      // Not for a page: what held the focus before is in the page that left,
+      // hidden or gone, and there is nothing of it to leave the focus on.
+      if (!target && isContainer) {
         if (focusedElement) {
           reason = "focused element before open (fallback)";
           target = focusedElement;
@@ -359,9 +386,12 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       // saying no count: finding nothing at all, and the fallback above, which
       // leaves the focus where it already was — outside.
       const placedInside =
-        target && (containerEl === target || containerEl.contains(target));
+        target &&
+        rootsOf(containerEl).some(
+          (root) => root === target || root.contains(target),
+        );
       let cancelRetry;
-      if (!placedInside) {
+      if (!placedInside && isContainer) {
         containerEl.setAttribute(AUTOFOCUS_UNPLACED_ATTRIBUTE, "");
         cancelRetry = retryWhenPlaceable(containerEl, {
           skipFirstFocusable,

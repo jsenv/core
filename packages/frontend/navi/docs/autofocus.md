@@ -1,7 +1,7 @@
 # Where the keyboard goes, and when a ring shows
 
-A dialog, a popover, a slide arriving: one of them opens and something inside
-has to hold the keyboard. `autoFocus` is how each element takes part in that
+A dialog, a popover, a slide or a page arriving: one of them opens and
+something inside has to hold the keyboard. `autoFocus` is how each element takes part in that
 decision. Handing the focus over answers a second question at the same time —
 whether what receives it shows a focus ring — and navi answers that one too, at
 the end of this page.
@@ -14,6 +14,7 @@ the end of this page.
   - [Opting a field back in](#opting-a-field-back-in)
 - [What a field says about itself](#what-a-field-says-about-itself)
 - [When the opening places nothing](#when-the-opening-places-nothing)
+- [A page arriving, and a return](#a-page-arriving-and-a-return)
 - [The ring is decided too](#the-ring-is-decided-too)
 - [When a popup closes](#when-a-popup-closes)
 - [Moving the focus yourself](#moving-the-focus-yourself)
@@ -36,8 +37,8 @@ the user asks for it, or when a field says it is what the user came for.
 
 ## The ladder
 
-Whoever hands out the focus — a popup opening, a slide arriving — tries these
-in order, and stops at the first that leads somewhere focusable:
+Whoever hands out the focus — a popup opening, a slide or a page arriving —
+tries these in order, and stops at the first that leads somewhere focusable:
 
 1. the element that held the focus when this container was last closed;
 2. the first `autoFocus` — "put it here", the container's own tried last;
@@ -159,6 +160,35 @@ it, and that debt is settled two ways, whichever comes first:
 So the same popup places the focus the same way whether a click or the page
 loading opened it.
 
+## A page arriving, and a return
+
+A route is an arrival like the others. When the router puts something new on
+screen — the page of a `<Route>` container, the pane a `RouteTravel` row stands
+on — and the focus was in what left, or on nothing, the keyboard goes to what
+arrived once it has rendered, through the ladder above: an `autoFocus` of the
+page, its first focusable (not on a touch device), its
+`navi-autofocus="last-resort"` (a heading with `tabIndex={-1}` makes a page its
+own surface, and a screen reader then says where one arrived). A page holding
+none of these leaves the focus on `<body>`.
+
+The focus held anywhere that stays is left where it is: a tab of a row above the
+routes, a bottom bar entry, a field the page arriving focused itself with
+`autoFocus`. A load or a reload places nothing beyond what asks for it, like the
+browser on any document load, and an address designating an element (a `#hash`)
+is answered by that element ([navigation.md](./navigation.md)).
+
+A page has no element of its own, so navi marks where each one starts and ends
+with two empty `<template>` elements around what it renders. They take no room,
+but a `:first-child` or `:last-child` rule aimed at a page's root sees them
+first.
+
+A return gives the focus back to where one was. A back to a page mounts it anew,
+so nothing in it remembers what was pressed; the address left does. Once the
+page is at rest — its reads answered, its lists back where they were — the focus
+goes to the link that leads to that address, when the page draws one, and
+through the ladder otherwise. A pane of a `RouteTravel` row stays built, and
+remembers what it was left on, as a slide does.
+
 ## The ring is decided too
 
 Handing the focus over answers a second question: does what receives it show a
@@ -208,8 +238,9 @@ field of its own — that one keeps it.
 
 So `{editing && <Dialog open>…</Dialog>}` unmounted from a button inside it
 lands the focus back on the button that opened it, and a dialog left along with
-the page around it lands it nowhere (`<body>`), exactly as if the page had
-simply been removed.
+the page around it gives it to nothing: the page arriving takes it
+([above](#a-page-arriving-and-a-return)), exactly as if the page had simply been
+removed.
 
 ## Moving the focus yourself
 

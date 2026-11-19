@@ -897,8 +897,9 @@ export const RouteTravel = ({
       return;
     }
     const movementBefore = movementRef.current;
-    // The row still rests on the page answered before. Held in the commit that made
-    // its pane inert, so no frame paints it contained.
+    // The row still rests on the page answered before. Held in the commit that moves
+    // the address, before its pane goes out of reach (see RouteRowContainer), so no
+    // frame paints it contained.
     const movement = beginMovement(
       { travelling: true },
       panesOf(row)[pages.findIndex((each) => samePage(each, answered))],

@@ -574,7 +574,9 @@ What that means for a page and for the application around it:
   [view_transitions.md](./view_transitions.md#a-hidden-element-is-not-photographed-even-in-the-top-layer)).
 - **The focus it holds goes where its removal would have sent it** — to no element
   — when it is hidden: a hidden element keeps the focus otherwise, and would
-  receive the keys pressed during the movement.
+  receive the keys pressed during the movement. From there the page arriving
+  takes it once it has rendered, inside the movement, as without one (see
+  [autofocus.md](./autofocus.md#a-page-arriving-and-a-return)).
 - **Its lists are mounted beside the page arriving's.** A list remembering where
   it was (`<List id>`) under the same `id` as a list of the page arriving is the
   same list to navi, and the two overwrite each other's position (see

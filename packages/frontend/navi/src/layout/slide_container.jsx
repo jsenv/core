@@ -76,6 +76,11 @@
  */
 
 import {
+  afterRendersSettle,
+  focusIsLoose,
+  markOutOfReach as markPartsOutOfReach,
+} from "../utils/focus/focus_hand_over.js";
+import {
   markAutofocusRestore,
   prepareFocusTransfer,
 } from "../utils/focus/focus_transfer.js";
@@ -1949,12 +1954,7 @@ export const SlideContainer = ({
     );
     if (arrivingElement) {
       const focusedElement = document.activeElement;
-      const focusIsLoose =
-        !focusedElement ||
-        focusedElement === document.body ||
-        focusedElement === containerRef.current ||
-        currentElement.contains(focusedElement);
-      if (focusIsLoose) {
+      if (focusIsLoose(currentElement, containerRef.current)) {
         // What the slide being left was left on, so coming back comes back to
         // it — the way out one pressed excepted (see rememberFocus).
         rememberFocus(currentElement, focusedElement);
@@ -2209,7 +2209,7 @@ export const SlideContainer = ({
   // inert would take the keyboard off it first, and drop it on document.body.
   const landFocusHandOver = () => {
     const focusHandOver = focusHandOverRef.current;
-    queueMicrotask(() => {
+    afterRendersSettle(() => {
       // Already landed by an earlier commit of this cascade, given up on, or
       // replaced by the transfer of a newer travel.
       if (focusHandOverRef.current !== focusHandOver || !trackRef.current) {
@@ -2233,12 +2233,9 @@ export const SlideContainer = ({
     });
   };
 
-  // Every slide but the one on screen out of reach — of the keyboard and of
-  // assistive technology alike.
+  // Every slide but the one on screen out of reach (see focus_hand_over.js).
   const markOutOfReach = (currentElement) => {
-    for (const slideElement of readMap().slideElements) {
-      slideElement.toggleAttribute("inert", slideElement !== currentElement);
-    }
+    markPartsOutOfReach(readMap().slideElements, currentElement);
   };
 
   /**

@@ -72,9 +72,12 @@ import { cloneElement, createContext, createRef, h } from "preact";
 import { useContext, useLayoutEffect, useReducer, useRef } from "preact/hooks";
 
 import { useUITransitionContentId } from "../transition/ui_transition.jsx";
+import { markOutOfReach } from "../utils/focus/focus_hand_over.js";
+import { markAutofocusRestore } from "../utils/focus/focus_transfer.js";
 import { forgetContainer, reportContainerShows } from "./rendered_page.js";
 import { unwireRouteFallback, wireRouteFallback } from "./route_fallback.js";
 import { observeRouteRender, publishRouteRender } from "./route_render.js";
+import { reportRouteArrival } from "./route_focus.js";
 import { RoutePageContext } from "./route_page_context.js";
 
 export { observeRouteRender };
@@ -287,13 +290,79 @@ const RouteRowContainer = ({ children }) => {
       forgetContainer(containerKey);
     };
   }, []);
-  if (activeBranch && activeBranch.type === "fallback") {
+  // The pane of each leaf, and the one on screen at the last commit.
+  const paneRefsRef = useRef(new Map());
+  const paneRefOf = (id) => {
+    let paneRef = paneRefsRef.current.get(id);
+    if (!paneRef) {
+      paneRef = createRef();
+      paneRefsRef.current.set(id, paneRef);
+    }
+    return paneRef;
+  };
+  const shownPaneRef = useRef(null);
+  const isFallback = Boolean(activeBranch && activeBranch.type === "fallback");
+  // Out of reach is a step of the row, not something a pane renders: the pane
+  // left is made inert in the commit that moves the address, and a browser takes
+  // the focus off an element the moment it becomes inert — a field one was
+  // typing in, a link one pressed, dropped on document.body. So the row hands
+  // the keyboard over first, the way a SlideContainer does (see
+  // focus_hand_over.js): what the pane left holds is written down on it, it
+  // stays within reach until the landing (see route_focus.js), and only then
+  // are the other panes put out of reach.
+  useLayoutEffect(() => {
+    const readPanes = () => {
+      const panes = [];
+      for (const [id, paneRef] of paneRefsRef.current) {
+        const pane = paneRef.current;
+        if (pane && pane.isConnected) {
+          panes.push(pane);
+        } else if (!pane) {
+          paneRefsRef.current.delete(id);
+        }
+      }
+      return panes;
+    };
+    const shownId = isFallback
+      ? "fallback"
+      : activeBranch
+        ? activeBranch.id
+        : null;
+    const shownPane =
+      shownId === null ? null : paneRefOf(shownId).current || null;
+    const leftPane = shownPaneRef.current;
+    shownPaneRef.current = shownPane;
+    const putOutOfReach = () => {
+      markOutOfReach(readPanes(), shownPaneRef.current);
+    };
+    if (
+      !shownPane ||
+      !leftPane ||
+      leftPane === shownPane ||
+      !leftPane.isConnected
+    ) {
+      putOutOfReach();
+      return;
+    }
+    if (leftPane.contains(document.activeElement)) {
+      markAutofocusRestore(leftPane, document.activeElement);
+    }
+    shownPane.removeAttribute("inert");
+    reportRouteArrival({
+      kind: "pane",
+      readRoots: () => (shownPane.isConnected ? [shownPane] : []),
+      leaving: leftPane,
+      afterLanding: putOutOfReach,
+    });
+  });
+  if (isFallback) {
     // An address the row has no place for: nothing to scroll between.
     return (
       <RouteRowPane
         key="fallback"
         branch={activeBranch}
         page={shownPage}
+        paneRef={paneRefOf("fallback")}
         shown
       />
     );
@@ -306,6 +375,7 @@ const RouteRowContainer = ({ children }) => {
       key={leaf.id}
       branch={leaf}
       page={pageOf(leaf)}
+      paneRef={paneRefOf(leaf.id)}
       shown={index === shownIndex}
       renderNeighbour={
         shownIndex !== -1 &&
@@ -316,7 +386,7 @@ const RouteRowContainer = ({ children }) => {
     />
   ));
 };
-const RouteRowPane = ({ branch, page, shown, renderNeighbour }) => {
+const RouteRowPane = ({ branch, page, paneRef, shown, renderNeighbour }) => {
   // The very vnode rendered last, while not on screen: Preact does not look into
   // it, and a page nobody can see costs nothing when the address moves.
   const contentRef = useRef(null);
@@ -340,9 +410,9 @@ const RouteRowPane = ({ branch, page, shown, renderNeighbour }) => {
   }, [shown]);
   return (
     <div
+      ref={paneRef}
       data-route-row-pane=""
       data-built={contentRef.current ? "" : undefined}
-      inert={!shown}
     >
       {contentRef.current ||
         (renderNeighbour && (
@@ -476,7 +546,16 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
     // A page carried over follows the branch it is now the page of.
     page.branchId = branch.id;
     page.element = element;
-    vnode = h(RoutePageContext.Provider, { key, value: page }, branch.node);
+    // Between two markers: a page has no element of its own, and where it
+    // starts and ends in the DOM is what the keyboard is handed to when it
+    // arrives (see readRoots).
+    vnode = h(
+      RoutePageContext.Provider,
+      { key, value: page },
+      h("template", { ref: page.startMarkerRef }),
+      branch.node,
+      h("template", { ref: page.endMarkerRef }),
+    );
   }
   shownRef.current = branch
     ? { id: branch.id, element, key, vnode, page }
@@ -510,6 +589,22 @@ const useContentKeepingLeavingPages = (branch, readShownBranch, parentPage) => {
       observer.observe(start.parentNode, { childList: true });
       entry.observer = observer;
     }
+  });
+  // A page this container did not show at its last commit is on screen: the
+  // keyboard may have to be handed to it (see route_focus.js). Its first page
+  // too, which is how a container mounting with the page around it is found
+  // inside that page, and left to it.
+  const arrivedPageRef = useRef(null);
+  useLayoutEffect(() => {
+    if (!page || page === arrivedPageRef.current) {
+      return;
+    }
+    arrivedPageRef.current = page;
+    reportRouteArrival({
+      kind: "page",
+      readRoots: page.readRoots,
+      isShown: page.isShown,
+    });
   });
   // Also run when a Suspense boundary above parks this container — a page
   // arriving that suspends to a `<Loading>` around both pages: every hook of
@@ -577,6 +672,27 @@ const createRoutePage = (readShownBranch, parentPage) => {
     element: undefined,
     left: false,
     ownLeavingSignal,
+    // Where a page of a route container starts and ends in the DOM (see
+    // useContentKeepingLeavingPages); a pane of a row is an element of its own.
+    startMarkerRef: createRef(),
+    endMarkerRef: createRef(),
+    // The elements the page renders, in the order they stand.
+    readRoots: () => {
+      const start = page.startMarkerRef.current;
+      const end = page.endMarkerRef.current;
+      const roots = [];
+      if (!start || !end || !start.isConnected) {
+        return roots;
+      }
+      let node = start.nextSibling;
+      while (node && node !== end) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          roots.push(node);
+        }
+        node = node.nextSibling;
+      }
+      return roots;
+    },
     // A page nested in one that left is hidden with it, even while its own
     // container goes on picking it (a route matching on both sides).
     leavingSignal: parentPage

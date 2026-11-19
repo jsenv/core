@@ -76,16 +76,16 @@ export const useAutoFocus = (
 
   const triggerAutofocus = (e) => {
     if (!autoFocus) {
-      return () => {};
+      return;
     }
     if (autoFocus === "restore") {
       // "restore" never claims focus on its own; the only way it gets focus is
       // an ancestor reopening and handing it back (see focus_transfer.js).
-      return () => {};
+      return;
     }
     const focusableElement = focusableElementRef.current;
     if (!focusableElement) {
-      return () => {};
+      return;
     }
     // When an ancestor (popover, dialog, …) just OPENED and revealed this
     // element among everything else it holds, the opening has an owner: that
@@ -109,7 +109,7 @@ export const useAutoFocus = (
     const isSelfAncestor = ancestor === focusableElement;
     if (becauseAncestorOpened && !isSelfAncestor) {
       if (autoFocus === "last-resort" || !claimUnplacedAutofocus(ancestor)) {
-        return () => {};
+        return;
       }
     }
     if (autoFocus === "last-resort" && !isSelfAncestor) {
@@ -120,7 +120,7 @@ export const useAutoFocus = (
       // document for no reason. The one case that IS an answer is a container
       // saying it about itself as it opens — there the transfer already tried
       // everything inside and came back empty.
-      return () => {};
+      return;
     }
     const activeElement = document.activeElement;
     if (
@@ -135,7 +135,7 @@ export const useAutoFocus = (
       // fires — Preact commits a child's own layout effects before its
       // parent's, so this parent-level effect would otherwise unconditionally
       // steal focus back from it.
-      return () => {};
+      return;
     }
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
     if (ancestorType === "document") {
@@ -155,52 +155,6 @@ export const useAutoFocus = (
       // Keep the beginning of the text visible instead of scrolling to the end
       focusableElement.scrollLeft = 0;
     }
-    return () => {
-      const focusIsOnSelfOrInsideSelf =
-        document.activeElement === focusableElement ||
-        focusableElement.contains(document.activeElement);
-      if (
-        !focusIsOnSelfOrInsideSelf &&
-        document.activeElement !== document.body
-      ) {
-        // focus is not on our element (or body) anymore
-        // keep it where it is
-        return;
-      }
-
-      // We have focus but we are unmounted
-      // -> try to move focus back to something more meaningful that what browser would do
-      // (browser would put it to document.body)
-      // -> We'll try to move focus back to the element that had focus before we moved it to this element
-
-      if (!document.body.contains(activeElement)) {
-        // previously active element is no longer in the document
-        return;
-      }
-
-      if (blurEvent) {
-        // But if this element is unmounted during a blur, the element that is about to receive focus should prevail
-        const elementAboutToReceiveFocus = blurEvent.relatedTarget;
-        const isSelfOrInsideSelf =
-          elementAboutToReceiveFocus === focusableElement ||
-          focusableElement.contains(elementAboutToReceiveFocus);
-        const isPreviouslyActiveElementOrInsideIt =
-          elementAboutToReceiveFocus === activeElement ||
-          (activeElement && activeElement.contains(elementAboutToReceiveFocus));
-        if (!isSelfOrInsideSelf && !isPreviouslyActiveElementOrInsideIt) {
-          // the element about to receive focus is not the input itself or inside it
-          // and is not the previously active element or inside it
-          // -> the element about to receive focus should prevail
-          return;
-        }
-      }
-
-      debugFocus(
-        e,
-        `restore focus to previously active element ${getElementSignature(activeElement)}.focus()`,
-      );
-      activeElement.focus();
-    };
   };
 
   // Nothing to place when the control asks for no focus ("restore" is given
@@ -213,7 +167,7 @@ export const useAutoFocus = (
   useDisplayedLayoutEffect(
     claimsFocus ? focusableElementRef : NO_ELEMENT_REF,
     (el, e) => {
-      return triggerAutofocus(e);
+      triggerAutofocus(e);
     },
     [],
   );
@@ -235,24 +189,3 @@ export const useAutoFocus = (
     "navi-autofocus-select": autoSelect ? "" : undefined,
   };
 };
-
-let blurEvent = null;
-let timeout;
-document.body.addEventListener(
-  "blur",
-  (e) => {
-    blurEvent = e;
-    setTimeout(() => {
-      blurEvent = null;
-    });
-  },
-  { capture: true },
-);
-document.body.addEventListener(
-  "focus",
-  () => {
-    clearTimeout(timeout);
-    blurEvent = null;
-  },
-  { capture: true },
-);

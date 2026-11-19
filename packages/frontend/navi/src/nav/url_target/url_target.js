@@ -61,6 +61,7 @@ import { documentUrlSignal } from "../browser_integration/document_url_signal.js
 import { documentLoadIsReturn } from "../browser_integration/scroll_restoration.js";
 import { decodeUrlPart } from "../decode_url_part.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
+import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
 const URL_TARGET_BLOCK_ATTRIBUTE = "data-url-target-block";
@@ -211,6 +212,12 @@ const urlToTargetId = (url) => {
   const { hash } = new URL(url);
   return hash ? decodeFragment(hash.slice(1)) : "";
 };
+/**
+ * Whether `url` designates an element (its hash names one). An arrival at such
+ * an address is answered here, its focus included: whoever else would place
+ * the focus for that arrival leaves it to this file (see route_focus.js).
+ */
+export const urlDesignatesElement = (url) => urlToTargetId(url) !== "";
 // A fragment naming no text (see decodeUrlPart) is the id as written.
 const decodeFragment = (fragment) => {
   return decodeUrlPart(fragment) ?? fragment;
@@ -261,6 +268,13 @@ const waitForUrlTarget = (id, onSettled) => {
     // Rendered inside a closed tab, a folded details, a view that is not the
     // one on screen: the element exists but would show nothing.
     if (element.checkVisibility && !element.checkVisibility()) {
+      return null;
+    }
+    // In a part navi keeps out of reach — a slide, a pane of a row not on
+    // screen — it shows nothing either, though it is laid out: reaching it
+    // would scroll the box holding it, which takes that scroll for a hand and
+    // travels there, and navi opens nothing to reach a target.
+    if (element.closest("[inert]")) {
       return null;
     }
     return element;
@@ -340,9 +354,11 @@ const revealUrlTarget = (element) => {
     behavior: prefersReducedMotion ? "instant" : behavior,
   });
   // What the browser does when it handles a fragment itself: keyboard
-  // navigation resumes from the target, not from the top of the document.
+  // navigation resumes from the target, not from the top of the document. With
+  // a ring only on the keyboard, as for any arrival. A target that cannot take
+  // the focus keeps the starting point the fragment navigation gave it.
   if (elementIsFocusable(element)) {
-    element.focus({ preventScroll: true });
+    moveFocusTo(element);
   }
   element.setAttribute(URL_TARGET_ATTRIBUTE, "");
   setTimeout(() => {
@@ -412,8 +428,15 @@ export const isTargetWriteInProgress = () => {
 // the scroll are put back in the same task, so nothing of it is painted; a
 // running view transition is not skipped by it (measured in Chrome, Firefox
 // and Safari).
+// The focus is put back too: the fragment navigation focuses a target that can
+// take it and takes the focus off anything else, synchronously (measured in
+// Chrome, Firefox and Safari). The write is about `:target` and nothing more;
+// what an arrival does with the focus is decided by whoever answers it
+// (revealUrlTarget), and a return gives none.
 const writeTarget = (element) => {
   const address = window.location.href;
+  const focusedElement = document.activeElement;
+  const focusWasVisible = Boolean(focusedElement?.matches(":focus-visible"));
   const historyState = window.history.state;
   const { navigation } = window;
   const entry = navigation ? navigation.currentEntry : null;
@@ -461,6 +484,21 @@ const writeTarget = (element) => {
     targetWriteInProgress = false;
   }
   putScrollBack();
+  putFocusBack(focusedElement, focusWasVisible);
+};
+
+const putFocusBack = (focusedElement, focusWasVisible) => {
+  const focusedNow = document.activeElement;
+  if (focusedNow === focusedElement) {
+    return;
+  }
+  if (!focusedElement || focusedElement === document.body) {
+    focusedNow?.blur();
+    return;
+  }
+  if (focusedElement.isConnected) {
+    moveFocusTo(focusedElement, { focusVisible: focusWasVisible });
+  }
 };
 
 // Every box a fragment navigation towards `element` may scroll: its ancestors,
