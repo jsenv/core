@@ -7,18 +7,14 @@ return fn({ browser, engine });
 
 ```js
 {
-  "steps_where_they_differ": [
-    "open the sheet",
-    "back",
-    "open the sheet again",
-    "confirm"
-  ],
+  "steps_where_they_differ": [],
   "via_history": {
     "timeline": [
       {
         "step": "loaded",
         "integration": "browser_history_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -28,6 +24,7 @@ return fn({ browser, engine });
       {
         "step": "open the sheet",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -37,6 +34,7 @@ return fn({ browser, engine });
       {
         "step": "back",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 0,
@@ -46,6 +44,7 @@ return fn({ browser, engine });
       {
         "step": "open the sheet again",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -55,6 +54,7 @@ return fn({ browser, engine });
       {
         "step": "confirm",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 0,
@@ -70,6 +70,7 @@ return fn({ browser, engine });
         "step": "loaded",
         "integration": "browser_navigation_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -79,15 +80,42 @@ return fn({ browser, engine });
       {
         "step": "open the sheet",
         "path": "/",
+        "search": "",
         "hash": "",
-        "entries": 2,
-        "depth": 0,
+        "entries": 3,
+        "depth": 1,
         "sheet_open": true,
         "announced": "0 before / 0 after"
       },
       {
         "step": "back",
-        "left_the_document": "http://127.0.0.1/tests/browser_integration_contract/client/"
+        "path": "/",
+        "search": "",
+        "hash": "",
+        "entries": 3,
+        "depth": 0,
+        "sheet_open": false,
+        "announced": "1 before / 1 after"
+      },
+      {
+        "step": "open the sheet again",
+        "path": "/",
+        "search": "",
+        "hash": "",
+        "entries": 3,
+        "depth": 1,
+        "sheet_open": true,
+        "announced": "1 before / 1 after"
+      },
+      {
+        "step": "confirm",
+        "path": "/",
+        "search": "",
+        "hash": "",
+        "entries": 3,
+        "depth": 0,
+        "sheet_open": false,
+        "announced": "2 before / 2 after"
       }
     ],
     "errors": []

@@ -7,15 +7,14 @@ return fn({ browser, engine });
 
 ```js
 {
-  "steps_where_they_differ": [
-    "back"
-  ],
+  "steps_where_they_differ": [],
   "via_history": {
     "timeline": [
       {
         "step": "loaded",
         "integration": "browser_history_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -25,6 +24,7 @@ return fn({ browser, engine });
       {
         "step": "press a",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -34,6 +34,7 @@ return fn({ browser, engine });
       {
         "step": "back",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 0,
@@ -43,6 +44,7 @@ return fn({ browser, engine });
       {
         "step": "press a again",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -58,6 +60,7 @@ return fn({ browser, engine });
         "step": "loaded",
         "integration": "browser_navigation_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -67,6 +70,7 @@ return fn({ browser, engine });
       {
         "step": "press a",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -76,15 +80,17 @@ return fn({ browser, engine });
       {
         "step": "back",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 3,
-        "depth": 1,
+        "depth": 0,
         "sheet_open": false,
         "announced": "2 before / 2 after"
       },
       {
         "step": "press a again",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,

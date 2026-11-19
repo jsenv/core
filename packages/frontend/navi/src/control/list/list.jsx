@@ -1222,7 +1222,9 @@ const ListUI = (props) => {
   // lockSize: capture the container's dimensions on first render so filtering
   // cannot collapse the layout. Measurement happens on the initial (unfiltered)
   // state because the parent controls hidden props before any search is applied.
-  const sizeLocked = useRef(false);
+  // Let go when lockSize turns false or the list leaves: the two minimums are
+  // taken back, unless something else wrote them since (a minWidth of the
+  // app's own, given while the lock held).
   useDisplayedLayoutEffect(
     ref,
     (listContainerEl) => {
@@ -1247,14 +1249,23 @@ const ListUI = (props) => {
         if (width === 0 && height === 0) {
           return;
         }
-        listContainerEl.style.minWidth = `${width}px`;
-        listContainerEl.style.minHeight = `${height}px`;
-        sizeLocked.current = true;
+        lockedMinWidth = `${width}px`;
+        lockedMinHeight = `${height}px`;
+        listContainerEl.style.minWidth = lockedMinWidth;
+        listContainerEl.style.minHeight = lockedMinHeight;
         observer.disconnect();
       });
+      let lockedMinWidth = null;
+      let lockedMinHeight = null;
       observer.observe(listContainerEl);
       return () => {
         observer.disconnect();
+        if (listContainerEl.style.minWidth === lockedMinWidth) {
+          listContainerEl.style.minWidth = "";
+        }
+        if (listContainerEl.style.minHeight === lockedMinHeight) {
+          listContainerEl.style.minHeight = "";
+        }
       };
     },
     [lockSize],
@@ -3354,6 +3365,36 @@ const useListScrollSync = ({
     };
   }, [scrolledWanted, scrollerElResolved]);
 
+  // A reveal still waiting for its item to be drawn (see scrollToItem) is
+  // overtaken by the user reaching for the list: the window goes where they
+  // take it, and the item may never be drawn — kept, the reveal would leave
+  // every later anchor uncaptured (see captureAnchor). Heard in the capture
+  // phase, before whatever the reach itself asks: a key that reveals the next
+  // item asks after this.
+  useLayoutEffect(() => {
+    if (!ref.current) {
+      return undefined;
+    }
+    const scrollerEl = getScroller();
+    const dropPendingReveal = () => {
+      pendingScrollRef.current = null;
+    };
+    const reachEvents = ["wheel", "keydown", "touchstart", "pointerdown"];
+    for (const type of reachEvents) {
+      scrollerEl.addEventListener(type, dropPendingReveal, {
+        passive: true,
+        capture: true,
+      });
+    }
+    return () => {
+      for (const type of reachEvents) {
+        scrollerEl.removeEventListener(type, dropPendingReveal, {
+          capture: true,
+        });
+      }
+    };
+  }, [scrollerElResolved]);
+
   // Where the list is, said the way it can be given back to it: the item at the
   // top of what is on screen, and how far above the fold it sits. An index
   // would not do — items get inserted while a list is being read, and the item
@@ -3545,6 +3586,14 @@ const useListScrollSync = ({
         return;
       }
       const axis = getAxis();
+      if (axis.readScroll(scrollerEl) === 0) {
+        // At its start, as for the anchoring (see captureAnchor): nothing
+        // above the view to put back, and the start is what is held. The
+        // window drawing the top items after a scroll there resizes the
+        // document's box, and the item read at the scroll — before they were
+        // drawn — would be moved to the top edge, past what stands above it.
+        return;
+      }
       const viewportRect = getScrollerViewportRect(scrollerEl);
       const itemRect = itemEl.getBoundingClientRect();
       const offsetNow = axis.start(itemRect) - axis.start(viewportRect);
@@ -5817,8 +5866,16 @@ const useVirtualItemSizeSignal = (
     virtualSizeSignalRef.current = signal(virtualItemSizeProp);
   }
   const virtualSizeSignal = virtualSizeSignalRef.current;
-  // propagate prop changes to the signal
+  // The app changing the size it gives (a denser layout of the same items)
+  // changes the room of every item: what is on screen is held where it is,
+  // as for a measured size moving, and the rooms remembered for items drawn
+  // in the other layout are let go of — kept, they would hold those items at
+  // their old size (see roomById).
   if (virtualItemSizeProp && virtualSizeSignal.peek() !== virtualItemSizeProp) {
+    if (virtualSizeSignal.peek() !== 0) {
+      beforeSizeChange();
+      listItems.roomById.clear();
+    }
     virtualSizeSignal.value = virtualItemSizeProp;
   }
   // Every item ever measured has a say, and an equal one: the room it took
@@ -6360,6 +6417,7 @@ const ListItemStandIn = (props) => {
   );
 };
 let listItemIdWarned = false;
+let shortAnswerWarned = false;
 const ListItemUI = (props) => {
   // A stable id only matters when the item's identity must survive reordering:
   // it carries a value or takes part in a search, which reorders items. A
@@ -9086,6 +9144,25 @@ const useItemStore = ({
           const pageCount = Array.isArray(page)
             ? pageItems.length
             : (page.count ?? pageStart + pageItems.length);
+          if (
+            import.meta.dev &&
+            !shortAnswerWarned &&
+            around === undefined &&
+            answersHold === undefined &&
+            start >= 0 &&
+            pageItems.length === 0 &&
+            start < pageCount
+          ) {
+            // Ranks the count promises, asked for, and none given. A short
+            // answer is asked again for the rest; an empty one changes nothing
+            // the list knows, so it is not asked again until the collection
+            // moves, and the skeletons would shimmer for good with nothing on
+            // its way.
+            shortAnswerWarned = true;
+            console.warn(
+              `itemsAction was asked for ranks ${start} to ${end} of ${pageCount} and gave none: the ranks it says exist (count) stay skeletons, never asked again until the collection moves. Answer the ranks asked for below count, or a count that says how many there are.`,
+            );
+          }
           const pageLanded = {
             pageItems,
             pageStart,

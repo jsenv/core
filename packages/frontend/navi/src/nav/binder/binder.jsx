@@ -28,6 +28,7 @@ import { toChildArray } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { LINK_REPLACE_ATTRIBUTE } from "../browser_integration/link_replace.js";
@@ -450,7 +451,13 @@ export const Binder = ({
       // A routed tab opens by being followed, the way a click on it does.
       nextTabElement?.click();
     }
-    nextTabElement?.focus();
+    if (nextTabElement) {
+      // Asked with a key, so the ring shows; and scrolled to, a departure from
+      // moveFocusTo's default argued here: the tab a key moves to has to be
+      // seen, in a row of tabs that may be wider than the binder, and the row
+      // is not what the navigation lays out anew.
+      moveFocusTo(nextTabElement, { focusVisible: true, preventScroll: false });
+    }
   };
 
   return (

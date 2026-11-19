@@ -27,12 +27,18 @@
  */
 export const ensureDocumentStartViewTransition = () => {
   if (!document.startViewTransition) {
+    // The update runs at once, as the API runs it when nothing can be
+    // animated, and its outcome is the transition's: a throw or a rejection
+    // rejects the three promises, and `finished` waits for an update that
+    // returns a promise (an async callback).
     const startViewTransitionPolyfill = (updateCallback) => {
-      updateCallback();
+      const updateCallbackDone = new Promise((resolve) => {
+        resolve(updateCallback());
+      }).then(() => {});
       return {
-        updateCallbackDone: Promise.resolve(),
-        ready: Promise.resolve(),
-        finished: Promise.resolve(),
+        updateCallbackDone,
+        ready: updateCallbackDone,
+        finished: updateCallbackDone,
         skipTransition: () => {},
       };
     };

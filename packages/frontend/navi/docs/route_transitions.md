@@ -141,7 +141,9 @@ answers:
 
 A default has no direction (nothing says which of two arbitrary pages is
 "before" the other), so navi's `slide-*` and `cover-*`, written on the direction,
-play nothing there. Written relations, and `"none"`, always win over it.
+play nothing there — the page only stands under the browser's cross-fade, deaf
+to the pointer meanwhile, and navi warns in development. Written relations, and
+`"none"`, always win over it.
 
 One thing does order two arbitrary pages: the history. An app built as a
 **navigation stack** — every link goes one level deeper, every back one level
@@ -211,7 +213,9 @@ default) still answers for:
 - `{ duration: 500 }` re-times what was already going to play.
 
 A pair no relation was written for answers the same way: a link asking for a
-movement gets it, forward unless it says otherwise. Navigate again by any other
+movement gets it, forward unless it says otherwise; a request naming only a
+`duration` or a `direction` amends the default there, and with no default plays
+nothing. Navigate again by any other
 means and the relations are back in charge — except the history traversal undoing
 that navigation, which plays what it asked for, reversed (next section). The link
 wears its request as an attribute, so a plain `<a>` says it too:

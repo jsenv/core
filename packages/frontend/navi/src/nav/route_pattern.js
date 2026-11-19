@@ -1951,13 +1951,14 @@ const buildUrlFromPattern = (
   patternObj = null,
 ) => {
   if (parsedPattern.segments.length === 0) {
-    // Root route
-    const queryParams = {};
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined) {
-        queryParams[key] = value;
-      }
-    }
+    // Root route: its query in the order its params are declared, as for any
+    // route — not in the order they were written.
+    const queryParams = buildHierarchicalQueryParams(
+      parsedPattern,
+      params,
+      originalPattern,
+      patternObj,
+    );
     const search = buildQueryString(queryParams);
     return `/${search ? `?${search}` : ""}`;
   }
@@ -1970,8 +1971,9 @@ const buildUrlFromPattern = (
     } else if (patternSeg.type === "param") {
       const value = params[patternSeg.name];
 
-      // If value is provided, include it
-      if (value !== undefined) {
+      // If value is provided, include it. null names no segment either: a
+      // path holding "null" would read back as the text "null".
+      if (value !== undefined && value !== null) {
         segments.push(encodeParamValue(value, false)); // Named parameters encode slashes
       } else if (!patternSeg.optional) {
         // For required parameters without values, keep the placeholder

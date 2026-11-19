@@ -17,11 +17,12 @@ return {
     },
     "range_asked_on_each_revisit": "1111111111",
     "many_asked_on_each_revisit": "0000000000",
-    "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
+    "rows_drawn_on_each_revisit": "60,60,60,60,60,60,60,60,60,60",
     "same_node_on_each_revisit": "----------",
     "transitions_played": 0,
     "transition_left_on_root": false,
-    "errors": []
+    "errors": [],
+    "warnings": []
   },
   "with_transition": {
     "on_first_load": {
@@ -30,11 +31,12 @@ return {
     },
     "range_asked_on_each_revisit": "1111111111",
     "many_asked_on_each_revisit": "0000000000",
-    "rows_drawn_on_each_revisit": "30,30,30,30,30,30,30,30,30,30",
+    "rows_drawn_on_each_revisit": "60,60,60,60,60,60,60,60,60,60",
     "same_node_on_each_revisit": "----------",
     "transitions_played": 20,
     "transition_left_on_root": false,
-    "errors": []
+    "errors": [],
+    "warnings": []
   }
 }
 ```

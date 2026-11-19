@@ -273,9 +273,14 @@ const parseColor = (color) => {
   // The canvas keeps a pixel premultiplied by its alpha, in bytes: the
   // channels of a translucent colour come back rounded at that alpha —
   // rgba(12, 23, 44, 0.45) reads 11, 22, 44. Made opaque, they read whole.
-  const [rOpaque, gOpaque, bOpaque] = drawColor(
+  const [rOpaque, gOpaque, bOpaque, aOpaque] = drawColor(
     `color(from ${color} srgb r g b / 1)`,
   );
+  if (aOpaque === 0) {
+    // No relative colour syntax: the colour drew nothing. The premultiplied
+    // channels, rounded at that alpha, are what there is.
+    return [r, g, b, a / 255];
+  }
   return [rOpaque, gOpaque, bOpaque, a / 255];
 };
 

@@ -99,6 +99,7 @@ export { UITransition } from "./src/transition/ui_transition.jsx";
 
 // Navigation/routing
 export {
+  enableNavigationApi,
   navBack,
   navForward,
   navIntegratedVia,

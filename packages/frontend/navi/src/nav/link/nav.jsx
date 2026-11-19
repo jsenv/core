@@ -204,7 +204,7 @@ const css = /* css */ `
   /* The bar under the current tab of a nav made of routes is NAMED: a change
      played as a view transition then finds it on both pictures and moves it
      from the tab it was under to the tab it is under, which is all "the bar
-     slides" is. The name is the row's (--nav-indicator-name, absent when the
+     slides" is. The name is the row's (--nav-indicator-name, "none" when the
      row asked for no slide) and only the bar of the tab the row chose wears it
      (see nameIndicatorTab): every tab holds a bar, two of them can be current
      at once, and a name belongs to one element at a time — worn twice, the
@@ -1080,11 +1080,19 @@ export const Nav = ({
           : wheelEvent.deltaMode === 2
             ? navElement.clientWidth
             : 1;
+      // Right to left, the row starts at 0 and runs into the negatives: further
+      // along is further left.
+      const rtl = getComputedStyle(navElement).direction === "rtl";
       const scrollLeftBefore = navElement.scrollLeft;
-      const scrollLeftWanted = Math.max(
-        0,
-        Math.min(scrollableWidth, scrollLeftBefore + deltaY * notch),
-      );
+      const scrollLeftWanted = rtl
+        ? Math.min(
+            0,
+            Math.max(-scrollableWidth, scrollLeftBefore - deltaY * notch),
+          )
+        : Math.max(
+            0,
+            Math.min(scrollableWidth, scrollLeftBefore + deltaY * notch),
+          );
       if (scrollLeftWanted === scrollLeftBefore) {
         // The row is at its end and the hand is still pushing: what is left
         // over is the page's, exactly as it would have been without any of
@@ -1290,12 +1298,16 @@ export const Nav = ({
       {...props}
       // The name the bar of the current tab wears, handed to the CSS above
       // rather than to the links: which bar wears it, and when, is decided
-      // there.
-      style={
-        currentIndicatorSlides && !slideContainer
-          ? { ...props.style, "--nav-indicator-name": indicatorNameRef.current }
-          : props.style
-      }
+      // there. Written in every case: the property is not registered, so a row
+      // asking for no slide would otherwise inherit the name of a row around
+      // it, and two bars would wear it.
+      style={{
+        ...props.style,
+        "--nav-indicator-name":
+          currentIndicatorSlides && !slideContainer
+            ? indicatorNameRef.current
+            : "none",
+      }}
       styleCSSVars={NavStyleCSSVars}
     >
       {(indicatorPosition || followsRouteRows) && (

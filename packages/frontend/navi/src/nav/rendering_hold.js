@@ -270,9 +270,20 @@ export const whenPageRendered = (callback) => {
     renderingHold.waiting.push(callback);
     return;
   }
-  requestAnimationFrame(() => {
+  // A hidden document has no frame: a timer stands in, and it too comes after
+  // the render Preact queued in a microtask. Whichever comes first, once.
+  let called = false;
+  const callOnce = () => {
+    if (called) {
+      return;
+    }
+    called = true;
     callback();
-  });
+  };
+  requestAnimationFrame(callOnce);
+  if (document.visibilityState === "hidden") {
+    setTimeout(callOnce);
+  }
 };
 
 // The hold a navigation takes on its way in — from before its first write:

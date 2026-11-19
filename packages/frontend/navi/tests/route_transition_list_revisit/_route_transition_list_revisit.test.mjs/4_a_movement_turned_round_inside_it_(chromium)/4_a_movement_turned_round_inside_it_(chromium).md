@@ -32,7 +32,8 @@ return {
         "item": true,
         "movement_on_root": false
       },
-      "errors": []
+      "errors": [],
+      "warnings": []
     },
     "default_movement": {
       "turns_asked_while_the_push_played": true,
@@ -49,7 +50,8 @@ return {
         "item": true,
         "movement_on_root": false
       },
-      "errors": []
+      "errors": [],
+      "warnings": []
     }
   },
   "back, forward, back, forward": {
@@ -68,7 +70,8 @@ return {
         "item": false,
         "movement_on_root": false
       },
-      "errors": []
+      "errors": [],
+      "warnings": []
     },
     "default_movement": {
       "turns_asked_while_the_push_played": true,
@@ -85,7 +88,8 @@ return {
         "item": false,
         "movement_on_root": false
       },
-      "errors": []
+      "errors": [],
+      "warnings": []
     }
   }
 }

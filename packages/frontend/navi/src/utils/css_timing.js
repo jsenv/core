@@ -9,13 +9,16 @@
 export const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// A CSS duration read as a number of milliseconds.
+// A duration read as a number of milliseconds: a CSS one ("300ms", "0.3s"), or
+// a number — what the Web Animations API takes — which is milliseconds already,
+// written bare in a string or not.
 export const durationToMs = (duration) => {
   const number = parseFloat(duration);
   if (Number.isNaN(number)) {
     return 0;
   }
-  return String(duration).trimEnd().endsWith("ms") ? number : number * 1000;
+  const inSeconds = /\ds\s*$/i.test(String(duration));
+  return inSeconds ? number * 1000 : number;
 };
 
 export const CSS_EASE = [0.25, 0.1, 0.25, 1];

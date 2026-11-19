@@ -24,6 +24,7 @@ return {
     "transitions_played": 0,
     "transition_left_on_root": false,
     "errors": [],
+    "warnings": [],
     "revisits": "10/10 lawful: never left (same node, no ask) or truly came back (remounted, one ask)"
   },
   "with_transition": {
@@ -36,6 +37,7 @@ return {
     "transitions_played": 10,
     "transition_left_on_root": false,
     "errors": [],
+    "warnings": [],
     "revisits": "10/10 lawful: never left (same node, no ask) or truly came back (remounted, one ask)"
   }
 }

@@ -7,6 +7,7 @@ linking to them, and turning them into tabs.
 - [Declaring routes](#declaring-routes)
   - [A page or a frame: the trailing slash](#a-page-or-a-frame-the-trailing-slash)
   - [A document that is not at the root: `setBaseUrl`](#a-document-that-is-not-at-the-root-setbaseurl)
+  - [The History API, or the Navigation API: `enableNavigationApi`](#the-history-api-or-the-navigation-api-enablenavigationapi)
   - [A section is allowed to be a route of its own](#a-section-is-allowed-to-be-a-route-of-its-own)
   - [Which values a param accepts](#which-values-a-param-accepts)
   - [An address that only sends elsewhere](#an-address-that-only-sends-elsewhere)
@@ -119,6 +120,15 @@ An address outside the base — `/` or `/places/42` for that admin — is not th
 document's: no route matches it, not even the one at `/`, and a link to it is
 left to the browser, which loads the document answering there. Such a link needs
 nothing more than its `href`.
+
+### The History API, or the Navigation API: `enableNavigationApi`
+
+navi takes the history in hand through the History API, which every browser
+has. `enableNavigationApi()`, called at the top level of the app's entry before
+`setupRoutes()`, has it go through the Navigation API instead where the browser
+has it — Firefox keeps the History API. Both answer the same contract: the same
+presses leave the same entries, the same depth (`canNavBackSignal`) and the
+same announcements to route transitions.
 
 ### A section is allowed to be a route of its own
 
@@ -546,7 +556,9 @@ navi is the one applying it.
 
 An entry usually stands for a whole section: "Lieux" stays lit on `/places/42`
 with `currentAlso={[PLACE_ROUTE]}`, and `currentExcept` names a place under the
-section it does NOT stand for. Both amend what a link claims about itself and
+section it does NOT stand for. A link with `routeParams` is current only while
+every one of them is the address's; a tab that opens the first video of a list
+and stands for all of them names its own route: `currentAlso={[VIDEO_ROUTE]}`. Both amend what a link claims about itself and
 nothing else — neither is an answer to a route that lies about where the reader
 is (see [what its address may say](#a-layer-over-the-screen-what-its-address-may-say)).
 A bar entry drawn as a button for its press feedback says the same with

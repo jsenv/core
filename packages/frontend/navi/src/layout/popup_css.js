@@ -474,9 +474,14 @@ export const popupCss = /* css */ `
      group beside the pages, painted over them where it stands.
 
      The class is how navi reaches that picture afterwards: its clock below,
-     and its place above the pages (the z-order in nav/route_transition.jsx). */
-  :root[data-navi-route-transition] .navi_popover[aria-expanded="true"],
-  :root[data-navi-route-transition] .navi_dialog[aria-expanded="true"] {
+     and its place above the pages (the z-order in nav/route_transition.jsx).
+
+     Whatever stands in the top layer, which is what the pictures cover: a
+     popup mid-exit too (closed, still shown for its animation), whose exit
+     then plays out over the pages. A popup with layer="local" is in its page,
+     and travels in its page's picture. */
+  :root[data-navi-route-transition] .navi_popover:popover-open,
+  :root[data-navi-route-transition] .navi_dialog:is(:modal, :popover-open) {
     view-transition-class: navi_popup;
   }
 
@@ -496,11 +501,11 @@ export const popupCss = /* css */ `
     :root[data-navi-route-transition]:not(
         [data-navi-route-transition-target="area"]
       )
-      .navi_popover[aria-expanded="true"],
+      .navi_popover:popover-open,
     :root[data-navi-route-transition]:not(
         [data-navi-route-transition-target="area"]
       )
-      .navi_dialog[aria-expanded="true"] {
+      .navi_dialog:is(:modal, :popover-open) {
       view-transition-name: match-element;
     }
   }

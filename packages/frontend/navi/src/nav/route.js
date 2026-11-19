@@ -3,7 +3,6 @@
  * Routes work with relative URLs, patterns handle base URL resolution
  */
 
-import { createPubSub } from "@jsenv/dom";
 import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { answerAsIf, writeStateFromAddress } from "../state/state_signal.js";
@@ -134,7 +133,6 @@ export const route = (pattern, options = {}) => {
     console.debug(`Creating route: ${pattern}`);
   }
   const { cleanPattern } = routePattern;
-  const [publishStatus, subscribeStatus] = createPubSub();
 
   // prepare route object
   const route = {
@@ -161,7 +159,6 @@ export const route = (pattern, options = {}) => {
     navTo: undefined,
     redirectTo: undefined,
     preload: undefined,
-    subscribeStatus,
     toString: () => {
       return `route "${cleanPattern}"`;
     },
@@ -244,22 +241,13 @@ export const route = (pattern, options = {}) => {
         route.params = mergedParams;
         someChange = true;
       }
-      if (!someChange) {
-        return false;
-      }
-      if (DEBUG) {
+      if (DEBUG && someChange) {
         console.debug(`${route} status changed:`, {
           matching,
           params: mergedParams,
           visited,
         });
       }
-      publishStatus({
-        matching,
-        params: mergedParams,
-        visited,
-      });
-      return true;
     };
     // (for now data contains only { routeSet })
     routePrivateProperties.setup = (data) => {
@@ -643,9 +631,6 @@ export const route = (pattern, options = {}) => {
   return route;
 };
 
-const [publishRouteMutations, observeRouteMutations] = createPubSub();
-export { observeRouteMutations };
-
 let redirectingRouteSet = null;
 let droppingRouteSet = null;
 /**
@@ -806,14 +791,29 @@ export const registerRoutePreload = (route, preload) => {
  * alike. What a link does when the pointer or the focus reaches it (see
  * use_preload_on_intent.js), available to anything else that knows where it
  * is about to go.
+ *
+ * Read as a link reads it: relative to the document, and only on this
+ * origin — another site sharing a path has none of these routes. A route
+ * redirecting elsewhere preloads where the navigation would land.
  */
 export const preloadUrl = (url) => {
   if (!activeRouteSet) {
     return;
   }
+  const urlObject = new URL(url, document.baseURI);
+  if (urlObject.origin !== window.location.origin) {
+    return;
+  }
+  let destinationUrl = urlObject.href;
+  try {
+    destinationUrl = resolveRouteRedirection(destinationUrl) || destinationUrl;
+  } catch {
+    // A redirection cycle: the navigation will say it, nothing to preload.
+    return;
+  }
   for (const route of activeRouteSet) {
     const { routePattern } = getRoutePrivateProperties(route);
-    if (routePattern.applyOn(url)) {
+    if (routePattern.applyOn(destinationUrl)) {
       route.preload();
     }
   }
@@ -1049,7 +1049,6 @@ This prevents cross-test pollution and ensures clean state.`,
       // Every state is written as the address's own (writeStateFromAddress):
       // its url write then stays silent, whenever its effects run.
       const matchingRouteSet = new Set();
-      const routeUpdateSet = new Set();
       // Params the address gave and the state could not hold as written
       // (autoFix): the address is rewritten with what the state holds, once
       // the sync is over, so the repaired value is not left in the url to be
@@ -1070,14 +1069,11 @@ This prevents cross-test pollution and ensures clean state.`,
         } of routeMatchInfoSet) {
           const { updateStatus } = routePrivateProperties;
           const visited = isVisited(route.url);
-          const updated = updateStatus({
+          updateStatus({
             matching: newMatching,
             params: newParams,
             visited,
           });
-          if (updated) {
-            routeUpdateSet.add(route);
-          }
           if (newMatching) {
             matchingRouteSet.add(route);
           }
@@ -1289,9 +1285,6 @@ This prevents cross-test pollution and ensures clean state.`,
           }
         }
       });
-      if (routeUpdateSet.size > 0) {
-        publishRouteMutations(routeUpdateSet);
-      }
       routedSignal.value = true;
       Object.assign(returnValue, { matchingRouteSet });
       for (const [route, repairedParams] of repairedParamsByRoute) {

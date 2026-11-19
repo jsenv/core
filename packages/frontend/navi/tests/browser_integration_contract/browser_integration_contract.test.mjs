@@ -24,9 +24,9 @@ import {
   whenPageAtRest,
 } from "../browser_harness.mjs";
 
-const clientHtmlFileUrl = import.meta.resolve("./client/main.html");
 // Every address of the app is served its html, as a single page application's
-// server does.
+// server does: client/history/ runs the app on via_history.js, client/navigation/
+// calls enableNavigationApi() before it.
 const jsenvPluginRouteFallback = () => ({
   name: "integration_contract_fallback",
   redirectReference: (reference) => {
@@ -34,11 +34,15 @@ const jsenvPluginRouteFallback = () => ({
       return null;
     }
     const { pathname, search } = new URL(reference.url);
-    for (const page of ["", "a", "b", "to_home"]) {
-      if (
-        pathname.endsWith(`/tests/browser_integration_contract/client/${page}`)
-      ) {
-        return `${clientHtmlFileUrl}${search}`;
+    for (const integration of ["history", "navigation"]) {
+      for (const page of ["", "a", "b", "to_home"]) {
+        if (
+          pathname.endsWith(
+            `/tests/browser_integration_contract/client/${integration}/${page}`,
+          )
+        ) {
+          return `${import.meta.resolve(`./client/${integration}/index.html`)}${search}`;
+        }
       }
     }
     return null;
@@ -53,7 +57,8 @@ const { testInEngines, closeBrowsers } = createEngineTests();
 
 /* eslint-disable no-undef */
 const readHistory = () => ({
-  path: window.location.pathname.replace(/^.*\/client\//, "/"),
+  path: window.location.pathname.replace(/^.*\/client\/[a-z]+\//, "/"),
+  search: window.location.search,
   hash: window.location.hash,
   entries: history.length,
   depth: window.readNavDepth(),
@@ -111,18 +116,46 @@ const SEQUENCES = {
     ["back", back],
   ],
   "routes reloaded": [["reload()", reloadRoutes]],
+  // The address follows a typed search late; a press made meanwhile stacks
+  // on the address the document is at, the search included.
+  // navi's own back and forward leave an entry carrying what was typed there.
+  "navBack while a typed search is not yet in the address": [
+    ["press b", click("#link_b")],
+    ["press a", click("#link_a")],
+    // not the entry next door: a push
+    ["press home", click("#link_home")],
+    [
+      "type, then navBack at once",
+      async (page) => {
+        /* eslint-disable no-undef */
+        await page.evaluate(() => {
+          window.typeSearch("club");
+          window.navBack();
+        });
+        /* eslint-enable no-undef */
+      },
+    ],
+    ["forward", forward],
+  ],
+  "a press while a typed search is not yet in the address": [
+    [
+      "type, then press a at once",
+      async (page) => {
+        // eslint-disable-next-line no-undef
+        await page.evaluate(() => window.typeSearch("padel"));
+        await page.click("#link_a");
+      },
+    ],
+    ["back", back],
+  ],
 };
 
 // Opened on the home page's own address, so that a press redirected to home
 // is a press redirected to the address on display.
 const play = async (browser, integration, steps) => {
-  const { page, errors } = await openPage(browser);
-  await page.addInitScript((name) => {
-    globalThis.__NAVI_BROWSER_INTEGRATION__ = name;
-  }, integration);
-  await page.goto(
-    `${devServer.origin}/tests/browser_integration_contract/client/`,
-    { timeout: 0 },
+  const { page, errors } = await openPage(
+    browser,
+    `${devServer.origin}/tests/browser_integration_contract/client/${integration}/`,
   );
   try {
     await settle(page);

@@ -1,8 +1,8 @@
 /*
- * One app, driven the same way under both browser integrations — the page sets
- * `globalThis.__NAVI_BROWSER_INTEGRATION__` ("history" or "navigation") before
- * navi loads: what each navigation leaves in the history — the address, the
- * entries, navi's depth — and whether it was announced.
+ * One app, driven the same way under both browser integrations: history/ runs
+ * it as is, navigation/ calls enableNavigationApi() first (in a module of its
+ * own, imported before this one). What each navigation leaves in the history —
+ * the address, the entries, navi's depth — and whether it was announced.
  *
  * Pages: home (""), /a, /b, and /to_home, which redirects to home. A popup-like
  * sheet keeps its open state in the entry (useNavState, push). A link to /b is
@@ -11,11 +11,14 @@
 
 import {
   Link,
+  navBack,
+  navForward,
   navIntegratedVia,
   reload,
   Route,
   route,
   setupRoutes,
+  stateSignal,
   useNavState,
   whenPageAtRest,
 } from "@jsenv/navi";
@@ -27,7 +30,16 @@ import {
 } from "../../../src/nav/browser_integration/before_routing.js";
 import { getNavDepth } from "../../../src/nav/browser_integration/document_back_and_forward.js";
 
-const HOME_ROUTE = route("");
+// A search typed into the home page: the address follows it late
+// (debounceUrl), as a field the reader types into.
+const searchSignal = stateSignal("", {
+  id: "contract_search",
+  debounceUrl: 300,
+});
+window.typeSearch = (value) => {
+  searchSignal.value = value;
+};
+const HOME_ROUTE = route("", { searchParams: { q: searchSignal } });
 const A_ROUTE = route("/a");
 const B_ROUTE = route("/b");
 const TO_HOME_ROUTE = route("/to_home", { redirectRoute: HOME_ROUTE });
@@ -42,7 +54,9 @@ observeAfterRouting(() => {
 });
 window.whenPageAtRest = whenPageAtRest;
 window.reloadRoutes = () => reload();
-window.integration = navIntegratedVia;
+window.navBack = () => navBack();
+window.navForward = () => navForward();
+window.integration = navIntegratedVia();
 // navi's depth, whichever integration keeps it (history.state is the history
 // integration's own place for it).
 window.readNavDepth = getNavDepth;

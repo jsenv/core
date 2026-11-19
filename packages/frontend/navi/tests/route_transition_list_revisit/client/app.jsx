@@ -124,7 +124,9 @@ export const start = ({ transition }) => {
       >
         <List
           scroller="parent"
-          renderBudget={30}
+          // Past the 33 items the screen shows: a budget holding no more
+          // than a screen goes blank as soon as the list scrolls.
+          renderBudget={60}
           scrolled={heldRowSignal.value}
           onScrolledChange={writeHeldRow}
         >

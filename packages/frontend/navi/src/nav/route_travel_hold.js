@@ -9,7 +9,7 @@
  * along.
  */
 
-import { signal } from "@preact/signals";
+import { batch, signal } from "@preact/signals";
 
 /**
  * The page the reader is still on while a hand holds the row and the address has run
@@ -30,23 +30,30 @@ export const routeTravelSettledPageSignal = signal(null);
 // row stays lit.
 const headingPageSignal = signal(null);
 
+// The two signals are written together, so a link reading both is told once.
 export const holdPage = (page, headingPage) => {
-  headingPageSignal.value = headingPage;
-  if (routeTravelSettledPageSignal.peek() === null) {
-    routeTravelSettledPageSignal.value = page;
-  }
+  batch(() => {
+    headingPageSignal.value = headingPage;
+    if (routeTravelSettledPageSignal.peek() === null) {
+      routeTravelSettledPageSignal.value = page;
+    }
+  });
 };
 
 // A hand no browser says has let go: the page nearest the row is where the reader is,
 // and the address, wherever it stands, is not.
 export const followPageOnScreen = (page, addressPage) => {
-  headingPageSignal.value = addressPage;
-  routeTravelSettledPageSignal.value = page;
+  batch(() => {
+    headingPageSignal.value = addressPage;
+    routeTravelSettledPageSignal.value = page;
+  });
 };
 
 export const releaseHeldPage = () => {
-  routeTravelSettledPageSignal.value = null;
-  headingPageSignal.value = null;
+  batch(() => {
+    routeTravelSettledPageSignal.value = null;
+    headingPageSignal.value = null;
+  });
 };
 
 /**

@@ -48,7 +48,7 @@ const relativeUrl = (url) => {
 
 // Install listeners once at module level — safe to have multiple <NavInspect> instances.
 const history = window.history;
-if (navIntegratedVia === "browser_history_api") {
+if (navIntegratedVia() === "browser_history_api") {
   const origPush = history.pushState.bind(history);
   history.pushState = (state, title, url) => {
     origPush(state, title, url);

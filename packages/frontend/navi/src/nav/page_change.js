@@ -35,19 +35,18 @@
 import { prefersReducedMotion } from "../utils/css_timing.js";
 import { whenPageRendered } from "./rendering_hold.js";
 
-let renderingPageChange = false;
+// Counted: a navigation noted while the render of another is on its way lasts
+// until its own render, not until the first one's.
+let pageChangesRendering = 0;
 
 export const notePageChange = () => {
-  if (renderingPageChange) {
-    return;
-  }
-  renderingPageChange = true;
+  pageChangesRendering++;
   whenPageRendered(() => {
-    renderingPageChange = false;
+    pageChangesRendering--;
   });
 };
 
-export const isRenderingPageChange = () => renderingPageChange;
+export const isRenderingPageChange = () => pageChangesRendering > 0;
 
 // A traversal the browser has shown moving already: a back swiped in Safari,
 // where its own picture of the entry reached slid in under the finger
@@ -55,19 +54,16 @@ export const isRenderingPageChange = () => renderingPageChange;
 // back to slide off a second time. For a layer it is the same as the page
 // changing (see above): it lands where the address puts it. Noted by the
 // integration as the traversal is announced, and lasting like the page change.
-let renderingShownByBrowser = false;
+let shownByBrowserRendering = 0;
 
 export const noteShownByBrowser = () => {
-  if (renderingShownByBrowser) {
-    return;
-  }
-  renderingShownByBrowser = true;
+  shownByBrowserRendering++;
   whenPageRendered(() => {
-    renderingShownByBrowser = false;
+    shownByBrowserRendering--;
   });
 };
 
-export const isRenderingShownByBrowser = () => renderingShownByBrowser;
+export const isRenderingShownByBrowser = () => shownByBrowserRendering > 0;
 
 /**
  * Whether navi may play a movement of its own for what is being rendered: a
@@ -80,4 +76,4 @@ export const isRenderingShownByBrowser = () => renderingShownByBrowser;
  * all the same, see route_transition.jsx).
  */
 export const mayAnimateMovement = () =>
-  !renderingShownByBrowser && !prefersReducedMotion();
+  !isRenderingShownByBrowser() && !prefersReducedMotion();

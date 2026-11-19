@@ -89,30 +89,58 @@ const applyRouting = (
   return updateActionsResult;
 };
 
-// via_navigation.js answers the same contract on the Navigation API, and is
-// meant to take over; history is the integration every browser gets today:
-// Firefox has no window.navigation, and the two still differ where the
-// contract test says so (tests/browser_integration_contract). A page asks for
-// the other one before navi loads, with
-// `globalThis.__NAVI_BROWSER_INTEGRATION__ = "navigation"` — how that test runs
-// the same sequences on both; it falls back by itself where the API is
-// missing.
-const USE_NAVIGATION_API =
-  globalThis.__NAVI_BROWSER_INTEGRATION__ === "navigation";
+// The history the app navigates through. via_history.js is what every browser
+// gets today: Firefox has no window.navigation. via_navigation.js answers the
+// same contract on the Navigation API and is meant to take over; an app asks
+// for it with enableNavigationApi(), and the two are held to that contract by
+// tests/browser_integration_contract. Created at its first use, or right after
+// the modules importing navi have run their top level — which is where an app
+// enables the other one — whichever comes first.
+let navigationApiEnabled = false;
+let browserIntegration = null;
+const getBrowserIntegration = () => {
+  if (!browserIntegration) {
+    const setupBrowserIntegration =
+      navigationApiEnabled && window.navigation
+        ? setupBrowserIntegrationViaNavigation
+        : setupBrowserIntegrationViaHistory;
+    browserIntegration = setupBrowserIntegration({
+      applyActions,
+      applyRouting,
+      // Routes are declared by the consumer and registered through
+      // setOnAllRouteReady below, so "does this document route at all?" is
+      // only answerable once that has run — hence a function, read at click
+      // time rather than a value read at setup time.
+      isRouting: () => Boolean(updateRoutes),
+    });
+  }
+  return browserIntegration;
+};
+queueMicrotask(getBrowserIntegration);
 
-const setupBrowserIntegration =
-  USE_NAVIGATION_API && window.navigation
-    ? setupBrowserIntegrationViaNavigation
-    : setupBrowserIntegrationViaHistory;
-const browserIntegration = setupBrowserIntegration({
-  applyActions,
-  applyRouting,
-  // Routes are declared by the consumer and registered through
-  // setOnAllRouteReady below, so "does this document route at all?" is only
-  // answerable once that has run — hence a function, read at click time rather
-  // than a value read at setup time.
-  isRouting: () => Boolean(updateRoutes),
-});
+/**
+ * Navigates through the Navigation API (`window.navigation`) instead of the
+ * History API, where the browser has it — elsewhere (Firefox) nothing changes.
+ * Called at the top level of the app's entry, before `setupRoutes()`: the
+ * history is taken in hand once, right after the modules have run.
+ *
+ * @example
+ * import { enableNavigationApi, setupRoutes } from "@jsenv/navi";
+ *
+ * enableNavigationApi();
+ * setupRoutes([HOME_ROUTE, GAME_ROUTE]);
+ */
+export const enableNavigationApi = () => {
+  if (browserIntegration) {
+    if (import.meta.dev) {
+      console.warn(
+        `enableNavigationApi() called once navi had already taken the history in hand, through ${browserIntegration.integration}: call it at the top level of the app's entry, before setupRoutes().`,
+      );
+    }
+    return;
+  }
+  navigationApiEnabled = true;
+};
 
 /**
  * How long an error that nothing displayed is given before it is called
@@ -149,11 +177,17 @@ installReportDeadlineExtension((decide) => {
 
 setOnAllRouteReady((v) => {
   updateRoutes = v;
-  browserIntegration.init();
+  getBrowserIntegration().init();
 });
-setRouteIntegration(browserIntegration);
+// Through navTo below, as any other navigation: a route asked for the address
+// on display (ROUTE.navTo(paramsAlreadyThere)) pushes no entry the back button
+// would return to without moving.
+setRouteIntegration({
+  navTo: (url, options) => navTo(url, options),
+});
 
-export const navIntegratedVia = browserIntegration.integration;
+// "browser_history_api" or "browser_navigation_api".
+export const navIntegratedVia = () => getBrowserIntegration().integration;
 /**
  * Go to `target`, a url resolved against the address the document is at.
  *
@@ -185,12 +219,12 @@ export const navTo = (target, options) => {
       return null;
     }
     // State-only update on same URL: skip if state is identical to current.
-    const currentState = browserIntegration.getDocumentState();
+    const currentState = getBrowserIntegration().getDocumentState();
     if (compareTwoJsValues(options.state, currentState)) {
       return null;
     }
   }
-  return browserIntegration.navTo(url, options);
+  return getBrowserIntegration().navTo(url, options);
 };
 export const replaceUrl = (target, options = {}) => {
   return navTo(target, { ...options, replace: true });
@@ -202,7 +236,7 @@ export const stopLoad = (reason = "stopLoad() called") => {
   }
   const documentIsBusy = documentIsBusySignal.value;
   if (documentIsBusy) {
-    browserIntegration.stop(reason);
+    getBrowserIntegration().stop(reason);
   }
 };
 /**
@@ -220,7 +254,7 @@ export const stopLoad = (reason = "stopLoad() called") => {
  * component reads and the lists' compositions stay, and they are the previous
  * person's (docs/resource.md, "An identity change is a fresh document").
  */
-export const reload = browserIntegration.reload;
+export const reload = () => getBrowserIntegration().reload();
 /**
  * Go back to the screen this document came from.
  *
@@ -246,19 +280,19 @@ export const reload = browserIntegration.reload;
  *   once the back has landed and been applied — the document url and state
  *   then say where it landed. A back preempted by another navigation, which
  *   lands nowhere, resolves `false` only under the Navigation API integration
- *   (see USE_NAVIGATION_API, off today): the History API does not tell it
+ *   (see enableNavigationApi): the History API does not tell it
  *   apart. `undefined` otherwise — nothing happened, or the fallback took the
  *   current entry's place.
  */
-export const navBack = browserIntegration.navBack;
+export const navBack = (options) => getBrowserIntegration().navBack(options);
 // Runs `callback` once the back navBack started has landed, at once when there
 // is none: until then the document reads the entry that back is leaving, and
 // a write made there is gone with it.
-export const whenBackLanded = browserIntegration.whenBackLanded;
-export const navForward = browserIntegration.navForward;
-export const isVisited = browserIntegration.isVisited;
-export const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
-export const handleActionTask = browserIntegration.handleActionTask;
+export const whenBackLanded = (callback) =>
+  getBrowserIntegration().whenBackLanded(callback);
+export const navForward = () => getBrowserIntegration().navForward();
+export const isVisited = (url) => getBrowserIntegration().isVisited(url);
+export { visitedUrlsSignal } from "./visited_urls.js";
 
 const idUsageMap = new Map();
 // Keys found in the entry with nobody to claim them, already reported.
@@ -321,7 +355,7 @@ const scheduleOrphanGeneratedKeysCheck = () => {
   });
 };
 const warnAboutOrphanGeneratedKeys = () => {
-  const state = browserIntegration.getDocumentState();
+  const state = getBrowserIntegration().getDocumentState();
   if (!state) {
     return;
   }
@@ -454,7 +488,7 @@ const useNavStateBasic = (
   // extra data with the entry when needed.
   const enter = (value = NAV_STATE_ENTERED_VALUE) => {
     enteredRef.current = true;
-    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    const currentStateCopy = getBrowserIntegration().getDocumentState() || {};
     if (Object.hasOwn(currentStateCopy, id) && currentStateCopy[id] === value) {
       return;
     }
@@ -492,14 +526,14 @@ const useNavStateBasic = (
   //   the entry left keeps the state entered, and them with it.
   const leave = ({ isBack, event, discard = NO_OP } = {}) => {
     enteredRef.current = false;
-    if (!Object.hasOwn(browserIntegration.getDocumentState() || {}, id)) {
+    if (!Object.hasOwn(getBrowserIntegration().getDocumentState() || {}, id)) {
       // Left already, by the outside: a back press.
       discard();
       return;
     }
     if (
       event &&
-      browserIntegration.carryByLinkNavigation(event, {
+      getBrowserIntegration().carryByLinkNavigation(event, {
         editState: (state) => {
           const stateWithoutKey = { ...state };
           delete stateWithoutKey[id];
@@ -520,18 +554,18 @@ const useNavStateBasic = (
     whenBackLanded(() => leaveLandedEntry({ isBack, discard }));
   };
   const leaveLandedEntry = ({ isBack, discard }) => {
-    if (!Object.hasOwn(browserIntegration.getDocumentState() || {}, id)) {
+    if (!Object.hasOwn(getBrowserIntegration().getDocumentState() || {}, id)) {
       return;
     }
     if (effectiveType === "push" && canNavBackSignal.peek() && isBack) {
-      Promise.resolve(browserIntegration.navBack()).then(discard);
+      Promise.resolve(getBrowserIntegration().navBack()).then(discard);
       return;
     }
     discard();
-    const currentStateCopy = browserIntegration.getDocumentState() || {};
+    const currentStateCopy = getBrowserIntegration().getDocumentState() || {};
     if (effectiveType === "push" && canNavBackSignal.peek()) {
       delete currentStateCopy[id];
-      browserIntegration.navBack({
+      getBrowserIntegration().navBack({
         landOn: { url: documentUrlSignal.peek(), state: currentStateCopy },
       });
       return;

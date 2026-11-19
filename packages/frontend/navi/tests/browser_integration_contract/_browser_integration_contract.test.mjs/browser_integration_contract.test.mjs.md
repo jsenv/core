@@ -17,6 +17,10 @@
 - [a fragment of the page (webkit)](13_a_fragment_of_the_page_(webkit)/13_a_fragment_of_the_page_(webkit).md)
 - [routes reloaded (chromium)](14_routes_reloaded_(chromium)/14_routes_reloaded_(chromium).md)
 - [routes reloaded (webkit)](15_routes_reloaded_(webkit)/15_routes_reloaded_(webkit).md)
+- [navBack while a typed search is not yet in the address (chromium)](16_navback_while_a_typed_search_is_not_yet_in_the_address_(chromium)/16_navback_while_a_typed_search_is_not_yet_in_the_address_(chromium).md)
+- [navBack while a typed search is not yet in the address (webkit)](17_navback_while_a_typed_search_is_not_yet_in_the_address_(webkit)/17_navback_while_a_typed_search_is_not_yet_in_the_address_(webkit).md)
+- [a press while a typed search is not yet in the address (chromium)](18_a_press_while_a_typed_search_is_not_yet_in_the_address_(chromium)/18_a_press_while_a_typed_search_is_not_yet_in_the_address_(chromium).md)
+- [a press while a typed search is not yet in the address (webkit)](19_a_press_while_a_typed_search_is_not_yet_in_the_address_(webkit)/19_a_press_while_a_typed_search_is_not_yet_in_the_address_(webkit).md)
 
 ---
 

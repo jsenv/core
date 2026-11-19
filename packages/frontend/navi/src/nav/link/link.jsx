@@ -527,8 +527,12 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   in the section, only the link stops claiming "you are here".
  * @param {object|object[]} [props.currentAlso] -
  *   Route(s) other than this link's own that are it: the link is current while
- *   one of them matches. The other side of `currentExcept` — an entry standing
- *   for more than the one page it opens. `currentExcept` wins over it.
+ *   one of them matches, whatever its params. The other side of `currentExcept`
+ *   — an entry standing for more than the one page it opens. `currentExcept`
+ *   wins over it. A route link is current only while every param it names
+ *   equals the address; one that stands for its route whatever the params (a
+ *   tab opening the first video of a list, current on every video) names its
+ *   own route here: `currentAlso={VIDEO_ROUTE}`.
  * @param {"text"|"icon"|"tab"} [props.variant] - Visual variant
  *   (`data-variant`); `"text"`/`"icon"` drop the link color/underline,
  *   `"tab"` renders a tab-like affordance.

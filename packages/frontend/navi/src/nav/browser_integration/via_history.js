@@ -2,7 +2,6 @@ import { findEvent } from "@jsenv/dom";
 
 import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
-import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
 import { resolveRouteRedirection } from "../route.js";
@@ -48,6 +47,7 @@ import {
   resolveOpenOnArrival,
 } from "./link_open.js";
 import { linkAsksForReplace } from "./link_replace.js";
+import { findPressedLink, readLinkHref } from "./pressed_link.js";
 import { linkAsksForReturn } from "./link_return.js";
 import {
   isUrlVisited,
@@ -134,7 +134,6 @@ export const setupBrowserIntegrationViaHistory = ({
     return 0;
   };
 
-  let abortController = null;
   const handleRoutingTask = (target, options) => {
     // Everything below this line reasons on the URL as a whole: it is compared
     // to the address, looked up in the history stack, written into the
@@ -188,6 +187,8 @@ export const setupBrowserIntegrationViaHistory = ({
           routeTransition: options.routeTransition,
         };
         publishTraversalAsked(elidedPressPending);
+        // The entry being left carries the address the document is at.
+        flushPendingReplace();
         if (delta === -1) {
           window.history.back();
         } else {
@@ -312,14 +313,8 @@ export const setupBrowserIntegrationViaHistory = ({
     if (navigationType === "push" && !asReturn) {
       forgetScrollersOnArrival(url, { from: urlLeft });
     }
-    if (abortController) {
-      abortController.abort(`navigating to ${url}`);
-    }
-    abortController = new AbortController();
-    const abortSignal = abortController.signal;
-    const { allResult, requestedResult } = applyRouting(url, {
+    const { requestedResult } = applyRouting(url, {
       globalAbortSignal: globalAbortController.signal,
-      abortSignal,
       reason,
       navigationType,
       isVisited,
@@ -353,12 +348,6 @@ export const setupBrowserIntegrationViaHistory = ({
     } else if (navigationType === "traverse") {
       restoreScrollPositionOnReturn(url);
     }
-    executeWithCleanup(
-      () => allResult,
-      () => {
-        abortController = undefined;
-      },
-    );
     return requestedResult;
   };
 
@@ -424,7 +413,7 @@ export const setupBrowserIntegrationViaHistory = ({
       // Another tab or window, or a download (see link_elsewhere.js).
       return false;
     }
-    const href = linkElement.href;
+    const href = readLinkHref(linkElement);
     const { isEmpty, isCurrent, isSameOrigin, isAnchor } =
       getHrefTargetInfo(href);
     if (isEmpty || !isSameOrigin) {
@@ -541,7 +530,7 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener(
     "click",
     (e) => {
-      const linkElement = e.target.closest("a");
+      const linkElement = findPressedLink(e);
       if (!linkElement) {
         return;
       }
@@ -755,6 +744,9 @@ export const setupBrowserIntegrationViaHistory = ({
       });
       backInFlight = landedPromise;
       landOnPending = landOn || null;
+      // The entry being left carries the address the document is at: a
+      // forward back to it finds what was typed there.
+      flushPendingReplace();
       window.history.back();
       return landedPromise;
     }
@@ -769,6 +761,7 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   const navForward = () => {
+    flushPendingReplace();
     window.history.forward();
   };
 

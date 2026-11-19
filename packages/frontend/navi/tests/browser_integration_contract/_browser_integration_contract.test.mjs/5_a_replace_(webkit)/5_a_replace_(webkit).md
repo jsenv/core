@@ -14,6 +14,7 @@ return fn({ browser, engine });
         "step": "loaded",
         "integration": "browser_history_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -23,6 +24,7 @@ return fn({ browser, engine });
       {
         "step": "press b (replace)",
         "path": "/b",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -38,6 +40,7 @@ return fn({ browser, engine });
         "step": "loaded",
         "integration": "browser_navigation_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -47,6 +50,7 @@ return fn({ browser, engine });
       {
         "step": "press b (replace)",
         "path": "/b",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,

@@ -855,8 +855,9 @@ const areaHeldOn = (slideElement) => {
  *   been meant for the box. Down the page it is the page's OWN gesture, handed on
  *   to what scrolls around the box, so a map that travels vertically has to be
  *   told (`travelByScroll` / `"y"` / `"xy"`) before a wheel moves it.
- * @param {string} [props.duration="300ms"] - how long a slide change asked for
- *   takes: a tab, a key, a command, a state. A hand goes at its own pace.
+ * @param {string|number} [props.duration="300ms"] - how long a slide change
+ *   asked for takes ("300ms", "0.3s", or a number of milliseconds): a tab, a key,
+ *   a command, a state. A hand goes at its own pace.
  * @param {"largest"|"frozen"} [props.sizing="largest"] - what decides the size
  *   of the box. "largest": the largest slide, at every moment — the box follows
  *   whatever the slides do. "frozen": the box is measured once and kept at that

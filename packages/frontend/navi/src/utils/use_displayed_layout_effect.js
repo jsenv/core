@@ -55,6 +55,10 @@ import {
  *     what the element says about itself (an autofocus, a measurement) is the
  *     only word there is.
  *
+ * The callback may return a cleanup, as a layout effect's does: called before
+ * the callback runs again (an ancestor opening once more), when the deps change
+ * and when the component unmounts.
+ *
  * Usage:
  *   useDisplayedLayoutEffect(ref, () => {
  *     scrollToSelected();
@@ -69,6 +73,19 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
   // without needing to be re-registered when deps change.
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
+  const cleanupRef = useRef(null);
+  const cleanUp = () => {
+    const cleanup = cleanupRef.current;
+    cleanupRef.current = null;
+    if (cleanup) {
+      cleanup();
+    }
+  };
+  const runCallback = (el, displayedEvent) => {
+    cleanUp();
+    const returned = callbackRef.current(el, displayedEvent);
+    cleanupRef.current = typeof returned === "function" ? returned : null;
+  };
 
   // Set by the mount effect below for an element that lives in its openable
   // ancestor's façade rather than in what that ancestor opens.
@@ -79,13 +96,17 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
 
   // Run on mount (or when deps change) — but only if the element is visible.
   useLayoutEffect(() => {
+    runIfDisplayed();
+    return cleanUp;
+  }, deps);
+  const runIfDisplayed = () => {
     const el = ref.current;
     if (!el) {
       return;
     }
     const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document, false));
+      runCallback(el, createDisplayedEvent(document, false));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
@@ -130,8 +151,8 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       // it keeps showing.
       displayedWhileAncestorClosedRef.current = true;
     }
-    callbackRef.current(el, createDisplayedEvent(ancestor, false));
-  }, deps);
+    runCallback(el, createDisplayedEvent(ancestor, false));
+  };
 
   // Re-run every time the ancestor opens.
   useLayoutEffect(() => {
@@ -156,7 +177,7 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
           return;
         }
         const lastEl = ref.current;
-        callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
+        runCallback(lastEl, createDisplayedEvent(ancestor, true));
       },
     );
     const popupMounting = decisionDeferredToRef.current;
@@ -181,18 +202,12 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
           return;
         }
         if (isAncestorOpen(ancestor)) {
-          callbackRef.current(
-            lastEl,
-            createDisplayedEvent(popupMounting, true),
-          );
+          runCallback(lastEl, createDisplayedEvent(popupMounting, true));
           return;
         }
         if (isDisplayedDespiteClosedAncestor(lastEl, ancestor)) {
           displayedWhileAncestorClosedRef.current = true;
-          callbackRef.current(
-            lastEl,
-            createDisplayedEvent(popupMounting, true),
-          );
+          runCallback(lastEl, createDisplayedEvent(popupMounting, true));
         }
       },
     );

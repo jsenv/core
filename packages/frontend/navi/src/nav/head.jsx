@@ -65,16 +65,31 @@ export const Head = ({ children }) => {
     entry.themeColors.set(themeColors);
     removeAppendedElements(entry);
     for (const { type, props } of elements) {
-      const el = document.createElement(type);
-      for (const [key, value] of Object.entries(props)) {
-        el.setAttribute(key, value);
-      }
+      const el = createHeadElement(type, props);
       document.head.appendChild(el);
       entry.appendedElements.push(el);
     }
   }, [contentKey, away]);
 
   return null;
+};
+
+// Written the way JSX writes an element: the children are its text (the CSS of
+// a <style>, the JSON of a <script type="application/ld+json">), and an
+// attribute left undefined, null or false is not written at all.
+const createHeadElement = (type, props) => {
+  const el = document.createElement(type);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "children") {
+      el.textContent = Array.isArray(value) ? value.join("") : (value ?? "");
+      continue;
+    }
+    if (value === undefined || value === null || value === false) {
+      continue;
+    }
+    el.setAttribute(key, value === true ? "" : value);
+  }
+  return el;
 };
 
 const removeAppendedElements = (entry) => {

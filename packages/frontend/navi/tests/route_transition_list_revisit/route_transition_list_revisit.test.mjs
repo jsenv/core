@@ -33,6 +33,7 @@ import {
   configureBrowserSnapshots,
   createEngineTests,
   ENGINES,
+  openPage,
   startNaviDevServer,
 } from "../browser_harness.mjs";
 
@@ -150,10 +151,10 @@ const openAndComeBack = async (
   name,
   { search = "", rushBack = false } = {},
 ) => {
-  const page = await browser.newPage();
+  // Errors and warnings alike: a warning navi says during these movements is
+  // something it found wrong, and the snapshot shows it.
+  const { page, errors, warnings } = await openPage(browser);
   await watchTransitions(page);
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
   try {
     // The run's budget ("jsenv:allocate") is the limit: under a full test run
     // the first load, which cooks all of navi, outlasts Playwright's 30s.
@@ -214,6 +215,7 @@ const openAndComeBack = async (
         document.documentElement.hasAttribute("data-navi-route-transition"),
       ),
       errors,
+      warnings,
     };
   } finally {
     await page.close();
@@ -253,10 +255,8 @@ const walk = (browser, name, options) => {
 // (popstate), which is a few milliseconds: all of them inside the movement,
 // and none of them taken back by the next before the browser applied it.
 const turnRound = async (browser, name, turns) => {
-  const page = await browser.newPage();
+  const { page, errors, warnings } = await openPage(browser);
   await watchTransitions(page);
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
   const movementOver = () =>
     page.waitForFunction(
       () =>
@@ -351,6 +351,7 @@ const turnRound = async (browser, name, turns) => {
       pressed_after,
       after_press: await shows(),
       errors,
+      warnings,
     };
   } finally {
     await page.close();

@@ -280,7 +280,7 @@ const TRAVEL_FRAME_MAX_MS = 1000 / 30;
  *   onTravel?: (detail: {route: object, params: object|undefined, cause: string}) => void|Promise<void>,
  *   renderNeighbour?: (page: {route: object, params: object|undefined}) => import("preact").ComponentChildren,
  *   prefetch?: boolean,
- *   duration?: string,
+ *   duration?: string | number,
  * }>}
  * @param {Array<object|{route: object, params?: object}>} [props.routes] - a window
  *   over something longer, in order: a few pages on each side of the one on screen,
@@ -313,9 +313,10 @@ const TRAVEL_FRAME_MAX_MS = 1000 / 30;
  *   `route.preload(params)`. A swipe then builds a page whose answers are already
  *   there, with no wait to show. Off by default: every page one stops on costs the
  *   reads of two more.
- * @param {string} [props.duration="300ms"] - how long a travel asked for takes: a
- *   tab pressed, the back button. One box, on the curve a SlideContainer plays, so
- *   two rows of tabs in one app move alike. A hand goes at its own pace.
+ * @param {string|number} [props.duration="300ms"] - how long a travel asked for
+ *   takes ("300ms", "0.3s", or a number of milliseconds): a tab pressed, the back
+ *   button. One box, on the curve a SlideContainer plays, so two rows of tabs in
+ *   one app move alike. A hand goes at its own pace.
  *
  * Every other prop lands on the box itself (`id`, `data-testid`, `className`, …).
  * The box has to outlive every page of its row: around those <Route>s, or around
@@ -485,6 +486,12 @@ export const RouteTravel = ({
     const live = liveRef.current;
     const index = latestRef.current.liveIndex;
     const picture = live.cloneNode(true);
+    // A checked radio of the picture, connected, would uncheck the live page's
+    // radio of the same name (a radio group with no form spans the document).
+    // Nameless, it shows its state and belongs to no group.
+    for (const radio of picture.querySelectorAll('input[type="radio"][name]')) {
+      radio.removeAttribute("name");
+    }
     picture.removeAttribute("data-route-row-live");
     picture.setAttribute("inert", "");
     picture.setAttribute("aria-hidden", "true");

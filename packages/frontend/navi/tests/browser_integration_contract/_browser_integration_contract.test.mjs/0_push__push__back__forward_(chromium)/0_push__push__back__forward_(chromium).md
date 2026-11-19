@@ -14,6 +14,7 @@ return fn({ browser, engine });
         "step": "loaded",
         "integration": "browser_history_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -23,6 +24,7 @@ return fn({ browser, engine });
       {
         "step": "press a",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -32,6 +34,7 @@ return fn({ browser, engine });
       {
         "step": "press b",
         "path": "/b",
+        "search": "",
         "hash": "",
         "entries": 4,
         "depth": 2,
@@ -41,6 +44,7 @@ return fn({ browser, engine });
       {
         "step": "back",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 4,
         "depth": 1,
@@ -50,6 +54,7 @@ return fn({ browser, engine });
       {
         "step": "forward",
         "path": "/b",
+        "search": "",
         "hash": "",
         "entries": 4,
         "depth": 2,
@@ -65,6 +70,7 @@ return fn({ browser, engine });
         "step": "loaded",
         "integration": "browser_navigation_api",
         "path": "/",
+        "search": "",
         "hash": "",
         "entries": 2,
         "depth": 0,
@@ -74,6 +80,7 @@ return fn({ browser, engine });
       {
         "step": "press a",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 3,
         "depth": 1,
@@ -83,6 +90,7 @@ return fn({ browser, engine });
       {
         "step": "press b",
         "path": "/b",
+        "search": "",
         "hash": "",
         "entries": 4,
         "depth": 2,
@@ -92,6 +100,7 @@ return fn({ browser, engine });
       {
         "step": "back",
         "path": "/a",
+        "search": "",
         "hash": "",
         "entries": 4,
         "depth": 1,
@@ -101,6 +110,7 @@ return fn({ browser, engine });
       {
         "step": "forward",
         "path": "/b",
+        "search": "",
         "hash": "",
         "entries": 4,
         "depth": 2,

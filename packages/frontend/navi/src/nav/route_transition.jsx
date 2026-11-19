@@ -1145,6 +1145,15 @@ export const defineRouteDefaultTransition = (transition) => {
     ...normalizeTransition(transition),
     readsHistory: direction === "history",
   };
+  if (
+    import.meta.dev &&
+    !value.readsHistory &&
+    DIRECTED_TYPES.includes(value.type)
+  ) {
+    console.warn(
+      `defineRouteDefaultTransition("${value.type}") plays nothing of its own: "${value.type}" is drawn on a way round, and a default has none. The page would stand under the browser's cross-fade, deaf to the pointer meanwhile. Give it { type: "${value.type}", direction: "history" }, or a type that needs no way round ("cross-fade").`,
+    );
+  }
   defaultTransition = value;
   installRouteTransitionCss();
   return () => {
@@ -1153,6 +1162,17 @@ export const defineRouteDefaultTransition = (transition) => {
     }
   };
 };
+
+// navi's own movements, each drawn on a way round (forward, back): the CSS
+// above keys every one of them on the direction.
+const DIRECTED_TYPES = [
+  "slide-x",
+  "slide-y",
+  "cover-right",
+  "cover-left",
+  "cover-bottom",
+  "cover-top",
+];
 
 // "cross-fade" is a name for what plays when nothing is asked for — the
 // browser's own animation — so it normalizes to asking for nothing. Having the
@@ -1412,10 +1432,11 @@ const rebuildWatcher = () => {
       navigationRequest,
       found && found.written ? null : navigationReplay,
     );
-    if (!found && !request) {
+    if (!found && !(request && request.typeSaid)) {
       // No relation says anything about these two and this navigation asked
-      // for nothing: they are side by side, and silence is the fact — not a
-      // missing case.
+      // for no movement: they are side by side, and silence is the fact — not
+      // a missing case. A request naming only a pace or a way round re-times
+      // or turns round what was going to play, and nothing was.
       return;
     }
     const { type, duration } = resolveTransition(
@@ -1614,7 +1635,9 @@ observeAfterRouting(() => {
     (!defaultTransition.readsHistory || historyDirection !== null)
       ? defaultTransition
       : null;
-  if (!navigationAnimated && (request || base)) {
+  // A request naming no movement only amends the default's, as it amends a
+  // relation's: with no default it plays nothing.
+  if (!navigationAnimated && ((request && request.typeSaid) || base)) {
     const { type, duration } = resolveTransition(request, base);
     if (type === "none") {
       navigationDecision = { type: "none" };
@@ -1938,7 +1961,20 @@ const playTransition = (
         // is raced with a short timer instead.
         await Promise.race([renderWait.rendered, waitMs(50)]);
       } else if (pageIsCurrent(page)) {
-        await renderWait.rendered;
+        // Bounded all the same, well under the browser's own limit: a callback
+        // left pending past it is skipped by the browser and leaves `finished`
+        // pending with it — nothing would ever hand the document back (see
+        // end). A page that never says it rendered (a page rendered outside a
+        // <Route>) is photographed as it stands.
+        const rendered = await Promise.race([
+          renderWait.rendered.then(() => true),
+          waitMs(RENDER_WAIT_LIMIT_MS).then(() => false),
+        ]);
+        if (import.meta.dev && !rendered) {
+          console.warn(
+            `A route transition to ${page.route} waited ${RENDER_WAIT_LIMIT_MS}ms for the page to render, with the document frozen, and photographed it as it stood. The page it plays to has to be rendered by a <Route> (or a RouteTravel row) to be waited for.`,
+          );
+        }
       }
     } finally {
       renderWait.stop();
@@ -2150,6 +2186,9 @@ const turnRunningTransitionRound = (fromUrl, url) => {
 const absoluteUrl = (url) =>
   url ? new URL(url, window.location.href).href : null;
 
+const TOP_LAYER_POPUP_SELECTOR =
+  ".navi_popover:popover-open, .navi_dialog:is(:modal, :popover-open)";
+
 // A transition skipped by another one starting is an outcome, not a failure.
 const ignoreSkipped = () => {};
 
@@ -2171,8 +2210,18 @@ const warnAboutCapture = import.meta.dev
         warnAboutNamesEscapingArea(areaElement, capturedNames);
         return;
       }
+      // An open popup of navi's is captured on its own on purpose (see
+      // layout/popup_css.js), under a name the browser generates for
+      // `match-element`: "match-element" in Chrome, "-ua-auto-…" in Safari.
+      const popupOnItsOwn = document.querySelector(TOP_LAYER_POPUP_SELECTOR);
       for (const name of capturedNames.keys()) {
         if (name === "root") {
+          continue;
+        }
+        if (
+          popupOnItsOwn &&
+          (name === "match-element" || name.startsWith("-ua-"))
+        ) {
           continue;
         }
         // Something stands still while the whole document travels under it.
@@ -2297,6 +2346,7 @@ const armRouteRenderWait = () => {
 };
 
 const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const RENDER_WAIT_LIMIT_MS = 1000;
 
 // A page written as the route itself, the page named by the absence of every
 // route around it (see route_fallback.js), and the page written nowhere:
