@@ -305,6 +305,16 @@ const css = /* css */ `
     );
 
     transition: opacity 0.2s ease;
+    /* Running leftward, a list has its header at the right and its footer at
+       the left (see the sticky parts below). */
+    &:dir(rtl) {
+      --x-list-scroll-spacing-left: calc(
+        var(--list-footer-width, 0px) + var(--list-scroll-padding-left, 0px)
+      );
+      --x-list-scroll-spacing-right: calc(
+        var(--list-header-width, 0px) + var(--list-scroll-padding-right, 0px)
+      );
+    }
 
     /* The frame does not clip to its rounded corners: Chrome cannot hit-test a
        rounded clip (overflow or clip-path) on the compositor, so a scroll box
@@ -415,7 +425,11 @@ const css = /* css */ `
        it is 0px when nothing covers the top. */
     &[data-scroller="document"] {
       --x-list-group-label-top: var(--navi-safe-area-inset-top);
-      --x-list-group-label-left: var(--navi-safe-area-inset-left);
+      --x-list-group-label-inline-start: var(--navi-safe-area-inset-left);
+
+      &:dir(rtl) {
+        --x-list-group-label-inline-start: var(--navi-safe-area-inset-right);
+      }
     }
 
     &[data-expand-x] {
@@ -716,7 +730,7 @@ const css = /* css */ `
   .navi_list_item_header {
     position: sticky;
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
     z-index: var(--list-header-z-index);
     order: -2;
 
@@ -830,8 +844,8 @@ const css = /* css */ `
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
-    right: 0;
     bottom: 0;
+    inset-inline-end: 0;
     z-index: var(--list-footer-z-index);
     order: 2;
 
@@ -977,7 +991,8 @@ const css = /* css */ `
 
   /* The same group, in a list whose items run along x: the groups stand side by
      side, each one its label over its own run of items, and the label rides the
-     left edge for as long as its group is on screen.
+     edge the list starts from (the right one under direction: rtl) for as long
+     as its group is on screen.
 
      The whole chain down to the group, because the axis is the axis of THIS
      list: a vertical list nested in an item of a horizontal one keeps the rules
@@ -994,7 +1009,10 @@ const css = /* css */ `
 
     > .navi_list_item_group_label {
       top: auto;
-      left: var(--list-group-label-left, var(--x-list-group-label-left, 0px));
+      inset-inline-start: var(
+        --list-group-label-inline-start,
+        var(--x-list-group-label-inline-start, 0px)
+      );
     }
 
     > .navi_list_item_group_list {
@@ -1936,10 +1954,21 @@ const useListScrollSync = ({
       renderWindow.start > 0 || renderWindow.end < listItems.totalSignal.peek()
     );
   };
+  // Which way the list runs (see VERTICAL_AXIS): a style, read again where the
+  // box that scrolls the list is (see resolveScroller), since a commit or a
+  // resize is when a `dir` can have changed — and before that, at its first
+  // use: a filler's layout effect runs ahead of the list's.
+  const axisRef = useRef(null);
+  const getAxis = () => {
+    if (axisRef.current === null) {
+      axisRef.current = readListAxis(ref.current, horizontal);
+    }
+    return axisRef.current;
+  };
   const virtualItemSizeSignal = useVirtualItemSizeSignal(
     ref,
     virtualItemSize,
-    horizontal,
+    getAxis,
     {
       listItems,
       inLines: Boolean(columns),
@@ -1964,6 +1993,7 @@ const useListScrollSync = ({
     if (!ref.current) {
       return;
     }
+    axisRef.current = readListAxis(ref.current, horizontal);
     const scrollerElNow = getScroller();
     setScrollerElResolved((current) =>
       current === scrollerElNow ? current : scrollerElNow,
@@ -1980,9 +2010,9 @@ const useListScrollSync = ({
     windowLeavesItemsOut,
     totalSignal: listItems.totalSignal,
     virtualItemSizeSignal,
-    horizontal,
+    getAxis,
   });
-  useStuckStickyParts(ref, getScroller, scrollerElResolved, horizontal);
+  useStuckStickyParts(ref, getScroller, scrollerElResolved, getAxis);
 
   // The item the scroll holds onto across a change of geometry, and where it
   // sat when that change was decided. Captured at the two moments the list
@@ -2001,10 +2031,7 @@ const useListScrollSync = ({
       return;
     }
     const scrollerEl = getScroller();
-    if (
-      scrollerEl &&
-      (horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop) === 0
-    ) {
+    if (scrollerEl && getAxis().readScroll(scrollerEl) === 0) {
       // A scroller at its start has nothing above the view to keep still, and
       // items landing above the first one are what a list read from its start
       // (a journal newest first, a feed) is there to show: holding the item on
@@ -2016,7 +2043,7 @@ const useListScrollSync = ({
       scrollerEl,
       listEl: getListEl(),
       items: listItems.visibleItemsSignal.peek(),
-      horizontal,
+      axis: getAxis(),
     });
   };
 
@@ -2070,7 +2097,7 @@ const useListScrollSync = ({
     if (!listEl) {
       return;
     }
-    const spaceBetween = readSpaceBetweenItems(listEl, horizontal);
+    const spaceBetween = readSpaceBetweenItems(listEl, getAxis());
     if (spaceBetween === null) {
       return;
     }
@@ -2190,7 +2217,7 @@ const useListScrollSync = ({
     if (!listEl) {
       return;
     }
-    readItemRooms(listEl, horizontal, (item, room, complete) => {
+    readItemRooms(listEl, getAxis(), (item, room, complete) => {
       listItems.roomById.set(item.id, room);
       if (!import.meta.dev || !complete || givenRoomWarnedRef.current) {
         return;
@@ -2480,6 +2507,9 @@ const useListScrollSync = ({
     currentScrollRef.current = {
       left: currentScrollLeft,
       top: currentScrollTop,
+      // Along the list's axis (see VERTICAL_AXIS), where the two above are
+      // what the scroller is put back at.
+      position: getAxis().readScroll(scrollerEl),
       renderWindow: { ...renderWindow },
     };
     debugScroll(
@@ -2643,7 +2673,7 @@ const useListScrollSync = ({
           virtualItemSizeSignal,
           itemsPerLine: itemsPerLineRef.current,
           renderWindowRef,
-          horizontal,
+          axis: getAxis(),
         });
         listScrollContainerEl.scrollTo({
           left: savedScroll.left,
@@ -2856,25 +2886,22 @@ const useListScrollSync = ({
       return;
     }
     const scrollerEl = getScroller();
+    const axis = getAxis();
     // Measured in the scroller's own pixels, the ones a scroll is written in.
     const scale = readScrollerScale(scrollerEl, horizontal);
     const viewportRect = getScrollerViewportRect(scrollerEl);
     const itemRect = itemEl.getBoundingClientRect();
-    const viewportSize =
-      (horizontal ? viewportRect.width : viewportRect.height) / scale;
-    const itemSize = (horizontal ? itemRect.width : itemRect.height) / scale;
+    const viewportSize = axis.size(viewportRect) / scale;
+    const itemSize = axis.size(itemRect) / scale;
     const offsetWanted = resolveHeldOffset({
       align,
       offset,
-      scrollInset: getItemScrollInset(scrollerEl, itemEl, horizontal),
+      scrollInset: getItemScrollInset(scrollerEl, itemEl, axis),
       viewportSize,
       itemSize,
     });
-    const offsetNow =
-      (horizontal
-        ? itemRect.left - viewportRect.left
-        : itemRect.top - viewportRect.top) / scale;
-    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    const offsetNow = (axis.start(itemRect) - axis.start(viewportRect)) / scale;
+    const scrollNow = axis.readScroll(scrollerEl);
     const delta = offsetNow - offsetWanted;
     if (delta > -0.5 && delta < 0.5) {
       sendHeldScroll(scrollNow);
@@ -2892,16 +2919,13 @@ const useListScrollSync = ({
       sendHeldScroll(0);
       return;
     }
+    const axis = getAxis();
     const scale = readScrollerScale(scrollerEl, horizontal);
     const viewportRect = getScrollerViewportRect(scrollerEl);
     const listRect = ref.current.getBoundingClientRect();
-    const offsetNow =
-      (horizontal
-        ? listRect.left - viewportRect.left
-        : listRect.top - viewportRect.top) / scale;
-    const delta =
-      offsetNow - getItemScrollInset(scrollerEl, ref.current, horizontal);
-    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    const offsetNow = (axis.start(listRect) - axis.start(viewportRect)) / scale;
+    const delta = offsetNow - getItemScrollInset(scrollerEl, ref.current, axis);
+    const scrollNow = axis.readScroll(scrollerEl);
     sendHeldScroll(delta < 0 ? scrollNow + delta : scrollNow);
   };
   // Every placement goes through here, the ones that find the list in place
@@ -2912,10 +2936,9 @@ const useListScrollSync = ({
   // is the list's until it gets there.
   const sendHeldScroll = (position) => {
     const scrollerEl = getScroller();
-    const from = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
-    const max = horizontal
-      ? scrollerEl.scrollWidth - scrollerEl.clientWidth
-      : scrollerEl.scrollHeight - scrollerEl.clientHeight;
+    const axis = getAxis();
+    const from = axis.readScroll(scrollerEl);
+    const max = axis.scrollMax(scrollerEl);
     let to = position;
     if (to > max) {
       to = max;
@@ -2937,16 +2960,12 @@ const useListScrollSync = ({
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
       scrollerEl.scrollTo({
-        [horizontal ? "left" : "top"]: to,
+        ...axis.scrollToOptions(to),
         behavior: "smooth",
       });
       return;
     }
-    if (horizontal) {
-      scrollerEl.scrollLeft = to;
-    } else {
-      scrollerEl.scrollTop = to;
-    }
+    axis.writeScroll(scrollerEl, to);
   };
   useLayoutEffect(placeWhereHeld);
   // A hold asked to glide (--navi-scroll:smooth) writes the scroll itself, a
@@ -2990,12 +3009,10 @@ const useListScrollSync = ({
         sayHoldChanged();
         return;
       }
-      const scrollNow = horizontal
-        ? scrollerEl.scrollLeft
-        : scrollerEl.scrollTop;
+      const scrollNow = getAxis().readScroll(scrollerEl);
       const viewportRect = getScrollerViewportRect(scrollerEl);
       const screenSize =
-        (horizontal ? viewportRect.width : viewportRect.height) /
+        getAxis().size(viewportRect) /
         readScrollerScale(scrollerEl, horizontal);
       const distance =
         target > scrollNow ? target - scrollNow : scrollNow - target;
@@ -3036,7 +3053,7 @@ const useListScrollSync = ({
       position = goingForward ? glide.target - left : glide.target + left;
     }
     scrollerEl.scrollTo({
-      [horizontal ? "left" : "top"]: position,
+      ...getAxis().scrollToOptions(position),
       behavior: "instant",
     });
     // The scroll events these writes cause are the hold's own (see
@@ -3073,9 +3090,8 @@ const useListScrollSync = ({
   // estimateItemStart). Null while nothing can say.
   const estimateHeldScroll = (scrollerEl) => {
     const wanted = startPlaceRef.current.wanted;
-    const max = horizontal
-      ? scrollerEl.scrollWidth - scrollerEl.clientWidth
-      : scrollerEl.scrollHeight - scrollerEl.clientHeight;
+    const axis = getAxis();
+    const max = axis.scrollMax(scrollerEl);
     if (wanted === "end") {
       return max;
     }
@@ -3093,7 +3109,7 @@ const useListScrollSync = ({
       return null;
     }
     const listEl = getListEl();
-    const geometry = readWindowGeometry(scrollerEl, listEl, horizontal);
+    const geometry = readWindowGeometry(scrollerEl, listEl, axis);
     if (!geometry) {
       return null;
     }
@@ -3105,21 +3121,19 @@ const useListScrollSync = ({
     const itemEl = findItemElementAt(listEl, index);
     let itemRoom = roomOf(index);
     if (itemEl) {
-      const rect = itemEl.getBoundingClientRect();
-      itemRoom = horizontal ? rect.width : rect.height;
+      itemRoom = axis.size(itemEl.getBoundingClientRect());
     }
     const scale = readScrollerScale(scrollerEl, horizontal);
     const viewportRect = getScrollerViewportRect(scrollerEl);
     const offsetWanted = resolveHeldOffset({
       align,
       offset,
-      scrollInset: getItemScrollInset(scrollerEl, itemEl, horizontal),
-      viewportSize:
-        (horizontal ? viewportRect.width : viewportRect.height) / scale,
+      scrollInset: getItemScrollInset(scrollerEl, itemEl, axis),
+      viewportSize: axis.size(viewportRect) / scale,
       itemSize: itemRoom / scale,
     });
-    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
-    const viewportStart = horizontal ? viewportRect.left : viewportRect.top;
+    const scrollNow = axis.readScroll(scrollerEl);
+    const viewportStart = axis.start(viewportRect);
     const to = scrollNow + (itemStart - viewportStart) / scale - offsetWanted;
     if (to > max) {
       return max;
@@ -3348,7 +3362,7 @@ const useListScrollSync = ({
       scrollerEl: getScroller(),
       listEl: getListEl(),
       items: listItems.visibleItemsSignal.peek(),
-      horizontal,
+      axis: getAxis(),
       countVisible,
     });
   // Said from where the item lands on its own, and with `visibleCount`: the
@@ -3360,7 +3374,7 @@ const useListScrollSync = ({
       id: position.id,
       index: position.index,
       offset:
-        position.offset - getItemScrollInset(getScroller(), itemEl, horizontal),
+        position.offset - getItemScrollInset(getScroller(), itemEl, getAxis()),
       visibleCount: position.visibleCount,
     };
   };
@@ -3518,17 +3532,16 @@ const useListScrollSync = ({
       if (!itemEl) {
         return;
       }
+      const axis = getAxis();
       const viewportRect = getScrollerViewportRect(scrollerEl);
       const itemRect = itemEl.getBoundingClientRect();
-      const offsetNow = horizontal
-        ? itemRect.left - viewportRect.left
-        : itemRect.top - viewportRect.top;
+      const offsetNow = axis.start(itemRect) - axis.start(viewportRect);
       const delta =
         offsetNow -
         resolveOpenOffset(
           position.offset,
-          horizontal ? viewportRect.width : viewportRect.height,
-          horizontal ? itemRect.width : itemRect.height,
+          axis.size(viewportRect),
+          axis.size(itemRect),
         );
       if (delta > -0.5 && delta < 0.5) {
         return;
@@ -3537,7 +3550,11 @@ const useListScrollSync = ({
       // holdAnchorStill). The document's box is the scroller of a list
       // scrolling the page, and it resizes with every item drawn taller than
       // its filler: while the page scrolls, that is at every window move.
-      if (scrollByUnlessInterrupting(scrollerEl, delta, { horizontal })) {
+      if (
+        scrollByUnlessInterrupting(scrollerEl, axis.sign * delta, {
+          horizontal,
+        })
+      ) {
         anchorRef.current = null;
       }
     };
@@ -3634,11 +3651,10 @@ const useListScrollSync = ({
       return;
     }
     const scrollerEl = getScroller();
+    const axis = getAxis();
     const viewportRect = getScrollerViewportRect(scrollerEl);
     const anchorRect = anchorEl.getBoundingClientRect();
-    const offsetNow = horizontal
-      ? anchorRect.left - viewportRect.left
-      : anchorRect.top - viewportRect.top;
+    const offsetNow = axis.start(anchorRect) - axis.start(viewportRect);
     const drift = offsetNow - anchor.offset;
     if (drift > -0.5 && drift < 0.5) {
       // Nothing moved in this commit, or less than the pixel a scroll is
@@ -3656,13 +3672,11 @@ const useListScrollSync = ({
     // scrollTo, the status bar, a fling on iOS). The write would stop that
     // scroll short of where it was going. Left alone, the items drawn above
     // push the rest by `drift` while all of it moves, and the scroll lands.
-    const scrollBefore = horizontal
-      ? scrollerEl.scrollLeft
-      : scrollerEl.scrollTop;
-    if (scrollByUnlessInterrupting(scrollerEl, drift, { horizontal })) {
-      const scrollAfter = horizontal
-        ? scrollerEl.scrollLeft
-        : scrollerEl.scrollTop;
+    const scrollBefore = axis.readScroll(scrollerEl);
+    if (
+      scrollByUnlessInterrupting(scrollerEl, axis.sign * drift, { horizontal })
+    ) {
+      const scrollAfter = axis.readScroll(scrollerEl);
       if (scrollAfter !== scrollBefore) {
         scrolledByListRef.current = scrollAfter;
       }
@@ -3725,7 +3739,7 @@ const useListScrollSync = ({
     if (!scrollerEl || !listEl) {
       return false;
     }
-    const geometry = readWindowGeometry(scrollerEl, listEl, horizontal);
+    const geometry = readWindowGeometry(scrollerEl, listEl, getAxis());
     if (!geometry) {
       return false;
     }
@@ -3953,14 +3967,11 @@ const useListScrollSync = ({
     if (wanted === "scroller-start") {
       // The scroller's first screen: the first item stands below whatever
       // comes before the list in it.
+      const axis = getAxis();
       const viewportRect = getScrollerViewportRect(scrollerEl);
       const listRect = listEl.getBoundingClientRect();
-      const scrollNow = horizontal
-        ? scrollerEl.scrollLeft
-        : scrollerEl.scrollTop;
-      const listOffsetNow = horizontal
-        ? listRect.left - viewportRect.left
-        : listRect.top - viewportRect.top;
+      const scrollNow = axis.readScroll(scrollerEl);
+      const listOffsetNow = axis.start(listRect) - axis.start(viewportRect);
       return {
         index: 0,
         above:
@@ -3975,15 +3986,14 @@ const useListScrollSync = ({
     const itemEl = findItemElementAt(listEl, index);
     let itemSize = 0;
     if (itemEl) {
-      const rect = itemEl.getBoundingClientRect();
-      itemSize = horizontal ? rect.width : rect.height;
+      itemSize = getAxis().size(itemEl.getBoundingClientRect());
     }
     // Not drawn yet, the item weighs nothing and has no inset: centred, it
     // stands half the screen down, which is where it will be put.
     const above = resolveHeldOffset({
       align,
       offset,
-      scrollInset: getItemScrollInset(scrollerEl, itemEl, horizontal),
+      scrollInset: getItemScrollInset(scrollerEl, itemEl, getAxis()),
       viewportSize: screenSize,
       itemSize,
     });
@@ -4036,9 +4046,8 @@ const useListScrollSync = ({
       // the window keeps ahead is ahead of this.
       const previousScroll = currentScrollRef.current;
       if (previousScroll) {
-        const delta = horizontal
-          ? scrollerEl.scrollLeft - previousScroll.left
-          : scrollerEl.scrollTop - previousScroll.top;
+        const delta =
+          getAxis().readScroll(scrollerEl) - previousScroll.position;
         if (delta > 0) {
           scrollDirectionRef.current = 1;
         } else if (delta < 0) {
@@ -4052,8 +4061,7 @@ const useListScrollSync = ({
       scrolledByListRef.current = null;
       if (
         scrolledByList !== null &&
-        (horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop) ===
-          scrolledByList
+        getAxis().readScroll(scrollerEl) === scrolledByList
       ) {
         // The window stays where it is — the position it would be re-derived
         // from was chosen to keep the items still — but where the list is has
@@ -4082,9 +4090,7 @@ const useListScrollSync = ({
         return;
       }
       const way = place.way;
-      const position = horizontal
-        ? scrollerEl.scrollLeft
-        : scrollerEl.scrollTop;
+      const position = getAxis().readScroll(scrollerEl);
       if (way && position > way.to - 1 && position < way.to + 1) {
         // From then on only that place is the list's, or a scroll back the
         // way it came would pass for its own.
@@ -4165,6 +4171,86 @@ const useListScrollSync = ({
     onListLeave,
   };
 };
+// The axis a list scrolls along, read from where its flow starts: downward, or
+// along the inline direction — rightward, or leftward under `direction: rtl`,
+// where an item further on stands further left and scrollLeft runs from 0 down
+// to negative values. Every position the list reads or writes goes through
+// one, so that whichever way the list runs, a position grows with the index, a
+// scroll offset runs from 0 at the start, and "start" is the side its first
+// item stands on: read in screen pixels, a list running leftward has items of
+// negative size, a band search running backwards and a hold pinned at its
+// start. The box that scrolls the list is taken to run the same way, which it
+// does unless a `dir` is set between the two.
+const VERTICAL_AXIS = {
+  horizontal: false,
+  name: "y",
+  sign: 1,
+  start: (rect) => rect.top,
+  end: (rect) => rect.bottom,
+  size: (rect) => rect.height,
+  readScroll: (scrollerEl) => scrollerEl.scrollTop,
+  // A position kept as the scroller gave it ({ left, top }).
+  scrollOf: (scrollValues) => scrollValues.top,
+  scrollMax: (scrollerEl) => scrollerEl.scrollHeight - scrollerEl.clientHeight,
+  scrollToOptions: (position) => ({ top: position }),
+  writeScroll: (scrollerEl, position) => {
+    scrollerEl.scrollTop = position;
+  },
+  // Where the padding box of a box starts, and the room its content runs on.
+  paddingBoxStart: (boxEl, boxRect) => boxRect.top + boxEl.clientTop,
+  clientSize: (boxEl) => boxEl.clientHeight,
+  scrollSize: (boxEl) => boxEl.scrollHeight,
+  gap: "rowGap",
+  borderStart: "borderTopWidth",
+  paddingStart: "paddingTop",
+  paddingEnd: "paddingBottom",
+  marginStart: "marginTop",
+  marginEnd: "marginBottom",
+  scrollPaddingStart: "scrollPaddingTop",
+  scrollMarginStart: "scrollMarginTop",
+};
+const createInlineAxis = (rtl) => {
+  const sign = rtl ? -1 : 1;
+  return {
+    horizontal: true,
+    name: "x",
+    sign,
+    start: rtl ? (rect) => -rect.right : (rect) => rect.left,
+    end: rtl ? (rect) => -rect.left : (rect) => rect.right,
+    size: (rect) => rect.width,
+    readScroll: (scrollerEl) => sign * scrollerEl.scrollLeft,
+    scrollOf: (scrollValues) => sign * scrollValues.left,
+    scrollMax: (scrollerEl) => scrollerEl.scrollWidth - scrollerEl.clientWidth,
+    scrollToOptions: (position) => ({ left: sign * position }),
+    writeScroll: (scrollerEl, position) => {
+      scrollerEl.scrollLeft = sign * position;
+    },
+    paddingBoxStart: rtl
+      ? (boxEl, boxRect) =>
+          -(boxRect.left + boxEl.clientLeft + boxEl.clientWidth)
+      : (boxEl, boxRect) => boxRect.left + boxEl.clientLeft,
+    clientSize: (boxEl) => boxEl.clientWidth,
+    scrollSize: (boxEl) => boxEl.scrollWidth,
+    gap: "columnGap",
+    borderStart: rtl ? "borderRightWidth" : "borderLeftWidth",
+    paddingStart: rtl ? "paddingRight" : "paddingLeft",
+    paddingEnd: rtl ? "paddingLeft" : "paddingRight",
+    marginStart: rtl ? "marginRight" : "marginLeft",
+    marginEnd: rtl ? "marginLeft" : "marginRight",
+    scrollPaddingStart: rtl ? "scrollPaddingRight" : "scrollPaddingLeft",
+    scrollMarginStart: rtl ? "scrollMarginRight" : "scrollMarginLeft",
+  };
+};
+const INLINE_AXIS = createInlineAxis(false);
+const INLINE_AXIS_RTL = createInlineAxis(true);
+const readListAxis = (listContainerEl, horizontal) => {
+  if (!horizontal) {
+    return VERTICAL_AXIS;
+  }
+  return getComputedStyle(listContainerEl).direction === "rtl"
+    ? INLINE_AXIS_RTL
+    : INLINE_AXIS;
+};
 // The band of the scroller the user actually sees. A page-level scroller is
 // the viewport itself — its own box is the whole document, which says nothing
 // about what is on screen.
@@ -4224,7 +4310,7 @@ const useStuckWindowWarning = ({
   windowLeavesItemsOut,
   totalSignal,
   virtualItemSizeSignal,
-  horizontal,
+  getAxis,
 }) => {
   const doneRef = useRef(false);
   // Asked at each commit, not subscribed to: this reports a geometry, and a
@@ -4247,15 +4333,14 @@ const useStuckWindowWarning = ({
       }
       // Measured as the window's evaluation measures it (see evaluateWindow).
       const scrollerEl = getScroller();
+      const axis = getAxis();
       const viewportRect = getScrollerViewportRect(scrollerEl);
-      const viewportSize = horizontal
-        ? viewportRect.width
-        : viewportRect.height;
+      const viewportSize = axis.size(viewportRect);
       if (!viewportSize) {
         // Not on screen — a list inside a closed popup, a parked subtree.
         return;
       }
-      if (canScrollerScroll(scrollerEl, horizontal ? "x" : "y")) {
+      if (canScrollerScroll(scrollerEl, axis.name)) {
         return;
       }
       // Scrolling nothing, the box keeps out of reach only the items past what
@@ -4267,10 +4352,10 @@ const useStuckWindowWarning = ({
       if (!listEl) {
         return;
       }
-      const screen = readWindowScreen(scrollerEl, horizontal);
+      const screen = readWindowScreen(scrollerEl, axis);
       const listRect = listEl.getBoundingClientRect();
-      const listFrom = horizontal ? listRect.left : listRect.top;
-      const listTo = horizontal ? listRect.right : listRect.bottom;
+      const listFrom = axis.start(listRect);
+      const listTo = axis.end(listRect);
       // A pixel of slack, like canScroll.
       if (listFrom > screen.from - 1 && listTo < screen.to + 1) {
         return;
@@ -4427,21 +4512,14 @@ const useDuplicateHeaderWarning = (ref) => {
 // a fraction away from it, and without this slack it reads as stuck: a bug
 // that shows up on one machine and not the next.
 const STUCK_SLACK = 1;
-// Which edge a part sticks to: the edge the list scrolls FROM for the header
-// and a group label, the one it scrolls toward for the footer.
-const getStickyEdge = (partEl, horizontal) => {
-  if (partEl.classList.contains("navi_list_item_footer")) {
-    return horizontal ? "right" : "bottom";
-  }
-  return horizontal ? "left" : "top";
-};
 // Whether a part stands away from its place in the flow. Each part has one the
 // box holding it decides: the header comes first in the list (order: -2), a
 // group label first in its group, the footer last in the list (order: 2). So
 // its place is that box's content edge, less its own margin — what sticky can
-// only move it away from. A box that is itself the scroller holds its content
-// where its scroll offset puts it.
-const readPartStuck = (partEl, edge, scrollerEl) => {
+// only move it away from: the edge the list scrolls FROM for the header and a
+// group label, the one it scrolls toward for the footer. A box that is itself
+// the scroller holds its content where its scroll offset puts it.
+const readPartStuck = (partEl, scrollerEl, axis) => {
   const boxEl = partEl.parentElement;
   const boxRect = boxEl.getBoundingClientRect();
   const boxStyle = getComputedStyle(boxEl);
@@ -4449,47 +4527,24 @@ const readPartStuck = (partEl, edge, scrollerEl) => {
   const partRect = partEl.getBoundingClientRect();
   const scrolls = boxEl === scrollerEl;
   const lengthOf = (value) => parseFloat(value) || 0;
-  if (edge === "top") {
-    const flowTop =
-      boxRect.top +
-      boxEl.clientTop +
-      lengthOf(boxStyle.paddingTop) +
-      lengthOf(partStyle.marginTop) -
-      (scrolls ? boxEl.scrollTop : 0);
-    return partRect.top - flowTop > STUCK_SLACK;
+  const contentStart =
+    axis.paddingBoxStart(boxEl, boxRect) -
+    (scrolls ? axis.readScroll(boxEl) : 0);
+  if (!partEl.classList.contains("navi_list_item_footer")) {
+    const flowStart =
+      contentStart +
+      lengthOf(boxStyle[axis.paddingStart]) +
+      lengthOf(partStyle[axis.marginStart]);
+    return axis.start(partRect) - flowStart > STUCK_SLACK;
   }
-  if (edge === "left") {
-    const flowLeft =
-      boxRect.left +
-      boxEl.clientLeft +
-      lengthOf(boxStyle.paddingLeft) +
-      lengthOf(partStyle.marginLeft) -
-      (scrolls ? boxEl.scrollLeft : 0);
-    return partRect.left - flowLeft > STUCK_SLACK;
-  }
-  if (edge === "bottom") {
-    const flowBottom =
-      boxRect.top +
-      boxEl.clientTop +
-      (scrolls ? boxEl.scrollHeight - boxEl.scrollTop : boxEl.clientHeight) -
-      lengthOf(boxStyle.paddingBottom) -
-      lengthOf(partStyle.marginBottom);
-    return flowBottom - partRect.bottom > STUCK_SLACK;
-  }
-  const flowRight =
-    boxRect.left +
-    boxEl.clientLeft +
-    (scrolls ? boxEl.scrollWidth - boxEl.scrollLeft : boxEl.clientWidth) -
-    lengthOf(boxStyle.paddingRight) -
-    lengthOf(partStyle.marginRight);
-  return flowRight - partRect.right > STUCK_SLACK;
+  const flowEnd =
+    contentStart +
+    (scrolls ? axis.scrollSize(boxEl) : axis.clientSize(boxEl)) -
+    lengthOf(boxStyle[axis.paddingEnd]) -
+    lengthOf(partStyle[axis.marginEnd]);
+  return flowEnd - axis.end(partRect) > STUCK_SLACK;
 };
-const useStuckStickyParts = (
-  ref,
-  getScroller,
-  scrollerElResolved,
-  horizontal,
-) => {
+const useStuckStickyParts = (ref, getScroller, scrollerElResolved, getAxis) => {
   // Rewritten on every render so the listeners below, registered once per
   // scroller, always run against the current geometry.
   const updateRef = useRef(null);
@@ -4519,8 +4574,9 @@ const useStuckStickyParts = (
     // them exist, which is what keeps this affordable on every scroll event.
     // Every part read before any is written: an attribute written is a style
     // the next reading would have to resolve again.
+    const axis = getAxis();
     const stuckList = partEls.map((partEl) =>
-      readPartStuck(partEl, getStickyEdge(partEl, horizontal), scrollerEl),
+      readPartStuck(partEl, scrollerEl, axis),
     );
     partEls.forEach((partEl, index) => {
       partEl.toggleAttribute("navi-stuck", stuckList[index]);
@@ -4763,10 +4819,11 @@ const easeInOutCubic = (t) =>
   t < 0.5
     ? 4 * t * t * t
     : 1 - ((-2 * t + 2) * (-2 * t + 2) * (-2 * t + 2)) / 2;
-// Where an item starts along the scroll axis, in viewport coordinates: read off
-// it when it is drawn, otherwise walked to from the nearest item drawn through
-// the room each item between them is held at — what the fillers hold, so where
-// the item will be drawn (findBandStart walks the same way, from a position).
+// Where an item starts along the scroll axis (see VERTICAL_AXIS), in viewport
+// coordinates: read off it when it is drawn, otherwise walked to from the
+// nearest item drawn through the room each item between them is held at — what
+// the fillers hold, so where the item will be drawn (findBandStart walks the
+// same way, from a position).
 const estimateItemStart = (items, index, roomOf) => {
   let before = null;
   let after = null;
@@ -4818,29 +4875,27 @@ const resolveHeldOffset = ({
   return resolveOpenOffset(alignedOffset + offset, viewportSize, itemSize);
 };
 
-// The room an item must be given at the top (or left) of the view: the
+// The room an item must be given at the start of the view: the
 // scroller's own scroll-padding — where a fixed bar publishes the space it
 // takes — plus the item's scroll-margin, where the list puts its sticky header
 // and the height of the group label it lives under. `scrollIntoView()` on an item
 // lands past both; a position given as `{id, offset}` means the same place, so
 // `offset` is the caller's own few pixels and not a number restating what the
 // CSS already measures.
-const getItemScrollInset = (scrollerEl, itemEl, horizontal) => {
+const getItemScrollInset = (scrollerEl, itemEl, axis) => {
   if (!itemEl) {
     return 0;
   }
   const viewportRect = getScrollerViewportRect(scrollerEl);
-  const viewportSize = horizontal ? viewportRect.width : viewportRect.height;
+  const viewportSize = axis.size(viewportRect);
   const scrollerStyle = window.getComputedStyle(scrollerEl);
   const rowStyle = window.getComputedStyle(itemEl);
   const scrollPadding = resolveScrollInset(
-    horizontal
-      ? scrollerStyle.scrollPaddingLeft
-      : scrollerStyle.scrollPaddingTop,
+    scrollerStyle[axis.scrollPaddingStart],
     viewportSize,
   );
   const scrollMargin = resolveScrollInset(
-    horizontal ? rowStyle.scrollMarginLeft : rowStyle.scrollMarginTop,
+    rowStyle[axis.scrollMarginStart],
     viewportSize,
   );
   return scrollPadding + scrollMargin;
@@ -4903,7 +4958,7 @@ const captureScrollAnchor = ({
   scrollerEl,
   listEl,
   items,
-  horizontal,
+  axis,
   countVisible,
 }) => {
   if (!scrollerEl || !listEl) {
@@ -4911,17 +4966,17 @@ const captureScrollAnchor = ({
   }
   const viewportRect = getScrollerViewportRect(scrollerEl);
   const listRect = listEl.getBoundingClientRect();
-  const range = getListVisibleRange(viewportRect, listRect, horizontal);
+  const range = getListVisibleRange(viewportRect, listRect, axis);
   if (!range) {
     return null;
   }
-  const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
-  const { itemEls, index } = findItemsFrom(listEl, range.from, horizontal);
+  const viewportFrom = axis.start(viewportRect);
+  const { itemEls, index } = findItemsFrom(listEl, range.from, axis);
   let fallbackAnchor = null;
   for (let i = index; i < itemEls.length; i++) {
     const itemEl = itemEls[i];
     const itemRect = itemEl.getBoundingClientRect();
-    const itemStart = horizontal ? itemRect.left : itemRect.top;
+    const itemStart = axis.start(itemRect);
     if (itemStart >= range.to) {
       break;
     }
@@ -4938,7 +4993,7 @@ const captureScrollAnchor = ({
           itemEls,
           i,
           range.to,
-          horizontal,
+          axis,
         );
       }
       return anchor;
@@ -4954,7 +5009,7 @@ const captureScrollAnchor = ({
           itemEls,
           i,
           range.to,
-          horizontal,
+          axis,
         );
       }
     }
@@ -4975,11 +5030,11 @@ const isSamePosition = (a, b) => {
 };
 // How many of the items from `fromIndex` on start before `to` along the scroll
 // axis — the ones on screen, when `to` is where the view ends.
-const countItemsStartingBefore = (itemEls, fromIndex, to, horizontal) => {
+const countItemsStartingBefore = (itemEls, fromIndex, to, axis) => {
   let index = fromIndex;
   while (index < itemEls.length) {
     const rect = itemEls[index].getBoundingClientRect();
-    if ((horizontal ? rect.left : rect.top) >= to) {
+    if (axis.start(rect) >= to) {
       break;
     }
     index++;
@@ -4989,11 +5044,11 @@ const countItemsStartingBefore = (itemEls, fromIndex, to, horizontal) => {
 // The part of the list that is on screen, along the scrolling axis. Both edges
 // matter: the scroller may be larger than the list (scroller="parent") as well
 // as smaller (the list scrolls inside its own box).
-const getListVisibleRange = (viewportRect, listRect, horizontal) => {
-  const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
-  const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
-  const listFrom = horizontal ? listRect.left : listRect.top;
-  const listTo = horizontal ? listRect.right : listRect.bottom;
+const getListVisibleRange = (viewportRect, listRect, axis) => {
+  const viewportFrom = axis.start(viewportRect);
+  const viewportTo = axis.end(viewportRect);
+  const listFrom = axis.start(listRect);
+  const listTo = axis.end(listRect);
   const from = listFrom > viewportFrom ? listFrom : viewportFrom;
   const to = listTo < viewportTo ? listTo : viewportTo;
   if (to - from < 2) {
@@ -5004,14 +5059,14 @@ const getListVisibleRange = (viewportRect, listRect, horizontal) => {
 // The real items of the list, and the first of them reaching past `from` along
 // the scroll axis. A binary search over their boxes: the items stand in
 // document order along that axis, so their far edges only grow.
-const findItemsFrom = (listEl, from, horizontal) => {
+const findItemsFrom = (listEl, from, axis) => {
   const itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
   let low = 0;
   let high = itemEls.length;
   while (low < high) {
     const mid = (low + high) >> 1;
     const rect = itemEls[mid].getBoundingClientRect();
-    const end = horizontal ? rect.right : rect.bottom;
+    const end = axis.end(rect);
     if (end > from) {
       high = mid;
     } else {
@@ -5027,7 +5082,7 @@ const isOwnItem = (itemEl, listEl) => itemEl.closest(".navi_list") === listEl;
 // From where an item ends to where the item after it starts, read on the first
 // two that follow each other in the same container (a group's label stands
 // between two items of different groups). Null when no two items do.
-const readSpaceBetweenItems = (listEl, horizontal) => {
+const readSpaceBetweenItems = (listEl, axis) => {
   let previous = null;
   for (const itemEl of listEl.querySelectorAll(
     `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
@@ -5046,12 +5101,12 @@ const readSpaceBetweenItems = (listEl, horizontal) => {
       previous.index === index - 1 &&
       previous.containerEl === itemEl.parentElement
     ) {
-      return (horizontal ? rect.left : rect.top) - previous.to;
+      return axis.start(rect) - previous.to;
     }
     previous = {
       index,
       containerEl: itemEl.parentElement,
-      to: horizontal ? rect.right : rect.bottom,
+      to: axis.end(rect),
     };
   }
   return null;
@@ -5073,46 +5128,43 @@ const findRealItemElementAt = (listEl, index) => {
   const itemEl = findItemElementAt(listEl, index);
   return itemEl && itemEl.hasAttribute("navi-list-item-real") ? itemEl : null;
 };
-// The screen the render window is framed on, along the scroll axis and in
-// viewport coordinates: the viewport of the box that scrolls the list — what
+// The screen the render window is framed on, along the scroll axis (see
+// VERTICAL_AXIS) and in viewport coordinates: the viewport of the box that scrolls the list — what
 // "150%" is a percentage of. A box that does not scroll — a list given no
 // height, as tall as its items — shows no more of them than the browser does:
 // its viewport is cut by the browser's, or a budget in % would draw items to
 // fill a screen they make grow.
-const readWindowScreen = (scrollerEl, horizontal) => {
+const readWindowScreen = (scrollerEl, axis) => {
   const scrollerRect = getScrollerViewportRect(scrollerEl);
-  let from = horizontal ? scrollerRect.left : scrollerRect.top;
-  let to = horizontal ? scrollerRect.right : scrollerRect.bottom;
-  if (!canScrollerScroll(scrollerEl, horizontal ? "x" : "y")) {
-    const browserSize = horizontal
-      ? document.documentElement.clientWidth
-      : document.documentElement.clientHeight;
-    if (from < 0) {
-      from = 0;
+  let from = axis.start(scrollerRect);
+  let to = axis.end(scrollerRect);
+  if (!canScrollerScroll(scrollerEl, axis.name)) {
+    const browserRect = getScrollerViewportRect(document.scrollingElement);
+    const browserFrom = axis.start(browserRect);
+    const browserTo = axis.end(browserRect);
+    if (from < browserFrom) {
+      from = browserFrom;
     }
-    if (to > browserSize) {
-      to = browserSize;
+    if (to > browserTo) {
+      to = browserTo;
     }
   }
   return { from, to };
 };
 // What the render window is placed and sized on (see evaluateWindow), along
-// the scroll axis and in viewport coordinates: the size of the screen (see
+// the scroll axis (see VERTICAL_AXIS) and in viewport coordinates: the size of the screen (see
 // readWindowScreen), the part of the list on it (the band), and the items
 // drawn, in the order they stand. A list off screen is met at its edge nearest
 // to the screen, where it comes in.
-const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
-  const { from: screenFrom, to: screenTo } = readWindowScreen(
-    scrollerEl,
-    horizontal,
-  );
+const readWindowGeometry = (scrollerEl, listEl, axis) => {
+  const { from: screenFrom, to: screenTo } = readWindowScreen(scrollerEl, axis);
   const screenSize = screenTo - screenFrom;
   if (screenSize < 1) {
     return null;
   }
   const listRect = listEl.getBoundingClientRect();
-  const listFrom = horizontal ? listRect.left : listRect.top;
-  const listTo = horizontal ? listRect.right : listRect.bottom;
+  const listFrom = axis.start(listRect);
+  const listTo = axis.end(listRect);
   if (listTo - listFrom < 1) {
     return null;
   }
@@ -5136,8 +5188,8 @@ const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
       // Not laid out (display: none): it stands nowhere.
       continue;
     }
-    const from = horizontal ? rect.left : rect.top;
-    const to = horizontal ? rect.right : rect.bottom;
+    const from = axis.start(rect);
+    const to = axis.end(rect);
     const failedFrom = itemEl.getAttribute("navi-list-failed-from");
     if (failedFrom !== null) {
       // The band standing for items whose page failed: read as those items,
@@ -5179,7 +5231,7 @@ const readWindowGeometry = (scrollerEl, listEl, horizontal) => {
 // list (a filler, a header); a stand-in is not measured, it takes the room it
 // is given and not the room of its item, but an item after it ends where it
 // ends. `complete` says whether the room was read up to an end before it.
-const readItemRooms = (listEl, horizontal, onRoom) => {
+const readItemRooms = (listEl, axis, onRoom) => {
   let previous = null;
   for (const itemEl of listEl.querySelectorAll(
     `[${LIST_ITEM_INDEX_ATTRIBUTE}]`,
@@ -5194,14 +5246,14 @@ const readItemRooms = (listEl, horizontal, onRoom) => {
     const item = {
       id: getItemName(itemEl),
       index: Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE)),
-      from: horizontal ? rect.left : rect.top,
-      to: horizontal ? rect.right : rect.bottom,
+      from: axis.start(rect),
+      to: axis.end(rect),
     };
     if (item.id !== null) {
       const endBefore =
         previous && previous.index === item.index - 1
           ? previous.to
-          : readEndBefore(itemEl, listEl, horizontal);
+          : readEndBefore(itemEl, listEl, axis);
       if (endBefore === null) {
         onRoom(item, item.to - item.from, false);
       } else {
@@ -5218,7 +5270,7 @@ const readItemRooms = (listEl, horizontal, onRoom) => {
 // group) starts, less the gap and the margins between the two. Its own box is
 // where it is painted, which a sticky header stuck to the top of the screen
 // puts thousands of pixels away from its place in the list.
-const readEndBefore = (itemEl, listEl, horizontal) => {
+const readEndBefore = (itemEl, listEl, axis) => {
   // The separator an item wears stands at the gap above it, and is part of its
   // room: what stands before the item is what stands before its separator.
   let slotEl =
@@ -5253,19 +5305,11 @@ const readEndBefore = (itemEl, listEl, horizontal) => {
     const beforeStyle = window.getComputedStyle(beforeEl);
     // A gap the browser computes as "normal" is none in a flex or grid list.
     const lengthOf = (value) => parseFloat(value) || 0;
-    if (horizontal) {
-      return (
-        slotRect.left -
-        lengthOf(containerStyle.columnGap) -
-        lengthOf(slotStyle.marginLeft) -
-        lengthOf(beforeStyle.marginRight)
-      );
-    }
     return (
-      slotRect.top -
-      lengthOf(containerStyle.rowGap) -
-      lengthOf(slotStyle.marginTop) -
-      lengthOf(beforeStyle.marginBottom)
+      axis.start(slotRect) -
+      lengthOf(containerStyle[axis.gap]) -
+      lengthOf(slotStyle[axis.marginStart]) -
+      lengthOf(beforeStyle[axis.marginEnd])
     );
   }
   if (slotEl.parentElement !== listEl) {
@@ -5273,13 +5317,11 @@ const readEndBefore = (itemEl, listEl, horizontal) => {
   }
   const listRect = listEl.getBoundingClientRect();
   const listStyle = window.getComputedStyle(listEl);
-  return horizontal
-    ? listRect.left +
-        parseFloat(listStyle.borderLeftWidth) +
-        parseFloat(listStyle.paddingLeft)
-    : listRect.top +
-        parseFloat(listStyle.borderTopWidth) +
-        parseFloat(listStyle.paddingTop);
+  return (
+    axis.start(listRect) +
+    parseFloat(listStyle[axis.borderStart]) +
+    parseFloat(listStyle[axis.paddingStart])
+  );
 };
 // The first item the screen shows from `position` on, and the item after the
 // last one it shows up to `position` (exclusive, like the window's end). An
@@ -5522,11 +5564,11 @@ const createItemSizeReader = (items, start, end, itemSize) => {
 };
 // Whether a filler (the room held for items outside the window) is what stands
 // at that position along the scroll axis.
-const isFillerAt = (listEl, position, horizontal) => {
+const isFillerAt = (listEl, position, axis) => {
   for (const fillerEl of listEl.querySelectorAll("[navi-virtual-filler]")) {
     const rect = fillerEl.getBoundingClientRect();
-    const from = horizontal ? rect.left : rect.top;
-    const to = horizontal ? rect.right : rect.bottom;
+    const from = axis.start(rect);
+    const to = axis.end(rect);
     if (position >= from && position < to) {
       return true;
     }
@@ -5547,12 +5589,12 @@ const getScrollInfo = ({
   virtualItemSizeSignal,
   itemsPerLine,
   renderWindowRef,
-  horizontal,
+  axis,
 }) => {
   const items = listItems.itemsSignal.peek();
   const viewportRect = getScrollerViewportRect(scrollerEl);
   const listRect = listEl.getBoundingClientRect();
-  const range = getListVisibleRange(viewportRect, listRect, horizontal);
+  const range = getListVisibleRange(viewportRect, listRect, axis);
   if (!range) {
     return null;
   }
@@ -5562,15 +5604,14 @@ const getScrollInfo = ({
   // within the visible area.
   const scanStart = (range.from + range.to) / 2;
   let hitEl = null;
-  const hitFiller = isFillerAt(listEl, scanStart, horizontal);
+  const hitFiller = isFillerAt(listEl, scanStart, axis);
   if (!hitFiller) {
     // The first real item from the center down, the way a probe walking down
     // from it would meet one — past a separator or a group label in between.
-    const { itemEls, index } = findItemsFrom(listEl, scanStart, horizontal);
+    const { itemEls, index } = findItemsFrom(listEl, scanStart, axis);
     const itemEl = itemEls[index];
     if (itemEl) {
-      const itemRect = itemEl.getBoundingClientRect();
-      const itemStart = horizontal ? itemRect.left : itemRect.top;
+      const itemStart = axis.start(itemEl.getBoundingClientRect());
       if (itemStart < range.to) {
         hitEl = itemEl;
       }
@@ -5586,15 +5627,14 @@ const getScrollInfo = ({
     if (virtualItemSize === 0) {
       return null;
     }
-    // How much of the list is above (or left of) the top of the viewport — the
-    // list is not necessarily flush against the top of the scroller.
+    // How much of the list is before the start of the viewport — the list is
+    // not necessarily flush against the start of the scroller.
     const listOffsetInViewport =
-      (horizontal ? viewportRect.left : viewportRect.top) -
-      (horizontal ? listRect.left : listRect.top);
+      axis.start(viewportRect) - axis.start(listRect);
     // scrollValues may describe a position the scroller is not at yet (a scroll
     // about to be restored): the difference is what the rects cannot show.
-    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
-    const scrollAsked = horizontal ? scrollValues.left : scrollValues.top;
+    const scrollNow = axis.readScroll(scrollerEl);
+    const scrollAsked = axis.scrollOf(scrollValues);
     const positionInItems =
       (listOffsetInViewport + (scrollAsked - scrollNow)) / virtualItemSize;
     const estimatedIndex = Math.floor(positionInItems);
@@ -5645,7 +5685,7 @@ const VIRTUAL_ITEM_SIZE_EPSILON = 0.5;
 // other items (a filler, the failure band) lies between them. A line holding a
 // stand-in is not read: it takes the room it is given. The last line drawn has
 // no line after it to be read up to.
-const readLineRooms = (listEl, horizontal, onRoom) => {
+const readLineRooms = (listEl, axis, onRoom) => {
   const lines = [];
   let line = null;
   for (const itemEl of listEl.querySelectorAll(
@@ -5659,7 +5699,7 @@ const readLineRooms = (listEl, horizontal, onRoom) => {
       line = null;
       continue;
     }
-    const from = horizontal ? rect.left : rect.top;
+    const from = axis.start(rect);
     const index = Number(itemEl.getAttribute(LIST_ITEM_INDEX_ATTRIBUTE));
     const sameLine =
       line &&
@@ -5711,16 +5751,14 @@ const readLineRooms = (listEl, horizontal, onRoom) => {
 // skeletons side by side in a grid (`inLines`), counted where a new line
 // starts. Only ever the first size: once an item is drawn, its room says more,
 // and the skeletons take the size they are given (see ListItems).
-const measureSkeletonSize = (listEl, horizontal, inLines) => {
+const measureSkeletonSize = (listEl, axis, inLines) => {
   const itemEls = listEl.querySelectorAll(`.${SKELETON_LIST_ITEM_CLASS}`);
   if (itemEls.length === 0) {
     return null;
   }
   const firstRect = itemEls[0].getBoundingClientRect();
   const lastRect = itemEls[itemEls.length - 1].getBoundingClientRect();
-  const span = horizontal
-    ? lastRect.right - firstRect.left
-    : lastRect.bottom - firstRect.top;
+  const span = axis.end(lastRect) - axis.start(firstRect);
   if (span <= 0) {
     return null;
   }
@@ -5729,8 +5767,7 @@ const measureSkeletonSize = (listEl, horizontal, inLines) => {
     lineCount = 0;
     let lineFrom = -Infinity;
     for (const itemEl of itemEls) {
-      const rect = itemEl.getBoundingClientRect();
-      const from = horizontal ? rect.left : rect.top;
+      const from = axis.start(itemEl.getBoundingClientRect());
       if (from > lineFrom + 0.5) {
         lineCount++;
         lineFrom = from;
@@ -5748,7 +5785,7 @@ const measureSkeletonSize = (listEl, horizontal, inLines) => {
 const useVirtualItemSizeSignal = (
   ref,
   virtualItemSizeProp = 0,
-  horizontal,
+  getAxis,
   {
     listItems,
     inLines,
@@ -5800,9 +5837,9 @@ const useVirtualItemSizeSignal = (
       samples.roomById.set(item.id, room);
     };
     if (inLines) {
-      readLineRooms(listEl, horizontal, sample);
+      readLineRooms(listEl, getAxis(), sample);
     } else {
-      readItemRooms(listEl, horizontal, sample);
+      readItemRooms(listEl, getAxis(), sample);
     }
     return samples.count === 0 ? null : samples.sum / samples.count;
   };
@@ -5877,14 +5914,13 @@ const useVirtualItemSizeSignal = (
     // room says more (see feedSample).
     const firstItemEl = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
     if (firstItemEl) {
-      const rect = firstItemEl.getBoundingClientRect();
-      const size = horizontal ? rect.width : rect.height;
+      const size = getAxis().size(firstItemEl.getBoundingClientRect());
       if (size > 0) {
         takeFirstSize(listEl, size);
       }
       return;
     }
-    const skeletonSize = measureSkeletonSize(listEl, horizontal, inLines);
+    const skeletonSize = measureSkeletonSize(listEl, getAxis(), inLines);
     if (skeletonSize !== null) {
       takeFirstSize(listEl, skeletonSize);
     }
@@ -5913,8 +5949,9 @@ const useVirtualItemSizeSignal = (
     // would ever give this effect another chance to run. A ResizeObserver
     // re-measures the moment it actually gets a real size instead.
     const observer = new ResizeObserver(() => {
-      const rect = firstListItem.getBoundingClientRect();
-      const measuredSize = horizontal ? rect.width : rect.height;
+      const measuredSize = getAxis().size(
+        firstListItem.getBoundingClientRect(),
+      );
       if (measuredSize > 0) {
         takeFirstSize(listEl, measuredSize);
         observer.disconnect();

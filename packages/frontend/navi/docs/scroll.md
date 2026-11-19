@@ -116,6 +116,14 @@ list, and dev warns when nothing scrolls it at all — a recovery, not the shape
 to aim for. When `"parent"` (found by measuring) is still not the box you mean,
 say so with `"document"` or the element itself.
 
+A `horizontal` list runs the way its text does: under `direction: rtl` its
+first item stands at the right and it scrolls leftward, and everything it
+measures counts from that side — the render window, the place it is held at
+(`scrolled`, `defaultScrolled`, `--navi-scroll`), the position it hands out, and
+the edge its header, footer and group labels stick to. The box that scrolls it
+must run the same way: a `dir` set on an element between the two is not
+followed.
+
 ### Where the list opens, and where it is
 
 `defaultScrolled` (or `scrolled`, held) takes `{id, offset}` — what
