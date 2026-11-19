@@ -473,10 +473,16 @@ export const createListItems = () => {
     },
     // Where the item named by that id sits, asked of whoever holds it: a run
     // knows its items, drawn or not; an item declared one by one is its own
-    // holder, and says its place when it draws.
+    // holder, and says its place when it draws. A name is compared as the
+    // text it is in the DOM (`navi-list-item-real`): the item 42 is the one
+    // the attribute calls "42".
     locateItem: (id) => {
+      if (id === undefined || id === null) {
+        return null;
+      }
+      const name = String(id);
       for (const locator of locatorByOwner.values()) {
-        const index = locator.indexOf(id);
+        const index = locator.indexOf(name);
         if (index !== null) {
           return index;
         }
@@ -486,12 +492,45 @@ export const createListItems = () => {
           entry.ownerId === entryId &&
           entry.item &&
           entry.place !== undefined &&
-          entry.data.itemId === id
+          String(entry.data.itemId) === name
         ) {
           return entry.place;
         }
       }
       return null;
+    },
+    // The name of the item at that index, when it is known: a run names what
+    // it holds, drawn or not; an item declared one by one says its own when it
+    // draws. Undefined for an item a run stands for without holding it yet.
+    itemNameAt: (index) => {
+      for (const locator of locatorByOwner.values()) {
+        if (locator.stands(index)) {
+          const id = locator.idAt(index);
+          return id === undefined ? undefined : String(id);
+        }
+      }
+      for (const [entryId, entry] of entryById) {
+        if (entry.ownerId === entryId && entry.item && entry.place === index) {
+          return String(entry.data.itemId);
+        }
+      }
+      return undefined;
+    },
+    // Whether a run stands for the item at that index without drawing it:
+    // outside the window it draws, or inside it with its page still on its
+    // way. Such an item is not missing — bringing it into view draws it.
+    standsUndrawnAt: (index) => {
+      for (const [ownerId, locator] of locatorByOwner) {
+        if (!locator.stands(index)) {
+          continue;
+        }
+        if (locator.awaits(index)) {
+          return true;
+        }
+        const window = windowByOwner.get(ownerId);
+        return !window || index < window.from || index >= window.to;
+      }
+      return false;
     },
     // Whether a run stands for the item at that index without holding it: the
     // page it belongs to has not answered yet. An id missing from what the runs

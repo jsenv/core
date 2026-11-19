@@ -26,6 +26,11 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "spellcheck",
   "autoCorrect",
   "aria-controls",
+  // Where the keys point and what typing offers, said by the element holding
+  // the focus while it drives another one (a field driving a list, see
+  // InputWithList): on any other element they say nothing.
+  "aria-activedescendant",
+  "aria-autocomplete",
   // The name goes where the role is: for most controls the root box has none,
   // so an aria-label left on it names nothing at all, while the host is what
   // the user focuses and what a screen reader announces (and what

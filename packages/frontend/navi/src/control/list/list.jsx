@@ -7,7 +7,13 @@ import {
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { cloneElement, Component, createContext } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 // Imported for its side effect: it is what writes navi-scrolling on whatever
 // scrolls, which the CSS below reads.
@@ -53,6 +59,7 @@ import { ListItemHeaderOrFooterResolver } from "./list_item_header_footer.jsx";
 import { createListItems } from "./list_items.js";
 import { listItemBlockedMessage } from "./list_item_blocked_message.js";
 import {
+  ListItemPositionContext,
   ListItemSelectableResolver,
   ListSelectableResolver,
 } from "./list_selectable.jsx";
@@ -1280,15 +1287,17 @@ const ListUI = (props) => {
   listItems.horizontal = Boolean(horizontal);
   listItems.renderSkeleton = renderSkeleton;
 
-  // An item is addressed by id from outside (--navi-scroll, --navi-select): the
-  // ones drawn have said so (see list_items.js), and the ones a run
-  // holds without drawing are known only to that run (see List.Items' item
-  // locator). Both answer here, so an item is reachable whether or not the
-  // window happens to frame it.
+  // An item is addressed by its name from outside (--navi-scroll, the item the
+  // keyboard moved to): the ones drawn have said so (see list_items.js), and
+  // the ones a run holds without drawing are known only to that run (see
+  // List.Items' item locator). Both answer here, so an item is reachable
+  // whether or not the window happens to frame it. A name is compared as the
+  // text it is in the DOM (see locateItem).
   const getItemById = (itemId) => {
+    const name = String(itemId);
     const itemDrawn = listItems.itemsSignal
       .peek()
-      .find((item) => item.itemId === itemId);
+      .find((item) => String(item.itemId) === name);
     if (itemDrawn) {
       return itemDrawn;
     }
@@ -1464,12 +1473,20 @@ const ListUI = (props) => {
         holdAt(wanted, { smooth: e.detail.smooth });
       }}
       // The item the keyboard moved to, brought into view by the nearest edge:
-      // nothing is held, the keyboard keeps going.
+      // nothing is held, the keyboard keeps going. Named, or at an index when
+      // the keyboard walked there by position (an item a run stands for
+      // without holding it yet has no name to give). `onRevealed` is handed
+      // the item's element once it is drawn and in view.
       onnavi_request_reveal={(e) => {
-        const item = getItemById(e.detail.id);
+        const { id, index, onRevealed } = e.detail;
+        const item =
+          index === undefined
+            ? getItemById(id)
+            : { itemId: id === undefined ? undefined : String(id), index };
         scrollToItem(item, {
           event: e,
           reason: "navi_request_reveal",
+          onRevealed,
         });
       }}
     >
@@ -2304,7 +2321,10 @@ const useListScrollSync = ({
     listItems.holdPending = false;
   };
 
-  const scrollToItem = (item, { event, reason, block: blockRequested }) => {
+  const scrollToItem = (
+    item,
+    { event, reason, block: blockRequested, onRevealed },
+  ) => {
     if (!item) {
       return;
     }
@@ -2348,12 +2368,19 @@ const useListScrollSync = ({
         event,
         item,
       });
+      if (onRevealed) {
+        onRevealed(itemEl);
+      }
     };
 
     // Whether the item is drawn is asked of the dom, not of the render window:
     // the window says what a run draws, and a list whose items are declared one
-    // by one has them all in the dom whatever the window says.
-    const itemEl = findItemElement(getListEl(), item.itemId);
+    // by one has them all in the dom whatever the window says. An item asked
+    // for by its index alone (one a run does not hold yet) is found there.
+    const itemEl =
+      item.itemId === undefined
+        ? findRealItemElementAt(getListEl(), index)
+        : findItemElement(getListEl(), item.itemId);
     if (itemEl) {
       scrollItemIntoView(itemEl);
       return;
@@ -2361,7 +2388,8 @@ const useListScrollSync = ({
     // Not in DOM — shift the render window. The item will read
     // pendingScrollRef on mount and scroll into view.
     pendingScrollRef.current = {
-      id: item.itemId,
+      id: item.itemId === undefined ? undefined : String(item.itemId),
+      index,
       resolve: (itemEl) => {
         pendingScrollRef.current = null;
         scrollItemIntoView(itemEl);
@@ -4994,6 +5022,12 @@ const findItemElementAt = (listEl, index) => {
   }
   return null;
 };
+// The item drawn at an index of the list, never a stand-in: what an item asked
+// for by its index is, once it has arrived.
+const findRealItemElementAt = (listEl, index) => {
+  const itemEl = findItemElementAt(listEl, index);
+  return itemEl && itemEl.hasAttribute("navi-list-item-real") ? itemEl : null;
+};
 // The screen the render window is framed on, along the scroll axis and in
 // viewport coordinates: the viewport of the box that scrolls the list — what
 // "150%" is a percentage of. A box that does not scroll — a list given no
@@ -6079,6 +6113,24 @@ const ListItemFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+  // What a search made of the item — gone, kept but hidden, or muted — is
+  // decided before anything else reads it: a selectable item not shown must
+  // not register the control it would carry (see ListItemSelectableResolver),
+  // or the list would hold a control with no element to act on.
+  // There is no standalone match/matchScore/highlight prop — participation
+  // in a matching system (search, filter…) only goes through `matchInfo`
+  // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
+  // matchRanges }), so there is exactly one way to wire it up.
+  const searchNoMatchMode = useContext(SearchNoMatchModeContext);
+  if (props.matchInfo?.match === false) {
+    if (searchNoMatchMode === "remove") {
+      props.filtered = true;
+    } else if (searchNoMatchMode === "invisible_and_inert") {
+      props.hidden = true;
+    } else if (searchNoMatchMode === "muted") {
+      props.muted = true;
+    }
+  }
 
   return <Next {...props} />;
 };
@@ -6220,30 +6272,22 @@ const ListItemUI = (props) => {
   // this (see captureScrollAnchor), and an item asked for by name is found by
   // this (locateItem, findItemElement); the DOM id is the caller's.
   props.itemId = runItem ? runItem.id : props.id;
-  // There is no standalone match/matchScore/highlight prop — participation
-  // in a matching system (search, filter…) only goes through `matchInfo`
-  // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
-  // matchRanges }), so there is exactly one way to wire it up.
   const matchInfo = props.matchInfo;
   // Expose match on the item: the list counts non-matching items via
   // `item.match === false` (drives noMatchCount → allNoMatch → the searchFallback
   // / hide-when-empty behavior). Without this a matchInfo-based search would
   // filter items out but never register them as "no match".
+  // (filtered/hidden/muted are derived from it in ListItemFirstResolver.)
   if (matchInfo) {
     props.match = matchInfo.match;
   }
-  // Derive filtered/hidden/muted from matchInfo.match + searchNoMatchMode context.
-  if (matchInfo?.match === false) {
-    if (searchNoMatchMode === "remove") {
-      props.filtered = true;
-      if (import.meta.dev && runItem) {
-        listItems.warnRunItemRemoved();
-      }
-    } else if (searchNoMatchMode === "invisible_and_inert") {
-      props.hidden = true;
-    } else if (searchNoMatchMode === "muted") {
-      props.muted = true;
-    }
+  if (
+    import.meta.dev &&
+    runItem &&
+    matchInfo?.match === false &&
+    searchNoMatchMode === "remove"
+  ) {
+    listItems.warnRunItemRemoved();
   }
   // Where an item sits is where it was declared, full stop: a list is written in
   // the order it reads. Its slot is what says that — a search that reorders
@@ -6328,7 +6372,13 @@ const ListItemReal = (props) => {
   // see the state change, which only the caller can arrange).
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
-  const needScrollOnMount = pendingScroll && pendingScroll.id === itemId;
+  // Asked for by name, or by index when the item had none to give yet (see
+  // scrollToItem); a name is compared as the text it is in the DOM.
+  const needScrollOnMount =
+    pendingScroll &&
+    (pendingScroll.id === undefined
+      ? pendingScroll.index === rest.index
+      : pendingScroll.id === String(itemId));
   useLayoutEffect(() => {
     if (!needScrollOnMount) {
       return;
@@ -6343,6 +6393,17 @@ const ListItemReal = (props) => {
   // CSS Highlight API: mark matching text ranges from matchInfo.matchRanges,
   // if any (there is no standalone highlight prop — see ListItem's own doc).
   useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
+
+  // Where the item stands, said for assistive technology over the whole
+  // collection: a window draws thirty items of two hundred, and a list
+  // counted from the DOM would be thirty items long.
+  const listItems = useContext(ListItemsContext);
+  const setsize = listItems.totalSignal.value;
+  const posinset = typeof rest.index === "number" ? rest.index + 1 : undefined;
+  const position = useMemo(
+    () => (posinset === undefined ? null : { posinset, setsize }),
+    [posinset, setsize],
+  );
 
   const itemColumnsOverrideProps = useItemColumnsOverrideProps(rest.style);
   // <List itemTransition>: the item carries the name it is to be paired by, and
@@ -6437,6 +6498,8 @@ const ListItemReal = (props) => {
       navi-list-item-real={itemId}
       navi-list-item-index={rest.index}
       navi-list-item-separated={separated ? "" : undefined}
+      aria-posinset={posinset}
+      aria-setsize={position ? setsize : undefined}
       {...rest}
       {...itemColumnsOverrideProps}
       index={undefined}
@@ -6498,7 +6561,9 @@ const ListItemReal = (props) => {
           )}
         </>
       ) : (
-        children
+        <ListItemPositionContext.Provider value={position}>
+          {children}
+        </ListItemPositionContext.Provider>
       )}
       {/* Drawn on top of the item, taking no space: the item keeps whatever
           layout it was given (a flex row, a grid of columns…) while it waits. */}
@@ -6578,10 +6643,15 @@ const LIST_ITEM_STYLE_CSS_VARS = {
  *   [key: string]: any,
  * }>}
  * @param {string} [props.id]
- *   HTML element id AND the stable identifier used by external commands
- *   (--navi-select, --navi-unselect, --navi-scroll, --navi-update). Required
- *   when items need to be targeted programmatically from outside the list;
- *   auto-generated if omitted.
+ *   The element's id, and the item's name in the list — unless a
+ *   `<List.Items>` run draws it: a run names its items itself (their `id`, or
+ *   the key its source names them by), whatever DOM id they wear. The name is
+ *   what the list's own commands take as their value — `--navi-select` and
+ *   `--navi-unselect` (an item drawn: the control it carries exists only while
+ *   it is), `--navi-scroll` (any item, drawn or not) — and what the keyboard's
+ *   current item is kept by. Compared as text: `42` and `"42"` name the same
+ *   item. A command aimed at an element (`commandFor`) names its DOM id.
+ *   Auto-generated if omitted.
  * @param {boolean} [props.selectable]
  *   The item participates in selection (radio or checkbox depending on whether
  *   the parent List has `multiple`). Requires `value` and typically a
@@ -7220,16 +7290,19 @@ const useRunItems = (
     return remembered === undefined ? givenRoomOf(itemIndex) : remembered;
   };
   listItems.setItemLocator(ownerId, {
+    // Compared as text: a name read back from the DOM is one (see locateItem).
     indexOf: (id) => {
+      const name = String(id);
       let found = null;
       store.eachHeld((item, rank) => {
         const itemIndex = indexOfRank(rank);
-        if (found === null && idOf(item, itemIndex) === id) {
+        if (found === null && String(idOf(item, itemIndex)) === name) {
           found = itemIndex;
         }
       });
       return found;
     },
+    idAt,
     stands: (itemIndex) => itemIndex >= runStart && itemIndex < runEnd,
     awaits: (itemIndex) =>
       itemIndex >= runStart &&
@@ -9272,6 +9345,19 @@ const ListResolved = /*#__PURE__*/ createComponentResolver([
  *   above it does not move. A `scrolled` changing in the same render wins. The
  *   position remembered under the `id` for the address shown is dropped; see
  *   docs/scroll.md.
+ * @param {boolean} [props.selectable]
+ *   The items are choices: a group of radios, or of checkboxes with
+ *   `multiple`, each carried by a visually hidden input in its item (a
+ *   `<SelectableInput />` draws a visible mark of it). Tab enters the list on
+ *   that input and the arrows walk the items; a field naming the list
+ *   (`<Input navi-list={id}>`) drives it while the focus stays in the field.
+ *   The keys walk the whole collection, the items a window does not draw
+ *   included, and an item scrolled out of the window while it holds the focus
+ *   hands it to the list until it is drawn again. Items are addressed by their
+ *   name (see `List.Item`'s `id`). The list opens on its selected item when
+ *   that item is among the first drawn: it knows an item's value only once it
+ *   is drawn, so a run whose selected item may stand further down says where
+ *   to open — `defaultScrolled={{ id, align: "center" }}`.
  * @param {boolean} [props.deselectable]
  *   A single-select list allowed to hold nothing: the selected item, pressed
  *   again, lets go. Without it the list is a radio group — a choice, once

@@ -1,4 +1,8 @@
-import { dispatchCustomEvent, dispatchPublicCustomEvent } from "@jsenv/dom";
+import {
+  dispatchCustomEvent,
+  dispatchPublicCustomEvent,
+  preventFocusNav,
+} from "@jsenv/dom";
 import { useComputed } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
@@ -11,6 +15,7 @@ import {
 import { getNetworkPolicyReadOnlyMessage } from "@jsenv/navi/src/action/network_policy.js";
 import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
+import { moveFocusTo } from "@jsenv/navi/src/utils/focus/focus_transfer.js";
 import { useFocusGroup } from "@jsenv/navi/src/utils/focus/use_focus_group.js";
 import {
   ControlIdContext,
@@ -285,6 +290,35 @@ const css = /* css */ `
   }
 `;
 
+// The keys heard while the focus is parked on the list (see focusParking in
+// ListSelectable): the walk goes on from the item that held it.
+const PARKED_KEY_GOALS = {
+  ArrowDown: "next",
+  ArrowRight: "next",
+  ArrowUp: "previous",
+  ArrowLeft: "previous",
+  Home: "first",
+  End: "last",
+};
+const getItemName = (itemEl) => itemEl.getAttribute("navi-list-item-real");
+const getItemIndex = (itemEl) =>
+  Number(itemEl.getAttribute("navi-list-item-index"));
+const getRealInput = (itemEl) =>
+  itemEl.querySelector("[navi-selectable-real-input]");
+// What the keys may land on: an item whose real input could take the focus —
+// not disabled, not inert nor hidden from assistive technology (an item a
+// search keeps in place but invisible, see searchNoMatchMode). The part of
+// the focus group's test that can apply to an item, read off attributes: no
+// style is read, and the keys ask it of every item they walk past.
+const isNavigable = (itemEl) => {
+  const realInput = getRealInput(itemEl);
+  return (
+    Boolean(realInput) &&
+    !realInput.disabled &&
+    !realInput.closest('[inert], [aria-hidden="true"]')
+  );
+};
+
 const SelectableListMultipleContext = createContext(false);
 // A single-select list whose selected row, pressed again, lets go: what its
 // rows' radios need to know to answer the press (see `deselectable` on Input).
@@ -297,6 +331,16 @@ const ListSelectableContext = createContext(false);
 // The values a selectable list means while it holds nothing (its
 // `placeholder`), or null while it holds something.
 const ListPlaceholderContext = createContext(null);
+// How an item of a selectable list hands the focus to the list when it leaves
+// the DOM holding it, and takes it back when drawn again (see focusParking).
+const SelectableListFocusParkingContext = createContext(null);
+/**
+ * Where an item stands in its list, for assistive technology: `posinset` and
+ * `setsize` counted over the whole collection, not over the items a window
+ * happens to draw. Provided by the item (see ListItemReal), read by the real
+ * input a selectable item carries, a radio announcing "3 of 120".
+ */
+export const ListItemPositionContext = createContext(null);
 // Interactive variant: manages hover/keyboard/selection state and handles the
 // navi event protocol. When an action is provided it binds the action to ui state
 // and fires it on select. When only uiAction is provided it calls it directly.
@@ -320,6 +364,7 @@ const ListSelectable = (props) => {
   props.name = props.name || `listbox_${defaultName}`;
   const {
     ref,
+    listItems,
     multiple,
     deselectable,
     focusGroupDirection,
@@ -380,81 +425,305 @@ const ListSelectable = (props) => {
     ySelector: "[navi-selectable-real-input]",
   });
 
-  // "Current item" tracking — the item that an external controller (e.g. an
-  // <input navi-list>) navigates from. Defaults to the first selected item,
-  // else the first navigable item. Updated when:
-  //   - an item's real input gains focus (via Tab, click, etc.)
-  //   - the controller dispatches navi_request_nav
-  // The current id is announced via navi_current_change (bubbling) so a
-  // connected input can update its aria-controls / aria-activedescendant.
-  const currentIdRef = useRef(null);
-  const setCurrentId = (id, event) => {
-    const previousId = currentIdRef.current;
-    if (previousId === id) {
+  // The item the keyboard points at: the one the focus is on while it is in
+  // the list, else the one a field driving the list (<Input navi-list>) or a
+  // command walking it (--navi-next…) moved to. Kept by its NAME in the list
+  // (`navi-list-item-real`: a run names its items whatever DOM id they wear),
+  // and checked against the items each time it is used — what it names may
+  // have been filtered out, hidden by a search or scrolled out of the window
+  // since. Announced with navi_current_change (bubbling), so a field driving
+  // the list can say where the keys point (aria-activedescendant).
+  const currentRef = useRef({ name: null, realInputId: null });
+  const setCurrent = (name, itemEl, event) => {
+    const realInput = itemEl ? getRealInput(itemEl) : null;
+    // An item not drawn keeps the DOM ids it was last drawn with: they are
+    // its own, and it is drawn again with them.
+    const realInputId = realInput
+      ? realInput.id
+      : name === currentRef.current.name
+        ? currentRef.current.realInputId
+        : null;
+    const previous = currentRef.current;
+    if (previous.name === name && previous.realInputId === realInputId) {
       return;
     }
-    currentIdRef.current = id;
+    currentRef.current = { name, realInputId };
     const listEl = ref.current;
     if (!listEl) {
       return;
     }
-    if (id) {
-      listEl.setAttribute("navi-current-id", id);
-    } else {
+    if (name === null) {
       listEl.removeAttribute("navi-current-id");
+    } else {
+      listEl.setAttribute("navi-current-id", name);
     }
     dispatchPublicCustomEvent(listEl, "navi_current_change", {
       event,
-      id,
-      realInputId: id ? `${id}_input` : null,
+      id: name,
+      realInputId,
     });
   };
-  const getNavigableElements = () => {
+  // The items of THIS list that are drawn, in DOM order: a list nested in an
+  // item has items of its own.
+  const getOwnItemElements = () => {
     const listEl = ref.current;
     if (!listEl) {
       return [];
     }
-    const itemEls = Array.from(
-      listEl.querySelectorAll("[navi-list-item-real]"),
-    );
-    const navigableEls = [];
-    for (const itemEl of itemEls) {
-      if (itemEl.hidden) {
-        continue;
+    const itemsEl = listEl.querySelector(".navi_list");
+    const itemEls = [];
+    for (const itemEl of listEl.querySelectorAll("[navi-list-item-real]")) {
+      if (itemEl.closest(".navi_list") === itemsEl) {
+        itemEls.push(itemEl);
       }
-      const realInput = itemEl.querySelector("[navi-selectable-real-input]");
-      if (!realInput || realInput.disabled) {
-        continue;
-      }
-      navigableEls.push(itemEl);
     }
-    return navigableEls;
+    return itemEls;
   };
-  // On mount: set the initial current item to the first selected, else the
-  // first one the empty list means (its placeholder), else the first navigable.
-  // After that, focusin events on the list keep currentIdRef up to date.
-  useLayoutEffect(() => {
-    const navigableEls = getNavigableElements();
-    if (navigableEls.length === 0) {
+  const findOwnItemElement = (name) => {
+    for (const itemEl of getOwnItemElements()) {
+      if (getItemName(itemEl) === name) {
+        return itemEl;
+      }
+    }
+    return null;
+  };
+  // The current item as it stands now: drawn and navigable, or held by a run
+  // outside what it draws (the keys go on from its place, and acting on it
+  // brings it back into view). Null when it names nothing any more — filtered
+  // out, hidden by a search, removed — or nothing at all.
+  const resolveCurrent = () => {
+    const { name } = currentRef.current;
+    if (name === null) {
+      return null;
+    }
+    const itemEl = findOwnItemElement(name);
+    if (itemEl) {
+      return isNavigable(itemEl)
+        ? { name, index: getItemIndex(itemEl), itemEl }
+        : null;
+    }
+    const index = listItems.locateItem(name);
+    if (index === null || !listItems.standsUndrawnAt(index)) {
+      return null;
+    }
+    return { name, index, itemEl: null };
+  };
+  // Walking the collection from an index, one item at a time — not what the
+  // window happens to draw: the first item the keys may land on. Drawn, it is
+  // judged on the spot; a run's item not drawn is brought into view and
+  // judged once drawn (see goTo).
+  const findTarget = (fromIndex, step) => {
+    const itemElByIndex = new Map();
+    for (const itemEl of getOwnItemElements()) {
+      itemElByIndex.set(getItemIndex(itemEl), itemEl);
+    }
+    const total = listItems.totalSignal.peek();
+    for (
+      let index = fromIndex + step;
+      index >= 0 && index < total;
+      index += step
+    ) {
+      const itemEl = itemElByIndex.get(index);
+      if (itemEl) {
+        if (isNavigable(itemEl)) {
+          return { name: getItemName(itemEl), index, itemEl };
+        }
+        continue;
+      }
+      if (listItems.standsUndrawnAt(index)) {
+        return { name: listItems.itemNameAt(index), index, itemEl: null };
+      }
+    }
+    return null;
+  };
+  // Brought into view, then made current — and given the focus when the
+  // keys came from a focus parked on the list (see parkFocus). An item a run
+  // had not drawn is judged once drawn: one the keys may not land on (a
+  // disabled one) is walked past, the same way.
+  const goTo = (target, event, { step, focus }) => {
+    if (target.name !== undefined) {
+      setCurrent(target.name, target.itemEl, event);
+    }
+    dispatchCustomEvent(ref.current, "navi_request_reveal", {
+      event,
+      id: target.name,
+      index: target.index,
+      onRevealed: (itemEl) => {
+        if (!isNavigable(itemEl)) {
+          const next = findTarget(target.index, step);
+          if (next && next.index !== target.index) {
+            goTo(next, event, { step, focus });
+          }
+          return;
+        }
+        setCurrent(getItemName(itemEl), itemEl, event);
+        if (focus) {
+          moveFocusTo(getRealInput(itemEl));
+        }
+      },
+    });
+  };
+  // "previous"/"next", not "up"/"down": a list is a line of items whichever
+  // way it is laid out, and a horizontal one walks sideways. The keys that
+  // drive it (arrows, Home/End) map onto that where they are heard, and so do
+  // the commands (--navi-previous / --navi-next / --navi-first / --navi-last).
+  // "none": the text of a field driving the list changed, and what the keys
+  // pointed at answered the text before — nothing is current until the keys
+  // pick something again.
+  // Returns whether the list answered: a key the list does not answer stays
+  // with whoever pressed it (the caret of the field, see InputWithList).
+  const navigate = (goal, event, { focus } = {}) => {
+    if (goal === "none") {
+      setCurrent(null, null, event);
+      return false;
+    }
+    const current = resolveCurrent();
+    if (!current && currentRef.current.name !== null) {
+      setCurrent(null, null, event);
+    }
+    let target;
+    let step = 1;
+    if (goal === "last") {
+      step = -1;
+      target = findTarget(listItems.totalSignal.peek(), step);
+    } else if (!current || goal === "first") {
+      target = findTarget(-1, step);
+    } else {
+      step = goal === "previous" ? -1 : 1;
+      target = findTarget(current.index, step);
+    }
+    if (!target) {
+      // At an end of the list: the key is the list's, nothing moves.
+      return Boolean(current);
+    }
+    goTo(target, event, { step, focus });
+    return true;
+  };
+
+  const getChildController = (itemEl) => {
+    const realInput = getRealInput(itemEl);
+    return realInput
+      ? uiGroupStateController.findChildById(realInput.id)
+      : null;
+  };
+  const requestSelect = (itemEl, e) => {
+    const childController = getChildController(itemEl);
+    if (!childController) {
       return;
     }
-    let initialEl;
-    for (const el of navigableEls) {
-      const realInput = el.querySelector("[navi-selectable-real-input]");
-      if (realInput && realInput.checked) {
-        initialEl = el;
-        break;
+    dispatchRequestInteraction(ref.current, {
+      event: e,
+      name: "select",
+      prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
+      // Asked of the item too, not only of the list: an item can be the one
+      // refusing (the list already holds all it accepts, see maxLength), and
+      // it is the one that then says why.
+      allowed: () => {
+        dispatchRequestInteraction(childController.ref.current, {
+          event: e,
+          name: "select",
+          prevented: () => e.preventDefault(),
+          allowed: () => childController.setUIState(childController.value, e),
+        });
+      },
+    });
+  };
+  const requestUnselect = (itemEl, e) => {
+    const childController = getChildController(itemEl);
+    if (!childController) {
+      return;
+    }
+    dispatchRequestInteraction(ref.current, {
+      event: e,
+      name: "unselect",
+      prevented: () => e.preventDefault(), // tell the requester that we don't want to unselect this item
+      allowed: () => childController.setUIState(undefined, e),
+    });
+  };
+
+  // The focus is not lost when the item holding it leaves the DOM — the
+  // window sliding past it under a wheel or a PageDown, a search taking it
+  // out: it is handed to the list before the item goes (see
+  // ListItemSelectable), and goes back to the item as soon as it is drawn
+  // again. The keys pressed meanwhile go on from it. The list takes the focus
+  // only for that while (tabindex -1, removed when the focus leaves it).
+  const focusParking = useMemo(
+    () => ({
+      park: (itemEl) => {
+        const listEl = ref.current;
+        const activeElement = document.activeElement;
+        if (
+          !listEl ||
+          !listEl.isConnected ||
+          !activeElement ||
+          !itemEl.contains(activeElement)
+        ) {
+          return;
+        }
+        setCurrent(getItemName(itemEl), itemEl, null);
+        listEl.setAttribute("tabindex", "-1");
+        moveFocusTo(listEl);
+      },
+      giveBack: (itemEl) => {
+        const listEl = ref.current;
+        if (
+          !listEl ||
+          document.activeElement !== listEl ||
+          getItemName(itemEl) !== currentRef.current.name
+        ) {
+          return;
+        }
+        moveFocusTo(getRealInput(itemEl));
+      },
+    }),
+    [],
+  );
+  useLayoutEffect(() => {
+    const listEl = ref.current;
+    const onFocusOut = (e) => {
+      if (e.target === listEl) {
+        listEl.removeAttribute("tabindex");
       }
+    };
+    // Heard before the focus group's own arrow keys (see initFocusGroup),
+    // which have no item to start from while the focus is on the list.
+    const onKeyDownWhileParked = (e) => {
+      if (e.target !== listEl) {
+        return;
+      }
+      const goal = PARKED_KEY_GOALS[e.key];
+      if (!goal) {
+        return;
+      }
+      if (navigate(goal, e, { focus: true })) {
+        e.preventDefault();
+        preventFocusNav(e);
+      }
+    };
+    listEl.addEventListener("focusout", onFocusOut);
+    listEl.addEventListener("keydown", onKeyDownWhileParked, { capture: true });
+    return () => {
+      listEl.removeEventListener("focusout", onFocusOut);
+      listEl.removeEventListener("keydown", onKeyDownWhileParked, {
+        capture: true,
+      });
+    };
+  }, []);
+
+  // On mount: the first selected item is current, else the first one the
+  // empty list means (its placeholder), else the first the keys may land on.
+  // After that, the focus and the keys move it.
+  useLayoutEffect(() => {
+    const itemEls = getOwnItemElements();
+    const findItem = (predicate) =>
+      itemEls.find((itemEl) => predicate(itemEl) && isNavigable(itemEl));
+    const initialEl =
+      findItem((itemEl) => getRealInput(itemEl)?.checked) ||
+      findItem((itemEl) => itemEl.hasAttribute("data-placeholder")) ||
+      findItem(() => true);
+    if (initialEl) {
+      setCurrent(getItemName(initialEl), initialEl, null);
     }
-    if (!initialEl) {
-      initialEl = navigableEls.find((el) =>
-        el.hasAttribute("data-placeholder"),
-      );
-    }
-    if (!initialEl) {
-      initialEl = navigableEls[0];
-    }
-    setCurrentId(initialEl.id);
   }, []);
 
   // The group's contexts stand around the whole list, never between the <ul>
@@ -488,123 +757,73 @@ const ListSelectable = (props) => {
             return;
           }
           const itemEl = realInput.closest("[navi-list-item-real]");
-          if (itemEl && itemEl.id) {
-            setCurrentId(itemEl.id, e);
+          if (itemEl && getOwnItemElements().includes(itemEl)) {
+            setCurrent(getItemName(itemEl), itemEl, e);
           }
         }}
+        // --navi-select / --navi-unselect: an item named as the list names it
+        // (see List.Item's `id`), among the items drawn — the control it
+        // carries exists only while it is.
         onnavi_request_select={(e) => {
           const { id } = e.detail;
           if (id === undefined) {
             return;
           }
-          const inputId = `${id}_input`;
-          const childController = uiGroupStateController.findChildById(inputId);
-          if (!childController) {
-            return;
+          const itemEl = findOwnItemElement(String(id));
+          if (itemEl) {
+            requestSelect(itemEl, e);
           }
-          const list = ref.current;
-          dispatchRequestInteraction(list, {
-            event: e,
-            name: "select",
-            prevented: () => e.preventDefault(), // tell the requester that we don't want to select this item
-            // Asked of the item too, not only of the list: an item can be the one
-            // refusing (the list already holds all it accepts, see maxLength), and
-            // it is the one that then says why.
-            allowed: () => {
-              dispatchRequestInteraction(childController.ref.current, {
-                event: e,
-                name: "select",
-                prevented: () => e.preventDefault(),
-                allowed: () =>
-                  childController.setUIState(childController.value, e),
-              });
-            },
-          });
         }}
         onnavi_request_unselect={(e) => {
           const { id } = e.detail;
           if (id === undefined) {
             return;
           }
-          const inputId = `${id}_input`;
-          const childController = uiGroupStateController.findChildById(inputId);
-          if (!childController) {
-            return;
+          const itemEl = findOwnItemElement(String(id));
+          if (itemEl) {
+            requestUnselect(itemEl, e);
           }
-          const list = ref.current;
-          dispatchRequestInteraction(list, {
-            event: e,
-            name: "unselect",
-            prevented: () => e.preventDefault(), // tell the requester that we don't want to unselect this item
-            allowed: () => childController.setUIState(undefined, e),
-          });
         }}
-        // "previous"/"next", not "up"/"down": a list is a line of items whichever
-        // way it is laid out, and a horizontal one walks sideways. The keys that
-        // drive it (arrows, Home/End) map onto that here, and so do the commands
-        // (--navi-previous / --navi-next / --navi-first / --navi-last).
         onnavi_request_nav={(e) => {
-          const { goal } = e.detail;
-          const navigableEls = getNavigableElements();
-          if (navigableEls.length === 0) {
+          if (navigate(e.detail.goal, e)) {
+            e.detail.onAnswer?.();
+          }
+        }}
+        // Enter: the item the keys point at, as it stands now — brought back
+        // into view first when it was scrolled out of the window. With none,
+        // the key is still the list's and does nothing: a form around a field
+        // driving the list is not submitted by a key meant for the list.
+        onnavi_request_activate={(e) => {
+          e.detail.onAnswer?.();
+          const current = resolveCurrent();
+          if (!current) {
+            if (currentRef.current.name !== null) {
+              setCurrent(null, null, e);
+            }
             return;
           }
-          const currentId = currentIdRef.current;
-          let currentIndex = -1;
-          if (currentId) {
-            currentIndex = navigableEls.findIndex((el) => el.id === currentId);
-          }
-          let targetEl;
-          if (goal === "first") {
-            targetEl = navigableEls[0];
-          } else if (goal === "last") {
-            targetEl = navigableEls[navigableEls.length - 1];
-          } else if (goal === "next") {
-            if (currentIndex === -1) {
-              targetEl = navigableEls[0];
-            } else if (currentIndex < navigableEls.length - 1) {
-              targetEl = navigableEls[currentIndex + 1];
+          const activate = (itemEl) => {
+            const childController = getChildController(itemEl);
+            const isSelected = childController && childController.uiState;
+            if ((multiple || deselectable) && isSelected) {
+              requestUnselect(itemEl, e);
             } else {
-              targetEl = navigableEls[navigableEls.length - 1];
+              requestSelect(itemEl, e);
             }
-          } else if (goal === "previous") {
-            if (currentIndex === -1) {
-              targetEl = navigableEls[0];
-            } else if (currentIndex > 0) {
-              targetEl = navigableEls[currentIndex - 1];
-            } else {
-              targetEl = navigableEls[0];
-            }
-          }
-          if (!targetEl) {
+          };
+          if (current.itemEl) {
+            activate(current.itemEl);
             return;
           }
-          setCurrentId(targetEl.id, e);
           dispatchCustomEvent(ref.current, "navi_request_reveal", {
             event: e,
-            id: targetEl.id,
-          });
-        }}
-        onnavi_request_activate={(e) => {
-          const currentId = currentIdRef.current;
-          if (!currentId) {
-            return;
-          }
-          if (multiple || deselectable) {
-            const inputId = `${currentId}_input`;
-            const childController =
-              uiGroupStateController.findChildById(inputId);
-            const isSelected = childController && childController.uiState;
-            dispatchCustomEvent(
-              ref.current,
-              isSelected ? "navi_request_unselect" : "navi_request_select",
-              { event: e, id: currentId },
-            );
-            return;
-          }
-          dispatchCustomEvent(ref.current, "navi_request_select", {
-            event: e,
-            id: currentId,
+            id: current.name,
+            index: current.index,
+            onRevealed: (itemEl) => {
+              if (isNavigable(itemEl)) {
+                activate(itemEl);
+              }
+            },
           });
         }}
       >
@@ -619,7 +838,9 @@ const ListSelectable = (props) => {
           value={Boolean(deselectable)}
         >
           <ListPlaceholderContext.Provider value={placeholderShown}>
-            {listVnode}
+            <SelectableListFocusParkingContext.Provider value={focusParking}>
+              {listVnode}
+            </SelectableListFocusParkingContext.Provider>
           </ListPlaceholderContext.Provider>
         </SelectableListDeselectableContext.Provider>
       </SelectableListMultipleContext.Provider>
@@ -665,7 +886,12 @@ export const ListItemSelectableResolver = (props) => {
     (isHeaderOrFooter || props.role === "presentation"
       ? false
       : listSelectable);
-  if (selectable) {
+  // An item a search took out renders nothing, so it carries no control: a
+  // control registered without an element would be one the keys and the
+  // commands act on with nothing to act on. Its value, when selected, stays
+  // with the list (an item not drawn keeps its selection, see
+  // useControlgroupProps in ListSelectable).
+  if (selectable && !props.filtered) {
     return renderResolver(ListItemSelectable, { ...props, selectable: true });
   }
   return <Next {...props} />;
@@ -745,6 +971,22 @@ const ListItemSelectable = (props) => {
           props,
         ));
   const inputRef = useRef();
+  // Handing the focus to the list before the item leaves the DOM holding it,
+  // taking it back when drawn again (see focusParking in ListSelectable).
+  // Read on the item element itself: the layout cleanup runs while the item
+  // is still in the document, before its children are taken out with it.
+  const focusParking = useContext(SelectableListFocusParkingContext);
+  const itemRef = props.ref;
+  useLayoutEffect(() => {
+    const itemEl = itemRef.current;
+    if (!itemEl || !focusParking) {
+      return undefined;
+    }
+    focusParking.giveBack(itemEl);
+    return () => {
+      focusParking.park(itemEl);
+    };
+  }, []);
   const inputType = multiple ? "checkbox" : "radio";
   const inputId = `${id}_input`;
   inputRef.nullCanHappen = true; // virtualization
@@ -807,7 +1049,6 @@ const ListItemSelectable = (props) => {
       matchInfo={matchInfo}
       filtered={filtered}
       hidden={hidden}
-      aria-selected={checked}
       selected={checked}
       navi-selectable=""
       spacing="s"
@@ -857,6 +1098,17 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":-navi-placeholder",
 ];
 const SelectableRealInput = (props) => {
+  // A radio says where it stands in its group ("3 of 120"), counted over the
+  // collection rather than over the radios drawn. A checkbox has no position
+  // in ARIA: its item says it (see ListItemReal).
+  const position = useContext(ListItemPositionContext);
+  const positionProps =
+    position && props.type === "radio"
+      ? {
+          "aria-posinset": position.posinset,
+          "aria-setsize": position.setsize,
+        }
+      : null;
   // here for some reason we can't use <Input, so instead we use <Box
   // ideally we could use <Input but it would interfere with the control props we already create
   // in the ListItemSelectable
@@ -865,6 +1117,7 @@ const SelectableRealInput = (props) => {
       as="input"
       pseudoClasses={SELECTABLE_INPUT_PSEUDO_CLASSES}
       {...props}
+      {...positionProps}
       navi-visually-hidden=""
       navi-selectable-real-input=""
       data-callout-arrow-x="center"
