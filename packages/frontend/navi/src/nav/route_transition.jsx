@@ -2154,11 +2154,19 @@ const turnRunningTransitionRound = (fromUrl, url) => {
     return true;
   }
   if (!walkPicturesHome(animations, LEAD_NAMES)) {
-    // The pictures do not exist yet: the movement was asked for a frame ago and
-    // the browser has not taken them. There is nothing to turn round, and this
-    // navigation gets a movement of its own — which skips the one that never
-    // played, and nothing was on screen to teleport.
-    return false;
+    // No picture is moving yet: the browser has not taken them (the movement
+    // was asked for this very frame), or is still waiting for the page
+    // arriving to render, the page being left frozen on screen meanwhile.
+    // Either way the reader still sees the page this way back returns to:
+    // nothing moved, and nothing has to. The movement is dropped, and this
+    // navigation lands on the page it never left, with no movement of its
+    // own — one would photograph the page being left on both sides (still
+    // held, or the page arriving that nobody saw) and slide it onto the page
+    // on screen.
+    running.viewTransition.skipTransition();
+    navigationDecision = reverseCrossing(running.decision);
+    navigationDecisionFoundAgain = false;
+    return true;
   }
   // What this navigation plays, for the entry it may create: the movement on
   // screen, the other way.

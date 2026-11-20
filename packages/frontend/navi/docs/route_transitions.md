@@ -370,6 +370,12 @@ still walking back, there is no page to start from — neither the one it walks
 back to nor the one it walks away from is where the address now is — so it is
 hurried home, and the page asked for then appears without a movement of its own.
 
+A way back asked before the movement has shown anything — in the same task as
+the press, or while the browser still waits for the page arriving to render, the
+page being left frozen on screen — finds nothing to turn round and nothing to
+play: the reader never left the page it returns to. The movement is dropped, and
+the way back lands with none of its own.
+
 A **modal `Dialog` open on a page** is furniture of the same kind: it travels with
 its page, or holds if both states have it. One the navigation itself opens or
 closes — a layer whose `weak` param the link drops, or the back brings back —
