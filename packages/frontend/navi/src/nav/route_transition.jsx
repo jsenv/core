@@ -1443,6 +1443,7 @@ const rebuildWatcher = () => {
       request,
       found ? found.relation : null,
     );
+    navigationDecisionFoundAgain = !request && Boolean(found && found.written);
     if (type === "none") {
       // Silence said out loud: this way of the pair was written to play
       // nothing — or this one navigation asked for nothing — where the reverse
@@ -1513,6 +1514,14 @@ let navigationHistoryDirection;
 // which is what its entry remembers (see recordCrossing). Null while nothing
 // has been decided, and for a navigation nothing was said about.
 let navigationDecision = null;
+// Whether a traversal over the entry this navigation creates decides the same
+// crossing without reading it there: what was decided came from nothing but a
+// relation written for this very way, or the default — both still say it when
+// the reader comes back, the way back being the written way's reverse, or the
+// default reading the history. A request (a link's, a navTo()'s), a deduction
+// (a pair's reverse, a page from anywhere) and a movement turned round are not
+// found again, and are written on the entry (see recordCrossing).
+let navigationDecisionFoundAgain = false;
 
 // Whether a navigation may move at all: navi may play a movement for it (see
 // mayAnimateMovement — not for someone who asked for less motion, nor for a
@@ -1537,6 +1546,7 @@ observeBeforeRouting((details) => {
   routingNavigation = true;
   navigationAnimated = false;
   navigationDecision = null;
+  navigationDecisionFoundAgain = false;
   navigationType = details.navigationType;
   navigationCut = !navigationMayMove(navigationType);
   navigationUrl = details.url;
@@ -1639,6 +1649,7 @@ observeAfterRouting(() => {
   // relation's: with no default it plays nothing.
   if (!navigationAnimated && ((request && request.typeSaid) || base)) {
     const { type, duration } = resolveTransition(request, base);
+    navigationDecisionFoundAgain = !request && Boolean(base);
     if (type === "none") {
       navigationDecision = { type: "none" };
     } else {
@@ -1667,10 +1678,11 @@ observeAfterRouting(() => {
       });
     }
   }
-  if (type === "push") {
+  if (type === "push" && !navigationDecisionFoundAgain) {
     recordCrossing({ url, fromDepth, decision: navigationDecision });
   }
   navigationDecision = null;
+  navigationDecisionFoundAgain = false;
   navigationCut = false;
   routingNavigation = false;
   releaseRoutingRenderingHold();
@@ -1680,9 +1692,14 @@ observeAfterRouting(() => {
 // the traversals leaving it or landing on it retrace it (see
 // readTraversalReplay). Written once the navigation has landed — the decision
 // needs the pages to be current, which is after the entry was created — as a
-// state-only replace: it announces nothing and routes nothing. Nothing is
-// written when nothing was decided: the silence between two unrelated pages is
-// not a crossing to remember. A replace keeps its entry's state, so an entry
+// state-only replace: it announces nothing and routes nothing, but it is a
+// second history write for the push, and browsers count them (Safari refuses
+// past 100 in 10 seconds). So it is written only when a traversal would not
+// find the crossing again on its own (see navigationDecisionFoundAgain):
+// nothing for the default or a relation written for this way, which every
+// push of an app with a default would otherwise pay. Nothing either when
+// nothing was decided: the silence between two unrelated pages is not a
+// crossing to remember. A replace keeps its entry's state, so an entry
 // reached by one keeps the crossing that led to where it stands.
 const recordCrossing = ({ url, fromDepth, decision }) => {
   if (!decision || fromDepth === undefined) {
@@ -2124,6 +2141,7 @@ const turnRunningTransitionRound = (fromUrl, url) => {
   const animations = viewTransitionAnimations();
   if (isWayInAgain) {
     navigationDecision = running.decision;
+    navigationDecisionFoundAgain = false;
     // The token is dropped first: the walk it stands for is the one that must
     // not arrive anywhere anymore, and its promise is still pending.
     running.walkHome = null;
@@ -2145,6 +2163,7 @@ const turnRunningTransitionRound = (fromUrl, url) => {
   // What this navigation plays, for the entry it may create: the movement on
   // screen, the other way.
   navigationDecision = reverseCrossing(running.decision);
+  navigationDecisionFoundAgain = false;
   // Which walk home this is, so the one that arrives is the one still wanted: a
   // walk turned round mid-way leaves a promise nobody cancelled, and it settles
   // when the pictures reach the far end.

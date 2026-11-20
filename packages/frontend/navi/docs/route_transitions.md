@@ -231,6 +231,13 @@ entry — so a back onto the entry that crossing came from plays it reversed, an
 forward plays it again as it was. An entry keeps its crossing when a replace
 rewrites its address (a param settling, a list writing where it stands).
 
+It remembers only what the relations could not find again on their own: what a
+link asked for, and what they deduced (a reverse, a page from anywhere).
+Remembering is one more history write for the push, and browsers count them —
+Safari refuses past 100 in ten seconds. A crossing played by the default, or by
+a relation written for that very way, is not written down: the back finds the
+same movement there, reversed, and the push costs one write.
+
 That replay outranks everything the relations **deduce**, and nothing the author
 **wrote** for that exact way:
 
