@@ -364,16 +364,29 @@ no field needs a url of its own — the fields then take nothing but their `name
 What a control is worth when it holds nothing has the type of what it holds when
 it holds something. A list of days nobody picked is `[]`, not `""`:
 
-| control                                                            | empty is |
-| ------------------------------------------------------------------ | -------- |
-| `Picker type="array"`, `List selectable multiple`, `CheckboxGroup` | `[]`     |
-| `Picker type="object"`                                             | `{}`     |
-| text/number/date `Input`, `Select`                                 | `""`     |
-| `Input type="checkbox" boolean`                                    | `false`  |
-| radio, `List selectable`, any other checkbox                       | absent   |
+| control                                                            | empty is    |
+| ------------------------------------------------------------------ | ----------- |
+| `Picker type="array"`, `List selectable multiple`, `CheckboxGroup` | `[]`        |
+| `Picker type="object"`                                             | `{}`        |
+| text/number/date `Input`, `Select`                                 | `""`        |
+| `Input type="checkbox" boolean`                                    | `false`     |
+| radio, `List selectable`, any other checkbox                       | `undefined` |
 
 This is what a clear (`--navi-clear`, a row's cross) leaves behind and what the
 object around it carries, so `value.days || []` is not needed.
+
+A value written for a group follows the same rule: its empties are written, never
+left out. To a group, a key missing from the object is not empty, it is "not
+mine to touch": the control of that name keeps what it shows and writes it back
+into the object. Only `{}` as a whole empties every control.
+
+```js
+// ✗ with no reason, the list keeps the one it showed — and a picker's cancel,
+//   putting this back, cannot take the list back to nothing either
+recordSignal.value = { ...(declared ? { reason } : null), until };
+// ✓ the key is there, holding nothing: the list empties
+recordSignal.value = { reason: declared ? reason : undefined, until };
+```
 
 ## What a checkbox is worth
 

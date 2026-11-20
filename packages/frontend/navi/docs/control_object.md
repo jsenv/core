@@ -229,8 +229,10 @@ the answer smaller:
 - **a value put ON the group reaches every key**, whether its control is there
   or not: the group's `signal` or `value`, a picker filling its popup, a cancel
   putting back what the picker held at open, a `--navi-update` aimed at the
-  group. It replaces the whole object, which is also how a key is dropped on
-  purpose;
+  group. It replaces the whole object, which is how the key of a control that
+  is not there is dropped on purpose; a control that IS there keeps what it
+  shows when its key is left out, and is emptied by its key written empty (see
+  [control_value.md](./control_value.md#empty-keeps-the-shape-of-the-question));
 - **a control's own `signal` reaches that control only.** Written while the
   control is not there, nobody is listening: the group never hears of it, and a
   cancel has nothing to take back. The answer is ONE signal, on the group or on
