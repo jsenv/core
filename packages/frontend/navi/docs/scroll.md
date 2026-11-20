@@ -172,8 +172,10 @@ as on a return. Meanwhile it neither says nor keeps where it is.
 A table of contents beside a long list, a "back to today" button: the press
 sends the list to a place with `--navi-scroll`, and the list goes there the way
 `scrolled` takes it — asked for by name when it is not fetched yet, measured,
-and held until something else moves it (a hand on the list stops a glide on its
-way):
+and held until something else moves it. A glide stops on its way the same way:
+a hand on the list, and also a scroll that comes with no input event to say
+whose it is — the page's own `scrollTo`, the status bar tapped on iOS, find in
+page:
 
 ```jsx
 <Button command="--navi-scroll:smooth" commandFor="feed" value={{ id: dayId }}>

@@ -3056,6 +3056,22 @@ const useListScrollSync = ({
       return;
     }
     const scrollerEl = getScroller();
+    // Every frame of the glide is written here, and nothing else writes the
+    // scroller while it runs (the hold's own placements wait for it to land).
+    // Found anywhere but where the last frame left it, the scroller was moved
+    // by someone else with no input event to say so — a scrollbar dragged in
+    // Firefox, the status bar tapped on iOS, find in page, the app's own
+    // scrollTo: the scroll is theirs, and so is the list from then on. The
+    // browser's scroll anchoring would move it too, but under a glide it
+    // never does (measured in Chromium, WebKit and Firefox, the document
+    // scrolling or the list's own box).
+    if (glide.written !== undefined) {
+      const scrollNow = getAxis().readScroll(scrollerEl);
+      if (scrollNow < glide.written - 1 || scrollNow > glide.written + 1) {
+        letGo();
+        return;
+      }
+    }
     // Walked to through every item not drawn on the way (see
     // estimateItemStart): read when it says where the glide is, not while it
     // is still leaving a long way.
@@ -3118,6 +3134,7 @@ const useListScrollSync = ({
       ...getAxis().scrollToOptions(position),
       behavior: "instant",
     });
+    glide.written = getAxis().readScroll(scrollerEl);
     // The scroll events these writes cause are the hold's own (see
     // letGoUnlessHeldScroll), and the window keeps its spare on the side the
     // glide goes to.
