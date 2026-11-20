@@ -669,7 +669,10 @@ of item only. A position handed back with its `visibleCount` sizes that first
 window itself, whatever `initial` says. A first window smaller than a page
 still asks the source for a whole page (`<List.Items pageSize>`, 100 by
 default), so the smaller window costs no second request; a window wider than a
-page — a count budget without `initial` — is asked for whole.
+page — a count budget without `initial` — is asked for whole. The page grows
+away from the items already held and stops right before them: a window a fling
+left a few items short of its pages asks for the page that joins them, never
+again for items it has.
 
 The switch waits for the paint itself. Do not rebuild it with a `useEffect`
 that widens a slice: preact runs a component's pending effects early when that

@@ -7681,16 +7681,39 @@ const useRunItems = (
     const holeSize = missingEnd - missingStart + 1;
     if (holeSize < itemsPerPage) {
       // Which way the page grows: away from the items already held, which is
-      // the way the user is going.
-      const heldBelow = store.holds(rankOf(missingEnd + 1));
-      const heldAbove = store.holds(rankOf(missingStart - 1));
-      if (heldBelow && !heldAbove) {
-        askStart = missingEnd - itemsPerPage + 1;
-      } else if (heldAbove && !heldBelow) {
-        askEnd = missingStart + itemsPerPage - 1;
+      // the way the user is going — and never over them. Held items are
+      // looked for within the page's reach, not only right against the hole:
+      // a window that outran its pages (a fling, asked for once it stands
+      // still) stops a few items short of what is held, and a page centred on
+      // it asked again for a third of what was already there.
+      const room = itemsPerPage - holeSize;
+      const distanceToHeld = (fromIndex, step) => {
+        let distance = 0;
+        let index = fromIndex;
+        while (distance < room && index >= runStart && index < runEnd) {
+          if (store.holds(rankOf(index))) {
+            return distance;
+          }
+          distance++;
+          index += step;
+        }
+        return -1;
+      };
+      const gapBelow = distanceToHeld(missingEnd + 1, 1);
+      const gapAbove = distanceToHeld(missingStart - 1, -1);
+      if (gapBelow !== -1 && gapAbove !== -1) {
+        // Between two parts already held: what lies between, nothing more.
+        askStart = missingStart - gapAbove;
+        askEnd = missingEnd + gapBelow;
+      } else if (gapBelow !== -1) {
+        askEnd = missingEnd + gapBelow;
+        askStart = askEnd - itemsPerPage + 1;
+      } else if (gapAbove !== -1) {
+        askStart = missingStart - gapAbove;
+        askEnd = askStart + itemsPerPage - 1;
       } else {
-        // A hole with nothing on either side (the scrollbar was thrown into
-        // territory never visited): grow it both ways around what is on
+        // Nothing held within a page on either side (the scrollbar was thrown
+        // into territory never visited): grow it both ways around what is on
         // screen.
         askStart = missingStart - Math.floor((itemsPerPage - holeSize) / 2);
         askEnd = askStart + itemsPerPage - 1;
