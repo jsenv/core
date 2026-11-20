@@ -743,8 +743,11 @@ a lifted finger leaves the row moving, the URL being the truth again: the row is
 playing out what the browser decided. A trackpad has no lift, so there it holds the
 page nearest the row until the row has come to rest, and the URL of a tab already built
 waits for that too. A tab pressed holds nothing, and `null` is all it ever reads, even
-over a row a hand has left moving: the press wins at once. One signal for the document: on a
-page with several boxes, `route` says which row it is.
+over a row a hand has left moving: the press wins at once. One signal for the document,
+for the row held last: on a page with several boxes, `route` says which row it is.
+Each row holds and lets go of its own page — a row of tabs coming to rest inside a
+page of another row leaves that row's hold alone, and the links of both answer for
+the row they lead into.
 
 `RouteTravel` is for pages that form a ROW the finger can push; pages related
 pair by pair are animated with `defineRouteTransition`, and a given pair by one

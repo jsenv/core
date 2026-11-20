@@ -585,7 +585,7 @@ export const RouteTravel = ({
     }
     const { pages } = latestRef.current;
     const { base, toward, fraction } = readRowFrame(row, panes);
-    publishRouteRowMove({
+    publishRouteRowMove(row, {
       basePage: pages[panes.indexOf(base)],
       towardPage: toward ? pages[panes.indexOf(toward)] : null,
       progress: -fraction,
@@ -764,7 +764,7 @@ export const RouteTravel = ({
     const position = row.scrollLeft;
     movement.rowTaken = true;
     // A travel no hand set off holds nothing: it goes where it goes.
-    releaseHeldPage();
+    releaseHeldPage(row);
     holdRowAt(row, position);
     afterFrames(2, () => {
       if (movementRef.current !== movement) {
@@ -793,8 +793,8 @@ export const RouteTravel = ({
     letRowGo(movement);
     putRowBack(movement);
     releaseTakenRow(row);
-    publishRouteRowMove(null);
-    releaseHeldPage();
+    publishRouteRowMove(row, null);
+    releaseHeldPage(row);
     releasePaneAtRest(row);
     if (liveRef.current) {
       liveRef.current.style.top = "";
@@ -987,6 +987,7 @@ export const RouteTravel = ({
       // lift to wait for (onLeftToSnap), and until then the page held stands.
       if (!finger) {
         followPageOnScreen(
+          row,
           pages[panes.indexOf(fraction >= 0.5 && toward ? toward : base)],
           askedPageRef.current || pages[currentIndex],
         );
@@ -1035,7 +1036,7 @@ export const RouteTravel = ({
       if (windowed) {
         leavePictureOfLive(movement, index);
       }
-      holdPage(pages[currentIndex], page);
+      holdPage(row, pages[currentIndex], page);
       askFor(page, movement, () => {
         // Refused, or sent elsewhere, with the hand perhaps still on the row: its
         // landing decides. Come to rest meanwhile, the row goes back to the address.
@@ -1077,7 +1078,7 @@ export const RouteTravel = ({
       // After the address: a pull coming back to its page must not light the tab the
       // address ran ahead to, even for a render. Only what readers are told: the
       // panes keep their layout until the row rests.
-      releaseHeldPage();
+      releaseHeldPage(row);
     };
     const stopWatching = watchRowScroll(row, {
       onScroll,
@@ -1123,8 +1124,8 @@ export const RouteTravel = ({
       }
       row.removeAttribute("data-route-row-travelling");
       movementRef.current = null;
-      publishRouteRowMove(null);
-      releaseHeldPage();
+      publishRouteRowMove(row, null);
+      releaseHeldPage(row);
       releasePaneAtRest(row);
     };
   }, [windowed]);

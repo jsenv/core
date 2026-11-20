@@ -19,13 +19,16 @@ export const followRouteRows = (onMove) => {
 };
 
 /**
+ * @param {Element} row - the row moving: a page can hold several, and what one
+ *   says is about its own tabs only — one coming to rest must not stop a nav
+ *   following another.
  * @param {{basePage: {route: object, params?: object}, towardPage: {route: object, params?: object}|null, progress: number}|null} move
  *   - the two pages the row stands between, the very objects the row holds for
  *   as long as it moves, and how far past the first in the terms of
  *   --slide-travel-progress. `null` once it has stopped.
  */
-export const publishRouteRowMove = (move) => {
+export const publishRouteRowMove = (row, move) => {
   for (const follower of followers) {
-    follower(move);
+    follower(row, move);
   }
 };

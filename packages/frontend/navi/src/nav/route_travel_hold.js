@@ -9,7 +9,21 @@
  * along.
  */
 
-import { batch, signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
+
+// One hold per row a hand holds or has just let go of, the latest last. A page
+// can hold several rows — a row of tabs in a page of another row — and each row
+// lets go of its own hold only: one coming to rest, or leaving, must not light
+// the tabs of a row a hand still holds. Each hold says the page the reader is
+// still on (`settled`) and where the address ran ahead to (`heading`): a link
+// has to tell that one from any other link that matches the address, an entry
+// of a bottom bar whose route is a section around the row staying lit.
+const holdsSignal = signal([]);
+
+const writeHold = (row, hold) => {
+  const holds = holdsSignal.peek().filter((each) => each.row !== row);
+  holdsSignal.value = hold ? [...holds, { row, ...hold }] : holds;
+};
 
 /**
  * The page the reader is still on while a hand holds the row and the address has run
@@ -21,39 +35,34 @@ import { batch, signal } from "@preact/signals";
  * the row has come to rest. A travel no hand set off holds nothing: it goes where it
  * goes.
  *
- * One for the document. `route` says which row, for a page holding several boxes.
+ * One for the document: the row held last. `route` says which row, for a page
+ * holding several boxes.
  */
-export const routeTravelSettledPageSignal = signal(null);
+export const routeTravelSettledPageSignal = computed(() => {
+  const holds = holdsSignal.value;
+  return holds.length === 0 ? null : holds[holds.length - 1].settled;
+});
 
-// Where the address ran ahead to. A link has to tell it from any other link that
-// matches the address: an entry of a bottom bar whose route is a section around the
-// row stays lit.
-const headingPageSignal = signal(null);
-
-// The two signals are written together, so a link reading both is told once.
-export const holdPage = (page, headingPage) => {
-  batch(() => {
-    headingPageSignal.value = headingPage;
-    if (routeTravelSettledPageSignal.peek() === null) {
-      routeTravelSettledPageSignal.value = page;
-    }
+// The page the reader is on stays what it was when the hand took the row: only
+// where the address runs ahead to follows the hand.
+export const holdPage = (row, page, headingPage) => {
+  const current = holdsSignal.peek().find((each) => each.row === row);
+  writeHold(row, {
+    settled: current ? current.settled : page,
+    heading: headingPage,
   });
 };
 
 // A hand no browser says has let go: the page nearest the row is where the reader is,
 // and the address, wherever it stands, is not.
-export const followPageOnScreen = (page, addressPage) => {
-  batch(() => {
-    headingPageSignal.value = addressPage;
-    routeTravelSettledPageSignal.value = page;
-  });
+export const followPageOnScreen = (row, page, addressPage) => {
+  writeHold(row, { settled: page, heading: addressPage });
 };
 
-export const releaseHeldPage = () => {
-  batch(() => {
-    routeTravelSettledPageSignal.value = null;
-    headingPageSignal.value = null;
-  });
+export const releaseHeldPage = (row) => {
+  if (holdsSignal.peek().some((each) => each.row === row)) {
+    writeHold(row, null);
+  }
 };
 
 /**
@@ -63,20 +72,24 @@ export const releaseHeldPage = () => {
  *   link, and the address answers.
  */
 export const readHeldLinkCurrent = (route, params) => {
-  const settledPage = routeTravelSettledPageSignal.value;
-  const headingPage = headingPageSignal.value;
-  if (!settledPage) {
+  const holds = holdsSignal.value;
+  if (holds.length === 0) {
     return undefined;
   }
   // By address: a link may name fewer params than the page it leads to.
   const leadsTo = (page) =>
+    Boolean(page) &&
     page.route === route &&
     route.buildUrl(params) === route.buildUrl(page.params);
-  if (leadsTo(settledPage)) {
-    return true;
+  for (const { settled } of holds) {
+    if (leadsTo(settled)) {
+      return true;
+    }
   }
-  if (leadsTo(headingPage)) {
-    return false;
+  for (const { heading } of holds) {
+    if (leadsTo(heading)) {
+      return false;
+    }
   }
   return undefined;
 };

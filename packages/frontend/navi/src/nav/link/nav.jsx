@@ -708,19 +708,29 @@ export const Nav = ({
       navElement?.removeAttribute("data-nav-indicator-measured");
       navElement?.style.removeProperty("--slide-travel-progress");
     };
-    const stopFollowing = followRouteRows((move) => {
+    const stopFollowing = followRouteRows((row, move) => {
       const navElement = navRef.current;
       if (!navElement) {
         return;
       }
+      let followed = followedRef.current;
+      // Following a row whose tabs are this nav's: what another row says —
+      // that it moves, that it stopped — is about other tabs.
+      const followingAnother =
+        followed && followed.row !== row && followed.baseTabElement;
       if (!move) {
-        followedRef.current = null;
-        letGo();
+        if (followed && followed.row === row) {
+          followedRef.current = null;
+          letGo();
+        }
         return;
       }
-      let followed = followedRef.current;
+      if (followingAnother) {
+        return;
+      }
       if (
         !followed ||
+        followed.row !== row ||
         followed.basePage !== move.basePage ||
         followed.towardPage !== move.towardPage
       ) {
@@ -734,6 +744,7 @@ export const Nav = ({
           ? (tabOf(move.towardPage) ?? null)
           : null;
         followed = {
+          row,
           basePage: move.basePage,
           towardPage: move.towardPage,
           baseTabElement,
