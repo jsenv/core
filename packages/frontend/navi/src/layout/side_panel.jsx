@@ -282,6 +282,9 @@ const css = /* css */ `
  *   pointer and finishes leaving (or comes back to rest) when it is
  *   released. Set to `false` for a panel that must only ever be dismissed
  *   deliberately. See `swipe_to_close.js` for when the gesture is claimed.
+ * @param {"close"|"cancel"} [props.dragEffect="close"] - What that push means:
+ *   `"close"` keeps, as the cross does; `"cancel"` closes the panel as a
+ *   cancel, as Escape does.
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
  *   resolution. Note that if `Popup` ends up in dialog mode (small screen, or
@@ -313,6 +316,7 @@ export const SidePanel = ({
   animation,
   closeByPressOutside = false,
   closeByDrag = true,
+  dragEffect,
   mode,
   layer = "top",
   className,
@@ -321,7 +325,9 @@ export const SidePanel = ({
   import.meta.css = css;
   const rest = dropPickerPopupProps(restGiven, "SidePanel");
 
-  const onSwipePointerDown = closeByDrag ? createSwipeToClose([side]) : null;
+  const onSwipePointerDown = closeByDrag
+    ? createSwipeToClose([side], { effect: dragEffect })
+    : null;
 
   return (
     <Popup

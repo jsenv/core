@@ -67,8 +67,13 @@ export const swipeAxesOf = (sides) => {
  * this file has no way of knowing about. A popup that names no grip is pushed
  * from its whole surface, which only suits one made of nothing else (a side
  * panel showing a page, a toast).
+ *
+ * `effect` says what the push means once the popup is out: `"close"` is a
+ * close that keeps, as its cross's; `"cancel"` is a cancel, as Escape's — for
+ * a sheet only its own button keeps.
  */
-export const createSwipeToClose = (sides, { grip } = {}) => {
+export const createSwipeToClose = (sides, { grip, effect = "close" } = {}) => {
+  const command = effect === "cancel" ? "--navi-cancel" : "--navi-close";
   const axes = swipeAxesOf(sides);
   // The side a push along `axis` towards `sign` leaves by, if it leaves at all.
   const sideTowards = (axis, sign) =>
@@ -131,7 +136,7 @@ export const createSwipeToClose = (sides, { grip } = {}) => {
       animation.finished.then(onArrival, () => {});
     };
     const close = (event, out, span) => {
-      triggerNaviCommand(panelEl, "--navi-close", event);
+      triggerNaviCommand(panelEl, command, event);
       if (panelEl.getAttribute("aria-expanded") === "true") {
         // Refused: the panel is staying, so it goes back where it was.
         travelTo(out, 0, span, restore);

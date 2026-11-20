@@ -581,8 +581,14 @@ const css = /* css */ `
  *   opening is not pushed either way (warned in dev). It is pushed from its
  *   whole surface, so it suits a popover holding little else: a button inside
  *   keeps its tap, and a press that turns into a push swallows the click it
- *   would have left. The close keeps, as a cross's does. See docs/interactions.md
- *   for a swipe on the popover's own element, which does not move it.
+ *   would have left. The close keeps, as a cross's does, unless `dragEffect`
+ *   says otherwise. See docs/interactions.md for a swipe on the popover's own
+ *   element, which does not move it.
+ * @param {"close"|"cancel"} [props.dragEffect="close"] - What a push out by
+ *   `closeByDrag` means: `"close"` keeps, as the cross does; `"cancel"` closes
+ *   it as a cancel, as Escape does — for a popover whose only way out that
+ *   keeps is a button of its own. A cancel is never asked about by
+ *   `closeQuestion`.
  * @param {string} [props.positionAreaFixed] - Overrides `positionArea` once
  *   the popover has actually been positioned once, so a live reposition
  *   (e.g. anchor moved) doesn't jump to a different side.
@@ -1065,6 +1071,8 @@ const usePopoverProps = (props) => {
     marginWithContainer = 0,
     container = "app",
     closeByDrag = false,
+    // What a push out by closeByDrag means: keep, or cancel.
+    dragEffect = "close",
     // "close"  → pointer press outside closes (a plain close = commit)
     // "cancel" → pointer press outside closes AS A CANCEL (revert)
     // "capture"→ absorb the press, stay open
@@ -2161,7 +2169,7 @@ const usePopoverProps = (props) => {
     },
   });
   const swipeToClose = swipeToCloseSides
-    ? createSwipeToClose(swipeToCloseSides)
+    ? createSwipeToClose(swipeToCloseSides, { effect: dragEffect })
     : null;
   Object.assign(contentProps, {
     id,

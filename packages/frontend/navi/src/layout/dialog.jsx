@@ -900,6 +900,11 @@ const css = /* css */ `
  *   "Outside" is the dialog's own border box; a see-through dialog whose box is
  *   bigger than what it paints marks the difference with
  *   `data-navi-popup-outside` (see docs/popup_backdrop.md).
+ * @param {"close"|"cancel"} [props.dragEffect="close"] - What pushing a sheet
+ *   docked by `dockedOnSmallTouchScreen` back through its edge means once it
+ *   is out: `"close"` keeps, as the cross does; `"cancel"` closes it as a
+ *   cancel, as Escape does — for a sheet whose only way out that keeps is a
+ *   button of its own. A cancel is never asked about by `closeQuestion`.
  * @param {"auto"|"lift"|"discrete"|"invisible"} [props.backdropVariant="auto"]
  *   - How visible the backdrop is, independently of what it does. `"auto"`:
  *   the paint `pressOutside` implies (dimmed for
@@ -1401,6 +1406,8 @@ const useDialogProps = (props) => {
     // either way; otherwise there's no native inert-ing, so the real backdrop
     // below is what makes "capture"/"ignore" behave the same way here too.
     pressOutside = "close",
+    // What a docked sheet pushed back through its edge means: keep, or cancel.
+    dragEffect = "close",
     // Whether there is a wall between the dialog and the page at all, asked
     // before what a press on it does (pressOutside) and
     // before how it is painted (backdropVariant below). It also picks the show
@@ -1607,7 +1614,10 @@ const useDialogProps = (props) => {
       ? parsedPositionArea.y
       : null;
   const onSwipePointerDown = swipeToCloseSide
-    ? createSwipeToClose([swipeToCloseSide], { grip: DOCKED_SWIPE_GRIP })
+    ? createSwipeToClose([swipeToCloseSide], {
+        grip: DOCKED_SWIPE_GRIP,
+        effect: dragEffect,
+      })
     : null;
   // A corner sitting exactly on the container's own corner must not be
   // rounded: the gap a radius carves out would show the container through it,

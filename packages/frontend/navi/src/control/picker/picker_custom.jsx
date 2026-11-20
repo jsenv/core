@@ -1323,6 +1323,7 @@ const PickerContentInsidePopup = (props) => {
     pressOutside = "close",
     // Named/forwarded rather than left in ...rest: rest goes to the picker
     // element itself, not the popup, and these belong to the popup.
+    dragEffect,
     backdrop,
     backdropVariant,
     backdropColor,
@@ -1507,6 +1508,7 @@ const PickerContentInsidePopup = (props) => {
           }
           scrollCapture={scrollCapture}
           pressOutside={pointerLock ? "capture" : pressOutside}
+          dragEffect={dragEffect}
           backdrop={backdrop}
           backdropVariant={backdropVariant}
           backdropColor={backdropColor}

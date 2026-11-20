@@ -463,6 +463,7 @@ const POPUP_PROP_SET = new Set([
   "backdropColor",
   "backdropFilter",
   "pressOutside",
+  "dragEffect",
   "escapeEffect",
   "closeOnFocusOut",
   "scrollCapture",

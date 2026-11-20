@@ -119,6 +119,9 @@ const css = /* css */ `
  *   below. `"capture"` is a wall that absorbs the press without closing, in
  *   either mode. `"ignore"` is not the same in both: a `Dialog` keeps its
  *   wall, a `Popover` lays none and the press reaches the page.
+ * @param {"close"|"cancel"} [props.dragEffect="close"] - Forwarded as-is: what
+ *   a push out through the edge it rests on means, keep or cancel (see
+ *   `Dialog`/`Popover`'s own `dragEffect`).
  * @param {boolean} [props.backdrop] - Whether anything is laid between the
  *   popup and the page at all: `false` lets a press outside both dismiss the
  *   popup and reach whatever it landed on, in one gesture. Forwarded as-is and

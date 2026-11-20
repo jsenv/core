@@ -2221,6 +2221,7 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   anchor?: import("preact").RefObject<HTMLElement> | HTMLElement,
  *   escapeEffect?: "cancel" | "close",
  *   pressOutside?: "close" | "cancel" | "capture",
+ *   dragEffect?: "close" | "cancel",
  *   backdrop?: boolean,
  *   backdropVariant?: "auto" | "lift" | "discrete" | "invisible",
  *   backdropColor?: string,
@@ -2680,6 +2681,13 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   put back the value at open ("cancel"), or nothing at all ("capture"). The
  *   default is what gives a popup with no confirm button its way out that
  *   keeps — see the same section.
+ * @param {"close"|"cancel"} [dragEffect="close"] What pushing the sheet back
+ *   through the edge it is docked to (`dockedOnSmallTouchScreen`) does: close
+ *   and keep ("close"), or close and put back the value at open ("cancel"),
+ *   as Escape does. With `pressOutside="cancel"` and a cross saying
+ *   `--navi-cancel`, it makes a sheet whose own button is the only way out
+ *   that keeps: everything else is putting the value back, and the action
+ *   runs for nothing else.
  * @param {boolean} [backdrop=true] Whether anything is laid between the popup
  *   and the page at all. `false` lets a press outside both close the popup and
  *   reach whatever it landed on, in one gesture — for a picker opened over a
