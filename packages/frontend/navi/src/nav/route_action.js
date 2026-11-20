@@ -74,7 +74,9 @@ export const activeRouteActionsSignal = computed(() => {
  *   whenPageAtRest(() => TOURNAMENTS_PAGE.preload({}));
  *
  * Called back once; a read or a transition starting before the paint makes it
- * wait again. A row of routes moving under a hand is not watched: `<RouteTravel>`
+ * wait again. A read reset under the page — a DELETE of what it reads — is not
+ * waited for: nothing asks it again while the page stays. A row of routes
+ * moving under a hand is not watched: `<RouteTravel>`
  * checks its own. Neither is the connection: whether it is worth spending is the
  * caller's decision.
  *
@@ -117,8 +119,16 @@ const pageIsArriving = () => {
   }
   for (const routeAction of activeRouteActionsSignal.value) {
     const runningState = routeAction.runningStateSignal.value;
-    // IDLE: asking, and run by an effect of the same batch that has not run yet.
-    if (runningState === RUNNING || runningState === IDLE) {
+    if (runningState === RUNNING) {
+      return true;
+    }
+    // IDLE: asking, and run by an effect of the same batch that has not run
+    // yet — unless the instance was reset (a DELETE of what the page reads,
+    // isPrerun then saying "nobody holds this answer"): nothing runs it again,
+    // and counting it would hold every wait for the page at rest until the
+    // page leaves. A run starting right after a reset (a kept answer expired)
+    // is still seen: the paint below asks again.
+    if (runningState === IDLE && !routeAction.isPrerunSignal.value) {
       return true;
     }
   }

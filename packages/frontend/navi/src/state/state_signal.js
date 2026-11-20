@@ -588,7 +588,12 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
     const { move } = askOfWrite;
     if (!move) {
-      return askOfWrite.history;
+      // Spent by the url write that carries it: a later navigation carrying
+      // the same value again (another state's write) is worth what the state
+      // declares, not what this write asked for its own move.
+      const historyAsked = askOfWrite.history;
+      askOfWrite = null;
+      return historyAsked;
     }
     if (move.taken) {
       return "replace";

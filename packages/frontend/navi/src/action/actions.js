@@ -60,9 +60,9 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  * - prerun actions may have no other reference yet, so
  *   prerunProtectionRegistry pins them until they answer;
  * - an answer is sure to outlive the screen that asked for it only where the
- *   question declared `keep` (createKeptAnswerRegistry); anything else lasts
- *   until the garbage collector takes its instance, so coming back may find it
- *   or ask again.
+ *   question declared `keep` (createKeptAnswerRegistry); anything else is kept
+ *   warm until the garbage collector takes its instance — the rule, not an
+ *   accident: coming back finds it and asks nothing until then.
  *
  * What makes that design fragile: reading an action's signals from inside an
  * effect subscribes that effect to them, and the root action never dies — so

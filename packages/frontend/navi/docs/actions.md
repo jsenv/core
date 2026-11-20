@@ -189,18 +189,22 @@ for them is called off by `actionRunEffect` (so by a route action) and carries
 on under a plain binding; either way nothing is reset — an action does not
 start over because its params went away.
 
-Whether coming back to those params finds that answer depends on the instance
-still being there. Without `keep` it lives as long as something references it,
-and once nothing does it goes at a moment nothing in the code decides: coming
-back may find it or ask again, and neither is something to build on.
-`createAction(callback, { keep: { ms } })` is what decides. The answer stays
-good for `ms` from the moment it landed, and the first screen asking for those
-params after that asks again: a read worth asking at each visit — a
-measurement, a quota — declares a short one.
+Without `keep`, **an answer is kept warm until the garbage collector takes
+it.** Once no screen reads it, nothing holds its instance any more, and it stays
+findable until the collector reclaims it: coming back to those params soon
+finds the answer and asks nothing, coming back after the engine collected asks
+again. Memory bounds what is kept this way, never a timer — so a return is not
+promised either way, and an answer found warm may have aged.
+
+`keep` decides instead. `createAction(callback, { keep: { ms } })` keeps the
+answer good for `ms` from the moment it landed, and the first screen asking for
+those params after that asks again: a read worth asking at each visit — a
+measurement, a quota — declares a short one. `{ keep: { max } }` holds the `max`
+answers used last, whatever the collector does, and `{ ms, max }` both.
 A resource's reads declare it on the resource,
-`resource(name, { keep: { GET: { ms } } })`; left out, coming back is the
-undecided case above, and when it asks the store draws the row it already holds
-meanwhile.
+`resource(name, { keep: { GET: { ms } } })`; left out, its answers are kept
+warm as above, and when coming back asks again the store draws the row it
+already holds meanwhile.
 
 ### The in-between states of a gesture are real params
 
@@ -300,8 +304,9 @@ else the address needed.
 
 **A route action is a read.** An address asks again on every new document — a
 reload, a pasted link — and on a move to other params of the route that `keep`
-does not hold; a step back from another page asks again or finds the answer
-still there ([coming back](#nothing-to-ask-and-coming-back)). That is what a read is for and
+does not hold; a step back from another page finds the answer while it is
+kept warm, and asks again once it is not
+([coming back](#nothing-to-ask-and-coming-back)). That is what a read is for and
 what a write cannot survive: `POST /users/:id/invitations` hung on `/users/:id`
 mints a token per reload, for ever. A run that writes belongs to the component that
 decided to write, whatever its parameter, and `{ run: true }` says it — a token

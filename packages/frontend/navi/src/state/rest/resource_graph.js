@@ -198,9 +198,10 @@ const SCOPED_MANY_OPTIONS = new Set([
  *   `.scopedMany()` takes `writes` too, `.scopedMany()` with the plural verbs.
  * @param {{ GET?: { ms?: number, max?: number }, GET_MANY?: { ms?: number, max?: number } }} [restCallbacks.keep] -
  *   how long an answer of a read is trusted, coming back to the same params
- *   within `ms` asking nothing. Left out, nothing is promised: coming back
- *   finds the answer while its instance is still referenced and asks again
- *   once it is gone, at a moment nothing in the code decides. Worth declaring
+ *   within `ms` asking nothing. Left out, the answer is kept warm until the
+ *   garbage collector takes its instance: coming back finds it and asks
+ *   nothing until then, and asks again after (see docs/actions.md, "Nothing
+ *   to ask, and coming back"). Worth declaring
  *   for what barely moves (a description, a finished tournament), and with a
  *   short `ms` for what must be asked at each visit (a count of
  *   registrations). The store keeps the rows either way, and a `GET` draws the row

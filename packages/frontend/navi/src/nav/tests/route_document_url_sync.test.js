@@ -2510,4 +2510,79 @@ await snapshotTests(import.meta.url, ({ test }) => {
       setRouteIntegration(null);
     }
   });
+
+  // Two states written in one batch leave in one navigation, whichever of
+  // their effects runs first: a push asked by one of them makes it a push,
+  // the replace beside it (a page put back to 1) being part of the same move.
+  test("a push asked beside a replace in one batch pushes", () => {
+    const tabSignal = stateSignal("info", { id: "batch_tab" });
+    const pageSignal = stateSignal(1, { id: "batch_page", type: "number" });
+    const PAGE_ROUTE = route("/page", {
+      searchParams: { tab: tabSignal, page: pageSignal },
+    });
+    const { updateRoutes, clearRoutes } = setupRoutes([PAGE_ROUTE]);
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url, options) => {
+        navToCalls.push({
+          url: url.replace(baseUrl, ""),
+          replace: Boolean(options?.replace),
+        });
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    try {
+      updateRoutes(`${baseUrl}/page?page=3`);
+      batch(() => {
+        tabSignal.set("members", { history: "push" });
+        pageSignal.value = 1;
+      });
+      updateRoutes(`${baseUrl}/page?page=3`);
+      batch(() => {
+        pageSignal.value = 1;
+        tabSignal.set("games", { history: "push" });
+      });
+      return {
+        nav_to_calls: navToCalls,
+        url: PAGE_ROUTE.url.replace(baseUrl, ""),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
+
+  // A write moving the address to another path rebuilds what the routes
+  // declare; a pair no route declares (utm_source) goes along, where it stood.
+  test("a pair no route declares goes along when a write changes path", () => {
+    const qSignal = stateSignal("", { id: "path_change_q" });
+    const sectionSignal = stateSignal("all", { id: "path_change_section" });
+    const GAMES_ROUTE = route("/games/", { searchParams: { q: qSignal } });
+    const SECTION_ROUTE = route(`/games/:section=${sectionSignal}`);
+    const { updateRoutes, clearRoutes } = setupRoutes([
+      GAMES_ROUTE,
+      SECTION_ROUTE,
+    ]);
+    const navToCalls = [];
+    setRouteIntegration({
+      navTo: (url) => {
+        navToCalls.push(url.replace(baseUrl, ""));
+        updateRoutes(url);
+        return Promise.resolve();
+      },
+    });
+    try {
+      updateRoutes(`${baseUrl}/games/open?utm_source=newsletter&q=a`);
+      sectionSignal.value = "done";
+      return {
+        nav_to_calls: navToCalls,
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+      setRouteIntegration(null);
+    }
+  });
 });

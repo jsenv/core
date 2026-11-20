@@ -473,13 +473,49 @@ export const route = (pattern, options = {}) => {
     // important: read connections at setup time so it includes query connections
     // inherited from ancestor patterns
     const { connections } = routePattern;
+    // Whether the url write about to be made carries this state's value too.
+    // The address is built from every state of the route, so a state written
+    // in the same batch as the one writing goes out with it, whichever of
+    // their effects runs first — and the one running second finds the address
+    // already saying its value, with nothing left to write.
+    const carriesState = (connection, rawParams) => {
+      const value = connection.signal.peek();
+      const urlParamValue = rawParams[connection.paramName];
+      if (urlParamValue === undefined) {
+        return !connection.isDefaultValue(value);
+      }
+      if (connection.isDefaultValue(value)) {
+        return true;
+      }
+      return !compareTwoJsValues(value, urlParamValue);
+    };
     for (const connection of connections) {
       const { signal: paramSignal, debug, paramName } = connection;
-      // What a write of this state is worth in the history: what the state
-      // declares, and what the write being carried says instead (see
-      // stateSignal's `history` and its `set`). Read at the moment of the
-      // navigation and never before.
-      const historyOfWrite = () => paramSignal.options.takeHistoryOfWrite();
+      // What the navigation is worth in the history: what each write it
+      // carries asks — what its state declares, or what the write said instead
+      // (see stateSignal's `history` and its `set`) — and one asking a push
+      // makes it one: a replace beside it (a page put back to 1 when a tab
+      // changes) is part of the same move, and must not cancel the entry the
+      // move asked for. Read at the moment of the navigation and never before.
+      const historyOfWrite = () => {
+        let history = paramSignal.options.takeHistoryOfWrite();
+        const rawParams = route.rawParamsSignal.peek();
+        for (const otherConnection of connections) {
+          const otherOptions = otherConnection.signal.options;
+          if (
+            otherConnection.signal === paramSignal ||
+            !otherOptions?.takeHistoryOfWrite ||
+            otherOptions.isWrittenByAddress() ||
+            !carriesState(otherConnection, rawParams)
+          ) {
+            continue;
+          }
+          if (otherOptions.takeHistoryOfWrite() === "push") {
+            history = "push";
+          }
+        }
+        return history;
+      };
       // Milliseconds the browser's address waits for this state to settle
       // (see stateSignal's `debounceUrl`); 0 writes at once. A plain signal says nothing.
       const debounceUrl = paramSignal.options?.debounceUrl || 0;

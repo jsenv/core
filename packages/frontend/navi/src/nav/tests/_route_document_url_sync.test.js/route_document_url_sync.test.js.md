@@ -44,6 +44,8 @@
 - [array signal - empty value against a non-empty default](40_array_signal_-_empty_value_against_a_non-empty_default/40_array_signal_-_empty_value_against_a_non-empty_default.md)
 - [a write made in reaction to an arrival reaches the address](41_a_write_made_in_reaction_to_an_arrival_reaches_the_address/41_a_write_made_in_reaction_to_an_arrival_reaches_the_address.md)
 - [the history a write asks for holds from an effect](42_the_history_a_write_asks_for_holds_from_an_effect/42_the_history_a_write_asks_for_holds_from_an_effect.md)
+- [a push asked beside a replace in one batch pushes](43_a_push_asked_beside_a_replace_in_one_batch_pushes/43_a_push_asked_beside_a_replace_in_one_batch_pushes.md)
+- [a pair no route declares goes along when a write changes path](44_a_pair_no_route_declares_goes_along_when_a_write_changes_path/44_a_pair_no_route_declares_goes_along_when_a_write_changes_path.md)
 
 ---
 

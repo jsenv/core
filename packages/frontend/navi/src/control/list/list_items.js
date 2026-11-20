@@ -224,8 +224,9 @@ export const createListItems = () => {
   const staleScopes = new Set();
   const scopeOf = (groupId) => (groupId === undefined ? UNGROUPED : groupId);
   // A group is known from the render of its wrapper (`group()`) until the
-  // wrapper's cleanup (`dropGroup()`), and only then: preact runs that cleanup
-  // before its items', so the items' own leaving reads a group already gone,
+  // wrapper leaves the list (`dropGroup()`, see useLeaveListAtUnmount in
+  // list.jsx — a park is not a leave), and only then: the wrapper leaves
+  // before its items, so the items' own leaving reads a group already gone,
   // and has no first to leave there. A read that brought the group back would
   // keep it for as long as the list lives — its id is never dropped again.
   const firstSignalOf = (scope) => {
@@ -731,10 +732,10 @@ export const createListItems = () => {
       }
       const firstSignal = firstSignalOf(scope);
       if (!firstSignal) {
-        // Its group's wrapper ran its cleanup and has not rendered since,
-        // while the entry renders: a Suspense park runs every cleanup, and the
-        // reveal renders again only what changed. Nothing the list knows of
-        // stands above it in a group it no longer knows.
+        // Its group's wrapper left the list a moment before the entry does
+        // (each leaves once the commit is over, the wrapper first), and the
+        // entry renders in between. Nothing the list knows of stands above it
+        // in a group it no longer knows.
         return true;
       }
       if (scope !== UNGROUPED && groupById.get(scope).continuedSignal.value) {

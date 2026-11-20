@@ -1578,6 +1578,45 @@ class ListLeaveWatcher extends Component {
     return null;
   }
 }
+/**
+ * Takes an entry out of the list's registry when its component leaves the list
+ * — not when a Suspense park runs its cleanups. A park keeps the component with
+ * its hooks and runs its effects again at the reveal (see loading_park.js).
+ * Emptied meanwhile, the registry would have the list, rendering while parked,
+ * find nothing and put its fallback in; and after the reveal it would hold only
+ * what rendered again — the items of a group whose wrapper did not would find
+ * their group gone, and stop drawing their separators. A cleanup cannot tell
+ * the two apart as it runs (the park starts after the cleanups it runs), so
+ * the leaving waits for the commit to be over: the effect running again (the
+ * reveal) calls it off, and a park puts it off until it ends.
+ *
+ * @param {() => void} leave
+ */
+const useLeaveListAtUnmount = (leave) => {
+  const loadingPark = useContext(LoadingParkContext);
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+  const presentRef = useRef(false);
+  useLayoutEffect(() => {
+    presentRef.current = true;
+    return () => {
+      presentRef.current = false;
+      const leaveUnlessKept = () => {
+        if (presentRef.current) {
+          return;
+        }
+        if (loadingPark && loadingPark.isParked()) {
+          loadingPark.whenRevealed(() => {
+            queueMicrotask(leaveUnlessKept);
+          });
+          return;
+        }
+        leaveRef.current();
+      };
+      queueMicrotask(leaveUnlessKept);
+    };
+  }, []);
+};
 // How many of a list's own items may be acting at once, when the items are what
 // carry the action. Four rather than none: a list is a place where the same
 // gesture is available many times over, and nothing else stops a long one from
@@ -6489,11 +6528,9 @@ const ListItemUI = (props) => {
     groupId,
     data: props,
   });
-  useLayoutEffect(() => {
-    return () => {
-      listItems.erase(idDefault);
-    };
-  }, []);
+  useLeaveListAtUnmount(() => {
+    listItems.erase(idDefault);
+  });
   const separator = useContext(SeparatorContext);
 
   if (props.filtered) {
@@ -7613,12 +7650,10 @@ const useRunItems = (
     from < to
       ? readKnownRoomsBy([from, to], () => 0)[0]
       : { room: 0, count: 0 };
-  useLayoutEffect(() => {
-    return () => {
-      listItems.dropItemLocator(ownerId);
-      listItems.drop(ownerId);
-    };
-  }, []);
+  useLeaveListAtUnmount(() => {
+    listItems.dropItemLocator(ownerId);
+    listItems.drop(ownerId);
+  });
 
   // What the list is about to draw and the run does not have. Asked for as one
   // range: a caller answering with less than that (a page at a time) is asked
@@ -8147,11 +8182,9 @@ const ListRunSkeletonItem = ({ runItem, separator, children }) => {
     groupId,
     data: SKELETON_ITEM_DATA,
   });
-  useLayoutEffect(() => {
-    return () => {
-      listItems.erase(entryId);
-    };
-  }, []);
+  useLeaveListAtUnmount(() => {
+    listItems.erase(entryId);
+  });
   const itemVnode = (
     <ListRunItemContext.Provider value={runItem}>
       {children}
@@ -9288,11 +9321,9 @@ export const ListItemGroup = ({
   // Said before its items render: the first one drawn of a group the window
   // cuts is not the group's first, and draws its separator (see isFirst).
   group.continuedSignal.value = Boolean(continued);
-  useLayoutEffect(() => {
-    return () => {
-      listItems.dropGroup(groupId);
-    };
-  }, []);
+  useLeaveListAtUnmount(() => {
+    listItems.dropGroup(groupId);
+  });
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
   const groupItemCount = group.countSignal.value;
   const groupNoMatchCount = group.noMatchCountSignal.value;

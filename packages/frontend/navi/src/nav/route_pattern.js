@@ -1182,8 +1182,22 @@ export const createRoutePattern = (
       // current pathname and only update the search string.
       return amendSearchOf(currentUrlObject);
     }
-    // Ancestor optimisation or descendant selection — trust buildMostPreciseUrl.
-    return absoluteBuiltUrl;
+    // Ancestor optimisation or descendant selection: the path is the builder's,
+    // and so is every pair a route declares — the routes matching after the
+    // move are not those matching before. The pairs no route declares
+    // (utm_source, fbclid, a share ref) are no route's to drop: they go along
+    // to the new path, as written, where they stood.
+    const { searchNamesDeclared } = patternObject;
+    if (!searchNamesDeclared || currentUrlObject.search.length < 2) {
+      return absoluteBuiltUrl;
+    }
+    const builtSearch = builtUrlObject.search;
+    builtUrlObject.search = amendSearch(
+      currentUrlObject.search,
+      (name) => searchNamesDeclared.has(name),
+      builtSearch ? builtSearch.slice(1).split("&") : [],
+    );
+    return builtUrlObject.href;
   };
 
   // Pattern object with unified data and methods
@@ -1200,6 +1214,10 @@ export const createRoutePattern = (
     // setupRoutePatterns.
     descendants: [],
     directChildren: [],
+    // The search names any route declares, shared by every pattern set up
+    // together (see setupRoutePatterns): a pair under another name belongs to
+    // no route.
+    searchNamesDeclared: null,
     parent: null,
     familyRoot: null, // Topmost ancestor, computed during setupPatterns
     depth: 0, // Will be calculated after relationships are built
@@ -2126,6 +2144,13 @@ export const setupRoutePatterns = (routePatterns) => {
   // Phase 1: Fill pattern set
   for (const routePattern of routePatterns) {
     routePatternSet.add(routePattern);
+  }
+  const searchNamesDeclared = new Set();
+  for (const routePattern of routePatternSet) {
+    for (const name of routePattern.queryConnectionMap.keys()) {
+      searchNamesDeclared.add(name);
+    }
+    routePattern.searchNamesDeclared = searchNamesDeclared;
   }
   // Phase 2: Determine parent-child relationships based on pattern analysis
   for (const routePattern of routePatternSet) {

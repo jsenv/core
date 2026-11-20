@@ -21,13 +21,30 @@ export const LoadingParkContext = createContext(null);
 
 export const createLoadingPark = (parentPark) => {
   let parked = false;
-  return {
+  let revealCallbacks = [];
+  const loadingPark = {
     isParked: () => parked || (parentPark !== null && parentPark.isParked()),
     park: () => {
       parked = true;
     },
     reveal: () => {
       parked = false;
+      const callbacks = revealCallbacks;
+      revealCallbacks = [];
+      for (const callback of callbacks) {
+        callback();
+      }
+    },
+    // Called once the park in force ends: the reveal, or the boundary leaving
+    // while parked, whose fallback says it the same way. Said from the commit
+    // taking the fallback down, before the subtree's effects run again.
+    whenRevealed: (callback) => {
+      if (!parked && parentPark !== null && parentPark.isParked()) {
+        parentPark.whenRevealed(callback);
+        return;
+      }
+      revealCallbacks.push(callback);
     },
   };
+  return loadingPark;
 };

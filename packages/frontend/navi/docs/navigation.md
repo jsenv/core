@@ -386,7 +386,10 @@ says so — see [`history: "push"`](#a-state-whose-values-are-places-history-pus
 A write changes the params it is about and nothing else: on
 `/places/clubs?view=map&utm_source=newsletter`, writing the clubs' `q` keeps the
 `view` of `/places/:section` and the `utm_source` no route declares, each as it
-was written, in its place.
+was written, in its place. A write that moves the address to another path — a
+path param changed, an optional segment filled — rebuilds what the routes
+declare, since the routes matching after the move are not those matching
+before; the pairs no route declares still go along, where they stood.
 
 One answer may be kept as several params — a level and its reach,
 `?levels=…&level_exact=…` — and drawn by one control whose value is the object.
@@ -1096,6 +1099,11 @@ photoSignal.set(nextPhoto, { history: "replace" });
 A slide reached by DRAGGING is such a write — swiping back and forth with a thumb
 is browsing, not a trail one wants to walk home along — and `SlideContainer`
 replaces for its own drags even when its state pushes.
+
+States written in the same batch — an effect putting the page back to 1 as the
+tab changes — leave in one navigation, and a push asked by any of them makes it
+a push: the replace beside it is part of the same move, not a reason to drop
+the entry the move asked for.
 
 ### What this is not
 
