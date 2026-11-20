@@ -43,12 +43,13 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   form nobody touched — one just rendered, one reopened and left alone — runs
  *   no action (a field still showing its `defaultValue` is an answer: confirming
  *   a suggestion), and after the first submission it is that value the next
- *   one is compared against. Everything around the action still happens either
+ *   one is compared against. A form holding no field at all always sends: the
+ *   press is its whole answer. Everything around the action still happens either
  *   way: the constraints are checked, and what follows the send still follows
  *   it (the slide moves on, the popup closes) — the user is done regardless of
  *   whether there was anything to send. Set this for a form where sending the
- *   same thing twice is the point — a single button that fires off a
- *   notification, an action whose duplicates are fine. See also
+ *   same thing twice is the point — the same message sent as a notification
+ *   again, an action whose duplicates are fine. See also
  *   `readOnlyWhileFormUnchanged` on `Button`, for a submit that should say it
  *   is waiting rather than accept a press that sends nothing.
  * @param {"POST"|"PUT"|"PATCH"|"DELETE"} [props.actionVerb] - What a plain
@@ -175,13 +176,20 @@ const useFormGroup = (props) => {
   // form as its fields change, which is what turns the submit button below
   // interactive the moment there is something to send.
   const uiState = uiStateController.uiStateSignal.value;
+  // A form holding no field — a "Continue", an "Accept", a "Join" alone in it —
+  // has no answer that could ever differ from the last one: "unchanged" would
+  // refuse every send, and its action would never run. The press is its whole
+  // answer, so it always has something to send.
+  const holdsField = uiStateController.holdsFieldSignal.value;
   // False until a field differs from what was last sent, true while it does,
   // and false again the moment it comes back to it — the plain fact about the
   // value, with no opinion about what a submit would do with it.
-  const changed = !compareTwoJsValues(
-    withoutEmptyFields(uiState),
-    uiStateController.sentUIState,
-  );
+  const changed =
+    !holdsField ||
+    !compareTwoJsValues(
+      withoutEmptyFields(uiState),
+      uiStateController.sentUIState,
+    );
   // Read by READONLY_CONSTRAINT from a submit button held back by this form,
   // which has to be able to say what it is waiting for.
   uiStateController.changed = changed;
@@ -193,6 +201,7 @@ const useFormGroup = (props) => {
   // against the state of the previous frame.
   uiStateController.shouldRequestAction = (value) =>
     Boolean(props.canSendWhileUnchanged) ||
+    !uiStateController.holdsFieldSignal.peek() ||
     !compareTwoJsValues(
       withoutEmptyFields(value),
       uiStateController.sentUIState,

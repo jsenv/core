@@ -1498,6 +1498,18 @@ export const useUIGroupStateController = (
       );
       const [publishUIState, subscribeUIState] = createPubSub();
       const uiStateSignal = signal(stateInitial);
+      // Whether one of its children answers — a field, a group of them — and
+      // not only buttons and links. Assumed until the group's commit has
+      // counted them, since they register after it rendered; then kept as they
+      // come and go. A form reads it: holding no field, it has no answer to
+      // measure a send against (see form.jsx).
+      const holdsFieldSignal = signal(true);
+      const countFields = () => {
+        holdsFieldSignal.value = childUIStateControllerArray.some(
+          shouldPropagateStateToChild,
+        );
+      };
+      s.countFields = countFields;
 
       // What the group is worth right now, and what it keeps when there is
       // nobody to ask: a list whose items have not arrived yet, a popup built
@@ -1774,6 +1786,7 @@ export const useUIGroupStateController = (
         keepsUnansweredKeys:
           resolvedAggregateChildStates === keptAndNamedChildUIStates,
         uiStateSignal,
+        holdsFieldSignal,
         wantRequesterButtonState,
         ref,
         getPropFromState: (uiState) => uiState,
@@ -1939,6 +1952,7 @@ export const useUIGroupStateController = (
           }
           const childControlType = childUIStateController.controlType;
           childUIStateControllerArray.push(childUIStateController);
+          countFields();
           debugUIGroup(
             `${controlType}.registerChild("${childControlType}") -> registered (total: ${childUIStateControllerArray.length})`,
           );
@@ -2054,6 +2068,7 @@ export const useUIGroupStateController = (
             return;
           }
           childUIStateControllerArray.splice(index, 1);
+          countFields();
           debugUIGroup(
             `${controlType}.unregisterChild("${childControlType}") -> unregistered (remaining: ${childUIStateControllerArray.length})`,
           );
@@ -2352,6 +2367,9 @@ export const useUIGroupStateController = (
 
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
+    // Its children have registered by now: the commit's count replaces what
+    // was assumed while they had not.
+    scope.countFields();
     const pendingChange = pendingChangeRef.current;
     if (pendingChange) {
       pendingChangeRef.current = null;

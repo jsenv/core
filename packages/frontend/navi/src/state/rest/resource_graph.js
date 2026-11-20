@@ -1656,6 +1656,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       { isMany, onActionComplete, paramScope, writeName, writeRerunOn },
     ) => {
       const childActionName = `${childName}.${writeName || verb}`;
+      const throwInvalidResult = createInvalidResultThrower(
+        relationLabel,
+        declarationSite,
+      );
       const action = createAction(callback, {
         name: childActionName,
         meta: writeName
@@ -1667,8 +1671,20 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         inheritData: isMany || verb !== "GET",
         resultToValue: (result) => {
           if (!Array.isArray(result) || result.length < 2) {
-            throw new TypeError(
-              `${childActionName} callback must return [ownerId, ...] array, received ${result}`,
+            throwInvalidResult(
+              childActionName,
+              `an array [ownerId, ...]`,
+              result,
+            );
+          }
+          // A plural verb's answer is the owner's whole collection. Anything
+          // else — the owner itself, an object around the items — fails further
+          // down, in a message that names neither the action nor its callback.
+          if (isMany && !Array.isArray(result[1])) {
+            throwInvalidResult(
+              childActionName,
+              `an array [ownerId, items[]] (the whole "${propertyName}" of that owner)`,
+              `[${result[0]}, ${describeEntry(result[1])}]`,
             );
           }
           const [rawOwnerId, ...rest] = result;
@@ -2227,6 +2243,17 @@ const getDeclarationSite = () => {
     return `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`;
   }
   return callerInfo.raw || "unknown location";
+};
+
+// What an entry of an answer is, as an error names it: an object's keys say
+// which answer came back where another was expected (a route's neighbour).
+const describeEntry = (value) => {
+  if (value === null || typeof value !== "object") {
+    return String(value);
+  }
+  const keys = Object.keys(value);
+  const shown = keys.slice(0, 5).join(", ");
+  return `{ ${shown}${keys.length > 5 ? ", …" : ""} }`;
 };
 
 const createInvalidResultThrower = (originalActionName, declarationSite) => {

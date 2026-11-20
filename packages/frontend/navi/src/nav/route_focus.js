@@ -15,6 +15,10 @@
  * - Landed once what arrived has committed and the renders it set off are over,
  *   into the outermost thing that arrived: a page arriving builds the routes
  *   inside it too, and is the one that speaks for them.
+ * - Landed again once the page is at rest (whenPageAtRest) when that found
+ *   nothing to take the keyboard: a page waiting for its code or its reads
+ *   arrives as a title or a skeleton, or suspended to the <Loading> around it,
+ *   and what it came to draw commits later.
  * - Only into a void: the focus on nothing, on document.body, in a page kept
  *   hidden while leaving, in the pane a row is leaving. Held anywhere that
  *   stays — a tab bar above the routes, a field the page arriving focused
@@ -54,20 +58,13 @@ const LEAVING_SELECTOR = "[data-navi-route-leaving]";
 const noDebug = () => {};
 
 let handOver = null;
-let navigationCount = 0;
-let cancelReturnLanding = null;
+let cancelLandingAtRest = null;
 observeBeforeRouting(({ navigationType }) => {
-  navigationCount++;
-  if (cancelReturnLanding) {
-    cancelReturnLanding();
-    cancelReturnLanding = null;
-  }
   if (navigationType === "load" || navigationType === "reload") {
     handOver = null;
     return;
   }
   handOver = {
-    navigation: navigationCount,
     isReturn: navigationType === "traverse",
     urlLeft: documentUrlSignal.peek(),
     focusTransfer: prepareFocusTransfer(undefined, noDebug),
@@ -98,6 +95,14 @@ export const reportRouteArrival = (arrival) => {
   const current = handOver;
   current.arrivals.push(arrival);
   if (current.arrivals.length === 1) {
+    // What arrives now takes the place of what was still owed a landing: the
+    // keyboard follows the latest page. A navigation bringing nothing new on
+    // screen (a search param written as the page arrives) leaves that landing
+    // owed: the page it is for is still the one on screen.
+    if (cancelLandingAtRest) {
+      cancelLandingAtRest();
+      cancelLandingAtRest = null;
+    }
     afterRendersSettle(() => {
       land(current);
     });
@@ -110,6 +115,44 @@ const land = (current) => {
   if (handOver === current) {
     handOver = null;
   }
+  const leavingParts = arrivals
+    .map((arrival) => arrival.leaving)
+    .filter(Boolean);
+  try {
+    if (!focusIsInVoid(leavingParts)) {
+      return;
+    }
+    const outermost = findOutermost(arrivals);
+    if (current.isReturn && (!outermost || outermost.arrival.kind === "page")) {
+      landWhenAtRest(current, arrivals);
+      return;
+    }
+    if (urlDesignatesElement(documentUrlSignal.peek())) {
+      return;
+    }
+    if (outermost) {
+      transferInto(current, outermost);
+    }
+    // Nothing took the keyboard: the page arrived waiting — its code, its reads
+    // — on a screen with nothing to land on yet (a title, a skeleton), or
+    // suspended to the <Loading> around it with nothing of it in the DOM. Its
+    // content commits later, with nothing left to hand it the keyboard: the
+    // arrival was the one moment there was. So the landing is owed until the
+    // page is at rest, and the ladder runs again then.
+    if (focusIsInVoid(leavingParts)) {
+      landWhenAtRest(current, arrivals);
+    }
+  } finally {
+    for (const arrival of arrivals) {
+      arrival.afterLanding?.();
+    }
+  }
+};
+
+// The arrival that holds the others — a page arriving builds the routes inside
+// it too — read as it stands now: an arrival with nothing of it in the DOM
+// (suspended) is not one.
+const findOutermost = (arrivals) => {
   const readings = [];
   for (const arrival of arrivals) {
     const roots = arrival.readRoots();
@@ -117,45 +160,25 @@ const land = (current) => {
       readings.push({ arrival, roots });
     }
   }
-  try {
-    const outermost = readings.find(
-      (reading) =>
-        !readings.some(
-          (other) =>
-            other !== reading &&
-            other.roots.some((otherRoot) =>
-              reading.roots.some(
-                (root) => otherRoot !== root && otherRoot.contains(root),
-              ),
+  return readings.find(
+    (reading) =>
+      !readings.some(
+        (other) =>
+          other !== reading &&
+          other.roots.some((otherRoot) =>
+            reading.roots.some(
+              (root) => otherRoot !== root && otherRoot.contains(root),
             ),
-        ),
-    );
-    if (!outermost) {
-      return;
-    }
-    const leavingParts = arrivals
-      .map((arrival) => arrival.leaving)
-      .filter(Boolean);
-    if (!focusIsInVoid(leavingParts)) {
-      return;
-    }
-    const { arrival, roots } = outermost;
-    if (current.isReturn && arrival.kind === "page") {
-      landReturnWhenAtRest(current, arrival);
-      return;
-    }
-    if (urlDesignatesElement(documentUrlSignal.peek())) {
-      return;
-    }
-    current.focusTransfer.transferFocus(
-      undefined,
-      arrival.kind === "pane" ? roots[0] : roots,
-    );
-  } finally {
-    for (const arrival of arrivals) {
-      arrival.afterLanding?.();
-    }
-  }
+          ),
+      ),
+  );
+};
+
+const transferInto = (current, { arrival, roots }) => {
+  current.focusTransfer.transferFocus(
+    undefined,
+    arrival.kind === "pane" ? roots[0] : roots,
+  );
 };
 
 const focusIsInVoid = (leavingParts) => {
@@ -169,25 +192,33 @@ const focusIsInVoid = (leavingParts) => {
   return leavingParts.some((part) => part.contains(focusedElement));
 };
 
-const landReturnWhenAtRest = (current, arrival) => {
-  cancelReturnLanding = whenPageAtRest(() => {
-    cancelReturnLanding = null;
-    if (current.navigation !== navigationCount) {
+// Once the page is at rest, its reads answered and its lists back where they
+// were: what it draws then is what it came to draw. Only into a void still —
+// the keyboard used meanwhile (a Tab, a field pressed) is the reader's own
+// landing — and only into what is still on screen.
+const landWhenAtRest = (current, arrivals) => {
+  cancelLandingAtRest = whenPageAtRest(() => {
+    cancelLandingAtRest = null;
+    if (!focusIsInVoid([])) {
       return;
     }
-    if (arrival.isShown && !arrival.isShown()) {
+    const outermost = findOutermost(
+      arrivals.filter((arrival) => !arrival.isShown || arrival.isShown()),
+    );
+    if (!outermost) {
       return;
     }
-    const roots = arrival.readRoots();
-    if (roots.length === 0 || !focusIsInVoid([])) {
-      return;
+    const { arrival, roots } = outermost;
+    if (current.isReturn && arrival.kind === "page") {
+      const link = findLinkTo(roots, current.urlLeft);
+      if (link) {
+        moveFocusTo(link, {
+          focusVisible: current.focusTransfer.focusVisible,
+        });
+        return;
+      }
     }
-    const link = findLinkTo(roots, current.urlLeft);
-    if (link) {
-      moveFocusTo(link, { focusVisible: current.focusTransfer.focusVisible });
-      return;
-    }
-    current.focusTransfer.transferFocus(undefined, roots);
+    transferInto(current, outermost);
   });
 };
 

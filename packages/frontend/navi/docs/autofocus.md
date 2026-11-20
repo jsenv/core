@@ -169,7 +169,12 @@ arrived once it has rendered, through the ladder above: an `autoFocus` of the
 page, its first focusable (not on a touch device), its
 `navi-autofocus="last-resort"` (a heading with `tabIndex={-1}` makes a page its
 own surface, and a screen reader then says where one arrived). A page holding
-none of these leaves the focus on `<body>`.
+none of these when it arrives is asked again once it is at rest, its reads
+answered: a page waiting for its code or its data arrives as a title or a
+skeleton, or suspended to the `<Loading>` around it, and what it came to draw
+comes later. Still holding none of them then, it leaves the focus on `<body>`.
+The keyboard used meanwhile — a Tab, a field pressed — is the reader's own, and
+stays where it went.
 
 The focus held anywhere that stays is left where it is: a tab of a row above the
 routes, a bottom bar entry, a field the page arriving focused itself with

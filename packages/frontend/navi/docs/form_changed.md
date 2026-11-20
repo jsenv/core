@@ -22,6 +22,10 @@ exception is a field still showing its `defaultValue`: confirming a suggestion
 is an answer, sent once (see
 [What counts as already held](#what-counts-as-already-held)).
 
+A form holding no field at all — a "Continue", an "Accept", a "Join" alone in
+it — always sends. Nothing in it could ever differ from the last send, so
+"unchanged" would refuse every press, and the press is its whole answer anyway.
+
 Everything around the action still happens: the constraints are checked, and
 what follows the send still follows it — the popup closes, the slide moves on,
 the page changes. The user is done either way; there was simply nothing to
@@ -31,8 +35,8 @@ send.
 rather than its fields: a request that exists even empty (join, ask, raise a
 hand), a step that moves on, a creation whose screen opens already filled —
 from the url, from last time's answers, from the defaults a `stateSignal`
-declares — and a send whose duplicates are the point (a single button firing a
-notification).
+declares — and a send whose duplicates are the point (the same message sent as
+a notification again).
 
 ```jsx
 <Form action={notify} canSendWhileUnchanged>
