@@ -396,7 +396,7 @@ export const holdDocumentScroll = (routePage) => {
     documentHolds.delete(hold);
   };
 };
-const isDocumentHeld = () => {
+export const isDocumentHeld = () => {
   for (const { routePage } of documentHolds) {
     if (routePage === null || routePage.isShown()) {
       return true;
@@ -734,9 +734,10 @@ export const restoreScrollPositionOnReturn = (url) => {
 // differently, and only the first is moved.
 //
 // A fragment does not make it less of an arrival. The browser finds nothing to
-// scroll to after a pushState; url_target.js brings the element in once it
-// renders, from this top — and when it never comes, the page is read from its
-// top like any other.
+// scroll to after a pushState; url_target.js lands on the element right after
+// this, when the page arriving can draw it already (see landOnUrlTarget), and
+// otherwise brings it in once it renders, from this top — and when it never
+// comes, the page is read from its top like any other.
 //
 // The document, because the document is the scrollport in the common case. An
 // app that scrolls an element of its own scrolls it itself.
@@ -760,6 +761,16 @@ export const startAtTop = (url, { from } = {}) => {
     return;
   }
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+// Where an arrival landed on the element its address designates (see
+// landOnUrlTarget), written down for the reason startAtTop writes its top: a
+// placement leaving the document at the offset it was at fires no scroll
+// event, and the url would keep that top.
+export const keepArrivalOffset = (url) => {
+  writeLatest(positionByUrl, keyOf(url), {
+    x: window.scrollX,
+    y: window.scrollY,
+  });
 };
 // Also what decides whether a push carries the state of the page it keeps
 // (see resolveEffectiveDocumentState).

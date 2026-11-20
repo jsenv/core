@@ -843,9 +843,11 @@ only for content nothing reaches during that first frame:
   nothing inside checks itself (see
   [control_object.md](./control_object.md#a-control-that-is-not-there)).
 - **Ids**: a `commandFor`, a popup `anchor` or a `triggerNaviCommand` aimed
-  inside finds nothing, and neither does a focus put back there. A `#fragment`
-  aimed inside lands a frame late, once the element is there; a popup opened
-  from the address opens once built, since it reads its signal then.
+  inside finds nothing, and neither does a focus put back there. A link
+  arriving at a `#fragment` inside has the boxes built until the element is
+  there, before the page is shown; a document loaded at such an address lands
+  on it a frame late, once built. A popup opened from the address opens once
+  built, since it reads its signal then.
 - **Size**: the box has no height until it is built (a `minHeight` reserves
   one). Anything measuring it in that frame — a sticky offset, a size read from
   outside — sees it empty.

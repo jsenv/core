@@ -23,7 +23,9 @@
  * it was left, and the bottom arrives under a page that has already jumped. So
  * whoever writes an arrival's offset builds first the boxes that offset shows
  * (buildDeferredBoxesAbove), in the same task — synchronously, since what comes
- * right after it (the offset) reads the layout.
+ * right after it (the offset) reads the layout. An arrival at an element its
+ * address designates has no offset yet: it builds until the element is there
+ * (buildDeferredBoxesUntil), then what the element's offset shows.
  */
 
 import { useLayoutEffect, useState } from "preact/hooks";
@@ -91,6 +93,27 @@ export const buildDeferredBoxesAbove = (bottom) => {
   for (const deferredBox of deferredBoxes) {
     const top = readTopInWindow(deferredBox.getElement());
     if (top === null || top + window.scrollY >= bottom) {
+      continue;
+    }
+    flushSyncRendering(() => {
+      deferredBox.build();
+    });
+  }
+};
+
+/**
+ * Builds, now, the boxes still waiting, in mount order, until `isFound` says
+ * what is looked for is there. A box nothing draws is passed by: what it holds
+ * would show nothing once built.
+ *
+ * Renders synchronously, like buildDeferredBoxesAbove.
+ */
+export const buildDeferredBoxesUntil = (isFound) => {
+  for (const deferredBox of deferredBoxes) {
+    if (isFound()) {
+      return;
+    }
+    if (readTopInWindow(deferredBox.getElement()) === null) {
       continue;
     }
     flushSyncRendering(() => {

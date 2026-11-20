@@ -769,7 +769,8 @@ Five cases, and they are not a policy to configure but five different facts:
   opening, a [state whose values are places](#a-state-whose-values-are-places-history-push)
   — stacks an entry over the page the reader is scrolled in, and moves nothing.
 - **Going somewhere new, to an element** (`/places/le-set#tournaments`) lands on
-  the element once it is rendered (see
+  the element: the page arrives showing it when it can draw it at once, and
+  otherwise arrives at its top and lands on it once it is rendered (see
   [Landing on an element](#landing-on-an-element-the-fragment)).
 - **Going back or forward** lands where that page was left, put back once the
   page is really rendered. The browser restores at the instant the entry changes,
@@ -904,6 +905,12 @@ entry, into which navi writes what is open on the page, so that a back finds the
 page as it was and the back arrow counts it — and navi then answers it like
 any other arrival:
 
+- **a page arrived at from another one arrives on the element**, when it can
+  draw it as soon as it renders — its data is in memory. navi builds the
+  `<Box mount="after-paint">` it is in and places it before the page is shown:
+  before a route transition photographs it, so the page slides in with the
+  element in view. With its data still on its way, the page arrives at its top
+  and the element is landed on once it is there, a jump;
 - **it waits for the element, and for the page.** The element must exist and
   show something (`checkVisibility`): one inside a closed tab or a folded
   `<details>` has not arrived, and navi opens nothing to reach it. And no route
@@ -925,7 +932,10 @@ The ring is coloured by `--navi-url-target-color` and lives in `@layer navi`: an
 unlayered `[data-url-target] { … }` replaces it, `animation: none` removes it.
 Its length is `markDuration`, set with `setUrlTargetOptions()` along with the
 alignment and the waits; it also publishes `--navi-url-target-duration`, and
-setting only the variable makes the ring and the attribute disagree.
+setting only the variable makes the ring and the attribute disagree. The same
+call takes `behavior`: `"smooth"` is for a `#id` link to the page already shown,
+the one case where the scroll goes from here to there — a page arrived at from
+another one is placed instantly whatever it says.
 
 **`:target` is the lasting "this one"**, `data-url-target` the moment it arrived.
 navi sets `:target` as it lands on the element — the browser never would after a

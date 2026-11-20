@@ -45,6 +45,7 @@ import { resolveRouteRedirection } from "../route.js";
 import { isUrlOfThisDocument } from "../route_pattern.js";
 import {
   isTargetWriteInProgress,
+  landOnUrlTarget,
   rearmUrlTarget,
 } from "../url_target/url_target.js";
 import {
@@ -357,6 +358,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       restoreScrollPositionOnReturn(url);
     } else if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
+      landOnUrlTarget(url, { from: urlLeft });
     } else if (navigationType === "traverse" || landing) {
       restoreScrollPositionOnReturn(url);
     } else if (navigationType === "replace") {

@@ -17,6 +17,7 @@ import {
 } from "./scroll_restoration.js";
 import {
   isTargetWriteInProgress,
+  landOnUrlTarget,
   rearmUrlTarget,
 } from "../url_target/url_target.js";
 import { announceRouting, publishTraversalAsked } from "./before_routing.js";
@@ -325,7 +326,9 @@ export const setupBrowserIntegrationViaHistory = ({
     // at its top (see rendering_hold.js), and after the history has been
     // written, so the entry being left keeps the offset it is at. A return
     // also waits for the page it returns to: an offset is clamped to whatever
-    // page the document holds when it is written.
+    // page the document holds when it is written. So does an arrival at an
+    // element, which has to be rendered to be landed on (see
+    // landOnUrlTarget).
     //
     // A replace leaves the document where it is: it is the same place said
     // differently — a param settling, a state written — and moving the reader
@@ -343,6 +346,7 @@ export const setupBrowserIntegrationViaHistory = ({
       restoreScrollPositionOnReturn(url);
     } else if (navigationType === "push") {
       whenRenderingResumes(() => startAtTop(url, { from: urlLeft }));
+      landOnUrlTarget(url, { from: urlLeft });
     } else if (navigationType === "replace") {
       stayInPlace(url);
     } else if (navigationType === "traverse") {

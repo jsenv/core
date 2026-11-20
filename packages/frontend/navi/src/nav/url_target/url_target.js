@@ -21,11 +21,22 @@
  *   browser would have done — target against the top edge, instantly — is
  *   applied here, after layout, so one rule holds whether the target was there
  *   all along or arrived late; `setUrlTargetOptions` lets an app pick another
- *   alignment or a smooth behavior, and a target (or a box around it) its own
- *   alignment, since a row a notification points at and an article of the
- *   terms do not land the same way. A page with nothing to scroll simply
- *   does not move, which is the whole of the "the list already fits on screen"
- *   case — the transient mark alone then says which one was meant.
+ *   alignment, and a target (or a box around it) its own alignment, since a
+ *   row a notification points at and an article of the terms do not land the
+ *   same way. A page with nothing to scroll simply does not move, which is the
+ *   whole of the "the list already fits on screen" case — the transient mark
+ *   alone then says which one was meant.
+ *
+ * - **An arrival from another page is shown already on its target.** The
+ *   answer waits for the document to be done working, which is after the
+ *   picture a route transition takes of the page arriving (and after the first
+ *   frame without one): the page would be seen at its top, then jumping. So
+ *   the push places the target as soon as the page arriving has rendered, when
+ *   it can be drawn by then (see landOnUrlTarget), and the answer only marks
+ *   it — or places it again, when what grew above it has moved it. Always
+ *   instantly: that is where the page arrives, not a movement within it. A
+ *   smooth `behavior` is for a `#id` link to the page already shown, the one
+ *   case where the scroll goes from here to there.
  *
  * - **A return is not an arrival.** A back, a forward or a reload lands where
  *   the reader was (scroll_restoration.js), as the browser itself does for a
@@ -55,12 +66,21 @@
 import { elementIsFocusable, getScrollContainer } from "@jsenv/dom";
 import { computed, effect } from "@preact/signals";
 
+import {
+  buildDeferredBoxesAbove,
+  buildDeferredBoxesUntil,
+} from "../../box/mount_after_paint.jsx";
 import { observeBeforeRouting } from "../browser_integration/before_routing.js";
 import { documentIsBusySignal } from "../browser_integration/document_loading_signal.js";
 import { documentUrlSignal } from "../browser_integration/document_url_signal.js";
-import { documentLoadIsReturn } from "../browser_integration/scroll_restoration.js";
+import {
+  documentLoadIsReturn,
+  isArrival,
+  isDocumentHeld,
+  keepArrivalOffset,
+} from "../browser_integration/scroll_restoration.js";
 import { decodeUrlPart } from "../decode_url_part.js";
-import { whenRenderingResumes } from "../rendering_hold.js";
+import { whenPageRendered, whenRenderingResumes } from "../rendering_hold.js";
 import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 
 const URL_TARGET_ATTRIBUTE = "data-url-target";
@@ -110,8 +130,11 @@ let urlTargetOptions = {
  *   on itself or on a box around it — a list saying it once for its items —,
  *   read before this one.
  * @param {ScrollBehavior} [options.behavior="instant"]
+ *   How a `#id` link to the page already shown scrolls to its target.
  *   "instant" by default, like the browser. When set to "smooth", it is
- *   overridden with "instant" under `prefers-reduced-motion: reduce`.
+ *   overridden with "instant" under `prefers-reduced-motion: reduce`. A page
+ *   arrived at from another one is placed on its target instantly, whatever
+ *   this says: that is where it arrives, not a movement within it.
  * @param {number} [options.markDuration=2000]
  *   How long, in ms, the element carries `data-url-target`. Published to CSS as
  *   `--navi-url-target-duration`.
@@ -146,6 +169,12 @@ export const useUrlTargetId = () => {
 
 let stopWaitingForCurrentTarget = null;
 let currentTargetKey;
+// The pathname of the url last armed: a target armed under another one is
+// arrived at from another page.
+let pathnameArmed = null;
+// Where the arrival put its target (see landOnUrlTarget), for the answer that
+// follows: { targetKey, element, documentTop }.
+let arrivalPlacement = null;
 
 // The url the document is on its way back to — a back, a forward, a reload —
 // where the reader was, as opposed to a place just sent to. Said by the
@@ -173,6 +202,10 @@ const armUrlTarget = (documentUrl, { isReturn }) => {
     return;
   }
   currentTargetKey = targetKey;
+  arrivalPlacement = null;
+  const { pathname } = new URL(documentUrl);
+  const arrivesFromAnotherPage = pathname !== pathnameArmed;
+  pathnameArmed = pathname;
   if (stopWaitingForCurrentTarget) {
     stopWaitingForCurrentTarget();
     stopWaitingForCurrentTarget = null;
@@ -197,8 +230,74 @@ const armUrlTarget = (documentUrl, { isReturn }) => {
       // element is named by the URL, not arrived at.
       return;
     }
-    revealUrlTarget(element);
+    if (!standsWhereArrivalPutIt(element, targetKey)) {
+      placeUrlTarget(
+        element,
+        arrivesFromAnotherPage ? "instant" : readMovementBehavior(),
+      );
+    }
+    markUrlTarget(element);
   });
+};
+
+/**
+ * Lands a push arriving from another page on the element its address
+ * designates, before the page is shown: inside the update callback of a route
+ * transition, before its picture; in the frame, before it paints, without one.
+ * Called right after the arrival asked for its top (startAtTop), which stays
+ * when the element cannot be drawn yet — its data still on its way. The answer
+ * (armUrlTarget) then brings it in once it renders, as for any arrival.
+ */
+export const landOnUrlTarget = (url, { from }) => {
+  if (!urlDesignatesElement(url) || !isArrival(url, { from })) {
+    return;
+  }
+  const targetKey = urlToTargetKey(url);
+  whenPageRendered(() => {
+    if (urlToTargetKey(documentUrlSignal.peek()) !== targetKey) {
+      // Another navigation came first.
+      return;
+    }
+    if (isDocumentHeld()) {
+      // A list holding the document has placed it on the page arriving (see
+      // holdDocumentScroll); the answer reveals the target from there.
+      return;
+    }
+    const id = urlToTargetId(url);
+    // A `<Box mount="after-paint">` the target is in would be built after the
+    // first frame, the picture already taken.
+    buildDeferredBoxesUntil(() => document.getElementById(id) !== null);
+    const element = findUrlTarget(id);
+    if (!element) {
+      return;
+    }
+    buildDeferredBoxesAbove(readDocumentTop(element) + window.innerHeight);
+    placeUrlTarget(element, "instant");
+    keepArrivalOffset(url);
+    arrivalPlacement = {
+      targetKey,
+      element,
+      documentTop: readDocumentTop(element),
+    };
+  });
+};
+
+// The arrival placed it, and nothing has moved it in the document since —
+// what drew above it while the page finished would have. The reader scrolling
+// does not: the place is theirs then.
+const standsWhereArrivalPutIt = (element, targetKey) => {
+  const placement = arrivalPlacement;
+  if (
+    !placement ||
+    placement.targetKey !== targetKey ||
+    placement.element !== element
+  ) {
+    return false;
+  }
+  return Math.abs(readDocumentTop(element) - placement.documentTop) < 1;
+};
+const readDocumentTop = (element) => {
+  return element.getBoundingClientRect().top + window.scrollY;
 };
 
 // The pathname and the hash, not the whole URL: a search param changing (a
@@ -260,31 +359,16 @@ const waitForUrlTarget = (id, onSettled) => {
     }
   };
 
-  const findElement = () => {
-    const element = document.getElementById(id);
-    if (!element) {
-      return null;
-    }
-    // Rendered inside a closed tab, a folded details, a view that is not the
-    // one on screen: the element exists but would show nothing.
-    if (element.checkVisibility && !element.checkVisibility()) {
-      return null;
-    }
-    // In a part navi keeps out of reach — a slide, a pane of a row not on
-    // screen — it shows nothing either, though it is laid out: reaching it
-    // would scroll the box holding it, which takes that scroll for a hand and
-    // travels there, and navi opens nothing to reach a target.
-    if (element.closest("[inert]")) {
-      return null;
-    }
-    return element;
-  };
   const settle = (element) => {
     stopWaiting();
     onSettled(element);
   };
   const check = () => {
-    if (confirmationPending || documentIsBusySignal.peek() || !findElement()) {
+    if (
+      confirmationPending ||
+      documentIsBusySignal.peek() ||
+      !findUrlTarget(id)
+    ) {
       return;
     }
     confirmationPending = true;
@@ -298,7 +382,7 @@ const waitForUrlTarget = (id, onSettled) => {
         if (documentIsBusySignal.peek()) {
           return;
         }
-        const element = findElement();
+        const element = findUrlTarget(id);
         if (element) {
           settle(element);
         }
@@ -333,7 +417,7 @@ const waitForUrlTarget = (id, onSettled) => {
   // A document that never stops working: the element as it stands, when it is
   // there at all.
   maxWaitTimeout = setTimeout(() => {
-    const element = findElement();
+    const element = findUrlTarget(id);
     if (element) {
       settle(element);
     } else {
@@ -344,15 +428,43 @@ const waitForUrlTarget = (id, onSettled) => {
   return stopWaiting;
 };
 
-const revealUrlTarget = (element) => {
-  const { behavior, markDuration } = urlTargetOptions;
+// The element with this id when it shows something.
+const findUrlTarget = (id) => {
+  const element = document.getElementById(id);
+  if (!element) {
+    return null;
+  }
+  // Rendered inside a closed tab, a folded details, a view that is not the
+  // one on screen: the element exists but would show nothing.
+  if (element.checkVisibility && !element.checkVisibility()) {
+    return null;
+  }
+  // In a part navi keeps out of reach — a slide, a pane of a row not on
+  // screen — it shows nothing either, though it is laid out: reaching it
+  // would scroll the box holding it, which takes that scroll for a hand and
+  // travels there, and navi opens nothing to reach a target.
+  if (element.closest("[inert]")) {
+    return null;
+  }
+  return element;
+};
+
+const placeUrlTarget = (element, behavior) => {
+  element.scrollIntoView({
+    block: resolveTargetBlock(element),
+    behavior,
+  });
+};
+const readMovementBehavior = () => {
+  const { behavior } = urlTargetOptions;
   const prefersReducedMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
   ).matches;
-  element.scrollIntoView({
-    block: resolveTargetBlock(element),
-    behavior: prefersReducedMotion ? "instant" : behavior,
-  });
+  return prefersReducedMotion ? "instant" : behavior;
+};
+
+const markUrlTarget = (element) => {
+  const { markDuration } = urlTargetOptions;
   // What the browser does when it handles a fragment itself: keyboard
   // navigation resumes from the target, not from the top of the document. With
   // a ring only on the keyboard, as for any arrival. A target that cannot take
