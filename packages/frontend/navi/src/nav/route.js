@@ -310,9 +310,17 @@ export const route = (pattern, options = {}) => {
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, options);
     };
+    // `amending`: the params are what the states hold, the address one stands
+    // at amended (see replaceParams).
     route.redirectTo = (
       params,
-      { callReason, history = "replace", debounceUrl, isSignalChange } = {},
+      {
+        callReason,
+        history = "replace",
+        debounceUrl,
+        isSignalChange,
+        amending = false,
+      } = {},
     ) => {
       if (!integration) {
         if (import.meta.dev) {
@@ -322,7 +330,11 @@ export const route = (pattern, options = {}) => {
         }
         return Promise.resolve();
       }
-      const routeUrl = route.buildUrl(params);
+      const routeUrl = amending
+        ? resolveRouteUrl(
+            routePattern.buildMostPreciseUrl(params, { amending }),
+          )
+        : route.buildUrl(params);
       if (DEBUG) {
         console.debug(
           `${route}.redirectTo(${routeUrl}) (reason: ${callReason})`,
@@ -375,6 +387,7 @@ export const route = (pattern, options = {}) => {
           history,
           debounceUrl,
           isSignalChange,
+          amending: true,
         });
       }
 
@@ -649,7 +662,7 @@ export const route = (pattern, options = {}) => {
           ) {
             return null;
           }
-          return { value: connection.getDefaultValue() };
+          return { value: connection.getDefaultValue(), isDefault: true };
         };
         addressReaderSet.add(readAddress);
         cleanupSet.add(() => {
@@ -1195,7 +1208,9 @@ This prevents cross-test pollution and ensures clean state.`,
                       `[route] weak param ${paramName}: route no longer matching, back to ${defaultValue}`,
                     );
                   }
-                  writeStateFromAddress(paramSignal, defaultValue);
+                  writeStateFromAddress(paramSignal, defaultValue, {
+                    isDefault: true,
+                  });
                 }
                 continue;
               }
@@ -1251,7 +1266,6 @@ This prevents cross-test pollution and ensures clean state.`,
             }
             // URL -> Signal sync: When route matches, ensure signal matches URL state
             // URL is the source of truth for explicit parameters
-            const value = paramSignal.peek();
             if (urlParamValue === undefined) {
               // An address silent about a persisted search param leaves it
               // alone: the state already holds what is stored (it starts from
@@ -1272,20 +1286,17 @@ This prevents cross-test pollution and ensures clean state.`,
               // No URL parameter - reset signal to its current default value
               // (handles both static fallback and dynamic default cases)
               const defaultValue = connection.getDefaultValue();
-              if (connection.isDefaultValue(value)) {
-                // Signal already has correct default value, no sync needed
-                continue;
-              }
-              if (debug) {
+              const written = writeStateFromAddress(paramSignal, defaultValue, {
+                isDefault: true,
+              });
+              if (written && debug) {
                 console.debug(
                   `[route] URL->Signal: ${paramName} not in URL, reset signal to default (${defaultValue})`,
                 );
               }
-              writeStateFromAddress(paramSignal, defaultValue);
               continue;
             }
-            if (compareTwoJsValues(urlParamValue, value)) {
-              // Values already match, no sync needed
+            if (!writeStateFromAddress(paramSignal, urlParamValue)) {
               continue;
             }
             if (debug) {
@@ -1293,7 +1304,6 @@ This prevents cross-test pollution and ensures clean state.`,
                 `[route] URL->Signal: ${paramName}=${urlParamValue} in url, sync signal with url`,
               );
             }
-            writeStateFromAddress(paramSignal, urlParamValue);
             if (
               paramSignal.validity?.autoFixed &&
               !repairedParamNameSet.has(paramName)

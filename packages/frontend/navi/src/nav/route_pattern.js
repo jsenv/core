@@ -112,14 +112,16 @@ const readSignalForUrlBuild = (connection) => {
 /**
  * Whether a url built for `entry` (see buildIntendedState) must write its
  * value: a value equal to its state's default goes without saying. A dynamic
- * default is derived from other states, the very ones a url given params is
- * built to change, so it cannot judge a given value: what it says now is not
- * what it will say at the destination (a court's first free hour, peeked while
- * another court is shown). A value given for such a state is always written.
+ * default is derived from other states, the very ones a url given params for
+ * another address is built to change, so it cannot judge a value given there:
+ * what it says now is not what it will say at the destination (a court's first
+ * free hour, peeked while another court is shown). Such a value is always
+ * written. An amendment of the address one stands at is given what the states
+ * hold already, and their defaults are the ones of the destination.
  */
 const entryIsWritten = (entry) => {
   const conn = entry.connection;
-  if (entry.explicit && conn.dynamicDefaultSignal) {
+  if (entry.givenElsewhere && conn.dynamicDefaultSignal) {
     return true;
   }
   return conn.isCustomValue(entry.value);
@@ -392,8 +394,11 @@ export const createRoutePattern = (
 
   /**
    * The state a url built by this route must encode, as a Map of
-   * paramName -> { value, connection, segmentIndex, owner, explicit }.
+   * paramName -> { value, connection, segmentIndex, owner, explicit,
+   * pageNaming, givenElsewhere }.
    * owner is relative to this route: "own" | "ancestor" | "descendant" | "extra".
+   * givenElsewhere: an explicit value for another address than the one
+   * amended (see entryIsWritten).
    *
    * Sources, in priority order (first write wins):
    * - explicit params (an explicit undefined pins the param to its default)
@@ -412,7 +417,7 @@ export const createRoutePattern = (
    * Every family signal is read (not only the stored ones) so that a url
    * computed inside a preact computed() subscribes to all of them.
    */
-  const buildIntendedState = (explicitParams) => {
+  const buildIntendedState = (explicitParams, { amending = false } = {}) => {
     const intended = new Map();
     const reachableDescendants = new Set();
     const setEntry = (
@@ -434,6 +439,7 @@ export const createRoutePattern = (
         owner,
         explicit,
         pageNaming,
+        givenElsewhere: false,
       });
     };
     const paramSegmentIndex = (patternObj, name) => {
@@ -498,6 +504,7 @@ export const createRoutePattern = (
     for (const [name, value] of Object.entries(explicitParams)) {
       const { connection, segmentIndex, owner } = findFamilyConnection(name);
       setEntry(name, value, connection, segmentIndex, owner, true);
+      intended.get(name).givenElsewhere = !amending;
     }
     for (const connection of connections) {
       const { paramName } = connection;
@@ -968,13 +975,16 @@ export const createRoutePattern = (
         owner: "ancestor",
         explicit: false,
         pageNaming: false,
+        givenElsewhere: false,
       });
     }
     return intendedWithOwn;
   };
 
-  const buildMostPreciseUrl = (params = {}) => {
-    return buildMostPreciseUrlFor(buildIntendedState(params));
+  // `amending`: the url amends the address one stands at, given what the
+  // states hold (see entryIsWritten).
+  const buildMostPreciseUrl = (params = {}, { amending = false } = {}) => {
+    return buildMostPreciseUrlFor(buildIntendedState(params, { amending }));
   };
   const buildMostPreciseUrlFor = ({ intended, reachableDescendants }) => {
     // ancestors: start at the immediate parent, climb while urls keep round-
@@ -1157,7 +1167,7 @@ export const createRoutePattern = (
     if (currentUrl) {
       params = carryOverPathParams(currentUrl, params);
     }
-    const intendedState = buildIntendedState(params);
+    const intendedState = buildIntendedState(params, { amending: true });
     const relativeBuiltUrl = buildMostPreciseUrlFor(intendedState);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);

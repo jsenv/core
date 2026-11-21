@@ -263,6 +263,8 @@ const TEXT_TYPE_SET = new Set(["string", "email", "url"]);
 // Each state's own write, which says what the write asks of the address (see
 // askOfWrite in stateSignal).
 const writeBySignal = new WeakMap();
+// Each state's write of what the address says (see writeStateFromAddress).
+const writeFromAddressBySignal = new WeakMap();
 // A write the address itself makes: what it writes is what the address says
 // already, so it is not carried back there.
 const ASK_OF_ADDRESS = { history: "replace" };
@@ -457,25 +459,19 @@ export const stateSignal = (defaultValue, options = {}) => {
     return staticDefaultValue;
   };
 
-  /**
-   * Returns fallback value: localStorage first, then code default.
-   * Used for signal initialization and resets.
-   *
-   * @returns {any} The fallback value (localStorage or code default)
-   */
-  const getFallbackValue = () => {
-    if (persists) {
-      const valueFromLocalStorage = readFromLocalStorage();
-      if (valueFromLocalStorage !== undefined) {
-        if (debug) {
-          console.debug(
-            `[stateSignal:${signalIdString}] using value from localStorage "${storageKeySignal.peek()}"=${valueFromLocalStorage}`,
-          );
-        }
-        return valueFromLocalStorage;
-      }
+  // What the state holds where nothing is written, when it was given a value
+  // before: the stored one. Otherwise it holds its default.
+  const readStoredValue = () => {
+    if (!persists) {
+      return undefined;
     }
-    return getDefaultValue(true);
+    const valueFromLocalStorage = readFromLocalStorage();
+    if (valueFromLocalStorage !== undefined && debug) {
+      console.debug(
+        `[stateSignal:${signalIdString}] using value from localStorage "${storageKeySignal.peek()}"=${valueFromLocalStorage}`,
+      );
+    }
+    return valueFromLocalStorage;
   };
   const isCustomValue = (value) => {
     if (value === undefined) {
@@ -522,13 +518,21 @@ export const stateSignal = (defaultValue, options = {}) => {
     // can reflect the current input state without silently correcting it.
     return validity.value;
   };
-  const preactSignal = signal(
-    processValue(
-      valueFromPreviousExecution === undefined
-        ? getFallbackValue()
-        : valueFromPreviousExecution,
-    ),
+  const valueGivenBefore =
+    valueFromPreviousExecution === undefined
+      ? readStoredValue()
+      : valueFromPreviousExecution;
+  const initialValue = processValue(
+    valueGivenBefore === undefined ? getDefaultValue(true) : valueGivenBefore,
   );
+  // Whether the state holds its default because nothing gave it a value: only
+  // then does a dynamic default carry it along as it moves. The value cannot
+  // say it — a value given (the hour a link names) may equal the default of
+  // the moment, and must stay when the default moves away from it.
+  const followsDefaultSignal = signal(
+    valueGivenBefore === undefined || initialValue === undefined,
+  );
+  const preactSignal = signal(initialValue);
 
   const signalProto = Object.getPrototypeOf(preactSignal);
   const valueDescriptor = Object.getOwnPropertyDescriptor(signalProto, "value");
@@ -540,14 +544,27 @@ export const stateSignal = (defaultValue, options = {}) => {
   // render or the batch that made it — and reads it there. The next write
   // replaces it, so it never answers for another value.
   let askOfWrite = null;
-  const write = (newValue, ask) => {
+  // `isDefault`: the value written is the default, put there because nothing
+  // gives one. Any other write gives the state its value, absence aside.
+  const write = (newValue, ask, isDefault = false) => {
     askOfWrite = ask;
     const processedValue = processValue(newValue);
     // const currentValue = valueDescriptor.get.call(preactSignal);
     // if (compareTwoJsValues(processedValue, currentValue)) {
     //   return;
     // }
-    valueDescriptor.set.call(preactSignal, processedValue);
+    batch(() => {
+      followsDefaultSignal.value = isDefault || processedValue === undefined;
+      valueDescriptor.set.call(preactSignal, processedValue);
+    });
+  };
+  const writeFromAddress = (value, isDefault) => {
+    if (compareTwoJsValues(value, preactSignal.peek())) {
+      followsDefaultSignal.value = isDefault || value === undefined;
+      return false;
+    }
+    write(value, ASK_OF_ADDRESS, isDefault);
+    return true;
   };
   // Override the value setter on the instance to intercept writes and apply processValue.
   // We do this on the instance (not the prototype) so preactSignal remains a real Signal
@@ -568,6 +585,7 @@ export const stateSignal = (defaultValue, options = {}) => {
 
   const facadeSignal = preactSignal;
   writeBySignal.set(facadeSignal, write);
+  writeFromAddressBySignal.set(facadeSignal, writeFromAddress);
   /**
    * Write the state, saying what this ONE write is worth in the history.
    *
@@ -633,7 +651,7 @@ export const stateSignal = (defaultValue, options = {}) => {
         );
       }
       // The end of the write that emptied the state, asking what it asked.
-      write(defaultValue, askOfWrite);
+      write(defaultValue, askOfWrite, true);
     });
   }
   dynamic_signal_effect: {
@@ -642,40 +660,18 @@ export const stateSignal = (defaultValue, options = {}) => {
     }
     // here we listen only on the dynamic default signal
     let isFirstRun = true;
-    let dynamicDefaultPreviousValue;
     effect(() => {
-      const value = preactSignal.peek();
-      const dynamicDefaultValue = dynamicDefaultSignal.value;
+      // eslint-disable-next-line no-unused-expressions
+      dynamicDefaultSignal.value;
       if (isFirstRun) {
         isFirstRun = false;
-        dynamicDefaultPreviousValue = dynamicDefaultValue;
         return;
       }
-      // Check if current signal value matches the PREVIOUS dynamic default
-      // If so, it was following the dynamic default and should update
-      // Special case: if previous was undefined and we were using static fallback
-      let wasFollowingDefault = false;
-      if (
-        dynamicDefaultPreviousValue === undefined &&
-        staticDefaultValue !== undefined
-      ) {
-        // Signal might have been using static fallback
-        wasFollowingDefault = value === staticDefaultValue;
-      } else {
-        // Signal was following the previous dynamic default
-        wasFollowingDefault = value === dynamicDefaultPreviousValue;
-      }
-
-      if (!wasFollowingDefault) {
-        // Signal has a custom value, don't update even if dynamic default changes
-        dynamicDefaultPreviousValue = dynamicDefaultValue;
+      if (!followsDefaultSignal.peek()) {
         return;
       }
-
-      // Signal was using default value, update to new default
       const newDefaultValue = getDefaultValue(true);
-      if (newDefaultValue === value) {
-        dynamicDefaultPreviousValue = dynamicDefaultValue;
+      if (newDefaultValue === preactSignal.peek()) {
         return;
       }
       if (debug) {
@@ -683,8 +679,7 @@ export const stateSignal = (defaultValue, options = {}) => {
           `[stateSignal:${signalIdString}] dynamic default updated, update to ${newDefaultValue}`,
         );
       }
-      dynamicDefaultPreviousValue = dynamicDefaultValue;
-      facadeSignal.value = newDefaultValue;
+      write(newDefaultValue, null, true);
     });
   }
   persist_in_local_storage: {
@@ -692,25 +687,30 @@ export const stateSignal = (defaultValue, options = {}) => {
       break persist_in_local_storage;
     }
     effect(() => {
-      // The key and the value are read together: an owner switch writes both
-      // in one batch (below), so a value is never kept under another owner.
+      // The key, the value and how it came are read together: an owner
+      // switch writes them in one batch (below), so a value is never kept
+      // under another owner.
       const storageKey = storageKeySignal.value;
       const value = preactSignal.value;
+      const followsDefault = followsDefaultSignal.value;
       if (storageKey === undefined) {
         return;
       }
 
       if (dynamicDefaultSignal) {
-        // With dynamic defaults: always persist to preserve user intent
-        // even when value matches dynamic defaults that may change
-        if (value !== undefined) {
-          if (debug) {
-            console.debug(
-              `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${storageKey}"=${value}`,
-            );
-          }
-          keepInLocalStorage(storageKey);
+        // A value given is kept, even one equal to the default of the moment:
+        // the default may move. A state following its default keeps nothing,
+        // so that it follows it again next time.
+        if (followsDefault) {
+          writeLocalStorage(storageKey, undefined);
+          return;
         }
+        if (debug) {
+          console.debug(
+            `[stateSignal:${signalIdString}] dynamic default: writing to localStorage "${storageKey}"=${value}`,
+          );
+        }
+        keepInLocalStorage(storageKey);
         return;
       }
       // Static defaults: only persist custom values
@@ -761,10 +761,15 @@ export const stateSignal = (defaultValue, options = {}) => {
           storageKeySignal.value = storageKey;
           if (valueFromAddress) {
             // eslint-disable-next-line signals/no-conditional-value-read -- a plain { value } from an address reader, not a signal
-            facadeSignal.value = valueFromAddress.value;
+            write(valueFromAddress.value, null, valueFromAddress.isDefault);
+            return;
+          }
+          // read once the key is the new owner's
+          const storedValue = readStoredValue();
+          if (storedValue === undefined) {
+            write(getDefaultValue(true), null, true);
           } else {
-            // read once the key is the new owner's
-            facadeSignal.value = getFallbackValue();
+            facadeSignal.value = storedValue;
           }
         });
       });
@@ -843,9 +848,24 @@ export const writeStatesAsOne = (writes, { history }) => {
  * Writes into a state what the address it is bound to says (see
  * sync_routes_with_url in route.js). The address already says it: no url write
  * follows, wherever and whenever the effects of this write run.
+ *
+ * The address either names a value, given: the state keeps it whatever its
+ * default does next. Or it names none (`isDefault`): the state holds `value`,
+ * its default there, and follows it. Said even when the state holds that value
+ * already, since a dynamic default carries along only a state that follows it.
+ *
+ * @param {import("@preact/signals").Signal} stateSignalToWrite
+ * @param {any} value
+ * @param {{ isDefault?: boolean }} [options]
+ * @returns {boolean} Whether the value was written: false when the state held
+ *   it already.
  */
-export const writeStateFromAddress = (stateSignalToWrite, value) => {
-  writeBySignal.get(stateSignalToWrite)(value, ASK_OF_ADDRESS);
+export const writeStateFromAddress = (
+  stateSignalToWrite,
+  value,
+  { isDefault = false } = {},
+) => {
+  return writeFromAddressBySignal.get(stateSignalToWrite)(value, isDefault);
 };
 
 /**

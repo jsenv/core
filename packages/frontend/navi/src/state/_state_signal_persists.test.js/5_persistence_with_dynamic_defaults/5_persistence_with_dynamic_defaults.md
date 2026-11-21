@@ -62,13 +62,13 @@ return { results };
       "step": "initial with dynamic default",
       "value": "dynamic_initial",
       "dynamicValue": "dynamic_initial",
-      "storage": "dynamic_initial"
+      "storage": null
     },
     {
       "step": "dynamic default changed",
       "value": "dynamic_changed",
       "dynamicValue": "dynamic_changed",
-      "storage": "dynamic_changed"
+      "storage": null
     },
     {
       "step": "explicit value set",
@@ -85,7 +85,7 @@ return { results };
       "step": "reset to follow dynamic",
       "value": "ignored",
       "dynamicValue": "ignored",
-      "storage": "ignored"
+      "storage": null
     }
   ]
 }
