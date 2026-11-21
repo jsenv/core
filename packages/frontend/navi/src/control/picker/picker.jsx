@@ -2638,8 +2638,9 @@ const PickerUI = /*#__PURE__*/ Object.assign(PickerDefaultUI, {
  *   (see `usePopupValue`).
  * @param {"box"|"scene"} [lift="box"] Dialog's own, under `animation="lifting"`:
  *   `"box"` for a card that extends (its top stays, the box uncovers the rest),
- *   `"scene"` for a thumbnail that is a band cut from the middle of the bigger
- *   view, as wide as it (each picture at the box's width, centred in it).
+ *   `"scene"` for a thumbnail that is a band cut from the bigger view, as wide
+ *   as it (each picture at the box's width, at the height the band was cut
+ *   from — see Dialog's `lift`).
  * @param {string} [animationDuration] The popup's own (`--popup-animation-duration`).
  * @param {boolean} [dialogSizeFromAnchor] Dialog mode: the dialog is as wide
  *   as the trigger — its box as a floor (Dialog's own `sizeFromAnchor`) and

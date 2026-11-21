@@ -79,7 +79,8 @@ usual shape.
 
 `lift="box"` (default) is one object at two sizes — each picture keeps its own
 size, and the box gains room; `lift="scene"` is one scene through two frames —
-both pictures are drawn at the box's width, centred. Choose the kind by what
+both pictures are drawn at the box's width, at the height the band was cut
+from. Choose the kind by what
 grows: text and controls keep their scale (`box`), a drawing does not (`scene`).
 
 Two traps, both about the thumbnail:
@@ -89,12 +90,16 @@ Two traps, both about the thumbnail:
   box for box, an `<svg>`, `<img>`, `<picture>`, `<canvas>` or `<video>` under
   `box`.
 - **A thumbnail that is not the scene framed.** `scene` assumes the thumbnail is
-  either the whole drawing smaller, or a band cut from its middle as wide as it.
-  A thumbnail letterboxed inside a box of another aspect ratio (an SVG
-  `meet`-fitted into a 2:1 frame), or a crop taken off-centre, cannot land on
-  the whole: the drawing seems to slide to one side, then reappear centred. Give
-  the trigger's frame the scene's own aspect ratio, and crop from the middle if
-  you crop.
+  either the whole drawing smaller, or a band cut from it as wide as it. Where
+  the band was cut is read off the anchor: the `object-position` of the `<img>`
+  or `<video>` that is the anchor's box with `object-fit: cover` — so a band the
+  app lets people reframe lands where it was cut. A band cut any other way
+  (`background-position`, an SVG `slice`) is taken as cut from the middle. A
+  thumbnail letterboxed inside a box of another aspect ratio (an SVG
+  `meet`-fitted into a 2:1 frame), or cut from the sides, cannot land on the
+  whole: the drawing seems to slide to one side, then reappear centred. Give the
+  trigger's frame the scene's own aspect ratio, and cut across its full width
+  if you cut.
 
 ## The lifted node paints itself
 

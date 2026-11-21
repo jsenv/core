@@ -133,6 +133,10 @@ const BACKGROUND_IMAGE_PROPERTY = "--navi-popup-lift-background-image";
 // authored values interpolated on the group's own clock (see
 // animateMovingBox).
 const BORDER_RADIUS_PROPERTY = "--navi-popup-lift-border-radius";
+// Under lift="scene", where the band the anchor shows was cut from the scene:
+// 0 its top, 1 its bottom (see readSceneCut). Read off the anchor whichever
+// way the movement goes, the band being the anchor's.
+const SCENE_CUT_PROPERTY = "--navi-popup-lift-scene-cut";
 
 const css = /* css */ `
   /* While a popup is lifting out of the element that opened it, or back into
@@ -214,19 +218,22 @@ const css = /* css */ `
     }
 
     /* One scene through two frames (lift="scene"): the thumbnail is a band
-       cut from the middle of the scene, as wide as it. Here the content DOES
-       scale with the box — a drawing enlarged is the same drawing bigger — so
-       both pictures are drawn at the box's width and centred in it, and the
-       band lands on the middle of the whole scene at every width the box
-       passes through. Not covered: a cover scales each picture to its own
-       box, and the band, covered into the whole scene's square, arrives three
-       times too big and off to one side. */
+       cut from the scene, as wide as it. Here the content DOES scale with the
+       box — a drawing enlarged is the same drawing bigger — so both pictures
+       are drawn at the box's width, and placed the way object-position places
+       a cut: a picture of height P in a box of height G at cut × (G − P), the
+       inset a share of the box and the translate a share of the picture. The
+       band then lands where it was cut from the whole scene at every width
+       the box passes through; cut in the middle (0.5), both are centred. Not
+       covered: a cover scales each picture to its own box, and the band,
+       covered into the whole scene's square, arrives three times too big and
+       off to one side. */
     &[data-navi-popup-lift-kind="scene"] {
       &::view-transition-old(navi-popup-lift),
       &::view-transition-new(navi-popup-lift) {
-        inset-block: 0;
+        inset-block-start: calc(var(--navi-popup-lift-scene-cut, 0.5) * 100%);
         inline-size: 100%;
-        margin-block: auto;
+        translate: 0 calc(var(--navi-popup-lift-scene-cut, 0.5) * -100%);
       }
     }
   }
@@ -335,6 +342,8 @@ export const liftPopupFromAnchor = (
   const room = measureRoomBetweenBars();
   const boxLeaving = elementLeaving.getBoundingClientRect();
   const paintLeaving = opened ? null : readBoxPaint(elementLeaving);
+  const sceneCutLeaving =
+    opened && lift === "scene" ? readSceneCut(elementLeaving) : null;
   const giveBackNameLeaving = wearLiftName(elementLeaving);
   const root = document.documentElement;
   root.setAttribute(ROOT_ATTRIBUTE, opened ? "opening" : "closing");
@@ -348,6 +357,9 @@ export const liftPopupFromAnchor = (
   setTransitionValue(BORDER_RADIUS_PROPERTY, cornersLeaving);
   if (paintLeaving) {
     publishBoxPaint(paintLeaving);
+  }
+  if (sceneCutLeaving !== null) {
+    setTransitionValue(SCENE_CUT_PROPERTY, sceneCutLeaving);
   }
 
   let giveBackNameArriving = null;
@@ -378,6 +390,7 @@ export const liftPopupFromAnchor = (
     removeTransitionValue(BORDER_RADIUS_PROPERTY);
     removeTransitionValue(BACKGROUND_COLOR_PROPERTY);
     removeTransitionValue(BACKGROUND_IMAGE_PROPERTY);
+    removeTransitionValue(SCENE_CUT_PROPERTY);
     callLiftOverCallbacks();
   };
   releaseLiftInProgress = release;
@@ -409,8 +422,13 @@ export const liftPopupFromAnchor = (
         giveBackNameArriving = wearLiftName(elementArriving);
         cornersArriving = readCorners(elementArriving);
         boxArriving = elementArriving.getBoundingClientRect();
+        const sceneCutArriving =
+          !opened && lift === "scene" ? readSceneCut(elementArriving) : null;
         if (picturesFitTheBox(lift, boxLeaving, boxArriving)) {
           root.setAttribute(FIT_ATTRIBUTE, "");
+        }
+        if (sceneCutArriving !== null) {
+          setTransitionValue(SCENE_CUT_PROPERTY, sceneCutArriving);
         }
       }
     });
@@ -565,6 +583,99 @@ const readCorners = (element) => {
     current = sameBoxChild(current);
   }
   return "0px";
+};
+
+// Where the band an anchor shows was cut from its scene, 0 the top and 1 the
+// bottom: what the drawing that is the anchor's box says in `object-position`
+// when it covers that box, found going down as readCorners goes. Its vertical
+// offset is a share of the room the cut leaves, plus a length: "70%",
+// "12px", "calc(100% - 12px)". The middle when no covered drawing says
+// otherwise, or when nothing is cut vertically and the cut does not matter.
+const SCENE_MIDDLE = 0.5;
+const COVERED_DRAWING_SELECTOR = "img, video";
+const readSceneCut = (anchor) => {
+  let drawing = anchor;
+  while (drawing && !drawing.matches(COVERED_DRAWING_SELECTOR)) {
+    drawing = sameBoxChild(drawing);
+  }
+  if (!drawing) {
+    return SCENE_MIDDLE;
+  }
+  const { objectFit, objectPosition } = getComputedStyle(drawing);
+  if (objectFit !== "cover") {
+    return SCENE_MIDDLE;
+  }
+  const offsetY = parseLengthPercentage(splitPosition(objectPosition)[1]);
+  if (!offsetY) {
+    return SCENE_MIDDLE;
+  }
+  if (offsetY.length === 0) {
+    return offsetY.percentage / 100;
+  }
+  const room = roomLeftByCover(drawing);
+  if (Number.isNaN(room) || room < 1) {
+    return SCENE_MIDDLE;
+  }
+  return offsetY.percentage / 100 + offsetY.length / room;
+};
+
+// How much taller the drawing is drawn than its box under object-fit: cover.
+// NaN until its pixels have arrived.
+const roomLeftByCover = (drawing) => {
+  const isVideo = drawing.localName === "video";
+  const naturalWidth = isVideo ? drawing.videoWidth : drawing.naturalWidth;
+  const naturalHeight = isVideo ? drawing.videoHeight : drawing.naturalHeight;
+  const { clientWidth, clientHeight } = drawing;
+  const scaleToWidth = clientWidth / naturalWidth;
+  const scaleToHeight = clientHeight / naturalHeight;
+  const scale = scaleToWidth > scaleToHeight ? scaleToWidth : scaleToHeight;
+  return naturalHeight * scale - clientHeight;
+};
+
+// "50% calc(100% - 12px)" → ["50%", "calc(100% - 12px)"]: split on the spaces
+// that are not inside parentheses.
+const splitPosition = (value) => {
+  const parts = [];
+  let depth = 0;
+  let current = "";
+  for (const char of value) {
+    if (char === "(") {
+      depth++;
+    } else if (char === ")") {
+      depth--;
+    } else if (char === " " && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts;
+};
+
+// A computed <length-percentage> — "70%", "12px", "calc(100% - 12px)" — as
+// its percentage and its length in px; null for anything else.
+const parseLengthPercentage = (value) => {
+  if (!value) {
+    return null;
+  }
+  const sum = value.startsWith("calc(") ? value.slice(5, -1) : value;
+  let percentage = 0;
+  let length = 0;
+  for (const term of sum.replace(/ - /g, " + -").split(" + ")) {
+    const match = /^(-?[\d.]+(?:e-?\d+)?)(%|px)$/.exec(term.trim());
+    if (!match) {
+      return null;
+    }
+    const number = parseFloat(match[1]);
+    if (match[2] === "%") {
+      percentage += number;
+    } else {
+      length += number;
+    }
+  }
+  return { percentage, length };
 };
 
 // The lifted node is often a wrapper painting nothing, around the card that
@@ -748,9 +859,10 @@ const animateMovingBox = ({ cornersFrom, cornersTo, room, boxFrom, boxTo }) => {
 // box's clip (dialog.jsx) is its edge for a picture larger than the box: what
 // a card gaining room uncovers, what a scene shows past the band cut from it.
 // Under "box" each picture keeps its own size, so both fit only when the two
-// boxes are the same size; under "scene" both are drawn as wide as the box
-// and centred, so they fit when the two boxes have the same aspect ratio —
-// each picture, drawn at the other box's width, is then that box's height.
+// boxes are the same size; under "scene" both are drawn as wide as the box,
+// so they fit when the two boxes have the same aspect ratio — each picture,
+// drawn at the other box's width, is then that box's height, and where the
+// band was cut moves neither.
 // A picture's ink past its own box (a halo, a shadow) is not content the clip
 // is there to cut, so when they fit, the clip is lifted.
 const picturesFitTheBox = (lift, boxFrom, boxTo) => {

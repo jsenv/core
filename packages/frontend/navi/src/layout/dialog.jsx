@@ -980,10 +980,11 @@ const css = /* css */ `
  *   own size from the box's top-left corner, and the box growing uncovers
  *   more of it: the header stays where it is, the content keeps its scale,
  *   the box gains room. `"scene"`: one
- *   scene through two frames — a thumbnail that is a band cut from the middle
- *   of the map, as wide as it. Each picture is drawn at the box's width and
- *   centred in it, so the band lands on the middle of the whole at every
- *   width the box passes through.
+ *   scene through two frames — a thumbnail that is a band cut from the map,
+ *   as wide as it. Each picture is drawn at the box's width, at the height
+ *   the band was cut from (the `object-position` of the anchor's covered
+ *   `<img>` or `<video>`, the middle otherwise), so the band lands where it
+ *   sits in the whole at every width the box passes through.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
  * @param {Element|{current: Element}|string} [props.anchor] - Never used for
