@@ -479,6 +479,12 @@ export const installPanZoom = (
   // it (or another gesture taking it): that pointer is over for this one. After
   // a pointerup it has already been let go of, and this says nothing.
   const onLostPointerCapture = (event) => {
+    // Only the surface's own capture: the event bubbles, and a finger landing
+    // on something inside the surface is captured there by the browser, so
+    // taking the press moves that capture here and its loss arrives from below.
+    if (event.target !== element) {
+      return;
+    }
     if (active) {
       onPointerEnd(event);
     }

@@ -110,6 +110,22 @@ const readSignalForUrlBuild = (connection) => {
 };
 
 /**
+ * Whether a url built for `entry` (see buildIntendedState) must write its
+ * value: a value equal to its state's default goes without saying. A dynamic
+ * default is derived from other states, the very ones a url given params is
+ * built to change, so it cannot judge a given value: what it says now is not
+ * what it will say at the destination (a court's first free hour, peeked while
+ * another court is shown). A value given for such a state is always written.
+ */
+const entryIsWritten = (entry) => {
+  const conn = entry.connection;
+  if (entry.explicit && conn.dynamicDefaultSignal) {
+    return true;
+  }
+  return conn.isCustomValue(entry.value);
+};
+
+/**
  * Whether a pattern catches the addresses below its own: "/map/", "/map/*" and
  * the root "/" do, "/places" does not. Only such a route lends its search
  * params to the routes below it: it is on screen wherever they are, so its
@@ -713,9 +729,7 @@ export const createRoutePattern = (
       if (!entry || entry.value === undefined) {
         continue;
       }
-      const meaningful = entry.connection
-        ? entry.connection.isCustomValue(entry.value)
-        : true;
+      const meaningful = entry.connection ? entryIsWritten(entry) : true;
       if (meaningful) {
         urlParams[seg.name] = entry.value;
       }
@@ -734,7 +748,7 @@ export const createRoutePattern = (
         }
         continue;
       }
-      if (!conn.isCustomValue(entry.value)) {
+      if (!entryIsWritten(entry)) {
         continue;
       }
       if (conn.paramType === "path") {
@@ -893,9 +907,7 @@ export const createRoutePattern = (
     const entryIsMeaningful = (conn) => {
       const entry = intended.get(conn.paramName);
       return (
-        Boolean(entry) &&
-        entry.value !== undefined &&
-        conn.isCustomValue(entry.value)
+        Boolean(entry) && entry.value !== undefined && entryIsWritten(entry)
       );
     };
     if (ancestorPattern !== patternObject.parent) {
