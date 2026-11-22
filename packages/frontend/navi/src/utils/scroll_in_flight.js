@@ -47,8 +47,14 @@
  * starting right after one that ended on its own is a new one, a key or a
  * smooth `scrollTo` must not pass for the fling before it.
  *
+ * A press asks about the flights too: a finger landing on a fling stops it,
+ * and Chrome for Android keeps the click of that touch (see
+ * layout/fixed_bar/fling_press.js). So the flights are kept in maps that can
+ * be walked, and the scrollers taken out of the document mid-flight, whose
+ * "scrollend" never comes, are forgotten when the next flight starts.
+ *
  * In a browser without "scrollend", no write is said to interrupt anything: a
- * scroll would never be seen ending.
+ * scroll would never be seen ending. Nor is any press said to land on a fling.
  */
 
 // The scroll a wheel turn causes starts in the frame the turn is read, or the
@@ -65,13 +71,13 @@ const FINGER_KEEPS_WRITES = !window.CSS.supports(
   "none",
 );
 
-const flightMap = new WeakMap();
+const flightMap = new Map();
 // Scrollers written to since their last "scrollend": that "scrollend" may be
 // the write's.
 const writtenScrollerSet = new WeakSet();
 // The flight of a written scroller, from its "scrollend" until a scroll goes on
 // with it.
-const writtenFlightEndMap = new WeakMap();
+const writtenFlightEndMap = new Map();
 let fingersDown = 0;
 let wheelTimeStamp = -Infinity;
 let fingerScrollTimeStamp = -Infinity;
@@ -109,10 +115,7 @@ const wouldInterruptScroll = (scrollerEl) => {
   if (!flight) {
     return false;
   }
-  if (
-    fingersDown > 0 ||
-    fingerScrollTimeStamp > flight.timeStamp - FLING_REACH
-  ) {
+  if (fingersDown > 0 || isFingersFlight(flight)) {
     return !FINGER_KEEPS_WRITES;
   }
   if (wheelTimeStamp > flight.timeStamp - WHEEL_REACH) {
@@ -120,6 +123,43 @@ const wouldInterruptScroll = (scrollerEl) => {
   }
   return true;
 };
+
+/**
+ * The scrollers a lifted finger left moving: flings, played by the browser on
+ * its own once the finger is gone. Asked at the `pointerdown` of a primary
+ * pointer, when no other finger is down: a finger's scroll still in flight then
+ * is one its finger has left.
+ *
+ * @param {number} timeStamp When the press began.
+ * @returns {Element[]}
+ */
+export const findFlingsInFlight = (timeStamp) => {
+  if (!scrollFlightsFollowed) {
+    return [];
+  }
+  const flingingScrollers = [];
+  for (const [scroller, flight] of flightMap) {
+    if (isFingersFlight(flight)) {
+      flingingScrollers.push(scroller);
+    }
+  }
+  // Between a write's "scrollend" and the scroll the fling goes on as, the
+  // fling is still the browser's: Chrome never stopped playing it.
+  for (const [scroller, writtenFlightEnd] of writtenFlightEndMap) {
+    if (
+      timeStamp - writtenFlightEnd.timeStamp < FLING_REACH &&
+      isFingersFlight(writtenFlightEnd.flight)
+    ) {
+      flingingScrollers.push(scroller);
+    }
+  }
+  return flingingScrollers;
+};
+
+// A finger moved it around the time it started or since (see the top of this
+// file).
+const isFingersFlight = (flight) =>
+  fingerScrollTimeStamp > flight.timeStamp - FLING_REACH;
 
 // The page scroll is dispatched on the document; the scroller asked about is
 // document.scrollingElement.
@@ -134,9 +174,23 @@ const onTouchEnd = (e) => {
   fingersDown = e.touches.length;
 };
 
+const forgetDetachedScrollers = () => {
+  for (const scroller of flightMap.keys()) {
+    if (!scroller.isConnected) {
+      flightMap.delete(scroller);
+    }
+  }
+  for (const scroller of writtenFlightEndMap.keys()) {
+    if (!scroller.isConnected) {
+      writtenFlightEndMap.delete(scroller);
+    }
+  }
+};
+
 // Listening from the moment the module runs, as a scroll can start before
-// anything asks about it — through a call annotated pure, which wouldInterruptScroll
-// reads: a bundler drops it with its reader, from an app that has no List.
+// anything asks about it — through a call annotated pure, which
+// wouldInterruptScroll and findFlingsInFlight read: a bundler drops it with its
+// readers, from an app that has neither a List nor a FixedBar.
 const followScrollFlights = () => {
   if (!("onscrollend" in window)) {
     return false;
@@ -152,6 +206,7 @@ const followScrollFlights = () => {
       if (flightMap.has(scroller)) {
         return;
       }
+      forgetDetachedScrollers();
       const writtenFlightEnd = writtenFlightEndMap.get(scroller);
       writtenFlightEndMap.delete(scroller);
       if (

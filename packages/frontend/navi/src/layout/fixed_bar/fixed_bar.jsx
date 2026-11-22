@@ -39,11 +39,12 @@
  *    beside it.
  */
 
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
 import { RoutePageContext } from "../../nav/route_page_context.js";
 import { requestFixedBarSpace, setFixedBarSpace } from "./fixed_bar_space.js";
+import { answerPressesStoppingAFling } from "./fling_press.js";
 
 const css = /* css */ `
   @layer navi {
@@ -326,6 +327,16 @@ export const FixedBar = ({
       setFixedBarSpace(area, barElement, null);
     };
   }, [area, vertical]);
+
+  // The page scrolls under the bar, not the bar: a press stopping a fling is
+  // aimed at what it touched here, though the browser keeps its click.
+  useEffect(() => {
+    const barElement = ref.current;
+    if (!barElement) {
+      return undefined;
+    }
+    return answerPressesStoppingAFling(barElement);
+  }, []);
 
   return (
     <Box
