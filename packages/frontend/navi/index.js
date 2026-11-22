@@ -246,7 +246,12 @@ export {
   getNowHoursRoundedToStep,
   isToday,
 } from "./src/control/picker/time_helpers.js";
-export { todaySignal } from "./src/utils/clock.js";
+export {
+  hourTickSignal,
+  minuteTickSignal,
+  secondTickSignal,
+  todaySignal,
+} from "./src/utils/clock.js";
 // --- List start ---
 export { applySearch } from "./src/control/list/apply_search.js";
 export { createSearch } from "./src/control/list/create_search.js";

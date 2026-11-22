@@ -317,7 +317,13 @@ export const useControlProps = (
     // it already says this: writing it back in the form it is shown in ("07"
     // for a 7 just typed) would move the caret and stop the person mid-number.
     // What is shown is derived again when the field is left (see below).
-    if (document.activeElement === el && readControlValue(el) === newUIState) {
+    // Nobody types into a radio or a checkbox: its DOM value is the option it
+    // stands for, and that follows the `value` prop, focused or not.
+    if (
+      !isCheckable &&
+      document.activeElement === el &&
+      readControlValue(el) === newUIState
+    ) {
       return;
     }
     const domProps = toDomProps(newUIState);
@@ -1238,6 +1244,7 @@ export const useControlProps = (
     const el = props.ref.current;
     if (
       el &&
+      !isCheckable &&
       document.activeElement === el &&
       readControlValue(el) === uiState
     ) {

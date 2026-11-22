@@ -1,6 +1,6 @@
 /**
- * What the clock says, for what is written from it: the day it is, and ticks
- * a text relative to now ages on.
+ * What the clock says, for what is drawn from it: the day it is, and a tick on
+ * each second, minute and hour for what follows the time.
  *
  * Each signal follows the clock only while something reads it, like
  * networkSpeedSignal: a page showing no date sets no timer. A timer alone is
@@ -87,18 +87,40 @@ export const todaySignal = /*#__PURE__*/ createClockSignal(
   },
 );
 
-// A tick on each second, on each minute and on each hour of the wall clock:
-// what a duration running since an instant reads to count on (see `<Time
-// type="duration" since>`), and a time relative to now to age on (see `<Time
-// type="relative">`).
+/**
+ * The wall clock's second, as a count of seconds since the epoch: it moves on
+ * each second. Reading it in a render is what makes that render follow the
+ * second; the render reads the time itself (`new Date()`), the count only says
+ * when to read it again. What `<Time type="duration" since>` counts on.
+ *
+ * @type {import("@preact/signals").ReadonlySignal<number>}
+ */
 export const secondTickSignal = /*#__PURE__*/ createClockSignal(
   () => Math.floor(Date.now() / 1000),
   (now) => 1000 - (now.getTime() % 1000),
 );
+/**
+ * The wall clock's minute, as a count of minutes since the epoch: it moves on
+ * each minute, and catches up when a phone wakes up or the tab is looked at
+ * again. Reading it in a render is what makes that render follow the minute (a
+ * "now" line in an agenda, "starts in 12 min"); the render reads the time
+ * itself (`new Date()`), the count only says when to read it again. What
+ * `<Time type="relative">` ages on.
+ *
+ * @type {import("@preact/signals").ReadonlySignal<number>}
+ */
 export const minuteTickSignal = /*#__PURE__*/ createClockSignal(
   () => Math.floor(Date.now() / MINUTE),
   (now) => MINUTE - (now.getTime() % MINUTE),
 );
+/**
+ * The wall clock's hour, as a count of hours since the epoch: it moves on each
+ * hour. Reading it in a render is what makes that render follow the hour; the
+ * render reads the time itself (`new Date()`), the count only says when to
+ * read it again.
+ *
+ * @type {import("@preact/signals").ReadonlySignal<number>}
+ */
 export const hourTickSignal = /*#__PURE__*/ createClockSignal(
   () => Math.floor(Date.now() / HOUR),
   (now) => HOUR - (now.getTime() % HOUR),

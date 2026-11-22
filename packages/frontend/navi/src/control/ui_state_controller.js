@@ -72,6 +72,7 @@ const useRenderScope = (init, update) => {
  *   registerChild(child): void;   // Called on child mount
  *   onChildUIAction(child, e, { stateChanged: boolean }): void; // Called when a child fires a UI action
  *   unregisterChild(child): void; // Called on child unmount
+ *   onChildValueChange(child): boolean; // A radio/checkbox child given another `value`: placed again by the group? (false: it keeps its checked state)
  *   collectsChild(child): boolean; // Whether registerChild(child) would put it in a value, here or above
  *   props: Object;
  *   ref: Ref; // Used to dispatch DOM events
@@ -585,10 +586,12 @@ export const useUIStateController = (
               s.parentUIStateController &&
               !s.parentUIStateController.hasStateProp
             ) {
-              // Exception: state_prop_change can only fire on a control with its own
-              // controlled state/value prop (see hasStateProp above) — groups never
-              // cascade state down into such children (they're explicitly skipped,
-              // see shouldPropagateStateToChild/hasStateProp checks), so this change
+              // Exception: state_prop_change only fires on a control following a
+              // prop of its own — a controlled state/value prop (see hasStateProp
+              // above), or the `value` of a radio/checkbox no group chooses (see
+              // onChildValueChange) — groups never cascade state down into such
+              // children (see shouldPropagateStateToChild/hasStateProp checks,
+              // and choosesOption), so this change
               // can never be an echo of the parent's own cascade. The loop risk this
               // suppression exists for only applies when the parent itself just pushed
               // this value down, which requires the parent to be controlled (have its
@@ -796,6 +799,12 @@ export const useUIStateController = (
         unregisterChild: (childUIStateController) => {
           s.parentUIStateController?.unregisterChild(childUIStateController);
         },
+        onChildValueChange: (childUIStateController) =>
+          Boolean(
+            s.parentUIStateController?.onChildValueChange(
+              childUIStateController,
+            ),
+          ),
         collectsChild: (childUIStateController) =>
           Boolean(
             s.parentUIStateController?.collectsChild(childUIStateController),
@@ -850,6 +859,7 @@ export const useUIStateController = (
         stateInitial,
         stateFromSignal,
       } = controlInfo;
+      const valueMoved = !compareTwoJsValues(value, controller.value);
       controller.value = value;
       controller.defaultValue = defaultValue;
       // An optimistic control with work in flight keeps the user's intent on
@@ -932,6 +942,32 @@ export const useUIStateController = (
                 );
               }
             }
+          }
+        }
+        if (
+          valueMoved &&
+          controlInfo.signalHoldsChecked &&
+          !controlInfo.signal
+        ) {
+          // A checked radio/checkbox holds its value, so what it held is said
+          // in the old one. Among options a group chooses from, it is another
+          // option, and the group places it. Otherwise it stays checked or
+          // not, worth the new value — what HTML does — and so do the states a
+          // rollback or a new default is compared with.
+          const placedByGroup = Boolean(
+            parentUIStateController?.onChildValueChange(controller),
+          );
+          if (!placedByGroup) {
+            const sayInNewValue = (held) =>
+              held === undefined ? undefined : value;
+            controller.state = sayInNewValue(controller.state);
+            controller.defaultValueTaken = sayInNewValue(
+              controller.defaultValueTaken,
+            );
+            controller.setUIState(
+              sayInNewValue(controller.uiState),
+              new CustomEvent("state_prop_change"),
+            );
           }
         }
         controller.followDefaultValue();
@@ -1140,6 +1176,9 @@ const keptAndNamedChildUIStates = (children, fallbackState, kept) => {
     readNamedChildUIStates(children, { warnNameless: true }),
   );
 };
+// Reads `props.type` for the reason given above GROUP_DEFAULTS.
+const isRadioControl = (child) =>
+  child.controlType === "input" && child.props?.type === "radio";
 // What the named controls among `children` say, one key each. A nameless
 // GROUP is a grouping, not a value: it exists to hold its children together
 // (a WheelGroup sharing navigation, a fieldset-ish cluster) without claiming a
@@ -1177,30 +1216,46 @@ const readNamedChildUIStates = (children, { warnNameless }) => {
       }
       continue;
     }
+    // Radios sharing a name answer one key together: the checked one says it,
+    // the others have nothing to say about it.
+    if (
+      isRadioControl(child) &&
+      child.uiState === undefined &&
+      Object.hasOwn(values, name)
+    ) {
+      continue;
+    }
     values[name] = uiState;
   }
   return values;
+};
+
+const choosesEveryOption = () => true;
+// The radio holding `groupUIState` is checked; its siblings are not.
+const distributeToRadio = (groupUIState, childUIStateController) => {
+  const childSelected = childUIStateController.props.value === groupUIState;
+  if (childSelected) {
+    return childUIStateController.props.value;
+  }
+  return undefined;
 };
 
 // Default aggregate/distribute implementations keyed by controlType or stateType.
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
 // group, creation throws so the caller knows it must supply them.
+// `choosesOption(child)`: whether what the group holds says which option a
+// radio/checkbox child is (every one in a RadioGroup, the radios of one name in
+// a form), rather than carrying what that child is worth (a lone checkbox in a
+// form). Absent, every option. See onChildValueChange.
 // The radio/checkbox filters read `props.type`, which controlHostProps copies:
 // a child is also asked about while rendering, before its first render has
 // built controlHostProps (see collectsChild).
 const GROUP_DEFAULTS = {
   radio_group: {
-    childControlFilter: (child) =>
-      child.controlType === "input" && child.props?.type === "radio",
+    childControlFilter: isRadioControl,
     aggregateChildStates: keptOrFirstDefinedChildUIState,
-    distributeChildUIState: (newUIState, childUIStateController) => {
-      const childSelected = childUIStateController.props.value === newUIState;
-      if (childSelected) {
-        return childUIStateController.props.value;
-      }
-      return undefined;
-    },
+    distributeChildUIState: distributeToRadio,
   },
   checkbox_group: {
     childControlFilter: (child) =>
@@ -1238,6 +1293,7 @@ const GROUP_DEFAULTS = {
     },
     aggregateChildStates: firstDefinedChildUIState,
     distributeChildUIState: (newUIState) => newUIState,
+    choosesOption: () => false,
   },
   object: {
     // Buttons are not fields. HTML has always been clear about it: a submit
@@ -1253,6 +1309,7 @@ const GROUP_DEFAULTS = {
       return child.controlType !== "button" && child.controlType !== "link";
     },
     aggregateChildStates: keptAndNamedChildUIStates,
+    choosesOption: isRadioControl,
     distributeChildUIState: (newUIState, child) => {
       const childName = child.name;
       if (
@@ -1272,6 +1329,11 @@ const GROUP_DEFAULTS = {
         // the `true` nobody said.
         if (uiStateIsChildEmpty(childUIState, child)) {
           return undefined;
+        }
+        // The key names one of the radios sharing it (see
+        // readNamedChildUIStates): handed to each, it would check them all.
+        if (isRadioControl(child)) {
+          return distributeToRadio(childUIState, child);
         }
         return childUIState;
       }
@@ -1379,6 +1441,12 @@ export const useUIGroupStateController = (
   // cannot be decided one seat at a time. Given both, the plural one wins.
   const resolvedDistributeChildStates =
     distributeChildStates ?? defaults?.distributeChildStates;
+  // See onChildValueChange. A distribute of the caller's own places such a
+  // child the way it places one arriving.
+  const resolvedChoosesOption =
+    distributeChildUIState || distributeChildStates
+      ? choosesEveryOption
+      : (defaults?.choosesOption ?? choosesEveryOption);
   if (
     typeof resolvedAggregateChildStates !== "function" ||
     typeof resolvedDistributeChildUIState !== "function"
@@ -1995,6 +2063,37 @@ export const useUIGroupStateController = (
             notifyExternal: "silent",
           });
         },
+        // A radio/checkbox given another value, when what the group holds
+        // says which option it is: placed from that, the way one arriving is
+        // placed above. Preact reusing a row for another option (rows keyed by
+        // position) must show what a row built for it would.
+        onChildValueChange: (childUIStateController) => {
+          const delegatedTo = delegatedChildrenRef.current.get(
+            childUIStateController,
+          );
+          if (delegatedTo) {
+            return delegatedTo.onChildValueChange(childUIStateController);
+          }
+          if (!isMonitoringChild(childUIStateController)) {
+            return false;
+          }
+          if (!resolvedChoosesOption(childUIStateController)) {
+            return false;
+          }
+          const placeEvent = new CustomEvent("initial_state_push", {
+            detail: {},
+          });
+          if (resolvedDistributeChildStates) {
+            controller.placeChildrenUIState(controller.uiState, placeEvent);
+          } else {
+            controller.placeChildUIState(
+              childUIStateController,
+              controller.uiState,
+              placeEvent,
+            );
+          }
+          return true;
+        },
         // registerChild above, asked ahead: monitored here, handed up, or
         // captured and dropped.
         collectsChild: (childUIStateController) => {
@@ -2541,6 +2640,9 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             s.realUIStateController.facadeChild = null;
           }
         },
+        // The picker holds what its one child is worth (registerChild
+        // above), not which option it is.
+        onChildValueChange: () => false,
         // A refused child is not handed further up: the popup's controls
         // answer to the picker or to nobody.
         collectsChild: (child) => canRegisterAsFacadeChild(child),
