@@ -51,7 +51,9 @@
  * and Chrome for Android keeps the click of that touch (see
  * layout/fixed_bar/fling_press.js). So the flights are kept in maps that can
  * be walked, and the scrollers taken out of the document mid-flight, whose
- * "scrollend" never comes, are forgotten when the next flight starts.
+ * "scrollend" never comes, are forgotten when the next flight starts. And a
+ * scroll a press asks for asks which scroller the wheel is moving: a
+ * trackpad's momentum goes on after the press (see wheel_tail.js).
  *
  * In a browser without "scrollend", no write is said to interrupt anything: a
  * scroll would never be seen ending. Nor is any press said to land on a fling.
@@ -80,6 +82,9 @@ const writtenScrollerSet = new WeakSet();
 const writtenFlightEndMap = new Map();
 let fingersDown = 0;
 let wheelTimeStamp = -Infinity;
+let wheelTarget = null;
+// The scroller a wheel moved last: what it was over, or what that chained to.
+let wheelScroller = null;
 let fingerScrollTimeStamp = -Infinity;
 
 /**
@@ -156,6 +161,20 @@ export const findFlingsInFlight = (timeStamp) => {
   return flingingScrollers;
 };
 
+/**
+ * The scroller the wheel moved last, and when the wheel last turned. A wheel
+ * gesture scrolls the scroller it started on until it ends, a trackpad's
+ * momentum included: while it goes on, its next event moves that one.
+ *
+ * @returns {{ scroller: Element, timeStamp: number } | null}
+ */
+export const readWheelHand = () => {
+  if (!scrollFlightsFollowed || !wheelScroller) {
+    return null;
+  }
+  return { scroller: wheelScroller, timeStamp: wheelTimeStamp };
+};
+
 // A finger moved it around the time it started or since (see the top of this
 // file).
 const isFingersFlight = (flight) =>
@@ -189,8 +208,9 @@ const forgetDetachedScrollers = () => {
 
 // Listening from the moment the module runs, as a scroll can start before
 // anything asks about it — through a call annotated pure, which
-// wouldInterruptScroll and findFlingsInFlight read: a bundler drops it with its
-// readers, from an app that has neither a List nor a FixedBar.
+// wouldInterruptScroll, findFlingsInFlight and readWheelHand read: a bundler
+// drops it with its readers, from an app that has neither a List nor a
+// FixedBar.
 const followScrollFlights = () => {
   if (!("onscrollend" in window)) {
     return false;
@@ -203,6 +223,12 @@ const followScrollFlights = () => {
         fingerScrollTimeStamp = e.timeStamp;
       }
       const scroller = asScroller(e.target);
+      if (
+        e.timeStamp - wheelTimeStamp < WHEEL_REACH &&
+        scroller.contains(wheelTarget)
+      ) {
+        wheelScroller = scroller;
+      }
       if (flightMap.has(scroller)) {
         return;
       }
@@ -237,6 +263,7 @@ const followScrollFlights = () => {
     "wheel",
     (e) => {
       wheelTimeStamp = e.timeStamp;
+      wheelTarget = e.target;
     },
     { capture: true, passive: true },
   );

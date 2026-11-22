@@ -20,6 +20,7 @@ import {
 import "../../utils/scroll_activity.js";
 import { afterPaint } from "../../utils/after_paint.js";
 import { scrollByUnlessInterrupting } from "../../utils/scroll_in_flight.js";
+import { holdOffWheelTail, isWheelTailHeld } from "../../utils/wheel_tail.js";
 
 import {
   createComponentResolver,
@@ -1979,6 +1980,9 @@ const useListScrollSync = ({
   const [, setHoldRequestCount] = useState(0);
   const holdAt = (wanted, { smooth = false } = {}) => {
     armPlace(wanted, { smooth });
+    // A trackpad thrown just before the press keeps sending the wheel events
+    // of its momentum, which would carry the list off the place asked for.
+    holdOffWheelTail(getScroller());
     if (
       smooth &&
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -3370,7 +3374,11 @@ const useListScrollSync = ({
     // glide, though: a hand on a list moving under it means stop, and the
     // glide's own scrolls would carry it on.
     const scrollerEl = getScroller();
-    const reach = () => {
+    const reach = (e) => {
+      if (e.type === "wheel" && isWheelTailHeld(scrollerEl)) {
+        // The momentum of a hand that let go before the press: not reaching.
+        return;
+      }
       const place = startPlaceRef.current;
       if (place.glide) {
         letGo();
@@ -3378,8 +3386,8 @@ const useListScrollSync = ({
       }
       place.reachedAt = performance.now();
     };
-    const putHandDown = () => {
-      reach();
+    const putHandDown = (e) => {
+      reach(e);
       startPlaceRef.current.handDown = true;
     };
     const liftHand = () => {
@@ -3432,7 +3440,10 @@ const useListScrollSync = ({
       return undefined;
     }
     const scrollerEl = getScroller();
-    const dropPendingReveal = () => {
+    const dropPendingReveal = (e) => {
+      if (e.type === "wheel" && isWheelTailHeld(scrollerEl)) {
+        return;
+      }
       pendingScrollRef.current = null;
     };
     const reachEvents = ["wheel", "keydown", "touchstart", "pointerdown"];
@@ -4494,6 +4505,10 @@ const useStuckWindowWarning = ({
 // canScroll reads the declared overflow, which the root element answers
 // "visible" to however much the page scrolls.
 const canScrollerScroll = (scrollerEl, axis) => {
+  if (isWheelTailHeld(scrollerEl)) {
+    // Hidden for the length of a wheel's tail only (wheel_tail.js).
+    return true;
+  }
   if (scrollerEl !== document.scrollingElement) {
     return canScroll(scrollerEl, axis);
   }
@@ -4849,7 +4864,13 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
     const ownScrollBoxEl = listContainerEl.querySelector(
       `:scope > .navi_list_scroll_container`,
     );
-    if (!ownScrollBoxEl || canScroll(ownScrollBoxEl, axis)) {
+    if (
+      !ownScrollBoxEl ||
+      // Its overflow reads hidden while a wheel's tail is kept off it
+      // (wheel_tail.js): it still is the box that scrolls.
+      isWheelTailHeld(ownScrollBoxEl) ||
+      canScroll(ownScrollBoxEl, axis)
+    ) {
       return ownScrollBoxEl;
     }
     const outerScrollerEl = getOuterScrollerEl(listContainerEl, axis);
