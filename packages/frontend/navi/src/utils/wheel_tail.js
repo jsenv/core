@@ -17,6 +17,9 @@
  * wheel no longer does. Chrome then drops the rest of the tail; WebKit hands
  * it to the scroller around (the page, when the page can scroll). Given back
  * before the tail is over, the scroller is carried again from where it stands.
+ * Chrome scrolls the tail off the main thread, where the hold arrives at the
+ * next commit: a step already on its way still lands, after what the press
+ * wrote that frame (2v2, Chrome 157: 50 to 140px, 12 runs in 20).
  *
  * `scrollbar-gutter: stable` keeps the room of the scrollbar the hold hides:
  * a list whose width changes reflows every item it draws. Where the room

@@ -20,6 +20,7 @@ changes, measure again before trusting a number here.
 - [A rounded clip makes the scroll wait for the main thread](#a-rounded-clip-makes-the-scroll-wait-for-the-main-thread)
 - [The click is the browser's call as much as ours](#the-click-is-the-browsers-call-as-much-as-ours)
 - [A tap dropped after a touch drag](#a-tap-dropped-after-a-touch-drag)
+- [A tap that stops a fling](#a-tap-that-stops-a-fling)
 - [A finger is captured to what it touched, inside shadow trees too](#a-finger-is-captured-to-what-it-touched-inside-shadow-trees-too)
 - [A finger never makes a wheel event](#a-finger-never-makes-a-wheel-event)
 - [A snap keeps running after the finger](#a-snap-keeps-running-after-the-finger)
@@ -214,6 +215,35 @@ capture on touch, and a momentum re-render moving the element under the tap.
 Reference: `onTouchMove` in `src/control/wheel/wheel.jsx`; the reductions, one
 variable per row, in `src/control/demos/lab/` (`tap_after_drag_experiment.html`,
 `surface_css_matrix_experiment.html`, `preventdefault_matrix_experiment.html`).
+
+## A tap that stops a fling
+
+A page thrown by a thumb keeps scrolling once the finger lifts, and a finger
+landing meanwhile stops it. On Chrome for Android that touch gets no `click`:
+`pointerdown` and `pointerup` arrive, the `click` does not. Over the content
+that is right, what the finger landed on was moving and is not what it aimed
+at. On a bar fixed over the page it is not: the entry touched is the entry
+meant, and it shrinks under the finger and does nothing. The tab already shown
+needs a second tap to bring its page back up, the tab of another page does not
+go there.
+
+So `FixedBar` gives that click itself. A touch or pen press on the bar that
+lands on a fling and lifts as a tap (under 8px, under 500ms) is clicked at its
+`pointerup`, on what the finger touched: it runs what the click runs, the ui
+action, the command, the link followed. A `click` the browser still sends for
+that press is swallowed, so the press runs once. A gesture that took the press,
+a hold opening a menu, swallows it like the browser's.
+
+The fling of a scroller around what was pressed is left to the browser: a row of
+tabs scrolling inside the bar moves its tabs under the finger. A floating button
+that is not in a `FixedBar` gets nothing.
+
+The dropped click is measured on a phone (2v2's bottom bar), the click given
+here is not: Chrome's touch emulator never drops the click, so a desktop only
+shows the second click being swallowed.
+
+Reference: `src/layout/fixed_bar/fling_press.js`, `findFlingsInFlight` in
+`src/utils/scroll_in_flight.js`.
 
 ## A finger is captured to what it touched, inside shadow trees too
 

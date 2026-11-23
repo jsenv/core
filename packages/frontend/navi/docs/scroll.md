@@ -193,6 +193,21 @@ set again a frame later. `:smooth` glides, and is instant under
 `scroll-behavior`: a `scroll-behavior: smooth` on the box glides every
 placement of the list, the one it opens on included.
 
+A trackpad thrown just before the press goes on scrolling after it: macOS sends
+the wheel events of its momentum for a second or two more, and Chrome and Safari
+dispatch them uncancelable. Left alone, they carry the list off the place asked
+for (a smooth `scrollTo(0)` asked mid-momentum ended 116px from the top in
+Chrome, 413px in Safari). So the press takes the list from the wheel until the
+momentum dies out, `overflow: hidden` on the box that scrolls with its
+scrollbar's room kept, and that momentum is not a hand: the glide goes on. Two
+fingers landing on the trackpad end it, the first event of their gesture
+refused, the rest scrolling the list. Safari hands the momentum kept off the
+list to what scrolls around it, the page when the page can scroll. A list the
+document scrolls is held only where its scrollbar takes no room: Chrome cannot
+keep the room of the document's classic scrollbar, and the list is left to the
+momentum rather than reflowed. In Firefox the glide wins over the momentum on
+its own.
+
 A `:smooth` glide shows its way: what it passes is drawn as it passes — the
 items, or the skeletons of those not fetched, which nothing asks for — and only
 where it goes is fetched. A way longer than four screens shows the screens it

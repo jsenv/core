@@ -3068,10 +3068,16 @@ const useListScrollSync = ({
     // scrollTo: the scroll is theirs, and so is the list from then on. The
     // browser's scroll anchoring would move it too, but under a glide it
     // never does (measured in Chromium, WebKit and Firefox, the document
-    // scrolling or the list's own box).
+    // scrolling or the list's own box). Except while a wheel's momentum is
+    // held off the scroller: Chrome scrolls it off the main thread and takes
+    // the hold at its next commit, so a step already on its way still lands
+    // (wheel_tail.js). The step after it writes the list back on its way.
     if (glide.written !== undefined) {
       const scrollNow = getAxis().readScroll(scrollerEl);
-      if (scrollNow < glide.written - 1 || scrollNow > glide.written + 1) {
+      if (
+        (scrollNow < glide.written - 1 || scrollNow > glide.written + 1) &&
+        !isWheelTailHeld(scrollerEl)
+      ) {
         letGo();
         return;
       }
