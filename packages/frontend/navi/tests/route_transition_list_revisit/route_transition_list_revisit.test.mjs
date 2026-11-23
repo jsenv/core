@@ -25,7 +25,7 @@
 
 // ten revisits per page, each waiting for a transition to have played
 // and a revalidation to have had time to ask, in each engine
-"jsenv:allocate 240s";
+"jsenv:allocate 300s";
 
 import { snapshotTests } from "@jsenv/snapshot";
 
@@ -253,7 +253,10 @@ const walk = (browser, name, options) => {
 //
 // Each turn is asked when the previous one has landed in the history
 // (popstate), which is a few milliseconds: all of them inside the movement,
-// and none of them taken back by the next before the browser applied it.
+// and none of them taken back by the next before the browser applied it. The
+// first one is asked by the page itself, at the first frame the movement
+// plays: a round trip to the test in between would run on the movement's
+// 300ms, and a loaded machine spends all of it there.
 const turnRound = async (browser, name, turns) => {
   const { page, errors, warnings } = await openPage(browser);
   await watchTransitions(page);
@@ -284,43 +287,48 @@ const turnRound = async (browser, name, turns) => {
   try {
     await page.goto(pageUrlOf(name), { timeout: 0 });
     await page.waitForSelector(OPEN_ROW);
-    await page.locator(OPEN_ROW).first().click();
-    await page.waitForFunction(() =>
-      // eslint-disable-next-line no-undef
-      document.documentElement.hasAttribute("data-navi-route-transition"),
-    );
-    const turnsInMovement = await page.evaluate(
-      (count) =>
-        new Promise((resolve) => {
-          /* eslint-disable no-undef */
-          let done = 0;
-          const inMovement = [];
-          const turn = () => {
-            if (done === count) {
-              window.removeEventListener("popstate", onPopstate);
-              resolve(inMovement);
-              return;
-            }
-            inMovement.push(
-              document.documentElement.hasAttribute(
-                "data-navi-route-transition",
-              ),
-            );
-            if (done % 2 === 0) {
-              history.back();
-            } else {
-              history.forward();
-            }
-            done++;
-          };
-          const onPopstate = () => {
-            turn();
-          };
-          window.addEventListener("popstate", onPopstate);
+    await page.evaluate((count) => {
+      /* eslint-disable no-undef */
+      window.turnsInMovement = new Promise((resolve) => {
+        let done = 0;
+        const inMovement = [];
+        const turn = () => {
+          if (done === count) {
+            window.removeEventListener("popstate", onPopstate);
+            resolve(inMovement);
+            return;
+          }
+          inMovement.push(
+            document.documentElement.hasAttribute("data-navi-route-transition"),
+          );
+          if (done % 2 === 0) {
+            history.back();
+          } else {
+            history.forward();
+          }
+          done++;
+        };
+        const onPopstate = () => {
           turn();
-          /* eslint-enable no-undef */
-        }),
-      turns,
+        };
+        const turnOnceMovementPlays = () => {
+          if (
+            document.documentElement.hasAttribute("data-navi-route-transition")
+          ) {
+            window.addEventListener("popstate", onPopstate);
+            turn();
+            return;
+          }
+          requestAnimationFrame(turnOnceMovementPlays);
+        };
+        requestAnimationFrame(turnOnceMovementPlays);
+      });
+      /* eslint-enable no-undef */
+    }, turns);
+    await page.locator(OPEN_ROW).first().click();
+    const turnsInMovement = await page.evaluate(
+      // eslint-disable-next-line no-undef
+      () => window.turnsInMovement,
     );
     const after_turns = await shows();
     // a press after the turns, to the other page

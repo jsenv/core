@@ -1,5 +1,5 @@
 // eight pages, each scrolled through, reloaded, and waited on
-"jsenv:allocate 120s";
+"jsenv:allocate 300s";
 
 /*
  * A list reloaded where it was left: it comes back on the same item, asking

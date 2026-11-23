@@ -7,7 +7,7 @@
  * Uninterrupted, the glide still lands on the item.
  */
 
-"jsenv:allocate 60s";
+"jsenv:allocate 120s";
 
 import { snapshotTests } from "@jsenv/snapshot";
 

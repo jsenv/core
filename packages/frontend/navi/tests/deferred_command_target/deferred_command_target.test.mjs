@@ -12,7 +12,7 @@
  * it replaces it.
  */
 
-"jsenv:allocate 60s";
+"jsenv:allocate 90s";
 
 import { snapshotTests } from "@jsenv/snapshot";
 

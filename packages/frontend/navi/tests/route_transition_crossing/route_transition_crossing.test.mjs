@@ -10,7 +10,7 @@
  *   (two writes), since the back could not deduce it — and it plays it back.
  */
 
-"jsenv:allocate 60s";
+"jsenv:allocate 120s";
 
 import { snapshotTests } from "@jsenv/snapshot";
 

@@ -34,8 +34,10 @@ await executeTestPlan({
     maxAhead: 1,
     // A heavy execution (one allowed more than 30s) keeps about two cores busy,
     // e.g. a navi browser test: its own dev server cooking all of navi plus a
-    // chromium. More than 4 of them at once outlast their budget.
-    maxHeavy: 4,
+    // browser. Half of the slots (themselves 80% of the cpus) is what the
+    // machine holds: 4 on 10 cpus, 1 on the 3 of a CI runner. More at once
+    // and they outlast their budget.
+    maxHeavy: "50%",
   },
   logs: {
     level: "info",

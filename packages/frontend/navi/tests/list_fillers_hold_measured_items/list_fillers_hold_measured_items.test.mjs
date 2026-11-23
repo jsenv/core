@@ -1,4 +1,4 @@
-"jsenv:allocate 90s";
+"jsenv:allocate 180s";
 
 /*
  * The room a list holds for the items outside its window is the room they

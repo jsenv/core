@@ -12,7 +12,7 @@
  * WebKit without the Navigation API falls back to history (`integration`).
  */
 
-"jsenv:allocate 180s";
+"jsenv:allocate 240s";
 
 import { snapshotTests } from "@jsenv/snapshot";
 

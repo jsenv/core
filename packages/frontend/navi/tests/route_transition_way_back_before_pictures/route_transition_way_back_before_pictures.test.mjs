@@ -12,7 +12,7 @@
  *   being left frozen on screen (the update callback held, see main.jsx).
  */
 
-"jsenv:allocate 60s";
+"jsenv:allocate 90s";
 
 import { snapshotTests } from "@jsenv/snapshot";
 

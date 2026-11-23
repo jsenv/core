@@ -1,4 +1,4 @@
-"jsenv:allocate 60s";
+"jsenv:allocate 90s";
 
 /*
  * A list judges its geometry on the list it is: whole from its first commit,
