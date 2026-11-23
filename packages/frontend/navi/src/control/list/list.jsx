@@ -1850,6 +1850,7 @@ const useListScrollSync = ({
     place.userTookOver = false;
     place.way = null;
     place.arrived = false;
+    place.placedAt = null;
     place.smooth = smooth;
     place.glide = null;
     place.reachedAt = -Infinity;
@@ -1892,6 +1893,9 @@ const useListScrollSync = ({
       scrollerReturn,
       way: null,
       arrived: false,
+      // Where the hold's last placement put the scroller, when its write
+      // landed at once (see letGoUnlessHeldScroll).
+      placedAt: null,
       // Whether the hold's writes glide (--navi-scroll:smooth).
       smooth: false,
       // The glide on its way there, driven by the list (see glideStepRef).
@@ -3017,6 +3021,7 @@ const useListScrollSync = ({
     place.way = { from, to };
     if (to === from) {
       place.arrived = true;
+      place.placedAt = to;
       return;
     }
     // Asked to glide, the list glides whatever scroll-behavior says — and
@@ -3029,9 +3034,12 @@ const useListScrollSync = ({
           ? "instant"
           : "smooth",
       });
-      return;
+    } else {
+      axis.writeScroll(scrollerEl, to);
     }
-    axis.writeScroll(scrollerEl, to);
+    // A write that glides leaves the scroller where it was, for now.
+    const scrollNow = axis.readScroll(scrollerEl);
+    place.placedAt = scrollNow > to - 1 && scrollNow < to + 1 ? to : null;
   };
   useLayoutEffect(placeWhereHeld);
   // A hold asked to glide (--navi-scroll:smooth) writes the scroll itself, a
@@ -4225,6 +4233,17 @@ const useListScrollSync = ({
       }
       const way = place.way;
       const position = getAxis().readScroll(scrollerEl);
+      const placedAt = place.placedAt;
+      if (
+        placedAt !== null &&
+        isWheelTailHeld(scrollerEl) &&
+        (position < placedAt - 1 || position > placedAt + 1)
+      ) {
+        // A step of a wheel's momentum that landed after the placement, the
+        // hold on the wheel not taken yet (wheel_tail.js): nobody's scroll.
+        sendHeldScroll(placedAt);
+        return;
+      }
       if (way && position > way.to - 1 && position < way.to + 1) {
         // From then on only that place is the list's, or a scroll back the
         // way it came would pass for its own.
