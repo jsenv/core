@@ -33,6 +33,8 @@
 - [repro panel explicitely undefined](29_repro_panel_explicitely_undefined/29_repro_panel_explicitely_undefined.md)
 - [literal routes naming a section keep the parent literal on the default](30_literal_routes_naming_a_section_keep_the_parent_literal_on_the_default/30_literal_routes_naming_a_section_keep_the_parent_literal_on_the_default.md)
 - [undeclared tab values let the ancestor url keep the current one](31_undeclared_tab_values_let_the_ancestor_url_keep_the_current_one/31_undeclared_tab_values_let_the_ancestor_url_keep_the_current_one.md)
+- [parent url keeps the page a param names over sibling query prefs](32_parent_url_keeps_the_page_a_param_names_over_sibling_query_prefs/32_parent_url_keeps_the_page_a_param_names_over_sibling_query_prefs.md)
+- [parent url stays the default page over sibling query prefs](33_parent_url_stays_the_default_page_over_sibling_query_prefs/33_parent_url_stays_the_default_page_over_sibling_query_prefs.md)
 
 ---
 

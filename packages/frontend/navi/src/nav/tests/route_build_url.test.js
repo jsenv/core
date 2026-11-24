@@ -1238,4 +1238,110 @@ await snapshotTests(import.meta.url, ({ test }) => {
       globalSignalRegistry.clear();
     }
   });
+
+  // A page named by a param keeps its address from the parent route even when
+  // a sibling page holds query prefs of its own: those belong to the sibling,
+  // and the url could not carry both.
+  test("parent url keeps the page a param names over sibling query prefs", () => {
+    const panelSignal = stateSignal(undefined, {
+      id: "sibling_prefs_panel",
+      type: "string",
+      oneOf: [undefined, "flow", "overview"],
+    });
+    const colorSignal = stateSignal("red", {
+      id: "sibling_prefs_color",
+      type: "string",
+    });
+    const orderSignal = stateSignal("a", {
+      id: "sibling_prefs_order",
+      type: "string",
+    });
+    const MAP_ROUTE = route("/map/");
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`, {
+      params: { panel: ["flow", "overview"] },
+    });
+    const MAP_FLOW_ROUTE = route("/map/flow", {
+      searchParams: { color: colorSignal },
+    });
+    const MAP_OVERVIEW_ROUTE = route("/map/overview", {
+      searchParams: { order: orderSignal },
+    });
+    const { clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_FLOW_ROUTE,
+      MAP_OVERVIEW_ROUTE,
+    ]);
+    try {
+      colorSignal.value = "blue";
+      orderSignal.value = "b";
+      const urlsWithPanel = (panel) => {
+        panelSignal.value = panel;
+        return {
+          map_url: MAP_ROUTE.buildUrl(),
+          panel_url: MAP_PANEL_ROUTE.buildUrl(),
+        };
+      };
+      return {
+        on_overview: urlsWithPanel("overview"),
+        on_flow: urlsWithPanel("flow"),
+        on_none: urlsWithPanel(undefined),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
+
+  // The counterpart with a default naming a page: the parent's bare address IS
+  // that page, whatever the param holds, so it carries that page's query prefs
+  // only. An explicit value still picks the other page.
+  test("parent url stays the default page over sibling query prefs", () => {
+    const panelSignal = stateSignal("overview", {
+      id: "default_page_panel",
+      type: "string",
+      oneOf: ["flow", "overview"],
+    });
+    const colorSignal = stateSignal("red", {
+      id: "default_page_color",
+      type: "string",
+    });
+    const orderSignal = stateSignal("a", {
+      id: "default_page_order",
+      type: "string",
+    });
+    const MAP_ROUTE = route("/map/");
+    const MAP_PANEL_ROUTE = route(`/map/:panel=${panelSignal}/`);
+    const MAP_FLOW_ROUTE = route("/map/flow", {
+      searchParams: { color: colorSignal },
+    });
+    const MAP_OVERVIEW_ROUTE = route("/map/overview", {
+      searchParams: { order: orderSignal },
+    });
+    const { clearRoutes } = setupRoutes([
+      MAP_ROUTE,
+      MAP_PANEL_ROUTE,
+      MAP_FLOW_ROUTE,
+      MAP_OVERVIEW_ROUTE,
+    ]);
+    try {
+      colorSignal.value = "blue";
+      orderSignal.value = "b";
+      const urlsWithPanel = (panel) => {
+        panelSignal.value = panel;
+        return {
+          map_url: MAP_ROUTE.buildUrl(),
+          map_url_explicit_flow: MAP_ROUTE.buildUrl({ panel: "flow" }),
+          panel_url: MAP_PANEL_ROUTE.buildUrl(),
+        };
+      };
+      return {
+        on_overview: urlsWithPanel("overview"),
+        on_flow: urlsWithPanel("flow"),
+      };
+    } finally {
+      clearRoutes();
+      globalSignalRegistry.clear();
+    }
+  });
 });

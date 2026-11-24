@@ -583,13 +583,15 @@ export const createRoutePattern = (
           continue;
         }
         // beyond this route's own segments: the literal must be justified by
-        // a custom param value at the same position, or by an explicit value
+        // a custom param value at the same position, or by an explicit value.
+        // A pageNaming value justifies nothing: this url stays the default's.
         const connsAtPosition =
           patternObject.descendantPathSignals.get(dSeg.index) || [];
         const justifiedBySignal = connsAtPosition.some((conn) => {
           const entry = intended.get(conn.paramName);
           return (
             entry &&
+            !entry.pageNaming &&
             entry.value !== undefined &&
             conn.isCustomValue(entry.value) &&
             String(entry.value) === dSeg.value
@@ -607,10 +609,41 @@ export const createRoutePattern = (
       }
       return true;
     };
+    // The pages the url being built opens at a position below this route's own
+    // segments: a value it writes there, else the page the bare address stands
+    // for (a default that goes without saying). A pageNaming value is not
+    // written: the url stays the default's. Empty when nothing names a page.
+    const pagesNamedAt = (connsAtPosition) => {
+      const written = new Set();
+      for (const conn of connsAtPosition) {
+        const entry = intended.get(conn.paramName);
+        if (
+          entry &&
+          !entry.pageNaming &&
+          entry.value !== undefined &&
+          entryIsWritten(entry)
+        ) {
+          written.add(String(entry.value));
+        }
+      }
+      if (written.size > 0) {
+        return written;
+      }
+      const bare = new Set();
+      for (const conn of connsAtPosition) {
+        const defaultValue = conn.getDefaultValue();
+        if (defaultValue !== undefined && !conn.isCustomValue(defaultValue)) {
+          bare.add(String(defaultValue));
+        }
+      }
+      return bare;
+    };
     // Query values are inherited under a LOOSER rule than path descent: the
     // descendant's extra literals only need a param position to exist there,
     // not a param value naming them. Leaving a sub screen keeps its query
     // prefs in the url; entering it by literal requires a value that says so.
+    // A position naming ANOTHER page keeps them out: the url opens that page,
+    // whose prefs they could not ride along with.
     const isDescendantQueryReachable = (descendant) => {
       const selfSegments = parsedPattern.segments;
       for (const dSeg of descendant.pattern.segments) {
@@ -642,6 +675,10 @@ export const createRoutePattern = (
           dSeg.index,
         );
         if (!connsAtPosition || connsAtPosition.length === 0) {
+          return false;
+        }
+        const pagesNamed = pagesNamedAt(connsAtPosition);
+        if (pagesNamed.size > 0 && !pagesNamed.has(dSeg.value)) {
           return false;
         }
       }
