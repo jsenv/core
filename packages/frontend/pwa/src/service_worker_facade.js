@@ -465,9 +465,11 @@ export const createServiceWorkerFacade = ({
         // read off the registration already in scope
         await registration.update();
       } catch (e) {
-        const errorKind = await getCheckErrorKind(registration);
-        mutate({ update: { error: e, errorKind } });
-        return false;
+        const checkFailure = await getCheckFailure(registration, e);
+        if (checkFailure) {
+          mutate({ update: checkFailure });
+          return false;
+        }
       }
       // An update found by THIS check is on registration.installing: update()
       // resolves as soon as the new script starts installing. The waiting
@@ -634,8 +636,12 @@ const ensureIsControllingNavigator = (serviceWorker) => {
 
 // The browser says why an update check failed in its message only, worded by
 // each browser: asking the server for the script again tells it the same way
-// everywhere. A connection changing between both requests can mislabel one.
-const getCheckErrorKind = async (registration) => {
+// everywhere. A script served fine now may still never have reached the
+// browser: the check met a connection waking up, as a phone comes back to the
+// foreground. Only the browser tells that apart from a script it refuses, so
+// it checks once more, the connection having just answered. Resolves to null
+// when that check succeeds.
+const getCheckFailure = async (registration, error) => {
   // registration.update() fetches the script of its newest worker
   const { scriptURL } =
     registration.installing || registration.waiting || registration.active;
@@ -643,15 +649,20 @@ const getCheckErrorKind = async (registration) => {
   try {
     response = await fetch(scriptURL, { cache: "no-store" });
   } catch {
-    return "network";
+    return { error, errorKind: "network" };
   }
   if (response.status >= 500) {
-    return "network";
+    return { error, errorKind: "network" };
   }
   if (!response.ok) {
-    return "http";
+    return { error, errorKind: "http" };
   }
-  return "script";
+  try {
+    await registration.update();
+  } catch (e) {
+    return { error: e, errorKind: "script" };
+  }
+  return null;
 };
 
 // https://github.com/GoogleChrome/workbox/issues/1120
