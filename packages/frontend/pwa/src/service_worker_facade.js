@@ -75,7 +75,8 @@ import { pwaLogger } from "./pwa_logger.js";
  *     "network" (no answer: offline, server unreachable or failing with a
  *     5xx; a later check may succeed), "http" (the server refuses the script
  *     with a 4xx) or "script" (the browser refused the script it received: it
- *     throws, has a wrong MIME type, redirects).
+ *     throws, has a wrong MIME type, redirects). A call made while a check
+ *     runs joins it and resolves the same way.
  *   - `activateUpdate()`: async, asks the installed update to skip waiting and
  *     resolves once it controls the page. A newer update found meanwhile
  *     replaces it, and the promise goes on with that one. Rejects when the
@@ -372,6 +373,60 @@ export const createServiceWorkerFacade = ({
     fromServiceWorker.addEventListener("statechange", applyStateChangeEffect);
   };
 
+  // One check at a time, as the browser joins equivalent update() jobs: two
+  // checks side by side would clear and write state.update.error over each
+  // other, and a caller would read the outcome of the other one.
+  let checkPromise = null;
+  const runUpdateCheck = async () => {
+    if (!canUseServiceWorkers) {
+      pwaLogger.debug("service worker API not available");
+      return false;
+    }
+    const registration = await serviceWorkerAPI.getRegistration(scope);
+    if (!registration) {
+      pwaLogger.info("nothing to update");
+      return false;
+    }
+    // update.readyState belongs to the tracked update worker and survives a
+    // check; only the error of a previous check is cleared here
+    mutate({
+      update: {
+        error: null,
+        errorKind: null,
+      },
+    });
+    try {
+      // registration.update() resolves with undefined per spec (browsers
+      // happen to resolve with the registration itself); the workers are
+      // read off the registration already in scope
+      await registration.update();
+    } catch (e) {
+      const checkFailure = await getCheckFailure(registration, e);
+      if (checkFailure) {
+        mutate({ update: checkFailure });
+        return false;
+      }
+    }
+    // An update found by THIS check is on registration.installing: update()
+    // resolves as soon as the new script starts installing. The waiting
+    // branch below is for an update found by a previous check, installed and
+    // still waiting to activate.
+    if (registration.waiting) {
+      pwaLogger.info("registration.update() -> found on registration.waiting");
+      trackUpdate(registration.waiting);
+      return true;
+    }
+    // when installing, no need to call trackUpdate, browser fires "updatefound"
+    if (registration.installing) {
+      pwaLogger.info(
+        "registration.update() -> found on registration.installing",
+      );
+      return true;
+    }
+    pwaLogger.info("registration.update() -> no update found");
+    return false;
+  };
+
   const init = async () => {
     serviceWorkerAPI.addEventListener("controllerchange", async () => {
       const controller = serviceWorkerAPI.controller;
@@ -441,56 +496,13 @@ export const createServiceWorkerFacade = ({
       pwaLogger.info("registration.unregister() failed");
       return false;
     },
-    checkForUpdates: async () => {
-      if (!canUseServiceWorkers) {
-        pwaLogger.debug("service worker API not available");
-        return false;
+    checkForUpdates: () => {
+      if (!checkPromise) {
+        checkPromise = runUpdateCheck().finally(() => {
+          checkPromise = null;
+        });
       }
-      const registration = await serviceWorkerAPI.getRegistration(scope);
-      if (!registration) {
-        pwaLogger.info("nothing to update");
-        return false;
-      }
-      // update.readyState belongs to the tracked update worker and survives a
-      // check; only the error of a previous check is cleared here
-      mutate({
-        update: {
-          error: null,
-          errorKind: null,
-        },
-      });
-      try {
-        // registration.update() resolves with undefined per spec (browsers
-        // happen to resolve with the registration itself); the workers are
-        // read off the registration already in scope
-        await registration.update();
-      } catch (e) {
-        const checkFailure = await getCheckFailure(registration, e);
-        if (checkFailure) {
-          mutate({ update: checkFailure });
-          return false;
-        }
-      }
-      // An update found by THIS check is on registration.installing: update()
-      // resolves as soon as the new script starts installing. The waiting
-      // branch below is for an update found by a previous check, installed and
-      // still waiting to activate.
-      if (registration.waiting) {
-        pwaLogger.info(
-          "registration.update() -> found on registration.waiting",
-        );
-        trackUpdate(registration.waiting);
-        return true;
-      }
-      // when installing, no need to call trackUpdate, browser fires "updatefound"
-      if (registration.installing) {
-        pwaLogger.info(
-          "registration.update() -> found on registration.installing",
-        );
-        return true;
-      }
-      pwaLogger.info("registration.update() -> no update found");
-      return false;
+      return checkPromise;
     },
     activateUpdate: async () => {
       if (!canUseServiceWorkers) {
@@ -636,33 +648,47 @@ const ensureIsControllingNavigator = (serviceWorker) => {
 
 // The browser says why an update check failed in its message only, worded by
 // each browser: asking the server for the script again tells it the same way
-// everywhere. A script served fine now may still never have reached the
-// browser: the check met a connection waking up, as a phone comes back to the
-// foreground. Only the browser tells that apart from a script it refuses, so
-// it checks once more, the connection having just answered. Resolves to null
-// when that check succeeds.
+// everywhere. A script served fine may still never have reached the browser
+// (a connection waking up as a phone comes back to the foreground), so a
+// refusal counts as "script" only when the server answered right before AND
+// right after it. The first check has nothing before it: it is made again.
+// Resolves to null when that second check succeeds.
 const getCheckFailure = async (registration, error) => {
   // registration.update() fetches the script of its newest worker
   const { scriptURL } =
     registration.installing || registration.waiting || registration.active;
+  const answerBefore = await askServerForScript(scriptURL);
+  if (answerBefore !== "ok") {
+    return { error, errorKind: answerBefore };
+  }
+  let refusal;
+  try {
+    await registration.update();
+    return null;
+  } catch (e) {
+    refusal = e;
+  }
+  const answerAfter = await askServerForScript(scriptURL);
+  if (answerAfter !== "ok") {
+    return { error: refusal, errorKind: answerAfter };
+  }
+  return { error: refusal, errorKind: "script" };
+};
+
+const askServerForScript = async (scriptURL) => {
   let response;
   try {
     response = await fetch(scriptURL, { cache: "no-store" });
   } catch {
-    return { error, errorKind: "network" };
+    return "network";
   }
   if (response.status >= 500) {
-    return { error, errorKind: "network" };
+    return "network";
   }
   if (!response.ok) {
-    return { error, errorKind: "http" };
+    return "http";
   }
-  try {
-    await registration.update();
-  } catch (e) {
-    return { error: e, errorKind: "script" };
-  }
-  return null;
+  return "ok";
 };
 
 // https://github.com/GoogleChrome/workbox/issues/1120
