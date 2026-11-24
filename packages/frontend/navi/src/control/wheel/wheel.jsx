@@ -26,8 +26,11 @@
  * is. Only visibleCount + 2 <li> slots are rendered per layer (WheelWindow) and recycled: as
  * the wheel scrolls, each slot's content is refilled from trackedItems. The slots
  * re-render on demand — only when the wheel crosses a row (the window base index
- * changes) — never per frame; the per-frame motion is a single imperative
- * transform on the track (--wheel-offset, see applyOffset). All geometry is
+ * changes) — never per frame; the per-frame motion is two custom properties
+ * written on the viewport, inherited by both layers: --wheel-offset moves the
+ * track, and --wheel-center-slot is the slot sitting at the center, from which
+ * each row computes its own --wheel-distance in CSS (see applyOffset). Per frame,
+ * the cost does not grow with the number of rows. All geometry is
  * computed from the value index and a measured uniform row size, not read off the
  * DOM.
  *
@@ -59,6 +62,7 @@ import {
   claimWheelGesture,
   dispatchPublicCustomEvent,
   findEvent,
+  mergeTwoStyles,
   releaseWheelGesture,
   wheelGestureIsTakenFrom,
 } from "@jsenv/dom";
@@ -260,6 +264,13 @@ const css = /* css */ `
   }
 
   .navi_wheel_item {
+    /* The row's signed distance to the center, in rows: 0 on the centered
+       row, ±1 on its neighbours, negative before the center, fractional while
+       the wheel moves. --wheel-slot is fixed per recycled <li>; only
+       --wheel-center-slot changes per frame, written once on the viewport, so
+       a moving wheel costs no per-row write. The same in both layers. */
+    --wheel-distance: calc(var(--wheel-slot) - var(--wheel-center-slot));
+
     position: relative;
     display: flex;
     flex: none;
@@ -685,6 +696,11 @@ const WheelGroupContext = createContext(null);
  * `-saturate` for the glass. The wheel paints no background. On a dark panel
  * inside a light page, `color-scheme: dark` on the panel turns its inks, its
  * glass and its frame, with the rest of the panel.
+ *
+ * Each row reads `--wheel-distance`, its signed distance to the center in rows
+ * (0 centered, ±1 the neighbours, fractional while moving), in both layers. To
+ * step sizes down toward the edges, scale what a row holds:
+ * `scale: calc(1 - min(abs(var(--wheel-distance)), 2) * 0.2)`.
  *
  * @type {import("preact").FunctionComponent<{
  *   value?: any,
@@ -1614,6 +1630,14 @@ function WheelUI(props) {
       renderedBaseRef.current * size;
     // On the viewport, so both layers' tracks read the same value.
     vp.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
+    // Relative to the base the DOM shows, like the offset, so a row's
+    // --wheel-distance matches where it is drawn even while a re-render lags.
+    // Read off pos rather than the rounded offset: whole numbers at rest.
+    const centerSlot = posRef.current / size - renderedBaseRef.current;
+    vp.style.setProperty(
+      "--wheel-center-slot",
+      String(Math.round(centerSlot * 1000) / 1000),
+    );
   };
   const renderPos = (vp) => {
     const size = getItemSize(vp);
@@ -2275,6 +2299,12 @@ const WheelWindow = ({
         key={slot}
         {...item.itemProps}
         baseClassName="navi_wheel_item"
+        // Fixed for this recycled <li> (keyed by slot): see --wheel-distance.
+        style={mergeTwoStyles(
+          { "--wheel-slot": slot },
+          item.itemProps.style,
+          "css",
+        )}
         data-unavailable={
           isRowUnavailable && isRowUnavailable(item.value) ? "" : undefined
         }

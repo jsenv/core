@@ -75,8 +75,12 @@ import { pwaLogger } from "./pwa_logger.js";
  *     "network" (no answer: offline, server unreachable or failing with a
  *     5xx; a later check may succeed), "http" (the server refuses the script
  *     with a 4xx) or "script" (the browser refused the script it received: it
- *     throws, has a wrong MIME type, redirects). A call made while a check
- *     runs joins it and resolves the same way.
+ *     throws, has a wrong MIME type, redirects). A refusal while the server
+ *     answers is made again once before it counts: the browser may never have
+ *     received the script (a connection waking up), and a retry that succeeds
+ *     leaves no error. "script" therefore means refused twice, the server
+ *     answering before and after. A call made while a check runs joins it and
+ *     resolves the same way.
  *   - `activateUpdate()`: async, asks the installed update to skip waiting and
  *     resolves once it controls the page. A newer update found meanwhile
  *     replaces it, and the promise goes on with that one. Rejects when the

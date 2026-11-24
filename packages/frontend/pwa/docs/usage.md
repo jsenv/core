@@ -149,7 +149,13 @@ An update that fails before it installs only surfaces through
 what failed. `"network"` is the noise of a phone (offline, server unreachable or
 answering 5xx) and a later check may succeed; `"http"` (a 4xx on the script)
 and `"script"` (a script the browser refused: it throws, wrong MIME type,
-redirect) are a broken deployment, the ones worth reporting. An update
+redirect) are a broken deployment, the ones worth reporting. A refusal is not
+taken at its word: a script the server serves may never have reached the
+browser (a phone's connection waking up as the app comes back to the
+foreground), so when the server answers right after a failed check, the check
+is made again, and a retry that succeeds leaves no error at all. `"script"`
+therefore means refused twice, the server answering before and after; a
+network blip no longer passes for a broken deployment. An update
 that fails during install (a resource that cannot be cached) rejects nothing:
 it turns `"redundant"`, and the reason is in the worker's console only.
 
