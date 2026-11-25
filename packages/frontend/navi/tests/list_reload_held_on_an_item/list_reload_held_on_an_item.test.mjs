@@ -29,6 +29,7 @@ import {
   configureBrowserSnapshots,
   createEngineTests,
   startNaviDevServer,
+  whenDocumentExecuted,
 } from "../browser_harness.mjs";
 
 const devServer = await startNaviDevServer();
@@ -81,6 +82,7 @@ const openPage = async (browser, query, { initScript } = {}) => {
   // The run's budget ("jsenv:allocate") is the limit: under a full test run the
   // first load, which cooks all of navi, outlasts Playwright's 30s.
   await page.goto(pageUrlOf(query), { timeout: 0 });
+  await whenDocumentExecuted(page);
   await page.waitForSelector("[navi-list-item-real]");
   await page.waitForTimeout(500);
   return { page, errors };
@@ -117,6 +119,9 @@ const leaveThenReload = async (browser, query, where) => {
     await scrollTo(page, where);
     const leftOn = await page.evaluate(readPlace);
     await page.reload();
+    // Resolved by the first render, before any answer: a tab the answers
+    // freeze still gets here, and is read as frozen below.
+    await whenDocumentExecuted(page);
     await page.waitForTimeout(1500);
     const backOn = await evaluateUnlessFrozen(page, readPlace);
     const asked =

@@ -35,6 +35,7 @@ import {
   ENGINES,
   openPage,
   startNaviDevServer,
+  whenDocumentExecuted,
 } from "../browser_harness.mjs";
 
 const clientDirectoryUrl = import.meta.resolve("./client/");
@@ -159,6 +160,7 @@ const openAndComeBack = async (
     // The run's budget ("jsenv:allocate") is the limit: under a full test run
     // the first load, which cooks all of navi, outlasts Playwright's 30s.
     await page.goto(pageUrlOf(name, search), { timeout: 0 });
+    await whenDocumentExecuted(page);
     await page.waitForSelector(OPEN_ROW);
     await settle(page);
     const onFirstLoad = await readAsks(page);
@@ -286,6 +288,7 @@ const turnRound = async (browser, name, turns) => {
   };
   try {
     await page.goto(pageUrlOf(name), { timeout: 0 });
+    await whenDocumentExecuted(page);
     await page.waitForSelector(OPEN_ROW);
     await page.evaluate((count) => {
       /* eslint-disable no-undef */

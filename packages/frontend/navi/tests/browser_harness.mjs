@@ -121,9 +121,32 @@ export const openPage = async (browser, url, pageOptions = {}) => {
     // The run's budget ("jsenv:allocate") is the limit: under a full test run
     // the first load, which cooks all of navi, outlasts Playwright's 30s.
     await page.goto(url, { timeout: 0, ...gotoOptions });
+    await whenDocumentExecuted(page);
   }
   return { page, errors, warnings };
 };
+
+/**
+ * The document's scripts executed: the page's module and everything it
+ * imports evaluated, its first render done. To be awaited after every
+ * `goto` and `reload`.
+ *
+ * The load event does not say it in WebKit: the dev server's supervisor runs
+ * a module script there through a dynamic import, which the load event does
+ * not wait for. The cooking of navi then happens after `goto` resolved — a
+ * timeout or a fixed wait started at `goto` is spent on it, and on a loaded
+ * machine runs out before the app has run. No timeout: the run's budget
+ * ("jsenv:allocate") is the limit, as for `goto`.
+ */
+export const whenDocumentExecuted = (page) =>
+  page.evaluate(async () => {
+    /* eslint-disable no-undef */
+    if (!window.__supervisor__) {
+      throw new Error("window.__supervisor__ is undefined");
+    }
+    await window.__supervisor__.getDocumentExecutionResult();
+    /* eslint-enable no-undef */
+  });
 
 // Frames, for what a list settles over: its window, the resizes a commit
 // delivers, the commits those cause.
