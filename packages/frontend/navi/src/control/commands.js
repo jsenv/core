@@ -167,7 +167,9 @@ export const resolveNaviCommand = (
     // The event is how the target takes part in what it was asked to do (a
     // popup closing on --navi-close also has its own things to do); the command
     // itself is the implementation, and it must not depend on someone
-    // listening. Nobody does when the target has left the document — a trigger
+    // listening. Nobody may be once the target has left the document, or only
+    // a component already gone (Preact keeps an unmounted element's
+    // listeners, see the picker's onnavi_request_close) — a trigger
     // whose own action took it away, which is the shape of "delete this, then
     // leave the page it was on" (see runWhenActionSucceeded in
     // rules/control_action.js): the command was decided above, while the
