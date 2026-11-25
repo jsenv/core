@@ -883,10 +883,8 @@ const PickerCustom = (props) => {
         openController.onOpeningPress?.(e);
       },
       onnavi_request_close: (e) => {
-        // Nothing open, nothing to ask the trigger (the twin of the open
-        // above). A command waiting for its action can land here after the
-        // picker left the tree: Preact keeps the popup's listeners, the
-        // unmount closed the controller, and the trigger is gone.
+        // Nothing open, nothing to close, nothing to ask the trigger: the twin
+        // of the open above.
         if (!openController.opened) {
           return;
         }

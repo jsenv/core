@@ -162,20 +162,20 @@ export const resolveNaviCommand = (
     );
     return undefined;
   }
-  const { target, implementation } = execute;
+  const { target, implementation, outlivesTarget } = execute;
   return () => {
+    // Aimed at the press, run once an action succeeded (see
+    // runWhenActionSucceeded in rules/control_action.js): a target that left
+    // the document meanwhile has nobody to answer for it. A popup gone is
+    // closed, a field gone has nothing to clear, and the listeners Preact
+    // keeps on an unmounted element belong to a component that is gone.
+    if (!outlivesTarget && !target.isConnected) {
+      return false;
+    }
     // The event is how the target takes part in what it was asked to do (a
     // popup closing on --navi-close also has its own things to do); the command
     // itself is the implementation, and it must not depend on someone
-    // listening. Nobody may be once the target has left the document, or only
-    // a component already gone (Preact keeps an unmounted element's
-    // listeners, see the picker's onnavi_request_close) — a trigger
-    // whose own action took it away, which is the shape of "delete this, then
-    // leave the page it was on" (see runWhenActionSucceeded in
-    // rules/control_action.js): the command was decided above, while the
-    // trigger was there, and runs once the action has succeeded, by which time
-    // the row it stood in is gone. So the command runs here rather than being
-    // lost in silence.
+    // listening: a command that outlives its target has nobody there.
     const detail = {
       command,
       event,
@@ -419,6 +419,9 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
 // - Returns undefined when no target can be found — this is a normal outcome for
 //   some commands (e.g. --navi-send when the source is outside any navi context).
 // - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
+// - `outlivesTarget: true` when the implementation acts on the app rather than
+//   on the target (leaving the page): it runs even once the target has left
+//   the document — "delete this, then go back", from a row the delete removed.
 // A command can carry an argument of its own, after a colon:
 // "--navi-go-to-slide:edit" is the go-to-slide command, told where to go. It is
 // part of the command because it says WHAT the command does — where a `value`
@@ -966,6 +969,7 @@ const navToCommand = (source, event, { argument }) => {
   const target = resolveExplicitTarget(source) || source;
   return {
     target,
+    outlivesTarget: true,
     // Which way there is worn by the source, as a link wears it (see
     // link_replace.js, link_return.js, link_open.js,
     // route_transition_request.js):
@@ -988,6 +992,7 @@ const navBackCommand = (source, event, { argument }) => {
   const target = resolveExplicitTarget(source) || source;
   return {
     target,
+    outlivesTarget: true,
     implementation: () => navBack({ fallback: argument }),
   };
 };
