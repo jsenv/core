@@ -77,7 +77,9 @@ const pressAndRead = async (page, id) => {
 
 const openPage = async (browser) => {
   const { page } = await openHarnessPage(browser, pageUrl);
-  await page.waitForSelector("#open_replaced", { timeout: 0 });
+  // Rendered by the page's module, which has run by now (see
+  // whenDocumentExecuted): what is not there yet is not coming.
+  await page.waitForSelector("#open_replaced", { timeout: 5000 });
   return page;
 };
 

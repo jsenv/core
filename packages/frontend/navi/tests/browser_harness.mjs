@@ -137,16 +137,28 @@ export const openPage = async (browser, url, pageOptions = {}) => {
  * timeout or a fixed wait started at `goto` is spent on it, and on a loaded
  * machine runs out before the app has run. No timeout: the run's budget
  * ("jsenv:allocate") is the limit, as for `goto`.
+ *
+ * A script that threw fails it, with that script's error: the document still
+ * reports itself completed, and a suite waiting next for something the page
+ * never rendered would wait out the whole budget and report only a timeout.
  */
-export const whenDocumentExecuted = (page) =>
-  page.evaluate(async () => {
+export const whenDocumentExecuted = async (page) => {
+  const failures = await page.evaluate(async () => {
     /* eslint-disable no-undef */
     if (!window.__supervisor__) {
       throw new Error("window.__supervisor__ is undefined");
     }
-    await window.__supervisor__.getDocumentExecutionResult();
+    const { executionResults } =
+      await window.__supervisor__.getDocumentExecutionResult();
     /* eslint-enable no-undef */
+    return Object.entries(executionResults)
+      .filter(([, result]) => result.status === "failed")
+      .map(([src, result]) => `${src}: ${result.exception?.message}`);
   });
+  if (failures.length > 0) {
+    throw new Error(`the page's scripts failed:\n${failures.join("\n")}`);
+  }
+};
 
 // Frames, for what a list settles over: its window, the resizes a commit
 // delivers, the commits those cause.
