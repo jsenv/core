@@ -16,7 +16,6 @@
  * Escape, a click outside) is no.
  */
 
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { triggerNaviCommand } from "../commands.js";
 import { findControlHost } from "../control_dom.js";
@@ -26,7 +25,8 @@ import {
   runWhenActionSucceeded,
   watchActionCompletion,
 } from "../rules/control_action.js";
-import { getPickerInput } from "./picker_custom.jsx";
+import { getPickerInput } from "./picker_context.jsx";
+import { renderPickerCustomOrNative } from "./picker_custom.jsx";
 
 const css = /* css */ `
   .navi_picker_confirm_body {
@@ -48,7 +48,6 @@ const css = /* css */ `
 // Reached for type="confirm" only (see PickerFirstResolver in picker.jsx).
 export const PickerConfirmResolver = (props) => {
   import.meta.css = css;
-  const Next = useNextResolver();
 
   const {
     ref,
@@ -114,27 +113,26 @@ export const PickerConfirmResolver = (props) => {
     }
   };
 
-  return (
-    <Next
-      {...props}
-      type="navi_js"
-      standalone
-      // No chevron, no clear cross, whatever variant the trigger is drawn in:
-      // both announce a value, and a question holds none.
-      picksNothing
-      variant={variant}
-      mode={mode}
-      focusCapture={focusCapture}
-      openWhileReadOnly={openWhileReadOnly}
-      onConfirm={onConfirm}
-      message={undefined}
-      confirmLabel={undefined}
-      cancelLabel={undefined}
-      confirmTestId={undefined}
-      cancelTestId={undefined}
-      focusOnOpen={undefined}
-    >
-      {children === undefined ? (
+  return renderPickerCustomOrNative({
+    ...props,
+    type: "navi_js",
+    standalone: true,
+    // No chevron, no clear cross, whatever variant the trigger is drawn in:
+    // both announce a value, and a question holds none.
+    picksNothing: true,
+    variant,
+    mode,
+    focusCapture,
+    openWhileReadOnly,
+    onConfirm,
+    message: undefined,
+    confirmLabel: undefined,
+    cancelLabel: undefined,
+    confirmTestId: undefined,
+    cancelTestId: undefined,
+    focusOnOpen: undefined,
+    children:
+      children === undefined ? (
         <PickerConfirmBody
           message={message}
           confirmLabel={confirmLabel}
@@ -145,9 +143,8 @@ export const PickerConfirmResolver = (props) => {
         />
       ) : (
         children
-      )}
-    </Next>
-  );
+      ),
+  });
 };
 
 const PickerConfirmBody = ({

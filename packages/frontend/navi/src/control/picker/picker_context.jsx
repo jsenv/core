@@ -112,3 +112,7 @@ export const usePickerState = () => {
   const { value, loading, interactive, readOnly } = context;
   return { value, loading, interactive, readOnly };
 };
+
+export const getPickerInput = (pickerEl) => {
+  return pickerEl.querySelector(".navi_picker_input");
+};

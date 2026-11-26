@@ -1,8 +1,8 @@
 import { useMemo } from "preact/hooks";
 
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { List } from "../../list/list.jsx";
+import { renderPickerCustomOrNative } from "../picker_custom.jsx";
 import { timeStringToSeconds } from "../time_helpers.js";
 
 /**
@@ -17,7 +17,6 @@ import { timeStringToSeconds } from "../time_helpers.js";
  *   <Picker type="navi_time" min="08:00" max="18:00" step="00:30" />
  */
 export const PickerNaviTime = (props) => {
-  const Next = useNextResolver();
   const { min = "00:00", max = "23:30", step } = props;
   // resolveInputProps has already run (PickerFirstResolver) and left navi_time
   // as written: what is handed on is a time input, whose step is in seconds.
@@ -28,8 +27,11 @@ export const PickerNaviTime = (props) => {
     [min, max, stepSeconds],
   );
 
-  return (
-    <Next {...props} type="time" step={hostStep}>
+  return renderPickerCustomOrNative({
+    ...props,
+    type: "time",
+    step: hostStep,
+    children: (
       <List selectable command="--navi-send">
         {slots.map((slot, i) => (
           <List.Item selectable key={slot} id={slot} index={i} value={slot}>
@@ -37,8 +39,8 @@ export const PickerNaviTime = (props) => {
           </List.Item>
         ))}
       </List>
-    </Next>
-  );
+    ),
+  });
 };
 
 const generateTimeSlots = (min, max, stepSeconds) => {

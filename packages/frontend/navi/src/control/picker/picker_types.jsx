@@ -12,8 +12,11 @@ import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { uiStateHoldsNothing } from "../ui_state_controller.js";
-import { asPickerOwnUI, usePickerContext } from "./picker_context.jsx";
-import { getPickerInput } from "./picker_custom.jsx";
+import {
+  asPickerOwnUI,
+  getPickerInput,
+  usePickerContext,
+} from "./picker_context.jsx";
 import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
 import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
 import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
@@ -21,42 +24,18 @@ import { DurationSvg } from "../../graphic/icons/duration_svg.jsx";
 import { FileSvg } from "../../graphic/icons/file_svg.jsx";
 import { PencilSvg } from "../../graphic/icons/pencil_svg.jsx";
 
-export const PickerTypeResolver = (props) => {
+// What a picker is drawn as on its face for the types navi draws itself — a
+// date, a color, the files it holds — once it is known whether it opens the
+// browser's picker or a popup of its own (see renderPickerCustomOrNative).
+// Called from the body of the resolver that decided it, rather than standing
+// as a step of the chain: every picker would otherwise render that step to
+// find out its type is not one of these. Its Next is the face itself.
+export const renderPickerType = (props) => {
+  const TypeResolver = PICKER_TYPE_RESOLVER_MAP.get(props.type);
+  if (TypeResolver) {
+    return renderResolver(TypeResolver, props);
+  }
   const Next = useNextResolver();
-
-  if (props.type === "color") {
-    return renderResolver(PickerColor, props);
-  }
-  if (props.type === "datetime") {
-    return renderResolver(PickerDatetime, props);
-  }
-  if (props.type === "date") {
-    return renderResolver(PickerDate, props);
-  }
-  if (props.type === "month") {
-    return renderResolver(PickerMonth, props);
-  }
-  if (props.type === "week") {
-    return renderResolver(PickerWeek, props);
-  }
-  if (props.type === "time") {
-    return renderResolver(PickerTime, props);
-  }
-  if (props.type === "duration") {
-    return renderResolver(PickerDuration, props);
-  }
-  if (props.type === "file") {
-    return renderResolver(PickerFile, props);
-  }
-  if (props.type === "text") {
-    return renderResolver(PickerText, props);
-  }
-  if (props.type === "array") {
-    return renderResolver(PickerArray, props);
-  }
-  if (props.type === "object") {
-    return renderResolver(PickerObject, props);
-  }
   return <Next {...props} />;
 };
 
@@ -497,3 +476,19 @@ export const PickerFileUI = /*#__PURE__*/ asPickerOwnUI(() => {
   const files = Array.isArray(value) ? value : [value];
   return files.map((file) => file.name).join(", ");
 });
+
+// Below every resolver it names: a Map rather than an object, so a type named
+// like an object's own property ("constructor") matches nothing.
+const PICKER_TYPE_RESOLVER_MAP = new Map([
+  ["color", PickerColor],
+  ["datetime", PickerDatetime],
+  ["date", PickerDate],
+  ["month", PickerMonth],
+  ["week", PickerWeek],
+  ["time", PickerTime],
+  ["duration", PickerDuration],
+  ["file", PickerFile],
+  ["text", PickerText],
+  ["array", PickerArray],
+  ["object", PickerObject],
+]);

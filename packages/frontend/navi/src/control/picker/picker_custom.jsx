@@ -40,10 +40,7 @@ import {
 } from "@jsenv/navi/src/layout/popup_busy.js";
 import { PopupTitleContext } from "@jsenv/navi/src/layout/popup_title.jsx";
 import { PopupValueContext } from "@jsenv/navi/src/layout/popup_value.js";
-import {
-  renderResolver,
-  useNextResolver,
-} from "@jsenv/navi/src/resolver/resolver.jsx";
+import { renderResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { interactionsDisputeThePress } from "../interaction/interactions.js";
 import { LONGPRESS_ATTRIBUTE } from "../interaction/interaction_press.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -67,7 +64,12 @@ import {
   ParentUIStateControllerContext,
   readStatesAtOpen,
 } from "../ui_state_controller.js";
-import { getPickerHostLabelId, pickerUIIsNaviOwn } from "./picker_context.jsx";
+import {
+  getPickerHostLabelId,
+  getPickerInput,
+  pickerUIIsNaviOwn,
+} from "./picker_context.jsx";
+import { renderPickerType } from "./picker_types.jsx";
 import { useGeneratedId } from "../../utils/use_generated_id.js";
 
 const css = /* css */ `
@@ -84,7 +86,7 @@ const css = /* css */ `
      the caller's popup props (popupBackgroundColor, dialogMaxWidth…) are not
      vars on the picker at all — a var on the picker inherits into everything
      the popup holds, and the pickers in there would read it as their own —
-     but props on the popup element, see PickerContentInsidePopup. */
+     but props on the popup element, see renderPickerContentInsidePopup. */
 
   /* callout: the content is docked in the picker between two opens (see
      PickerCalloutPopup), where it is not shown. */
@@ -183,7 +185,13 @@ const css = /* css */ `
   }
 `;
 
-export const PickerCustomResolver = (props) => {
+// The browser's own picker, or a popup of navi's: decided once the picker's
+// type is settled (see PickerFirstResolver in picker.jsx, and the confirm and
+// preset resolvers, which end here too). Called from the body of the resolver
+// that settles it rather than standing as a step of the chain: a page of
+// pickers would otherwise render one more component per picker, at every
+// render, for a decision that is a branch.
+export const renderPickerCustomOrNative = (props) => {
   import.meta.css = css;
 
   if (props.children === undefined) {
@@ -259,90 +267,86 @@ export const PickerCustomResolver = (props) => {
 };
 
 const PickerNative = (props) => {
-  const Next = useNextResolver();
-
-  return (
-    <Next
-      {...props}
-      // When the picker has its own action we want to run it when native "change" event occur (native picker dialog closes)
-      // not on every change of color while user is selecting a color for instance
-      // (it would cause too many calls and would likely not be what the user expects)
-      // (uiAction can be used to react live)
-      actionEvent={props.action ? "change" : undefined}
-      resetOnCancel
-      resetOnAbort
-      resetOnError
-      onnavi_request_open={(e) => {
-        const pickerEl = props.ref.current;
-        const pickerInput = getPickerInput(pickerEl);
-        if (!pickerInput) {
+  return renderPickerType({
+    ...props,
+    // When the picker has its own action we want to run it when native "change" event occur (native picker dialog closes)
+    // not on every change of color while user is selecting a color for instance
+    // (it would cause too many calls and would likely not be what the user expects)
+    // (uiAction can be used to react live)
+    actionEvent: props.action ? "change" : undefined,
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    onnavi_request_open: (e) => {
+      const pickerEl = props.ref.current;
+      const pickerInput = getPickerInput(pickerEl);
+      if (!pickerInput) {
+        e.preventDefault();
+        return;
+      }
+      dispatchRequestInteraction(pickerInput, {
+        event: e,
+        name: "navi_request_open to show native picker",
+        // No "read" intent here, unlike a picker holding a popup of its own
+        // (see PickerCustom): the browser's picker cannot be held read-only,
+        // whichever way its type falls. Where `readonly` applies (date, time,
+        // month, number…) the input is not mutable and showPicker() refuses
+        // it — there is nothing to open. Where it does not (color, file) the
+        // browser opens all the same and writes whatever is chosen straight
+        // into the input, which is read-only in name only. So a read-only
+        // native picker says why instead, on the trigger.
+        prevented: () => {
           e.preventDefault();
-          return;
-        }
-        dispatchRequestInteraction(pickerInput, {
-          event: e,
-          name: "navi_request_open to show native picker",
-          // No "read" intent here, unlike a picker holding a popup of its own
-          // (see PickerCustom): the browser's picker cannot be held read-only,
-          // whichever way its type falls. Where `readonly` applies (date, time,
-          // month, number…) the input is not mutable and showPicker() refuses
-          // it — there is nothing to open. Where it does not (color, file) the
-          // browser opens all the same and writes whatever is chosen straight
-          // into the input, which is read-only in name only. So a read-only
-          // native picker says why instead, on the trigger.
+        },
+        allowed: () => {
+          showNativePicker(findNativePicker(pickerEl), e);
+        },
+      });
+    },
+    eventReactionDefinitions: {
+      click: (e) => {
+        return {
+          name: "click to show native picker",
           prevented: () => {
             e.preventDefault();
           },
           allowed: () => {
-            showNativePicker(findNativePicker(pickerEl), e);
+            const pickerEl = props.ref.current;
+            const pickerInput = getPickerInput(pickerEl);
+            if (pickerInput.type === "color") {
+              // nothing to do, color picker whole surface is opening the picker
+            } else {
+              // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
+              showNativePicker(findNativePicker(pickerEl), e);
+            }
           },
-        });
-      }}
-      eventReactionDefinitions={{
-        click: (e) => {
-          return {
-            name: "click to show native picker",
-            prevented: () => {
-              e.preventDefault();
-            },
-            allowed: () => {
-              const pickerEl = props.ref.current;
-              const pickerInput = getPickerInput(pickerEl);
-              if (pickerInput.type === "color") {
-                // nothing to do, color picker whole surface is opening the picker
-              } else {
-                // other picker might not open the picker when clicking the input surface (only the calendar picker for instance would open)
-                showNativePicker(findNativePicker(pickerEl), e);
-              }
-            },
-          };
-        },
-        // A file picker's input holds the File and opens nothing by itself
-        // (see PickerFile in picker_types.jsx): Space and Enter open the
-        // chooser, as they would open a file input.
-        keyDown: (e) => {
-          if (e.key !== " " && e.key !== "Enter") {
-            return null;
-          }
-          const pickerEl = props.ref.current;
-          const chooser = findFileChooser(pickerEl);
-          if (!chooser) {
-            return null;
-          }
-          return {
-            name: "key to show file chooser",
-            prevented: () => {
-              e.preventDefault();
-            },
-            allowed: () => {
-              e.preventDefault();
-              showNativePicker(chooser, e);
-            },
-          };
-        },
-      }}
-    />
-  );
+        };
+      },
+      // A file picker's input holds the File and opens nothing by itself
+      // (see PickerFile in picker_types.jsx): Space and Enter open the
+      // chooser, as they would open a file input.
+      keyDown: (e) => {
+        if (e.key !== " " && e.key !== "Enter") {
+          return null;
+        }
+        const pickerEl = props.ref.current;
+        const chooser = findFileChooser(pickerEl);
+        if (!chooser) {
+          return null;
+        }
+        return {
+          name: "key to show file chooser",
+          prevented: () => {
+            e.preventDefault();
+          },
+          allowed: () => {
+            e.preventDefault();
+            showNativePicker(chooser, e);
+          },
+        };
+      },
+    },
+  });
 };
 
 const PickerCustom = (props) => {
@@ -421,7 +425,7 @@ const PickerCustom = (props) => {
   };
   // Consumed right here (useNavState's own defaultValue above) — not a
   // real DOM/Popup prop, so it must not travel any further down (would
-  // otherwise leak through PickerContentInsidePopup's own ...rest).
+  // otherwise leak through renderPickerContentInsidePopup's own ...rest).
   delete pickerProps.open;
   delete pickerProps.defaultOpen;
   delete pickerProps.openSignal;
@@ -455,6 +459,9 @@ const PickerCustom = (props) => {
   }
   // ref
   const popupRef = useRef(null);
+  // Set in the block below, read by the popup assembly at the end.
+  let popupBuiltReason;
+  let popupStandInProps;
   popupProps.ref = popupRef;
   // The `navi_request_confirm` a `--navi-confirm` dispatches right before its
   // `navi_request_close`: remembered here, answered once the popup has really
@@ -795,6 +802,26 @@ const PickerCustom = (props) => {
       (valueInPopup && isPickerValueReadAtMount(props, answersToGroup)
         ? "always"
         : MOUNT_DEFAULT);
+    // The popup stands in for itself until something needs it (see
+    // useControlledPopupStandIn): an agenda whose every case opens a sheet of
+    // its own is a picker per case, and would build a whole popup for each,
+    // at every render of the page, for openings that mostly never come.
+    // Needed from the start: open, its content wanted ahead of any opening,
+    // an `openSignal`, whose press preload listens on the popup element from
+    // the picker's mount (see useOpenPropsEffectOnOpenController). A callout
+    // never stands in: its dock is the whole of it (see PickerCalloutPopup).
+    [popupBuiltReason, popupStandInProps] = useControlledPopupStandIn(
+      openController,
+      {
+        ref: popupRef,
+        anchor: props.anchor || props.ref,
+        needed:
+          mode === "callout" ||
+          popupMount !== MOUNT_DEFAULT ||
+          Boolean(opened) ||
+          Boolean(openSignal),
+      },
+    );
     const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
       "requestValue":
@@ -841,13 +868,6 @@ const PickerCustom = (props) => {
       anchor: props.anchor || props.ref,
       openController,
       mount: popupMount,
-      // What needs the popup proper before anything opens it — until then it
-      // stands in for itself (see PickerPopup): an open state saying open,
-      // content wanted ahead of any opening, an `openSignal`, whose press
-      // preload listens on the popup element from the picker's mount (see
-      // useOpenPropsEffectOnOpenController).
-      needed:
-        popupMount !== MOUNT_DEFAULT || Boolean(opened) || Boolean(openSignal),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -1203,10 +1223,11 @@ const PickerCustom = (props) => {
     }
   }
 
-  return renderResolver(PickerContentInsidePopup, {
-    ...pickerProps,
-    mode,
-  });
+  return renderPickerContentInsidePopup(
+    { ...pickerProps, mode },
+    popupBuiltReason,
+    popupStandInProps,
+  );
 };
 
 // Whether something reads a picker's value before its popup has opened, as
@@ -1237,10 +1258,6 @@ const isPickerValueReadAtMount = (props, answersToGroup) => {
 // own hold (its `openOn`) is not "around" it, and has already stepped back.
 const isPressDisputedByHold = (pickerEl) =>
   Boolean(pickerEl?.parentElement?.closest(`[${LONGPRESS_ATTRIBUTE}]`));
-
-export const getPickerInput = (pickerEl) => {
-  return pickerEl.querySelector(".navi_picker_input");
-};
 
 // The <label>s naming a picker's trigger, by id. Read off the document: it is
 // the one place a label[for] and its control meet (navi's own Label carries an
@@ -1303,8 +1320,14 @@ const getPickerInputUIState = (pickerEl) => {
   return getUIStateFromElement(pickerInput);
 };
 
-const PickerContentInsidePopup = (props) => {
-  const Next = useNextResolver();
+// What the trigger is told and what its popup is given, split out of the
+// picker's props — called from PickerCustom's body: a step of its own would be
+// one more component per picker, at every render, for a split of props.
+const renderPickerContentInsidePopup = (
+  props,
+  popupBuiltReason,
+  popupStandInProps,
+) => {
   const {
     popupProps,
     children,
@@ -1377,7 +1400,7 @@ const PickerContentInsidePopup = (props) => {
     animationDuration,
     // mode="callout": what the callout says about what it holds, and paints
     // in its border and icon — "none" for a plain tooltip (see the callout
-    // defaults in PickerCustomResolver). And whether it wears a cross: without
+    // defaults in renderPickerCustomOrNative). And whether it wears a cross: without
     // one it still closes on Escape, a click outside, or a --navi-close of the
     // content's own.
     calloutStatus,
@@ -1403,188 +1426,182 @@ const PickerContentInsidePopup = (props) => {
     }
   }
 
-  return (
-    <Next
-      // A dialog in either mode: what a picker opens is content of the
-      // caller's, never a listbox (a selectable List is a group of radios or
-      // checkboxes). The popover says so with its role, below.
-      aria-haspopup="dialog"
-      navi-popover-mode={isPopover ? popoverMode : undefined}
-      {...rest}
-      // On popupProps already (see the picker's popup assembly); they mean
-      // nothing to the picker element.
-      mount={undefined}
-      onFocusOut={(e) => {
-        if (!isPopover || !closeOnFocusOut) {
-          return;
-        }
-        // Close when focus leaves the select entirely (not just moving between internal elements).
-        // relatedTarget is the element receiving focus; if it's inside the select or the popup, keep open.
-        const relatedTarget = e.relatedTarget;
-        const pickerEl = props.ref.current;
-        const popupEl = popupProps.ref.current;
-        const focusStaysInside =
-          (pickerEl && pickerEl.contains(relatedTarget)) ||
-          (popupEl && popupEl.contains(relatedTarget));
-        if (focusStaysInside) {
-          return;
-        }
-        dispatchRequestInteraction(pickerEl, {
-          event: e,
-          name: "blur",
-          category: "interaction",
-          allowed: () => {
-            popupProps.openController.requestClose(e, { isCancel: true });
-          },
-        });
-      }}
-    >
-      {isCallout ? (
-        <PickerCalloutPopup
-          {...popupProps}
-          pickerRef={props.ref}
-          testId={popupTestId}
-          status={calloutStatus}
-          icon={calloutIcon}
-          closeButton={calloutCloseButton}
-          closeByScroll={calloutCloseByScroll}
-          // Left unsaid, the callout's own default: no backdrop. It dims
-          // nothing, so the page looks as pressable as it did before.
-          backdrop={backdrop}
-          pressOutside={pressOutside}
-        >
-          <PopupModeContext.Provider value={mode}>
-            {/* A callout is read as its message: a title in there names
-                nothing, and certainly not a popup around the picker. */}
-            <PopupTitleContext.Provider value={null}>
-              {children}
-            </PopupTitleContext.Provider>
-          </PopupModeContext.Provider>
-        </PickerCalloutPopup>
-      ) : (
-        <PickerPopup
-          {...popupProps}
-          data-testid={popupTestId}
-          // What the trigger's aria-haspopup announces; a <dialog> says it
-          // for itself.
-          role={isPopover ? "dialog" : undefined}
-          aria-label={popupAriaLabel}
-          aria-labelledby={popupAriaLabelledBy}
-          aria-describedby={popupAriaDescribedBy}
-          openerAriaLabel={openerAriaLabel}
-          openerAriaLabelledBy={openerAriaLabelledBy}
-          // What the CSS above keys on: this picker's own popup, and no other
-          // popup below the picker.
-          data-picker-popup=""
-          backgroundColor={popupBackgroundColor}
-          borderRadius={
-            popupBorderRadius === undefined &&
-            isBorderRadiusAShape(props.borderRadius)
-              ? "var(--navi-popup-border-radius)"
-              : popupBorderRadius
-          }
-          boxShadow={popupBoxShadow}
-          borderWidth={isPopover ? undefined : dialogBorderWidth}
-          minWidth={
-            isPopover
-              ? popupWidthFitContent
-                ? undefined
-                : "var(--anchor-width, 0px)"
-              : dialogMinWidth
-          }
-          minHeight={isPopover ? undefined : dialogMinHeight}
-          // As wide as the trigger under dialogSizeFromAnchor: Dialog's own
-          // sizeFromAnchor is a floor, this is the ceiling. A dialogMaxWidth of
-          // the caller's still wins.
-          maxWidth={
-            isPopover
-              ? undefined
-              : dialogMaxWidth === undefined && dialogSizeFromAnchor
-                ? "var(--anchor-width)"
-                : dialogMaxWidth
-          }
-          maxHeight={isPopover ? popoverMaxHeight : dialogMaxHeight}
-          mode={mode}
-          layer={popupLayer}
-          animation={animation}
-          animationDuration={animationDuration}
-          positionArea={
-            isPopover
-              ? (positionArea ??
-                (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
-              : positionArea
-          }
-          marginWithAnchor={isPopover ? popoverSpacing : undefined}
-          marginWithContainer={
-            marginWithContainer === undefined && isPopover
-              ? popoverSpacing
-              : marginWithContainer
-          }
-          scrollCapture={scrollCapture}
-          pressOutside={pointerLock ? "capture" : pressOutside}
-          dragEffect={dragEffect}
-          backdrop={backdrop}
-          backdropVariant={backdropVariant}
-          backdropColor={backdropColor}
-          backdropFilter={backdropFilter}
-          focusCapture={isPopover ? focusCapture : undefined}
-          expand={isPopover ? undefined : dialogExpand}
-          expandX={isPopover ? undefined : dialogExpandX}
-          expandY={isPopover ? undefined : dialogExpandY}
-          dockedOnSmallTouchScreen={
-            isPopover ? undefined : dockedOnSmallTouchScreen
-          }
-          sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
-          // A popover lifts on its close only (animation={{ open, close:
-          // "lifting" }}), which is all these two are read for there.
-          lift={lift}
-          liftAnchor={liftAnchor}
-        >
-          {/* Let the popup content branch on the mode via usePopupMode(). */}
-          <PopupModeContext.Provider value={mode}>
+  let popup;
+  if (isCallout) {
+    popup = (
+      <PickerCalloutPopup
+        {...popupProps}
+        pickerRef={props.ref}
+        testId={popupTestId}
+        status={calloutStatus}
+        icon={calloutIcon}
+        closeButton={calloutCloseButton}
+        closeByScroll={calloutCloseByScroll}
+        // Left unsaid, the callout's own default: no backdrop. It dims
+        // nothing, so the page looks as pressable as it did before.
+        backdrop={backdrop}
+        pressOutside={pressOutside}
+      >
+        <PopupModeContext.Provider value={mode}>
+          {/* A callout is read as its message: a title in there names
+              nothing, and certainly not a popup around the picker. */}
+          <PopupTitleContext.Provider value={null}>
             {children}
-          </PopupModeContext.Provider>
-        </PickerPopup>
-      )}
-    </Next>
-  );
-};
-
-// What a picker opens stands in as one bare <dialog> until something needs it
-// (see useControlledPopupStandIn): an agenda whose every case opens a sheet of
-// its own is a picker per case, and would build a whole popup for each, at
-// every render of the page, for openings that mostly never come. The stand-in
-// carries what reaches a closed popup: the id the trigger's aria-controls and
-// a `commandfor` name, its test id, and the requests the trigger forwards to
-// it.
-const PickerPopup = ({ needed, ...props }) => {
-  const [builtReason, standInProps] = useControlledPopupStandIn(
-    props.openController,
-    { ref: props.ref, anchor: props.anchor, needed },
-  );
-  if (builtReason === null) {
-    return (
+          </PopupTitleContext.Provider>
+        </PopupModeContext.Provider>
+      </PickerCalloutPopup>
+    );
+  } else if (popupBuiltReason === null) {
+    // One bare <dialog> carrying what reaches a closed popup: the id the
+    // trigger's aria-controls and a `commandfor` name, its test id, and the
+    // requests the trigger forwards to it. The picker renders it in place of
+    // everything it wraps its popup in (see PickerButton): nothing in there
+    // has a reader until the popup is built.
+    popup = (
       <dialog
-        {...standInProps}
-        id={props.id}
-        data-testid={props["data-testid"]}
+        {...popupStandInProps}
+        id={popupProps.id}
+        data-testid={popupTestId}
         // navi's own events, heard through preact's on* props
         // eslint-disable-next-line react/no-unknown-property
-        onnavi_request_open={props.onnavi_request_open}
+        onnavi_request_open={popupProps.onnavi_request_open}
         // eslint-disable-next-line react/no-unknown-property
-        onnavi_request_close={props.onnavi_request_close}
+        onnavi_request_close={popupProps.onnavi_request_close}
         // eslint-disable-next-line react/no-unknown-property
-        onnavi_request_confirm={props.onnavi_request_confirm}
+        onnavi_request_confirm={popupProps.onnavi_request_confirm}
         // eslint-disable-next-line react/no-unknown-property
-        onnavi_open_press={props.onnavi_open_press}
+        onnavi_open_press={popupProps.onnavi_open_press}
       />
     );
+  } else {
+    popup = (
+      <Popup
+        {...popupProps}
+        // Built by a warm: the content comes with it, and stays, as a
+        // "from-first-open" content does once built.
+        mount={popupBuiltReason === "warm" ? "always" : popupProps.mount}
+        data-testid={popupTestId}
+        // What the trigger's aria-haspopup announces; a <dialog> says it
+        // for itself.
+        role={isPopover ? "dialog" : undefined}
+        aria-label={popupAriaLabel}
+        aria-labelledby={popupAriaLabelledBy}
+        aria-describedby={popupAriaDescribedBy}
+        openerAriaLabel={openerAriaLabel}
+        openerAriaLabelledBy={openerAriaLabelledBy}
+        // What the CSS above keys on: this picker's own popup, and no other
+        // popup below the picker.
+        data-picker-popup=""
+        backgroundColor={popupBackgroundColor}
+        borderRadius={
+          popupBorderRadius === undefined &&
+          isBorderRadiusAShape(props.borderRadius)
+            ? "var(--navi-popup-border-radius)"
+            : popupBorderRadius
+        }
+        boxShadow={popupBoxShadow}
+        borderWidth={isPopover ? undefined : dialogBorderWidth}
+        minWidth={
+          isPopover
+            ? popupWidthFitContent
+              ? undefined
+              : "var(--anchor-width, 0px)"
+            : dialogMinWidth
+        }
+        minHeight={isPopover ? undefined : dialogMinHeight}
+        // As wide as the trigger under dialogSizeFromAnchor: Dialog's own
+        // sizeFromAnchor is a floor, this is the ceiling. A dialogMaxWidth of
+        // the caller's still wins.
+        maxWidth={
+          isPopover
+            ? undefined
+            : dialogMaxWidth === undefined && dialogSizeFromAnchor
+              ? "var(--anchor-width)"
+              : dialogMaxWidth
+        }
+        maxHeight={isPopover ? popoverMaxHeight : dialogMaxHeight}
+        mode={mode}
+        layer={popupLayer}
+        animation={animation}
+        animationDuration={animationDuration}
+        positionArea={
+          isPopover
+            ? (positionArea ??
+              (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
+            : positionArea
+        }
+        marginWithAnchor={isPopover ? popoverSpacing : undefined}
+        marginWithContainer={
+          marginWithContainer === undefined && isPopover
+            ? popoverSpacing
+            : marginWithContainer
+        }
+        scrollCapture={scrollCapture}
+        pressOutside={pointerLock ? "capture" : pressOutside}
+        dragEffect={dragEffect}
+        backdrop={backdrop}
+        backdropVariant={backdropVariant}
+        backdropColor={backdropColor}
+        backdropFilter={backdropFilter}
+        focusCapture={isPopover ? focusCapture : undefined}
+        expand={isPopover ? undefined : dialogExpand}
+        expandX={isPopover ? undefined : dialogExpandX}
+        expandY={isPopover ? undefined : dialogExpandY}
+        dockedOnSmallTouchScreen={
+          isPopover ? undefined : dockedOnSmallTouchScreen
+        }
+        sizeFromAnchor={isPopover ? undefined : dialogSizeFromAnchor}
+        // A popover lifts on its close only (animation={{ open, close:
+        // "lifting" }}), which is all these two are read for there.
+        lift={lift}
+        liftAnchor={liftAnchor}
+      >
+        {/* Let the popup content branch on the mode via usePopupMode(). */}
+        <PopupModeContext.Provider value={mode}>
+          {children}
+        </PopupModeContext.Provider>
+      </Popup>
+    );
   }
-  // Built by a warm: the content comes with it, and stays, as a
-  // "from-first-open" content does once built.
-  return (
-    <Popup {...props} mount={builtReason === "warm" ? "always" : props.mount} />
-  );
+
+  return renderPickerType({
+    // A dialog in either mode: what a picker opens is content of the
+    // caller's, never a listbox (a selectable List is a group of radios or
+    // checkboxes). The popover says so with its role, below.
+    "aria-haspopup": "dialog",
+    "navi-popover-mode": isPopover ? popoverMode : undefined,
+    ...rest,
+    // On popupProps already (see the picker's popup assembly); they mean
+    // nothing to the picker element.
+    "mount": undefined,
+    "onFocusOut": (e) => {
+      if (!isPopover || !closeOnFocusOut) {
+        return;
+      }
+      // Close when focus leaves the select entirely (not just moving between internal elements).
+      // relatedTarget is the element receiving focus; if it's inside the select or the popup, keep open.
+      const relatedTarget = e.relatedTarget;
+      const pickerEl = props.ref.current;
+      const popupEl = popupProps.ref.current;
+      const focusStaysInside =
+        (pickerEl && pickerEl.contains(relatedTarget)) ||
+        (popupEl && popupEl.contains(relatedTarget));
+      if (focusStaysInside) {
+        return;
+      }
+      dispatchRequestInteraction(pickerEl, {
+        event: e,
+        name: "blur",
+        category: "interaction",
+        allowed: () => {
+          popupProps.openController.requestClose(e, { isCancel: true });
+        },
+      });
+    },
+    "children": popup,
+    // Read by PickerButton, which renders the stand-in alone.
+    "popupStandsIn": popupBuiltReason === null && !isCallout,
+  });
 };
 
 // One token per picker rather than per instance: a callout manager belongs to

@@ -1,7 +1,7 @@
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Button } from "../../input/button.jsx";
 import { InputTextual } from "../../input/input_textual.jsx";
+import { renderPickerCustomOrNative } from "../picker_custom.jsx";
 
 /**
  * PickerNaviMinute — a custom minute picker that opens a number input.
@@ -16,14 +16,16 @@ import { InputTextual } from "../../input/input_textual.jsx";
  *   <Picker type="navi_minute" min={15} max={300} step={15} value={90} />
  */
 export const PickerNaviMinute = (props) => {
-  const Next = useNextResolver();
   const { min, max, step, value } = props;
 
   // resolveInputProps has already run (PickerFirstResolver), so the type
   // handed on is one the picker renders as is — the text field a navi numeric
   // type resolves to, told what its value is.
-  return (
-    <Next {...props} type="text" navi-input-type="minute">
+  return renderPickerCustomOrNative({
+    ...props,
+    "type": "text",
+    "navi-input-type": "minute",
+    "children": (
       <Box flex="y" spacing="s" padding="s">
         <InputTextual
           type="number"
@@ -39,6 +41,6 @@ export const PickerNaviMinute = (props) => {
           <Button command="--navi-cancel">Annuler</Button>
         </Box>
       </Box>
-    </Next>
-  );
+    ),
+  });
 };

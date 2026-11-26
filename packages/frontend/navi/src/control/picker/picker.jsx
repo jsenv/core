@@ -9,7 +9,6 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import {
   createComponentResolver,
   renderResolver,
-  useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { MaxLinesContext } from "@jsenv/navi/src/text/max_lines_context.js";
 import { buttonI18n } from "@jsenv/navi/src/text/navi_i18n.js";
@@ -48,7 +47,7 @@ import {
   pickerUIIsNaviOwn,
   usePickerContext,
 } from "./picker_context.jsx";
-import { PickerCustomResolver } from "./picker_custom.jsx";
+import { renderPickerCustomOrNative } from "./picker_custom.jsx";
 import { PICKER_PRESET_RESOLVER_MAP } from "./picker_preset.jsx";
 import {
   PickerArrayUI,
@@ -60,7 +59,6 @@ import {
   PickerDurationUI,
   PickerFileUI,
   PickerTimeUI,
-  PickerTypeResolver,
   PickerWeekUI,
 } from "./picker_types.jsx";
 import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
@@ -1107,6 +1105,9 @@ const PickerButton = (props) => {
     // reads it (see usePickerContext). Set by PickerCustom, only while that
     // value lives in the popup.
     requestValue,
+    // `children` is the bare element the popup stands in as (see
+    // renderPickerContentInsidePopup): nothing to wrap it in.
+    popupStandsIn,
   } = props;
   // A word in a sentence is never truncated — and the clamp's overflow: hidden
   // would cut its dotted underline, which sits on the edge of the line box
@@ -1263,314 +1264,320 @@ const PickerButton = (props) => {
   };
 
   return (
-    /* Read-only crosses into everything the picker is made of: what it really
-       holds is drawn by controls of their own — in the popup, and on the façade
-       where an application puts its own affordances — and each of them refuses
-       once told, in the picker's words when it gave some (readOnlyMessage),
-       in its own otherwise. Said from the read-only state alone, never
-       from the busy one — an action running for a moment is not the same thing
-       as a value nobody may change. */
-    <ReadOnlyProvider
-      readOnly={readOnlyResolved}
-      readOnlyMessage={readOnlyMessageResolved}
+    <Box
+      // A word in a sentence (variant="text") sits in a <p>, where a <div> is
+      // not allowed: phrasing content there, block content elsewhere.
+      as={variant === "text" ? "span" : "div"}
+      ref={ref}
+      // The flow this element really has (.navi_picker is display:inline-flex).
+      // Left unsaid, Box reads a <div> as block and resolves alignX into a
+      // text-align — which is a different intention entirely (that one is the
+      // textAlign prop, placing the text INSIDE the value slot).
+      inline
+      flex="x"
+      baseClassName="navi_picker"
+      pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
+      data-variant={variant}
+      data-picks-nothing={picksNothing ? "" : undefined}
+      data-cta={cta ? "" : undefined}
+      data-icon={isIcon ? "" : undefined}
+      data-chevron={hasRightSlot ? bareChevron : undefined}
+      navi-picker=""
+      navi-single-line={isSingleLine ? "" : undefined}
+      navi-ui-custom={ui === "default" ? undefined : ""}
+      data-readonly-opens={readOnlyOpens ? "" : undefined}
+      {...pickerRemainingProps}
+      basePseudoState={basePseudoState}
+      styleCSSVars={PickerStyleCSSVars}
+      variant={undefined}
+      cta={undefined}
+      icon={undefined}
+      // The caller's own role goes onto the host, beside the name (see
+      // control_context.js): a role and a name on two different elements
+      // name nothing at all. What the trigger opens is said there too, and
+      // aria-haspopup with it. aria-expanded stays here as well: commands.js
+      // and the CSS read the open state off the root (see
+      // expandableRepeatedBy in commands.js).
+      role={undefined}
+      aria-haspopup={undefined}
+      rightSlotIcon={undefined}
+      rightSlotIconSize={undefined}
+      rightSlot={undefined}
+      chevron={undefined}
+      clearConfirm={undefined}
+      picksNothing={undefined}
+      openWhileReadOnly={undefined}
+      ui={undefined}
+      maxLines={undefined}
+      error={undefined}
+      dayLabel={undefined}
+      loadingOutline={undefined}
+      loadingOutlineInset={undefined}
+      requestValue={undefined}
+      popupStandsIn={undefined}
+      // This wrapper will receive keyboard event bubbling from the picker popup content
+      // we re-dispatch on the input (to get escape to close for instance)
+      onKeyDown={inputProps.onKeyDown}
+      // in case request open/close (or the press announcing an open) are
+      // dispatched on the control root -> redispatch them to the host
+      onnavi_request_open={inputProps.onnavi_request_open}
+      onnavi_request_close={inputProps.onnavi_request_close}
+      onnavi_open_press={inputProps.onnavi_open_press}
+      onnavi_request_select={onRequestSelect}
+      onnavi_request_unselect={onRequestUnselect}
     >
-      <Box
-        // A word in a sentence (variant="text") sits in a <p>, where a <div> is
-        // not allowed: phrasing content there, block content elsewhere.
-        as={variant === "text" ? "span" : "div"}
-        ref={ref}
-        // The flow this element really has (.navi_picker is display:inline-flex).
-        // Left unsaid, Box reads a <div> as block and resolves alignX into a
-        // text-align — which is a different intention entirely (that one is the
-        // textAlign prop, placing the text INSIDE the value slot).
-        inline
-        flex="x"
-        baseClassName="navi_picker"
-        pseudoClasses={PICKER_BUTTON_PSEUDO_CLASSES}
-        data-variant={variant}
-        data-picks-nothing={picksNothing ? "" : undefined}
-        data-cta={cta ? "" : undefined}
-        data-icon={isIcon ? "" : undefined}
-        data-chevron={hasRightSlot ? bareChevron : undefined}
-        navi-picker=""
-        navi-single-line={isSingleLine ? "" : undefined}
-        navi-ui-custom={ui === "default" ? undefined : ""}
-        data-readonly-opens={readOnlyOpens ? "" : undefined}
-        {...pickerRemainingProps}
-        basePseudoState={basePseudoState}
-        styleCSSVars={PickerStyleCSSVars}
-        variant={undefined}
-        cta={undefined}
-        icon={undefined}
-        // The caller's own role goes onto the host, beside the name (see
-        // control_context.js): a role and a name on two different elements
-        // name nothing at all. What the trigger opens is said there too, and
-        // aria-haspopup with it. aria-expanded stays here as well: commands.js
-        // and the CSS read the open state off the root (see
-        // expandableRepeatedBy in commands.js).
-        role={undefined}
-        aria-haspopup={undefined}
-        rightSlotIcon={undefined}
-        rightSlotIconSize={undefined}
-        rightSlot={undefined}
-        chevron={undefined}
-        clearConfirm={undefined}
-        picksNothing={undefined}
-        openWhileReadOnly={undefined}
-        ui={undefined}
-        maxLines={undefined}
-        error={undefined}
-        dayLabel={undefined}
-        loadingOutline={undefined}
-        loadingOutlineInset={undefined}
-        requestValue={undefined}
-        // This wrapper will receive keyboard event bubbling from the picker popup content
-        // we re-dispatch on the input (to get escape to close for instance)
-        onKeyDown={inputProps.onKeyDown}
-        // in case request open/close (or the press announcing an open) are
-        // dispatched on the control root -> redispatch them to the host
-        onnavi_request_open={inputProps.onnavi_request_open}
-        onnavi_request_close={inputProps.onnavi_request_close}
-        onnavi_open_press={inputProps.onnavi_open_press}
-        onnavi_request_select={onRequestSelect}
-        onnavi_request_unselect={onRequestUnselect}
+      <span
+        className="navi_picker_box"
+        style={
+          hangingChevronSize === undefined
+            ? undefined
+            : { "--x-picker-chevron-size": hangingChevronSize }
+        }
       >
-        <span
-          className="navi_picker_box"
-          style={
-            hangingChevronSize === undefined
-              ? undefined
-              : { "--x-picker-chevron-size": hangingChevronSize }
-          }
-        >
-          <PickerContext.Provider value={pickerContext}>
-            {variant === "headless" ? null : (
-              <LoadingOutline
-                loading={loadingOutline === "custom" ? false : loading}
-                color="var(--picker-loader-color)"
-                inset={loadingOutlineInset}
-              />
-            )}
-            <PickerInput
-              role={hostRole}
-              aria-haspopup={props["aria-haspopup"]}
-              aria-expanded={props["aria-expanded"]}
-              aria-labelledby={hostLabelId}
-              tabIndex={variant === "headless" ? -1 : undefined}
-              aria-hidden={variant === "headless" ? "true" : undefined}
-              {...inputProps}
-              // eslint-disable-next-line react/no-children-prop
-              children={undefined} // we will render children into the div
-              ui={ui}
-              onnavi_request_select={onRequestSelect}
-              onnavi_request_unselect={onRequestUnselect}
-              onCopy={(e) => {
-                const pickerEl = ref.current;
-                if (isWithinPickerContent(e.target, pickerEl)) {
-                  return;
-                }
-                const uiState = uiStateController.uiState;
-                if (uiState === undefined) {
-                  return;
-                }
-                e.preventDefault();
-                const displayText =
-                  pickerEl.querySelector(".navi_picker_value")?.textContent ??
-                  String(uiState);
-                e.clipboardData.setData("text/plain", displayText);
-                e.clipboardData.setData(
-                  "application/x-navi",
-                  JSON.stringify(uiState),
-                );
-              }}
-              onCut={(e) => {
-                const pickerEl = ref.current;
-                if (isWithinPickerContent(e.target, pickerEl)) {
-                  return;
-                }
-                const uiState = uiStateController.uiState;
-                if (uiState === undefined) {
-                  return;
-                }
-                // the copy part don't need control to be interactable
-                const displayText =
-                  pickerEl.querySelector(".navi_picker_value")?.textContent ??
-                  String(uiState);
-                e.clipboardData.setData("text/plain", displayText);
-                e.clipboardData.setData(
-                  "application/x-navi",
-                  JSON.stringify(uiState),
-                );
-                e.preventDefault();
-                // A picker that asks before its cross clears anything is not
-                // emptied by a keystroke without the question: the cut copies,
-                // and the value stays.
-                if (clearConfirm !== undefined) {
-                  return;
-                }
-                // the clear ui state part need control to be interactable
-                dispatchRequestInteraction(pickerEl, {
-                  event: e,
-                  name: "cut",
-                  allowed: () => {
-                    dispatchRequestClearUIState(inputRef.current, e);
-                    sendClosedPickerChange(inputRef.current, {
-                      event: e,
-                      name: "cut",
-                    });
-                  },
-                });
-              }}
-              onPaste={(e) => {
-                const pickerEl = ref.current;
-                if (isWithinPickerContent(e.target, pickerEl)) {
-                  // Don't intercept inside the picker popup content.
-                  return;
-                }
-                const naviData = e.clipboardData.getData("application/x-navi");
-                let pasteValue;
-                if (naviData) {
-                  try {
-                    pasteValue = JSON.parse(naviData);
-                  } catch {
-                    pasteValue = naviData;
-                  }
-                } else {
-                  pasteValue = e.clipboardData.getData("text/plain");
-                }
-                dispatchRequestInteraction(pickerEl, {
-                  event: e,
-                  name: "paste",
-                  allowed: () => {
-                    dispatchRequestSetUIState(inputRef.current, pasteValue, {
-                      event: e,
-                    });
-                    sendClosedPickerChange(inputRef.current, {
-                      event: e,
-                      name: "paste",
-                    });
-                  },
-                });
-                e.preventDefault();
-              }}
+        <PickerContext.Provider value={pickerContext}>
+          {variant === "headless" ? null : (
+            <LoadingOutline
+              loading={loadingOutline === "custom" ? false : loading}
+              color="var(--picker-loader-color)"
+              inset={loadingOutlineInset}
             />
-            {variant === "headless" || ui === "default" ? null : (
-              <Text
-                className="navi_picker_value"
-                // Only when it names the trigger (see hostLabelId above).
-                id={hostLabelId}
-                // Tells the caller's own drawing of the control from the value
-                // the picker draws itself, so each is written on its own line
-                // (see .navi_picker_value in the CSS above).
-                data-picker-facade={
-                  ui === undefined
-                    ? undefined
-                    : typeof ui === "string" ||
-                        typeof ui === "number" ||
-                        drawsLabel
-                      ? "label"
-                      : "drawing"
+          )}
+          <PickerInput
+            role={hostRole}
+            aria-haspopup={props["aria-haspopup"]}
+            aria-expanded={props["aria-expanded"]}
+            aria-labelledby={hostLabelId}
+            tabIndex={variant === "headless" ? -1 : undefined}
+            aria-hidden={variant === "headless" ? "true" : undefined}
+            {...inputProps}
+            // eslint-disable-next-line react/no-children-prop
+            children={undefined} // we will render children into the div
+            ui={ui}
+            onnavi_request_select={onRequestSelect}
+            onnavi_request_unselect={onRequestUnselect}
+            onCopy={(e) => {
+              const pickerEl = ref.current;
+              if (isWithinPickerContent(e.target, pickerEl)) {
+                return;
+              }
+              const uiState = uiStateController.uiState;
+              if (uiState === undefined) {
+                return;
+              }
+              e.preventDefault();
+              const displayText =
+                pickerEl.querySelector(".navi_picker_value")?.textContent ??
+                String(uiState);
+              e.clipboardData.setData("text/plain", displayText);
+              e.clipboardData.setData(
+                "application/x-navi",
+                JSON.stringify(uiState),
+              );
+            }}
+            onCut={(e) => {
+              const pickerEl = ref.current;
+              if (isWithinPickerContent(e.target, pickerEl)) {
+                return;
+              }
+              const uiState = uiStateController.uiState;
+              if (uiState === undefined) {
+                return;
+              }
+              // the copy part don't need control to be interactable
+              const displayText =
+                pickerEl.querySelector(".navi_picker_value")?.textContent ??
+                String(uiState);
+              e.clipboardData.setData("text/plain", displayText);
+              e.clipboardData.setData(
+                "application/x-navi",
+                JSON.stringify(uiState),
+              );
+              e.preventDefault();
+              // A picker that asks before its cross clears anything is not
+              // emptied by a keystroke without the question: the cut copies,
+              // and the value stays.
+              if (clearConfirm !== undefined) {
+                return;
+              }
+              // the clear ui state part need control to be interactable
+              dispatchRequestInteraction(pickerEl, {
+                event: e,
+                name: "cut",
+                allowed: () => {
+                  dispatchRequestClearUIState(inputRef.current, e);
+                  sendClosedPickerChange(inputRef.current, {
+                    event: e,
+                    name: "cut",
+                  });
+                },
+              });
+            }}
+            onPaste={(e) => {
+              const pickerEl = ref.current;
+              if (isWithinPickerContent(e.target, pickerEl)) {
+                // Don't intercept inside the picker popup content.
+                return;
+              }
+              const naviData = e.clipboardData.getData("application/x-navi");
+              let pasteValue;
+              if (naviData) {
+                try {
+                  pasteValue = JSON.parse(naviData);
+                } catch {
+                  pasteValue = naviData;
                 }
-                // A placeholder is the picker saying "nothing here yet" about
-                // the value navi draws — the default rendering, or the one a
-                // typed picker installs for itself. A button's label is not
-                // that, however empty the picker behind it is, and neither is a
-                // caller's own "ui": an empty value may be exactly what the
-                // caller is drawing there ("no filter", "anywhere"), so how it
-                // looks empty stays theirs (documented on the ui prop below).
-                navi-placeholder={
-                  (ui === undefined || pickerUIIsNaviOwn(ui)) &&
-                  !drawnAsButton &&
-                  variant !== "text" &&
-                  uiStateHoldsNothing(value)
-                    ? ""
-                    : undefined
-                }
-                maxLines={maxLines}
+              } else {
+                pasteValue = e.clipboardData.getData("text/plain");
+              }
+              dispatchRequestInteraction(pickerEl, {
+                event: e,
+                name: "paste",
+                allowed: () => {
+                  dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                    event: e,
+                  });
+                  sendClosedPickerChange(inputRef.current, {
+                    event: e,
+                    name: "paste",
+                  });
+                },
+              });
+              e.preventDefault();
+            }}
+          />
+          {variant === "headless" || ui === "default" ? null : (
+            <Text
+              className="navi_picker_value"
+              // Only when it names the trigger (see hostLabelId above).
+              id={hostLabelId}
+              // Tells the caller's own drawing of the control from the value
+              // the picker draws itself, so each is written on its own line
+              // (see .navi_picker_value in the CSS above).
+              data-picker-facade={
+                ui === undefined
+                  ? undefined
+                  : typeof ui === "string" ||
+                      typeof ui === "number" ||
+                      drawsLabel
+                    ? "label"
+                    : "drawing"
+              }
+              // A placeholder is the picker saying "nothing here yet" about
+              // the value navi draws — the default rendering, or the one a
+              // typed picker installs for itself. A button's label is not
+              // that, however empty the picker behind it is, and neither is a
+              // caller's own "ui": an empty value may be exactly what the
+              // caller is drawing there ("no filter", "anywhere"), so how it
+              // looks empty stays theirs (documented on the ui prop below).
+              navi-placeholder={
+                (ui === undefined || pickerUIIsNaviOwn(ui)) &&
+                !drawnAsButton &&
+                variant !== "text" &&
+                uiStateHoldsNothing(value)
+                  ? ""
+                  : undefined
+              }
+              maxLines={maxLines}
+            >
+              <PickerOwnContent
+                readOnly={faceReadOnly}
+                readOnlyMessage={faceReadOnlyMessage}
               >
-                <PickerOwnContent
-                  readOnly={faceReadOnly}
-                  readOnlyMessage={faceReadOnlyMessage}
-                >
-                  {/* For what the picker cannot clamp itself: a <BadgeList>
+                {/* For what the picker cannot clamp itself: a <BadgeList>
                     wraps flex rows, which line-clamp never sees. */}
-                  <MaxLinesContext.Provider value={maxLines}>
-                    {ui === undefined ? (
-                      isIcon ? (
-                        // An icon picker draws no value, so there is no slot
-                        // beside it either — the icon that would have sat in
-                        // that slot IS the trigger, and a caller's own `ui`
-                        // replaces it like any other.
-                        <Icon size={rightSlotIconSize} lineOverflow="allow">
-                          {rightSlotIcon === undefined ? (
-                            <ChevronDownSvg />
-                          ) : (
-                            rightSlotIcon
-                          )}
-                        </Icon>
-                      ) : (
-                        <PickerDefaultUI />
-                      )
-                    ) : UIComponent ? (
-                      // Told what the picker HOLDS — the value it just closed
-                      // on, before the server has said anything — so a façade
-                      // shows the answer at once, and the wait with it. The
-                      // same state usePickerState() hands an element (see the
-                      // `ui` doc).
-                      <UIComponent
-                        value={value}
-                        loading={loading}
-                        interactive={interactive}
-                      />
+                <MaxLinesContext.Provider value={maxLines}>
+                  {ui === undefined ? (
+                    isIcon ? (
+                      // An icon picker draws no value, so there is no slot
+                      // beside it either — the icon that would have sat in
+                      // that slot IS the trigger, and a caller's own `ui`
+                      // replaces it like any other.
+                      <Icon size={rightSlotIconSize} lineOverflow="allow">
+                        {rightSlotIcon === undefined ? (
+                          <ChevronDownSvg />
+                        ) : (
+                          rightSlotIcon
+                        )}
+                      </Icon>
                     ) : (
-                      ui
-                    )}
-                  </MaxLinesContext.Provider>
-                </PickerOwnContent>
-              </Text>
-            )}
-            {hasRightSlot ? (
-              <span className="navi_picker_right_slot">
-                <PickerOwnContent
-                  readOnly={faceReadOnly}
-                  readOnlyMessage={faceReadOnlyMessage}
-                >
-                  {clearable && pickerHasSomethingToClear(pickerContext) ? (
-                    <PickerClear size={rightSlotIconSize} />
-                  ) : rightSlot === undefined ? (
-                    // lineOverflow: what sits in the slot is an affordance, not a
-                    // character — a caller asking for a bigger one wants it bigger,
-                    // not capped at the height of the line it sits on
-                    <Icon size={rightSlotIconSize} lineOverflow="allow">
-                      {rightSlotIcon === undefined ? (
-                        <ChevronDownSvg />
-                      ) : (
-                        rightSlotIcon
-                      )}
-                    </Icon>
+                      <PickerDefaultUI />
+                    )
+                  ) : UIComponent ? (
+                    // Told what the picker HOLDS — the value it just closed
+                    // on, before the server has said anything — so a façade
+                    // shows the answer at once, and the wait with it. The
+                    // same state usePickerState() hands an element (see the
+                    // `ui` doc).
+                    <UIComponent
+                      value={value}
+                      loading={loading}
+                      interactive={interactive}
+                    />
                   ) : (
-                    rightSlot
+                    ui
                   )}
-                </PickerOwnContent>
-              </span>
-            ) : null}
-          </PickerContext.Provider>
-        </span>
-        <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
-          {/* The attribute is what tells "inside this picker's popup" from
-              "on its façade" — read by this picker's own press handling and by
-              the command resolution in control_dom.js. */}
-          <ContentTag className="navi_picker_content" data-picker-content="">
-            {/* What the popup draws reads the value held right now too, the
-                draft included: a row saying it is the one chosen, a preview,
-                a Picker.Clear in the sheet. */}
-            <PickerContext.Provider value={pickerContext}>
-              {children}
-            </PickerContext.Provider>
-          </ContentTag>
-        </ControlFacadeChildrenWrapper>
-      </Box>
-    </ReadOnlyProvider>
+                </MaxLinesContext.Provider>
+              </PickerOwnContent>
+            </Text>
+          )}
+          {hasRightSlot ? (
+            <span className="navi_picker_right_slot">
+              <PickerOwnContent
+                readOnly={faceReadOnly}
+                readOnlyMessage={faceReadOnlyMessage}
+              >
+                {clearable && pickerHasSomethingToClear(pickerContext) ? (
+                  <PickerClear size={rightSlotIconSize} />
+                ) : rightSlot === undefined ? (
+                  // lineOverflow: what sits in the slot is an affordance, not a
+                  // character — a caller asking for a bigger one wants it bigger,
+                  // not capped at the height of the line it sits on
+                  <Icon size={rightSlotIconSize} lineOverflow="allow">
+                    {rightSlotIcon === undefined ? (
+                      <ChevronDownSvg />
+                    ) : (
+                      rightSlotIcon
+                    )}
+                  </Icon>
+                ) : (
+                  rightSlot
+                )}
+              </PickerOwnContent>
+            </span>
+          ) : null}
+        </PickerContext.Provider>
+      </span>
+      {popupStandsIn ? (
+        children
+      ) : (
+        /* Read-only crosses into everything the picker is made of: what it
+             really holds is drawn by controls of their own — in the popup,
+             and on the façade where an application puts its own affordances
+             (see PickerOwnContent) — and each of them refuses once told, in
+             the picker's words when it gave some (readOnlyMessage), in its own
+             otherwise. Said from the read-only state alone, never from the
+             busy one — an action running for a moment is not the same thing as
+             a value nobody may change. */
+        <ReadOnlyProvider
+          readOnly={readOnlyResolved}
+          readOnlyMessage={readOnlyMessageResolved}
+        >
+          <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
+            {/* The attribute is what tells "inside this picker's popup" from
+                  "on its façade" — read by this picker's own press handling and
+                  by the command resolution in control_dom.js. */}
+            <ContentTag className="navi_picker_content" data-picker-content="">
+              {/* What the popup draws reads the value held right now too,
+                    the draft included: a row saying it is the one chosen, a
+                    preview, a Picker.Clear in the sheet. */}
+              <PickerContext.Provider value={pickerContext}>
+                {children}
+              </PickerContext.Provider>
+            </ContentTag>
+          </ControlFacadeChildrenWrapper>
+        </ReadOnlyProvider>
+      )}
+    </Box>
   );
 };
 /**
@@ -1930,17 +1937,22 @@ const PickerDefaultUI = () => {
 // (confirm), a preset drawing (navi_time, navi_minute). Reached from the head
 // of the chain for those types only, rather than standing as steps in every
 // picker's chain: a page of pickers would otherwise run them, at every render
-// of each, to find out the type is not theirs.
+// of each, to find out the type is not theirs. Each ends where every other
+// picker goes from here (renderPickerCustomOrNative).
 const PICKER_TYPE_RESOLVER_MAP = new Map([
   ["confirm", PickerConfirmResolver],
   ...PICKER_PRESET_RESOLVER_MAP,
 ]);
 
-// Before a type's own resolver, so a preset reads the min/max/step a bound
-// signal fills in (resolveInputProps); a preset type therefore has no row in
-// NAVI_TYPE_DEFAULTS (resolve_input_props.js).
+// Two steps, the head and the face: what comes between — the type that turns
+// into another picker, the browser's picker or a popup of navi's, the drawing
+// of a typed value — is decided by functions called from the head's body, each
+// rendering the resolver it picks with `renderResolver`. A step that only
+// routes is one more component per picker at every render (see resolver.jsx).
+// resolveInputProps comes first, so a preset reads the min/max/step a bound
+// signal fills in; a preset type therefore has no row in NAVI_TYPE_DEFAULTS
+// (resolve_input_props.js).
 const PickerFirstResolver = (props) => {
-  const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   resolveInputProps(props, { controlType: "picker" });
@@ -1949,11 +1961,11 @@ const PickerFirstResolver = (props) => {
   if (TypeResolver) {
     return renderResolver(TypeResolver, props);
   }
-  return <Next {...props} />;
+  return renderPickerCustomOrNative(props);
 };
 
 // Every picker type is resolved into one of these before it gets here (see
-// PickerTypeResolver and resolveInputProps): a native input type, or navi_js
+// renderPickerType and resolveInputProps): a native input type, or navi_js
 // for the ones whose value is a whole object. Anything else is a type nobody
 // implements — the picker then behaves as a plain text one, silently, and an
 // object value reaches the DOM as "[object Object]".
@@ -2105,8 +2117,6 @@ const warnOnUnknownPickerType = (props) => {
 
 const PickerResolved = /*#__PURE__*/ createComponentResolver([
   PickerFirstResolver,
-  PickerCustomResolver,
-  PickerTypeResolver,
   PickerButton,
 ]);
 

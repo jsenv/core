@@ -2100,6 +2100,11 @@ const useInteractiveProps = (
     // often already null by then, and the labels subscribed under that id would
     // stay told about a control that no longer exists.
     const publishedIdRef = useRef(null);
+    // The labels last told about this control are the ones told it is gone:
+    // asked again at unmount, the DOM would scan the document once more per
+    // control (see getAssociatedLabels), and a page of controls leaving
+    // together pays it once each.
+    const toldLabelsRef = useRef(NO_LABELS);
     useLayoutEffect(() => {
       const element = ref.current;
       if (!element) {
@@ -2113,7 +2118,9 @@ const useInteractiveProps = (
         required: requiredResolved,
         nameOn,
       };
-      for (const label of getAssociatedLabels(element)) {
+      const labels = getAssociatedLabels(element);
+      toldLabelsRef.current = labels;
+      for (const label of labels) {
         label.dispatchEvent(
           new CustomEvent("navi_control_state", { detail: controlState }),
         );
@@ -2123,11 +2130,8 @@ const useInteractiveProps = (
     }, [disabledResolved, readOnlyResolved, requiredResolved, ref]);
     useLayoutEffect(() => {
       return () => {
-        const element = ref.current;
-        if (element) {
-          for (const label of getAssociatedLabels(element)) {
-            label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
-          }
+        for (const label of toldLabelsRef.current) {
+          label.dispatchEvent(new CustomEvent("navi_control_disconnected"));
         }
         unpublishControlStateToLabels(publishedIdRef.current);
       };
@@ -2648,9 +2652,29 @@ const isCheckableInput = (controlType, typeProp) =>
 // pointing at a native form element. Everything else — a label[for] on a
 // non-native control — goes through control_label_state.js instead, which knows
 // the pairing without asking the document for it.
+// `element.labels` is answered by scanning the element's whole tree, per
+// control, and a page mounting a hundred controls scans it a hundred times.
+// The <label>s of a document are kept by the browser until its DOM changes, and
+// a commit's layout effects all run on the same DOM: the ones naming this
+// control (`label.control`, which is what `labels` is made of) are found among
+// those few instead.
+const NO_LABELS = [];
 const getAssociatedLabels = (element) => {
   if (!element || !element.labels) {
-    return [];
+    return NO_LABELS;
   }
-  return Array.from(element.labels);
+  const root = element.getRootNode();
+  if (root.nodeType !== Node.DOCUMENT_NODE) {
+    return Array.from(element.labels);
+  }
+  let labels = NO_LABELS;
+  for (const label of root.getElementsByTagName("label")) {
+    if (label.control === element) {
+      if (labels === NO_LABELS) {
+        labels = [];
+      }
+      labels.push(label);
+    }
+  }
+  return labels;
 };

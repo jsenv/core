@@ -1,7 +1,7 @@
 import { createElement } from "preact";
 
 /**
- * Creates a renderComponent function that passes props through a chain of resolvers.
+ * Creates a component that passes props through a chain of resolvers.
  * Each resolver is a component function rendered in sequence (hooks are allowed).
  * To pass through to the next resolver, call useNextResolver() and render the
  * returned Next component with the desired props.
@@ -12,9 +12,11 @@ import { createElement } from "preact";
  * from useNextResolver() indicating it is terminal.
  *
  * Usage:
- *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
- *   // Then inside a component render:
- *   renderButton(props)
+ *   const Button = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
+ *   <Button {...props} />
+ *
+ * The component is the first step's runner itself: a wrapper rendering it
+ * would be one more component per instance, for nothing.
  *
  * A chain step is one component: a runner, defined once per position, whose
  * render CALLS its resolver's body rather than rendering it as a child. The
@@ -52,10 +54,8 @@ export const createComponentResolver = (resolvers, { pure } = {}) => {
     runners.push(Runner);
   }
   const FirstRunner = runners[0];
-  const renderComponent = (props) => <FirstRunner {...props} />;
-
   if (!pure) {
-    return renderComponent;
+    return FirstRunner;
   }
   // The chain does not run again for props that say the same thing. The
   // signals integration already promises this for any component that READS a
@@ -74,7 +74,7 @@ export const createComponentResolver = (resolvers, { pure } = {}) => {
   // it to the element the caller was reaching for.
   function PureRenderComponent(props) {
     this.shouldComponentUpdate = pureShouldComponentUpdate;
-    return renderComponent(props);
+    return <FirstRunner {...props} />;
   }
   return PureRenderComponent;
 };
