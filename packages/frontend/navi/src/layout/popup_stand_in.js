@@ -15,16 +15,30 @@
  *
  * Nothing about where the popup goes is needed at rest: a popover reads its
  * anchor at the opening, from the request.
+ *
+ * A popup whose open state its owner holds — a Picker, which hands the popup
+ * its own open controller — stands in the same way (useControlledPopupStandIn):
+ * a list of cases that each open a sheet is one picker per case. Opening goes
+ * through that controller rather than through a request on the element, so the
+ * controller is what builds it: `open()` renders the popup proper first, and
+ * the content is then built for that opening as it would have been anyway (see
+ * popup_content_mount.js). The intent that warms a closed popup's content
+ * warms one standing in the same way, and builds both: a press on what opens
+ * it, a pointer entering its anchor, focus landing there, or something reading
+ * the content while closed (`buildContent`).
  */
 
 import { dispatchCustomEvent } from "@jsenv/dom";
 import { computed } from "@preact/signals";
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { preloadState } from "../nav/route.js";
 import { flushSyncRendering } from "../utils/flush_sync_rendering.js";
 import { readOpened, readOpenValue } from "./open_controller.js";
-import { requestBuildOnPress } from "./popup_content_mount.js";
+import {
+  requestBuildOnPress,
+  warmOnAnchorIntent,
+} from "./popup_content_mount.js";
 
 /**
  * @returns {[null|"mount"|"interaction"|"request"|"press", {current: Element}, object]}
@@ -111,6 +125,92 @@ export const usePopupStandIn = (props) => {
     },
   };
   return [builtRef.current, popupRef, standInProps];
+};
+
+/**
+ * The stand-in of a popup whose owner holds its open controller (see the top
+ * comment).
+ *
+ * @param {object} openController
+ * @param {{ ref: {current: Element}, anchor?: any, needed: boolean }} options
+ *   `needed`: the owner needs the popup proper now — it is open, or its
+ *   content is wanted ahead of any opening; once said, the popup stays built.
+ * @returns {[null|"needed"|"open"|"warm", object]} Why the popup proper
+ *   exists (`null` while it stands in; "warm" built its content along with
+ *   it), and the props of the stand-in element.
+ */
+export const useControlledPopupStandIn = (
+  openController,
+  { ref, anchor, needed },
+) => {
+  const builtRef = useRef(null);
+  if (builtRef.current === null && needed) {
+    builtRef.current = "needed";
+  }
+  const [, setBuildCount] = useState(0);
+  const pressWarmRef = useRef(null);
+  const build = (reason) => {
+    if (builtRef.current === null) {
+      builtRef.current = reason;
+      pressWarmRef.current?.();
+      pressWarmRef.current = null;
+    }
+    setBuildCount((count) => count + 1);
+  };
+  const standingIn = builtRef.current === null;
+  if (standingIn) {
+    // Rendered before it returns, even when a warm already asked for the
+    // build and its render is still queued: the opening reads the popup
+    // proper right after.
+    openController.buildPopup = () => {
+      flushSyncRendering(() => {
+        build("open");
+      });
+    };
+    // The popup proper assigns its own once rendered (see
+    // popup_content_mount.js), in renders this one is not always part of:
+    // assigned here only while standing in.
+    openController.buildContent = () => {
+      build("warm");
+    };
+    openController.onOpeningPress = (openPressEvent) => {
+      if (pressWarmRef.current) {
+        return;
+      }
+      pressWarmRef.current = requestBuildOnPress(openPressEvent, {
+        onBuild: () => {
+          pressWarmRef.current = null;
+          build("warm");
+        },
+        onGiveUp: () => {
+          pressWarmRef.current = null;
+        },
+      });
+    };
+  } else {
+    openController.buildPopup = null;
+  }
+  useEffect(() => {
+    if (!standingIn || !anchor) {
+      return undefined;
+    }
+    return warmOnAnchorIntent(anchor, ref, () => {
+      build("warm");
+    });
+  }, [standingIn, anchor]);
+  useEffect(() => {
+    return () => {
+      pressWarmRef.current?.();
+    };
+  }, []);
+
+  const standInProps = {
+    ref,
+    "navi-hidden": "",
+    "navi-out-of-flow": "",
+    "aria-expanded": "false",
+  };
+  return [builtRef.current, standInProps];
 };
 
 // What needs the popup proper from the start: an opening at mount, content

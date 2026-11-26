@@ -465,6 +465,11 @@ export const createOpenController = (
     // let through: it has to be in the document for showModal()/showPopover()
     // to be legal at all (see useOpenPropsEffectOnOpenController).
     getElement: null,
+    // Set while the popup stands in for itself, its owner holding this
+    // controller (see useControlledPopupStandIn in popup_stand_in.js): renders
+    // the popup proper on the spot, which is what sets openEffect and
+    // mountContent. Called first by open(), whose every step needs them.
+    buildPopup: null,
     // Set by the controlled element (see popup_content_mount.js) when its
     // content is still waiting for a first open to be built. Called below,
     // before openEffect, so the popup measures and positions the real thing.
@@ -524,6 +529,9 @@ export const createOpenController = (
         }
         return;
       }
+      // Before the refusals below as well: they answer for a press that
+      // closed the popup, and a popup still standing in was never open.
+      controller.buildPopup?.();
       if (!controller.openEffect) {
         return;
       }

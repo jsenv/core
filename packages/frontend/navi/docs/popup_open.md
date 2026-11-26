@@ -1155,9 +1155,13 @@ popup at every mount, not a popup: a row may carry the popups of its own
 actions. It is built at once when
 something needs it from the start — open at mount, a `navState`, an `anchor` (a
 hover builds the content ahead of the click), or a `mount` other than the
-default. A `Picker`'s popup is the picker's own, built with it: it is anchored
-on the picker's trigger, whose hover builds the content, and every way the
-picker opens asks its popup directly.
+default. A `Picker`'s popup stands in the same way — an agenda whose every case
+opens its own sheet is a picker per case. The picker holds its open state, so
+every way it opens builds the popup first, and what warms the content of a
+built one (a press on the trigger, a hover, focus there) builds both. It is
+built from the start when it is open at mount, given an `openSignal`, or given a
+`mount` other than the default — as is the popup of a picker told no value
+whose value something reads.
 
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:

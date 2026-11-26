@@ -244,81 +244,9 @@ export const usePopupContentMount = (
     if (contentMounted || !anchor || mount === "while-opened") {
       return undefined;
     }
-    const anchorElement = resolveAnchorElement(anchor);
-    if (!anchorElement) {
-      return undefined;
-    }
-    let cancelWarm = null;
-    let warmIsTouchHold = false;
-    const warm = () => {
-      if (cancelWarm) {
-        return;
-      }
-      warmIsTouchHold = false;
-      cancelWarm = requestFrameAfterNext(() => {
-        setContentMounted(true);
-      });
-    };
-    const warmAfterTouchHold = () => {
-      if (cancelWarm) {
-        return;
-      }
-      warmIsTouchHold = true;
-      cancelWarm = requestFrameAfterDuration(TOUCH_WARM_HOLD_MS, () => {
-        setContentMounted(true);
-      });
-    };
-    // A touch leaves the anchor when the finger lifts or the browser takes the
-    // touch: either way, before the hold said anything.
-    const onPointerLeave = () => {
-      if (!warmIsTouchHold) {
-        return;
-      }
-      cancelWarm();
-      cancelWarm = null;
-      warmIsTouchHold = false;
-    };
-    // The anchor itself when it is a control (a Popover anchored on the button
-    // opening it), or the one the popup is written in (a picker's trigger).
-    const isOwnControl = (control) =>
-      control === anchorElement || control.contains(ref?.current);
-    // pointerover rather than pointerenter: it says which element the pointer
-    // is over, and that element decides whose intent it is.
-    const onPointerOver = (pointeroverEvent) => {
-      const control = findControlAimedAt(
-        pointeroverEvent.target,
-        anchorElement,
-      );
-      if (control) {
-        if (!isOwnControl(control)) {
-          return;
-        }
-        if (control.hasAttribute("data-open-on")) {
-          return;
-        }
-      }
-      if (pointeroverEvent.pointerType === "touch") {
-        warmAfterTouchHold();
-        return;
-      }
-      warm();
-    };
-    const onFocusIn = (focusinEvent) => {
-      const control = findControlAimedAt(focusinEvent.target, anchorElement);
-      if (control && !isOwnControl(control)) {
-        return;
-      }
-      warm();
-    };
-    anchorElement.addEventListener("pointerover", onPointerOver);
-    anchorElement.addEventListener("pointerleave", onPointerLeave);
-    anchorElement.addEventListener("focusin", onFocusIn);
-    return () => {
-      cancelWarm?.();
-      anchorElement.removeEventListener("pointerover", onPointerOver);
-      anchorElement.removeEventListener("pointerleave", onPointerLeave);
-      anchorElement.removeEventListener("focusin", onFocusIn);
-    };
+    return warmOnAnchorIntent(anchor, ref, () => {
+      setContentMounted(true);
+    });
   }, [contentMounted, anchor, mount]);
   // Warm on an opening press (see the top comment). Told by the popup's own
   // element, which hears the announcement where it hears the opening request:
@@ -370,6 +298,81 @@ export const usePopupContentMount = (
   }, [mount]);
 
   return contentMounted;
+};
+
+// Calls `onWarm` once intent on the anchor says the popup `ref` holds is about
+// to open (see the top comment); returns what stops listening. Also used by a
+// popup standing in for itself, whose warm builds the popup and its content
+// together (see popup_stand_in.js).
+export const warmOnAnchorIntent = (anchor, ref, onWarm) => {
+  const anchorElement = resolveAnchorElement(anchor);
+  if (!anchorElement) {
+    return undefined;
+  }
+  let cancelWarm = null;
+  let warmIsTouchHold = false;
+  const warm = () => {
+    if (cancelWarm) {
+      return;
+    }
+    warmIsTouchHold = false;
+    cancelWarm = requestFrameAfterNext(onWarm);
+  };
+  const warmAfterTouchHold = () => {
+    if (cancelWarm) {
+      return;
+    }
+    warmIsTouchHold = true;
+    cancelWarm = requestFrameAfterDuration(TOUCH_WARM_HOLD_MS, onWarm);
+  };
+  // A touch leaves the anchor when the finger lifts or the browser takes the
+  // touch: either way, before the hold said anything.
+  const onPointerLeave = () => {
+    if (!warmIsTouchHold) {
+      return;
+    }
+    cancelWarm();
+    cancelWarm = null;
+    warmIsTouchHold = false;
+  };
+  // The anchor itself when it is a control (a Popover anchored on the button
+  // opening it), or the one the popup is written in (a picker's trigger).
+  const isOwnControl = (control) =>
+    control === anchorElement || control.contains(ref?.current);
+  // pointerover rather than pointerenter: it says which element the pointer
+  // is over, and that element decides whose intent it is.
+  const onPointerOver = (pointeroverEvent) => {
+    const control = findControlAimedAt(pointeroverEvent.target, anchorElement);
+    if (control) {
+      if (!isOwnControl(control)) {
+        return;
+      }
+      if (control.hasAttribute("data-open-on")) {
+        return;
+      }
+    }
+    if (pointeroverEvent.pointerType === "touch") {
+      warmAfterTouchHold();
+      return;
+    }
+    warm();
+  };
+  const onFocusIn = (focusinEvent) => {
+    const control = findControlAimedAt(focusinEvent.target, anchorElement);
+    if (control && !isOwnControl(control)) {
+      return;
+    }
+    warm();
+  };
+  anchorElement.addEventListener("pointerover", onPointerOver);
+  anchorElement.addEventListener("pointerleave", onPointerLeave);
+  anchorElement.addEventListener("focusin", onFocusIn);
+  return () => {
+    cancelWarm?.();
+    anchorElement.removeEventListener("pointerover", onPointerOver);
+    anchorElement.removeEventListener("pointerleave", onPointerLeave);
+    anchorElement.removeEventListener("focusin", onFocusIn);
+  };
 };
 
 // The anchor accepts the same shapes Popover resolves at open time — a string

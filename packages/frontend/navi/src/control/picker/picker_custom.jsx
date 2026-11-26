@@ -33,6 +33,7 @@ import {
   usePopupContentMount,
 } from "@jsenv/navi/src/layout/popup_content_mount.js";
 import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
+import { useControlledPopupStandIn } from "@jsenv/navi/src/layout/popup_stand_in.js";
 import {
   findControlsHoldingPopup,
   giveUpOnControlsHoldingPopup,
@@ -783,6 +784,17 @@ const PickerCustom = (props) => {
     const requestValue = useStableCallback(() => {
       openController.buildContent();
     });
+    // A picker whose value was never given to it reads it off the control in
+    // its popup (see useUIFacadeStateController), so that control is built as
+    // soon as something reads the value: at mount when the picker sees the
+    // reader, otherwise when a drawing of the caller's asks (requestValue
+    // above). Told a value — even an empty one — the picker pushes it down,
+    // and the popup waits for its first open (see popup_content_mount.js).
+    const popupMount =
+      props.mount ??
+      (valueInPopup && isPickerValueReadAtMount(props, answersToGroup)
+        ? "always"
+        : MOUNT_DEFAULT);
     const { onActionStart, children, uiAction: uiActionProp } = props;
     Object.assign(pickerProps, {
       "requestValue":
@@ -828,17 +840,14 @@ const PickerCustom = (props) => {
       // button) hangs its popup off the whole control instead.
       anchor: props.anchor || props.ref,
       openController,
-      // A picker whose value was never given to it reads it off the control in
-      // its popup (see useUIFacadeStateController), so that control is built as
-      // soon as something reads the value: at mount when the picker sees the
-      // reader, otherwise when a drawing of the caller's asks (requestValue
-      // above). Told a value — even an empty one — the picker pushes it down,
-      // and the popup waits for its first open (see popup_content_mount.js).
-      mount:
-        props.mount ??
-        (valueInPopup && isPickerValueReadAtMount(props, answersToGroup)
-          ? "always"
-          : MOUNT_DEFAULT),
+      mount: popupMount,
+      // What needs the popup proper before anything opens it — until then it
+      // stands in for itself (see PickerPopup): an open state saying open,
+      // content wanted ahead of any opening, an `openSignal`, whose press
+      // preload listens on the popup element from the picker's mount (see
+      // useOpenPropsEffectOnOpenController).
+      needed:
+        popupMount !== MOUNT_DEFAULT || Boolean(opened) || Boolean(openSignal),
       // Not on pickerProps (the trigger): commands.js's own
       // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
       // find where to dispatch navi_request_open/navi_request_close — and
@@ -1453,7 +1462,7 @@ const PickerContentInsidePopup = (props) => {
           </PopupModeContext.Provider>
         </PickerCalloutPopup>
       ) : (
-        <Popup
+        <PickerPopup
           {...popupProps}
           data-testid={popupTestId}
           // What the trigger's aria-haspopup announces; a <dialog> says it
@@ -1535,9 +1544,46 @@ const PickerContentInsidePopup = (props) => {
           <PopupModeContext.Provider value={mode}>
             {children}
           </PopupModeContext.Provider>
-        </Popup>
+        </PickerPopup>
       )}
     </Next>
+  );
+};
+
+// What a picker opens stands in as one bare <dialog> until something needs it
+// (see useControlledPopupStandIn): an agenda whose every case opens a sheet of
+// its own is a picker per case, and would build a whole popup for each, at
+// every render of the page, for openings that mostly never come. The stand-in
+// carries what reaches a closed popup: the id the trigger's aria-controls and
+// a `commandfor` name, its test id, and the requests the trigger forwards to
+// it.
+const PickerPopup = ({ needed, ...props }) => {
+  const [builtReason, standInProps] = useControlledPopupStandIn(
+    props.openController,
+    { ref: props.ref, anchor: props.anchor, needed },
+  );
+  if (builtReason === null) {
+    return (
+      <dialog
+        {...standInProps}
+        id={props.id}
+        data-testid={props["data-testid"]}
+        // navi's own events, heard through preact's on* props
+        // eslint-disable-next-line react/no-unknown-property
+        onnavi_request_open={props.onnavi_request_open}
+        // eslint-disable-next-line react/no-unknown-property
+        onnavi_request_close={props.onnavi_request_close}
+        // eslint-disable-next-line react/no-unknown-property
+        onnavi_request_confirm={props.onnavi_request_confirm}
+        // eslint-disable-next-line react/no-unknown-property
+        onnavi_open_press={props.onnavi_open_press}
+      />
+    );
+  }
+  // Built by a warm: the content comes with it, and stays, as a
+  // "from-first-open" content does once built.
+  return (
+    <Popup {...props} mount={builtReason === "warm" ? "always" : props.mount} />
   );
 };
 
