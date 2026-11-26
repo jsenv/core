@@ -1148,20 +1148,18 @@ A `Dialog` or a `Popover` nobody has asked for yet is not even built — nor a
 `Popup` or a `SidePanel`, which render one of the two. It stands in as one bare
 element (a `<dialog>`, a `<div>`) — the id a command finds, the element a press
 announces itself on — and the popup proper is built at the first request: an
-open, a press on what opens it (its content with it), its `signal` or `open`
-saying open. From then on it stays built. So a list whose rows each hold a few
-popups (a sheet per seat, a share sheet per card) pays one element per closed
-popup at every mount, not a popup: a row may carry the popups of its own
-actions. It is built at once when
-something needs it from the start — open at mount, a `navState`, an `anchor` (a
-hover builds the content ahead of the click), or a `mount` other than the
+open, its `signal` or `open` saying open. What warms the content of a built
+popup builds a standing one along with its content: a press on what opens it, a
+pointer entering its `anchor`, focus landing there. From then on it stays built.
+So a list whose rows each hold a few popups (a sheet per seat, a share sheet per
+card) pays one element per closed popup at every mount, not a popup: a row may
+carry the popups of its own actions. It is built at once when something needs it
+from the start — open at mount, a `navState`, or a `mount` other than the
 default. A `Picker`'s popup stands in the same way — an agenda whose every case
 opens its own sheet is a picker per case. The picker holds its open state, so
-every way it opens builds the popup first, and what warms the content of a
-built one (a press on the trigger, a hover, focus there) builds both. It is
-built from the start when it is open at mount, given an `openSignal`, or given a
-`mount` other than the default — as is the popup of a picker told no value
-whose value something reads.
+every way it opens builds the popup first. It is built from the start when it is
+open at mount, given an `openSignal`, or given a `mount` other than the default
+— as is the popup of a picker told no value whose value something reads.
 
 "Closed" is two states, not one — never opened yet, and closed again after an
 opening — so the `mount` prop answers both at once:

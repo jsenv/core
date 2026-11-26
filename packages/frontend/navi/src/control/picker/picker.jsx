@@ -8,6 +8,7 @@ import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
+  renderResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { MaxLinesContext } from "@jsenv/navi/src/text/max_lines_context.js";
@@ -48,7 +49,7 @@ import {
   usePickerContext,
 } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
-import { PickerPresetResolver } from "./picker_preset.jsx";
+import { PICKER_PRESET_RESOLVER_MAP } from "./picker_preset.jsx";
 import {
   PickerArrayUI,
   PickerChip,
@@ -1925,12 +1926,29 @@ const PickerDefaultUI = () => {
   return renderSafe(value);
 };
 
+// The types a resolver of their own turns into another picker: a question
+// (confirm), a preset drawing (navi_time, navi_minute). Reached from the head
+// of the chain for those types only, rather than standing as steps in every
+// picker's chain: a page of pickers would otherwise run them, at every render
+// of each, to find out the type is not theirs.
+const PICKER_TYPE_RESOLVER_MAP = new Map([
+  ["confirm", PickerConfirmResolver],
+  ...PICKER_PRESET_RESOLVER_MAP,
+]);
+
+// Before a type's own resolver, so a preset reads the min/max/step a bound
+// signal fills in (resolveInputProps); a preset type therefore has no row in
+// NAVI_TYPE_DEFAULTS (resolve_input_props.js).
 const PickerFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   resolveInputProps(props, { controlType: "picker" });
 
+  const TypeResolver = PICKER_TYPE_RESOLVER_MAP.get(props.type);
+  if (TypeResolver) {
+    return renderResolver(TypeResolver, props);
+  }
   return <Next {...props} />;
 };
 
@@ -2085,13 +2103,8 @@ const warnOnUnknownPickerType = (props) => {
   );
 };
 
-// PickerFirstResolver comes before the presets so a preset reads the
-// min/max/step a bound signal fills in (resolveInputProps); a preset type
-// therefore has no row in NAVI_TYPE_DEFAULTS (resolve_input_props.js).
 const PickerResolved = /*#__PURE__*/ createComponentResolver([
   PickerFirstResolver,
-  PickerPresetResolver,
-  PickerConfirmResolver,
   PickerCustomResolver,
   PickerTypeResolver,
   PickerButton,

@@ -5,13 +5,16 @@
  * (`commandfor`) and asks it to open, a press on what opens it announces
  * itself on it (navi_open_press), --navi-toggle reads its aria-expanded. The
  * popup proper — its open controller, its box, its backdrop, its focus and
- * pseudo-class wiring — is built at the first request: an open, a press about
- * to open it, its signal or its `open` saying open. A press builds what the
- * popup holds along with it, as it warms the content of a popup already built
- * (see popup_content_mount.js): the click that follows only opens. A list
- * whose rows each hold a few popups mounts hundreds of them, and would pay for
- * every one at every mount, for openings that mostly never come. Built once,
- * the popup stays: the next opening finds it there.
+ * pseudo-class wiring — is built at the first request: an open, its signal or
+ * its `open` saying open. A list whose rows each hold a few popups mounts
+ * hundreds of them, and would pay for every one at every mount, for openings
+ * that mostly never come. Built once, the popup stays: the next opening finds
+ * it there.
+ *
+ * The intent that warms the content of a closed popup (see
+ * popup_content_mount.js) warms one standing in the same way, and builds the
+ * popup and its content together: a press on what opens it, a pointer
+ * entering its anchor, focus landing there. The click that follows only opens.
  *
  * Nothing about where the popup goes is needed at rest: a popover reads its
  * anchor at the opening, from the request.
@@ -21,11 +24,9 @@
  * a list of cases that each open a sheet is one picker per case. Opening goes
  * through that controller rather than through a request on the element, so the
  * controller is what builds it: `open()` renders the popup proper first, and
- * the content is then built for that opening as it would have been anyway (see
- * popup_content_mount.js). The intent that warms a closed popup's content
- * warms one standing in the same way, and builds both: a press on what opens
- * it, a pointer entering its anchor, focus landing there, or something reading
- * the content while closed (`buildContent`).
+ * the content is then built for that opening as it would have been anyway.
+ * Something reading the content while closed (`buildContent`) is one more
+ * intent there.
  */
 
 import { dispatchCustomEvent } from "@jsenv/dom";
@@ -41,13 +42,14 @@ import {
 } from "./popup_content_mount.js";
 
 /**
- * @returns {[null|"mount"|"interaction"|"request"|"press", {current: Element}, object]}
+ * @returns {[null|"mount"|"interaction"|"request"|"warm", {current: Element}, object]}
  *   Why the popup proper exists (`null` while it stands in; "interaction" is
- *   an opening asked while it stood in, which plays like any other), the ref
- *   both elements share, and the props of the stand-in element.
+ *   an opening asked while it stood in, which plays like any other; "warm"
+ *   built its content along with it), the ref both elements share, and the
+ *   props of the stand-in element.
  */
 export const usePopupStandIn = (props) => {
-  const { ref, id, signal, value, open } = props;
+  const { ref, id, signal, value, open, anchor } = props;
   const ownRef = useRef();
   const popupRef = ref || ownRef;
   // Why the popup proper exists, once it does; never undone.
@@ -71,16 +73,32 @@ export const usePopupStandIn = (props) => {
     }
   }
   const [, setBuildCount] = useState(0);
-  const warmRef = useRef(null);
+  const pressWarmRef = useRef(null);
   const build = (reason) => {
     if (builtRef.current !== null) {
       return;
     }
     builtRef.current = reason;
+    pressWarmRef.current?.();
+    pressWarmRef.current = null;
     flushSyncRendering(() => {
       setBuildCount((count) => count + 1);
     });
   };
+  const standingIn = builtRef.current === null;
+  useEffect(() => {
+    if (!standingIn || !anchor) {
+      return undefined;
+    }
+    return warmOnAnchorIntent(anchor, popupRef, () => {
+      build("warm");
+    });
+  }, [standingIn, anchor]);
+  useEffect(() => {
+    return () => {
+      pressWarmRef.current?.();
+    };
+  }, []);
 
   const standInProps = {
     "ref": popupRef,
@@ -110,16 +128,16 @@ export const usePopupStandIn = (props) => {
       if (signal) {
         preloadState(signal, readOpenValue(value));
       }
-      if (warmRef.current) {
+      if (pressWarmRef.current) {
         return;
       }
-      warmRef.current = requestBuildOnPress(e, {
+      pressWarmRef.current = requestBuildOnPress(e, {
         onBuild: () => {
-          warmRef.current = null;
-          build("press");
+          pressWarmRef.current = null;
+          build("warm");
         },
         onGiveUp: () => {
-          warmRef.current = null;
+          pressWarmRef.current = null;
         },
       });
     },
@@ -214,10 +232,9 @@ export const useControlledPopupStandIn = (
 };
 
 // What needs the popup proper from the start: an opening at mount, content
-// built ahead of any opening, a history entry to read, an anchor whose hover
-// or focus builds the content ahead of the click.
+// built ahead of any opening, a history entry to read.
 const needsPopupFromMount = (props) => {
-  if (props.defaultOpen || props.navState || props.anchor !== undefined) {
+  if (props.defaultOpen || props.navState) {
     return true;
   }
   return props.mount !== undefined && props.mount !== "from-first-open";

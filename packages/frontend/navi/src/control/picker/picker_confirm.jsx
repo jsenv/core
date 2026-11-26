@@ -45,13 +45,11 @@ const css = /* css */ `
   }
 `;
 
+// Reached for type="confirm" only (see PickerFirstResolver in picker.jsx).
 export const PickerConfirmResolver = (props) => {
   import.meta.css = css;
   const Next = useNextResolver();
 
-  if (props.type !== "confirm") {
-    return <Next {...props} />;
-  }
   const {
     ref,
     action,
