@@ -115,6 +115,14 @@ copy it throws (kept inside its list, it covers no distance), a `leave` for
 whatever it is declared on, and a `data-drop-container` (a place outside is only
 reached from outside).
 
+Brought near an edge of its scroll container, what is carried scrolls it, so a
+long list is reordered past what is on screen. `data-drag-scroll="none"` on the
+element or a container keeps the container still, whichever edge the hand
+reaches: for a board whose places are all on screen and whose way out — a bin, a
+tray — lies past its edge, where reaching for it would scroll the board under the
+hand instead. It says nothing about where the thing may go: reaching that bin
+also takes `data-drag-free`, or one of the three above.
+
 ```jsx
 const startViewTransition = ensureDocumentStartViewTransition();
 
@@ -157,6 +165,7 @@ screen has not asked for it to swap places with whatever it flew over.
 | `data-drag-delay` `data-drag-slop` `data-drag-threshold` | when the press becomes a grab          |
 | `data-drag-on-contact`                                   | a finger may drag by travelling too    |
 | `data-drag-free`                                         | it may leave its scroll area           |
+| `data-drag-scroll="none"`                                | its scroll container never follows it  |
 | `data-toss-distance` `data-toss-speed`                   | how far and how fast counts as a throw |
 | `data-drop-container`                                    | where the places are looked for        |
 

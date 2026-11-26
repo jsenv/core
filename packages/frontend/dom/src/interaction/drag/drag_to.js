@@ -412,6 +412,10 @@ const DRAG_IGNORED_SELECTOR =
  * @param {boolean} [options.stickyFrontiers=true]
  *   Shrinks the auto-scroll area at sticky boundaries (elements with `data-sticky-left` /
  *   `data-sticky-top`).
+ * @param {boolean} [options.autoScroll=true]
+ *   Whether the scroll container follows the element brought near its edge.
+ *   `false` for a board whose places are all on screen and whose way out (a bin,
+ *   a tray) lies past its edge: reaching for it would scroll the board instead.
  * @param {number} [options.autoScrollAreaPadding=0]
  *   Extra padding (px) subtracted from each edge of the auto-scroll trigger area.
  * @param {string|object|function} [options.areaConstraint="scroll"]
@@ -461,6 +465,7 @@ const DRAG_IGNORED_SELECTOR =
  */
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
+  autoScroll = true,
   autoScrollAreaPadding = 0,
   areaConstraint = "scroll",
   obstaclesContainer,
@@ -675,6 +680,9 @@ export const createDragToMoveGestureController = ({
           hasCrossedScrollportLeftOnce || left < scrollport.left;
         hasCrossedScrollportTopOnce =
           hasCrossedScrollportTopOnce || top < scrollport.top;
+        if (!autoScroll) {
+          break auto_scroll;
+        }
 
         const getScrollMove = (axis) => {
           const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
@@ -1036,7 +1044,7 @@ const warnAboutTransformsOutsideTransform = (element) => {
  * just by being handed a press, and is not started.
  *
  * Everything else is forwarded to `createDragToMoveGestureController`
- * (`areaConstraint`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
+ * (`areaConstraint`, `autoScroll`, `autoScrollAreaPadding`, `direction`…) and to `dragAfterIntent`
  * (`threshold`, `longPress`, `longPressDelay`, `longPressSlop`, `onPressStart`,
  * `onPressCancel`, `onPress`).
  *

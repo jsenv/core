@@ -427,6 +427,9 @@ const INTENT_AXIS_ATTRIBUTE = "data-drag-intent-axis";
 // side by side over several lines. Said nothing, it is read from where the
 // items stand.
 const FLOW_ATTRIBUTE = "data-reorder-flow";
+// "none": the scroll container stays where it is, whatever edge the hand
+// reaches. Said nothing, it follows the hand.
+const SCROLL_ATTRIBUTE = "data-drag-scroll";
 const DELAY_ATTRIBUTE = "data-drag-delay";
 const SLOP_ATTRIBUTE = "data-drag-slop";
 const THRESHOLD_ATTRIBUTE = "data-drag-threshold";
@@ -735,6 +738,11 @@ defineInteractionDetector({
             : canMove || canMoving
               ? "scrollport"
               : undefined,
+        // Whether its scroll container follows it near an edge, said in the DOM
+        // too, and apart from where it may go: a board whose places are all on
+        // screen and whose way out lies past its edge must not scroll under a
+        // hand reaching for it.
+        autoScroll: !element.closest(`[${SCROLL_ATTRIBUTE}="none"]`),
         threshold: readConfig(THRESHOLD_ATTRIBUTE, undefined),
         longPressDelay: readConfig(DELAY_ATTRIBUTE, undefined),
         longPressSlop: readConfig(SLOP_ATTRIBUTE, undefined),
