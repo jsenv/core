@@ -13,7 +13,6 @@ import {
   compareTwoJsValues,
   SYMBOL_IDENTITY,
 } from "../../utils/compare_two_js_values.js";
-import { getCallerInfo } from "../../utils/get_caller_info.js";
 import { warnUnknownOptions } from "../../utils/warn_unknown_options.js";
 import {
   arraySignalStore,
@@ -81,8 +80,8 @@ setActionDependenciesRegistrar(
  * - restCallback:    the user-provided callback function associated with a restCallbackKey
  * - restCallbacks:   object mapping { [restCallbackKey]: restCallback }
  * - isMany:          true when the action operates on a collection (restCallbackKey ends with _MANY)
- * - declarationSite: "file:line:column" of the user code that declared the
- *                    callbacks, shown in invalid-result errors
+ * - declarationSite: where the user code declared the callbacks, read as
+ *                    "file:line:column" by invalid-result errors
  */
 
 let DEBUG = false;
@@ -2233,17 +2232,51 @@ const getLastGetItemId = (action) => {
   return lastGetItemIdWeakMap.get(action);
 };
 
-// Captures the "file:line:column" of the user code that invoked the public
-// function (resource(), .one(), .many(), .scopedOne(), …), so invalid-result
-// errors can point at where the callbacks were declared, not at this file.
-// Must be called directly from the public function: the stack offset accounts
-// for exactly two frames (getCallerInfo → getDeclarationSite → public fn → user code).
+// Where the user code invoked the public function (resource(), .one(),
+// .many(), .scopedOne(), …), so invalid-result errors can point at where the
+// callbacks were declared, not at this file. An app declares hundreds of them
+// as it boots, and an error reading one is rare: the frames are captured here,
+// three of them (this function, the public one, its caller), and turned into
+// "file:line:column" only when an error message reads the site as a string.
+// Must be called directly from the public function, for that third frame to be
+// the user code.
 const getDeclarationSite = () => {
-  const callerInfo = getCallerInfo(null, 1);
-  if (callerInfo.file && callerInfo.line && callerInfo.column) {
-    return `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`;
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 3;
+  const capture = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+  let formatted;
+  return {
+    toString: () => {
+      if (formatted === undefined) {
+        formatted = formatCallerFrame(capture);
+      }
+      return formatted;
+    },
+  };
+};
+// V8's structured frames (Error.prepareStackTrace): read once, at the first
+// `.stack` access, which is here. Elsewhere `.stack` is a string, and the
+// site is unknown.
+const formatCallerFrame = (capture) => {
+  const { prepareStackTrace } = Error;
+  try {
+    Error.prepareStackTrace = (_, frames) => frames;
+    const frames = capture.stack;
+    if (!Array.isArray(frames) || !frames[2]) {
+      return "unknown";
+    }
+    const callerFrame = frames[2];
+    const file = callerFrame.getFileName();
+    const line = callerFrame.getLineNumber();
+    const column = callerFrame.getColumnNumber();
+    if (file && line && column) {
+      return `${file}:${line}:${column}`;
+    }
+    return callerFrame.toString();
+  } finally {
+    Error.prepareStackTrace = prepareStackTrace;
   }
-  return callerInfo.raw || "unknown location";
 };
 
 // What an entry of an answer is, as an error names it: an object's keys say
