@@ -807,9 +807,10 @@ Five cases, and they are not a policy to configure but five different facts:
   further down than that page is tall.
 - **Replacing the entry** (`<Link replace>`, `route.redirectTo()`, a param
   settling) moves nothing: the same place said differently — except in a row of
-  tabs, below. A link to the address the document is at replaces too, as the
-  browser answers it: stacked, it would leave an entry that Back returns to
-  without moving.
+  tabs, below. A link or a `navTo()` to the place the document is at replaces
+  too, as the browser answers a link to the address it shows: stacked, it
+  would leave an entry that Back returns to without moving. The place, however
+  the address spells it: a param at its default is the same named or left out.
 - **A reload** lands where one was, as it would have without navi, once the
   page is there ([below](#a-page-that-is-not-whole-yet)) — and so does a tab the
   system discarded in the background, when the reader comes back to it: the

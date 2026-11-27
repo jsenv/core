@@ -30,7 +30,9 @@
  * answered one, and there is no halo — the position is the last dot filled.
  * The dots ahead are filled too, in the color of the road ahead, which is
  * solid and meets the dots (the gap between dot and line is the halo's
- * room, and there is no halo). The path itself is computed the same way.
+ * room, and there is no halo). The path is the steps reached without a gap
+ * from the start, and it stops IN the last of them: no segment of appetite,
+ * which would read here as half-way to a step not reached.
  *
  * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>.
  * An Item renders nothing: it REGISTERS with the list as it renders (order
@@ -43,10 +45,12 @@
  * The dots are drawn in SVG, twice: a muted layer, and a filled layer
  * clipped at the path's edge — the clip is what makes the path's progress a
  * single sweep that fills the line and the dots it crosses in one movement.
- * The line is drawn as segments between the dots (never behind them), so the
+ * The line is drawn as segments between the dots (never through them), so the
  * dots need no background of their own and the component sits on any
- * surface. Colors are CSS custom properties (see the css below), overridden
- * from outside for a dark band or a different accent.
+ * surface. Every segment is painted before every dot: where a segment
+ * touches a dot (plain), it runs under it, on both sides. Colors are CSS
+ * custom properties (see the css below), overridden from outside for a dark
+ * band or a different accent.
  *
  * `slideContainer` connects the list to a <SlideContainer> by id, both ways:
  * pressing a step travels there (--navi-go-to-slide), and the position is
@@ -326,9 +330,6 @@ const EDGE_INSET = 30;
 // halo of a current dot not to sit on the line. The plain variant has no
 // halo, and its line meets the dots.
 const LINE_GAP = 5;
-// Where a dot's drawing ends: its radius plus the outer half of its stroke
-// (stroke-width 1.5 in the css).
-const DOT_EDGE = DOT_R + 0.75;
 
 // What the Items say to the list holding them (see Step): where to write
 // themselves down. Null outside any list — a Step alone renders nothing and
@@ -354,8 +355,9 @@ const StepListContext = createContext(null);
  *   fill. The dots answered or looked at are filled with the accent and
  *   their labels take the current color; the dots ahead are filled with the
  *   line color (--step-list-line), their numbers in --step-list-on-accent;
- *   the road is solid and meets the dots; no halo. Labels keep the page's
- *   weight, the current one included.
+ *   the road is solid, meets the dots, and takes the accent only between
+ *   reached dots (from the first, without a gap); no halo. Labels keep the
+ *   page's weight, the current one included.
  * @param {string} [slideContainer] - id of a <SlideContainer> these steps
  *   are the slides of. Pressing a step travels there
  *   (--navi-go-to-slide), the halo follows the container — drags included —
@@ -524,9 +526,12 @@ export const StepList = ({
   const currentIndex =
     resolvedCurrent === undefined ? -1 : indexOf(resolvedCurrent);
   // The path, deduced from what the Items say: the steps answered without a
-  // gap from the start. -1 when the first step is not answered yet — there
-  // is no path then, only dots.
-  let pathEndIndex = steps.findIndex((step) => !step.done);
+  // gap from the start — reached, in plain (see the top comment). -1 when
+  // the first step is not on it yet: there is no path then, only dots.
+  const isOnPath = plain
+    ? (step, index) => step.done || index === currentIndex
+    : (step) => step.done;
+  let pathEndIndex = steps.findIndex((step, index) => !isOnPath(step, index));
   if (pathEndIndex === -1) {
     pathEndIndex = stepCount;
   }
@@ -535,16 +540,16 @@ export const StepList = ({
   // dot (radius plus stroke) when everything is; otherwise THROUGH the
   // answered prefix and onward to the edge of the next dot — the segment of
   // appetite (see the top comment), with the dot it points at left empty.
-  // A plain line runs under the dot it meets, so its fill stops at the dot's
-  // drawn edge: any further would tint that dot.
+  // Plain stops at the centre of the last dot reached: that dot is drawn
+  // filled underneath anyway, so any point inside it reads the same.
   const lineGap = plain ? 0 : LINE_GAP;
   let fillX;
   if (pathEndIndex === -1) {
     fillX = 0;
+  } else if (plain) {
+    fillX = dotXs[pathEndIndex];
   } else if (pathEndIndex >= stepCount - 1) {
     fillX = dotXs[stepCount - 1] + DOT_R + 3;
-  } else if (plain) {
-    fillX = dotXs[pathEndIndex + 1] - DOT_EDGE;
   } else {
     fillX = dotXs[pathEndIndex + 1] - DOT_R - LINE_GAP;
   }
@@ -566,6 +571,17 @@ export const StepList = ({
       viewBox={`0 0 ${width} ${RAIL_H}`}
       aria-hidden="true"
     >
+      {dotXs.map((x, index) =>
+        index > 0 ? (
+          <line
+            key={steps[index].value}
+            x1={dotXs[index - 1] + DOT_R + lineGap}
+            y1={cy}
+            x2={x - DOT_R - lineGap}
+            y2={cy}
+          />
+        ) : null,
+      )}
       {dotXs.map((x, index) => (
         <g
           key={steps[index].value}
@@ -574,14 +590,6 @@ export const StepList = ({
           data-current={!filled && index === currentIndex ? "" : undefined}
           data-done={!filled && steps[index].done ? "" : undefined}
         >
-          {index > 0 ? (
-            <line
-              x1={dotXs[index - 1] + DOT_R + lineGap}
-              y1={cy}
-              x2={x - DOT_R - lineGap}
-              y2={cy}
-            />
-          ) : null}
           <circle cx={x} cy={cy} r={DOT_R} />
           <text x={x} y={cy} dy="0.36em" text-anchor="middle">
             {index + 1}

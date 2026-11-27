@@ -175,6 +175,18 @@ export const setupBrowserIntegrationViaHistory = ({
         redirected: true,
       });
     }
+    // A push to the place the document is at, with no state of its own for an
+    // entry, takes the place of the entry: stacked, it would leave behind an
+    // entry that a Back returns to without moving. The browser answers a link
+    // to the address it shows the same way, and here the address may spell
+    // that place another way too (see addressesHoldSameStates).
+    if (
+      options.navigationType === "push" &&
+      options.state === undefined &&
+      addressesHoldSameStates(url, readAddress())
+    ) {
+      options = { ...options, navigationType: "replace" };
+    }
     // Decided before anything is announced: an elided push IS the traversal it
     // becomes, and the traversal will make its own announcements when the
     // browser answers — a before/after cycle here would be about a navigation
@@ -188,8 +200,7 @@ export const setupBrowserIntegrationViaHistory = ({
       options.navigationType === "push" &&
       options.state === undefined &&
       !options.pressWrites &&
-      !options.fromSignal &&
-      url !== readAddress()
+      !options.fromSignal
     ) {
       const delta = adjacentEntryDelta(url);
       if (delta !== 0) {
@@ -479,13 +490,9 @@ export const setupBrowserIntegrationViaHistory = ({
     const linkRoutingOptions = {
       reason: `"click" on a[href="${href}"]`,
       // A link that takes the place of the current entry instead of stacking
-      // on it says so on itself (see link_replace.js). One to the address the
-      // document is at replaces too, as the browser answers it: stacked, it
-      // would leave behind an entry that a Back returns to without moving.
-      navigationType:
-        linkAsksForReplace(linkElement) || href === readAddress()
-          ? "replace"
-          : "push",
+      // on it says so on itself (see link_replace.js). One to the place the
+      // document is at is taken as one at the door (see handleRoutingTask).
+      navigationType: linkAsksForReplace(linkElement) ? "replace" : "push",
       asReturn: linkAsksForReturn(linkElement),
       // Who started it. Announced with the navigation because a press
       // carries things the url does not: what a link asks of a route
@@ -511,7 +518,7 @@ export const setupBrowserIntegrationViaHistory = ({
     const { id, type } = resolveOpenOnArrival(open);
     const urlLeft = readAddress();
     // Already on the page: only the popup's opening is left to write.
-    const onThePage = url === urlLeft;
+    const onThePage = addressesHoldSameStates(url, urlLeft);
     const pageState = readPageStateUnderPopup(url, {
       state: options.state,
       urlLeft,

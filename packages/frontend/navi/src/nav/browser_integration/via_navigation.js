@@ -660,23 +660,28 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
 
     // A link that takes the place of the current entry rather than stacking on
-    // it (see link_replace.js), or one to the address the document is at,
-    // which a page load would replace too: stacked, it would leave behind an
-    // entry that a Back returns to without moving. The browser has already
-    // decided this is a push and nothing can turn a live push into a replace,
-    // so the navigation is declined and re-asked as one — carrying by hand
-    // what such a call has no sourceElement to say: the element pressed, and
-    // with it what that element asks of a route transition (it wears it as an
+    // it (see link_replace.js), or a push to the place the document is at with
+    // no state of its own for an entry, which a page load would replace too:
+    // stacked, it would leave behind an entry that a Back returns to without
+    // moving. The place, not the address: one place may be spelled several
+    // ways (see addressesHoldSameStates). The browser has already decided this
+    // is a push and nothing can turn a live push into a replace, so the
+    // navigation is declined and re-asked as one — carrying by hand what a
+    // re-asked call has no sourceElement to say: the element pressed, and with
+    // it what that element asks of a route transition (it wears it as an
     // attribute).
     if (
       navigationType === "push" &&
-      event.sourceElement &&
-      (linkAsksForReplace(event.sourceElement) || url === readAddress())
+      ((event.sourceElement && linkAsksForReplace(event.sourceElement)) ||
+        (event.destination.getState() === undefined &&
+          addressesHoldSameStates(url, readAddress())))
     ) {
       event.preventDefault();
       navigate(url, {
         history: "replace",
-        info: { element: event.sourceElement },
+        info: event.sourceElement
+          ? { element: event.sourceElement }
+          : event.info,
       });
       return;
     }
@@ -698,8 +703,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       navigationType === "push" &&
       event.destination.getState() === undefined &&
       !linkPressWritesMap.has(pressElement) &&
-      !event.info?.fromSignal &&
-      url !== readAddress()
+      !event.info?.fromSignal
     ) {
       const key = adjacentEntryKey(url);
       if (key !== null) {
@@ -881,11 +885,10 @@ export const setupBrowserIntegrationViaNavigation = ({
       navToWithPopupOpen(href, { replace, info }, open);
       return;
     }
-    // One to the address the document is at replaces too, as the browser
-    // answers it: stacked, it would leave behind an entry that a Back returns
-    // to without moving.
+    // One to the place the document is at is re-asked as a replace when its
+    // navigation is heard (see the navigate listener).
     navigate(href, {
-      history: replace || href === readAddress() ? "replace" : "push",
+      history: replace ? "replace" : "push",
       info,
     });
   };
@@ -987,7 +990,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     const { id, type } = resolveOpenOnArrival(open);
     const urlLeft = readAddress();
     // Already on the page: only the popup's opening is left to write.
-    const onThePage = url === urlLeft;
+    const onThePage = addressesHoldSameStates(url, urlLeft);
     const pageState = readPageStateUnderPopup(url, {
       state,
       urlLeft,
