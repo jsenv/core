@@ -1293,7 +1293,11 @@ export const createAction = (callback, rootOptions = {}) => {
           });
         }
       }
-      const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
+      const bindingKey = readBindingKey(
+        newParamsOrSignal,
+        optionsWithoutDebounce,
+      );
+      const existingChildAction = childActionWeakMap.get(bindingKey);
       if (existingChildAction) {
         if (keptAnswerRegistry) {
           keptAnswerRegistry.touch(existingChildAction);
@@ -1304,7 +1308,7 @@ export const createAction = (callback, rootOptions = {}) => {
         newParamsOrSignal,
         optionsWithoutDebounce,
       );
-      childActionWeakMap.set(newParamsOrSignal, childAction);
+      childActionWeakMap.set(bindingKey, childAction);
       if (childAction !== action) {
         // binding that added nothing resolves to the action itself; it must
         // not enter its own child set or matchAllSelfOrDescendant would
@@ -1314,6 +1318,34 @@ export const createAction = (callback, rootOptions = {}) => {
       }
 
       return childAction;
+    };
+
+    // What a binding is cached under: its params — and, for one following
+    // signals, what makes it behave otherwise: an `inheritData` other than
+    // the action's, an `onChange` of its own. One signal bound twice that way
+    // is two bindings, each keeping what it was asked for. Plain params stay
+    // one instance whatever is said with them: they move nowhere and hand
+    // nothing over.
+    const readBindingKey = (
+      paramsOrSignal,
+      { inheritData: bindingInheritData, onChange: bindingOnChange },
+    ) => {
+      const inheritsLikeTheAction =
+        bindingInheritData === undefined || bindingInheritData === inheritData;
+      if (bindingOnChange === undefined && inheritsLikeTheAction) {
+        return paramsOrSignal;
+      }
+      if (
+        !isSignal(paramsOrSignal) &&
+        !readSignalOfParamsObject(paramsOrSignal)
+      ) {
+        return paramsOrSignal;
+      }
+      return [
+        paramsOrSignal,
+        inheritsLikeTheAction ? inheritData : bindingInheritData,
+        bindingOnChange,
+      ];
     };
 
     const createChildAction = (childOptions) => {
@@ -1628,6 +1660,12 @@ export const createAction = (callback, rootOptions = {}) => {
             runningStateSignal.value = COMPLETED;
             const data = dataSignal.value;
             onComplete?.(data, action);
+            // The side effect of the previous answer ends with it: a rerun's
+            // answer takes its place, and whatever the previous one took (a
+            // scoped read counting on its owner's scope) is let go of.
+            if (completeSideEffectCleanup) {
+              completeSideEffectCleanup("answered again");
+            }
             completeSideEffectCleanup = completeSideEffect?.(action);
           });
           if (keptAnswerRegistry) {

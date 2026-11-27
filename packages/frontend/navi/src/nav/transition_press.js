@@ -38,6 +38,7 @@
  * ever ends.
  */
 
+import { warnOnce } from "../utils/warn_once.js";
 import { pressLandsOnFurniture } from "./transition_furniture.js";
 
 // Worn by a control that keeps answering while the pages move. Written by
@@ -136,9 +137,8 @@ const isOutOfReach = (element) => {
   return true;
 };
 
-// Said once per kind: a control asking for this is one fact about the
-// application, and repeating it every time the reader moves would bury it.
-const warningsSaid = new Set();
+// Said once per kind (warnOnce): a control asking for this is one fact about
+// the application, and repeating it every time the reader moves would bury it.
 const warnAboutPressablesThatMove = (areaElement) => {
   const pressables = document.querySelectorAll(PRESSABLE_SELECTOR);
   if (pressables.length === 0) {
@@ -161,11 +161,4 @@ const warnAboutPressablesThatMove = (areaElement) => {
     );
     return;
   }
-};
-const warnOnce = (id, message) => {
-  if (warningsSaid.has(id)) {
-    return;
-  }
-  warningsSaid.add(id);
-  console.warn(message);
 };

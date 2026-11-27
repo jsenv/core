@@ -163,6 +163,7 @@ import {
   setTransitionValue,
 } from "./transition_values.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { warnOnce } from "../utils/warn_once.js";
 import { ensureDocumentStartViewTransition } from "../transition/start_view_transition_polyfill.js";
 import {
   hurryPictures,
@@ -2434,18 +2435,6 @@ const warnAboutNamesEscapingArea = (areaElement, capturedNames) => {
     );
     return;
   }
-};
-
-// Said once per kind, whatever the number of navigations: a misconfiguration
-// is one fact about the application, and repeating it every time the user
-// moves would bury it.
-const warningsSaid = new Set();
-const warnOnce = (id, message) => {
-  if (warningsSaid.has(id)) {
-    return;
-  }
-  warningsSaid.add(id);
-  console.warn(message);
 };
 
 // A route matching is a signal changing; how many passes Preact takes to

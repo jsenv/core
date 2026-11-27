@@ -2080,15 +2080,19 @@ export const useUIGroupStateController = (
           uiStateSignal.value = newUIState;
           publishUIState(newUIState);
         },
-        onUIAction: (e, { skipCommand, actingChild } = {}) => {
+        onUIAction: (e, { skipCommand, skipBoundSignal, actingChild } = {}) => {
           const currentUIState = controller.uiState;
           // The same write applyState/onChange make (see writeBoundSignal), for
           // the case where the state did not move but the user acted all the
           // same — a picker whose suggestion was confirmed untouched, say. A
           // leaf control writes its signal from its own onUIAction for exactly
           // this reason; setting a signal to what it already holds is a no-op,
-          // so the paths that write twice cost nothing.
-          writeBoundSignal(currentUIState);
+          // so the paths that write twice cost nothing. Not for a value the
+          // group follows (its signal moved, its `value` came back down): the
+          // signal is what it follows.
+          if (!skipBoundSignal) {
+            writeBoundSignal(currentUIState);
+          }
           s.uiAction?.(currentUIState, e);
           s.uiActionInternal?.(currentUIState, e);
           if (!skipCommand && controller.props.command) {
@@ -2523,13 +2527,26 @@ export const useUIGroupStateController = (
       controller.defaultValue = defaultValue;
       controller.hasValueProp = hasValueProp;
       controller.hasDefaultValueProp = hasDefaultValueProp;
+      // What the group holds, moved from outside — its `value` coming back
+      // down, its signal written elsewhere — and heard as a leaf hears its own
+      // (state_prop_change, see useUIStateController): its uiAction is told,
+      // since uiAction mirrors the state whoever moved it (docs/actions.md);
+      // no command, since nobody acted; the signal it follows left alone; and
+      // nobody above told, as for a leaf.
       const placeChildrenFrom = (groupUIState) => {
         const propagateDownEvent = new CustomEvent(
           "propagate_down_set_ui_state",
           { detail: {} },
         );
+        const uiStateBefore = controller.uiState;
         controller.placeChildrenUIState(groupUIState, propagateDownEvent);
         controller.syncInternalState(groupUIState);
+        if (!compareTwoJsValues(controller.uiState, uiStateBefore)) {
+          controller.onUIAction(new CustomEvent("state_prop_change"), {
+            skipCommand: true,
+            skipBoundSignal: true,
+          });
+        }
       };
       // A controlled group goes on showing the value it is given. A child
       // answering for itself moves what the group is worth — that is what

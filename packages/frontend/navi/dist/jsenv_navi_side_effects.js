@@ -126,19 +126,18 @@ if (vv) {
 // rather than cached in a signal: the callers are a popup resolving its margin
 // and placing itself, which already read far more of the DOM than this, and
 // nothing then has to be invalidated when the value changes.
-const readAppInsets = () => {
+const readAppInsets = () => readInsets("--navi-app-inset");
+const readInsets = (prefix) => {
   const computedStyle = getComputedStyle(document.documentElement);
   return {
-    top: readAppInset(computedStyle, "top"),
-    right: readAppInset(computedStyle, "right"),
-    bottom: readAppInset(computedStyle, "bottom"),
-    left: readAppInset(computedStyle, "left"),
+    top: readInset(computedStyle, prefix, "top"),
+    right: readInset(computedStyle, prefix, "right"),
+    bottom: readInset(computedStyle, prefix, "bottom"),
+    left: readInset(computedStyle, prefix, "left"),
   };
 };
-const readAppInset = (computedStyle, side) => {
-  const value = parseFloat(
-    computedStyle.getPropertyValue(`--navi-app-inset-${side}`),
-  );
+const readInset = (computedStyle, prefix, side) => {
+  const value = parseFloat(computedStyle.getPropertyValue(`${prefix}-${side}`));
   // A browser that cannot register a custom property hands back the calc()
   // it was written as: JS then answers for the whole viewport.
   return Number.isFinite(value) ? value : 0;
@@ -155,6 +154,15 @@ const getAppWidth = () => {
 // twice.
 const getAppInsets = () => {
   const insets = readAppInsets();
+  insets.bottom -= getVirtualKeyboardOverlayHeight();
+  return insets;
+};
+// The same for the safe area (--navi-safe-area-inset-*: the app's screen less
+// its fixed bars and the device's own bands), for a popup that keeps clear of
+// the bars rather than covering them. The keyboard comes off for the same
+// reason: the safe area's bottom band counts it through the app's.
+const getSafeAreaInsets = () => {
+  const insets = readInsets("--navi-safe-area-inset");
   insets.bottom -= getVirtualKeyboardOverlayHeight();
   return insets;
 };
@@ -263,7 +271,8 @@ installImportMetaCssBuild(import.meta);
  * JS placement answers to the level-1 rectangle too: getAppInsets
  * (layout/responsive.js) reads these same bands back off the computed style,
  * and hands them to pickPositionRelativeTo via setPlacementViewportInsets (see
- * navi_css_vars.js).
+ * navi_css_vars.js). A Popover with container="safe-area" is placed in level 2
+ * instead (getSafeAreaInsets, passed per placement).
  */
 
 const SAFE_AREA_CSS = /* css */ `@property --navi-app-inset-top {
@@ -540,5 +549,5 @@ effect(() => {
 // those.
 setPlacementViewportInsets(getAppInsets);
 
-export { coarsePointerSignal, getAppHeight, getAppWidth, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
+export { coarsePointerSignal, getAppHeight, getAppWidth, getSafeAreaInsets, installImportMetaCssBuild, smallTouchScreenSignal, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

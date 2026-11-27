@@ -1466,8 +1466,12 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         },
         set: applyProps,
       });
-      // The child lives inside its owner: it leaves with it.
+      // The child lives inside its owner: it leaves with it, and a write for
+      // that owner id finds no child to update, as for an owner not loaded.
       return () => {
+        if (applyPropsMap.get(ownerId) === applyProps) {
+          applyPropsMap.delete(ownerId);
+        }
         leaveItem(childItem);
       };
     });
@@ -1668,6 +1672,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     // sweep: a read of the children (its columns, on the page still showing
     // them) would go blank under a row the list just let go.
     const releaseScope = (scope) => {
+      if (scope.released) {
+        return;
+      }
+      scope.released = true;
       for (const ownerKey of scope.ownerKeySet) {
         if (scopeMap.get(ownerKey) === scope) {
           scopeMap.delete(ownerKey);
@@ -1690,6 +1698,35 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         }
       });
     }
+    // A read of the children counts on its owner's scope while its answer
+    // names it. The range sweep letting the owner row go then leaves the
+    // scope to that read — still showing the children — and the scope goes
+    // with the last such read: let go of by a newer answer, a reset, or the
+    // read itself being collected.
+    const stopReadingScope = (scope) => {
+      scope.readerCount--;
+      if (scope.readerCount === 0 && scope.ownerLeft) {
+        releaseScope(scope);
+      }
+    };
+    const scopeReaderFinalization = new FinalizationRegistry(stopReadingScope);
+    const readScopeNamedBy = (readAction) => {
+      const value = readAction.valueSignal.peek();
+      if (!value) {
+        return undefined;
+      }
+      const scope = scopeMap.get(value[0]);
+      if (!scope) {
+        return undefined;
+      }
+      scope.readerCount++;
+      const token = {};
+      scopeReaderFinalization.register(readAction, scope, token);
+      return () => {
+        scopeReaderFinalization.unregister(token);
+        stopReadingScope(scope);
+      };
+    };
     const createScope = (ownerKey) => {
       // Keeps every child it is given (no `letsGoOfRows`): the scope stays
       // with its owner key, and the owner's collection is what holds them.
@@ -1711,6 +1748,11 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         // owner arrived.
         ownerId: undefined,
         ownerKeySet: new Set(),
+        // The reads whose answer names it (see readScopeNamedBy), and whether
+        // its owner row left the store meanwhile.
+        readerCount: 0,
+        ownerLeft: false,
+        released: false,
       };
     };
     addItemSetup((item, answer) => {
@@ -1749,6 +1791,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           scope = createScope(ownerId);
         }
         scope.ownerId = ownerId;
+        scope.ownerLeft = false;
         // Register the scope under the id and every uniqueKey value so that
         // resolveOwnerId can address it whichever key a callback returns.
         registerScope(ownerId, scope);
@@ -1791,6 +1834,26 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
+      if (ownerName) {
+        // The item's own scope, named by no key and read by no one but it.
+        return () => {
+          releaseScope(scope);
+        };
+      }
+      // The owner row leaves the store: deleted (its scope is released at
+      // once, see the removal observer above), or let go of by the range
+      // sweep — then its scope stays for as long as a read of the children
+      // names it (see readScopeNamedBy), and goes with the last one.
+      return () => {
+        if (scope.ownerId !== ownerId) {
+          return;
+        }
+        if (scope.readerCount > 0) {
+          scope.ownerLeft = true;
+          return;
+        }
+        releaseScope(scope);
+      };
     });
     const createRestActionForScopedMany = (
       verb,
@@ -1904,7 +1967,13 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           }
           return childStore.select(idOrIdArray);
         },
-        completeSideEffect: onActionComplete,
+        completeSideEffect:
+          verb === "GET"
+            ? (completedAction) => {
+                onActionComplete(completedAction);
+                return readScopeNamedBy(completedAction);
+              }
+            : onActionComplete,
       });
       if (verb === "GET") {
         markRelationshipRead(action);
