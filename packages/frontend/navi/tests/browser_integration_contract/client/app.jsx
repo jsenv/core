@@ -6,7 +6,9 @@
  *
  * Pages: home (""), /a, /b, and /to_home, which redirects to home. A popup-like
  * sheet keeps its open state in the entry (useNavState, push). A link to /b is
- * wrapped in an element that cancels every click in the bubble phase.
+ * wrapped in an element that cancels every click in the bubble phase. Home has
+ * a search param at its default (`view`), and a plain link names that default:
+ * `?view=list` is home, spelled another way.
  */
 
 import {
@@ -39,7 +41,10 @@ const searchSignal = stateSignal("", {
 window.typeSearch = (value) => {
   searchSignal.value = value;
 };
-const HOME_ROUTE = route("", { searchParams: { q: searchSignal } });
+const viewSignal = stateSignal("list", { id: "contract_view" });
+const HOME_ROUTE = route("", {
+  searchParams: { q: searchSignal, view: viewSignal },
+});
 const A_ROUTE = route("/a");
 const B_ROUTE = route("/b");
 const TO_HOME_ROUTE = route("/to_home", { redirectRoute: HOME_ROUTE });
@@ -103,6 +108,9 @@ const Page = ({ name }) => (
       </Link>
       <a id="link_fragment" href="#section">
         section
+      </a>
+      <a id="link_home_default_named" href="./?view=list">
+        home, its default named
       </a>
       <span
         onClick={(event) => {

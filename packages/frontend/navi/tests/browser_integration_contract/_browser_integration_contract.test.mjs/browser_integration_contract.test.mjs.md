@@ -21,6 +21,10 @@
 - [navBack while a typed search is not yet in the address (webkit)](17_navback_while_a_typed_search_is_not_yet_in_the_address_(webkit)/17_navback_while_a_typed_search_is_not_yet_in_the_address_(webkit).md)
 - [a press while a typed search is not yet in the address (chromium)](18_a_press_while_a_typed_search_is_not_yet_in_the_address_(chromium)/18_a_press_while_a_typed_search_is_not_yet_in_the_address_(chromium).md)
 - [a press while a typed search is not yet in the address (webkit)](19_a_press_while_a_typed_search_is_not_yet_in_the_address_(webkit)/19_a_press_while_a_typed_search_is_not_yet_in_the_address_(webkit).md)
+- [a press to the place on display, spelled another way (chromium)](20_a_press_to_the_place_on_display__spelled_another_way_(chromium)/20_a_press_to_the_place_on_display__spelled_another_way_(chromium).md)
+- [a press to the place on display, spelled another way (webkit)](21_a_press_to_the_place_on_display__spelled_another_way_(webkit)/21_a_press_to_the_place_on_display__spelled_another_way_(webkit).md)
+- [a press to the entry next door, spelled another way (chromium)](22_a_press_to_the_entry_next_door__spelled_another_way_(chromium)/22_a_press_to_the_entry_next_door__spelled_another_way_(chromium).md)
+- [a press to the entry next door, spelled another way (webkit)](23_a_press_to_the_entry_next_door__spelled_another_way_(webkit)/23_a_press_to_the_entry_next_door__spelled_another_way_(webkit).md)
 
 ---
 

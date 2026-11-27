@@ -148,6 +148,16 @@ const SEQUENCES = {
     ],
     ["back", back],
   ],
+  // One place, two spellings: home with its default named (`?view=list`) is
+  // home. A press to the place on display takes the place of its entry, and
+  // one to the entry next door goes there.
+  "a press to the place on display, spelled another way": [
+    ["press home, its default named", click("#link_home_default_named")],
+  ],
+  "a press to the entry next door, spelled another way": [
+    ["press a", click("#link_a")],
+    ["press home, its default named", click("#link_home_default_named")],
+  ],
 };
 
 // Opened on the home page's own address, so that a press redirected to home
