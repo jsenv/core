@@ -223,23 +223,34 @@ export const setupBrowserIntegrationViaNavigation = ({
     updateDocumentState(entryState);
   };
 
-  const adjacentEntryKey = (url) => {
+  const entryNextDoor = (delta) => {
     const { currentEntry } = navigation;
     if (!currentEntry) {
       return null;
     }
-    const entries = navigation.entries();
-    const index = currentEntry.index;
+    const entry = navigation.entries()[currentEntry.index + delta];
+    if (!entry || !sameDocumentEntryKeys.has(entry.key)) {
+      return null;
+    }
+    return entry;
+  };
+  const adjacentEntryKey = (url) => {
     // Behind first: when the same page stands on both sides, a link to it
     // reads as going back.
     for (const delta of [-1, 1]) {
-      const entry = entries[index + delta];
-      if (entry && entry.url === url && sameDocumentEntryKeys.has(entry.key)) {
+      const entry = entryNextDoor(delta);
+      if (entry && entry.url === url) {
         return entry.key;
       }
     }
     return null;
   };
+  // Whether a back would land on `target` (see navBackToState in route.js).
+  // Never while a back is in flight: the stack read here is the one around the
+  // entry being left.
+  const isEntryBehind = (target) =>
+    !backInFlight &&
+    entryNextDoor(-1)?.url === new URL(target, readAddress()).href;
 
   // An address that only sends elsewhere is answered by going there, and this
   // document never routes to it (see resolveRouteRedirection). A press that
@@ -1108,6 +1119,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     reload,
     navBack,
     whenBackLanded,
+    isEntryBehind,
     navForward,
     getDocumentState,
     carryByLinkNavigation,

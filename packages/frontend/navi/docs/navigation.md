@@ -794,9 +794,12 @@ real traversal**: a "back" link to the page one just came from behaves as a back
 — no A, B, A, B… growth, and the scroll comes back — and one step forward too.
 Only towards entries of this document, and never when the push carries explicit
 state. A traversal lands when the browser answers, after the call has returned;
-so a state written with `history: "push"` always stacks its entry, since what is
+so a state written with `history: "push"` stacks its entry, since what is
 written right after it (a layer, then what is open inside it) belongs on that
-entry. An arrow that must ALWAYS behave as a back is `navBack()`.
+entry. The one writer that knows nothing follows its write is a `SlideContainer`
+travelling on its own, which goes back
+([below](#a-state-whose-values-are-places-history-push)). An arrow that must
+ALWAYS behave as a back is `navBack()`.
 
 Further back, a push is an arrival even when it means a return: a bar entry
 leading back to a thread whose address names the item one was reading
@@ -1112,6 +1115,15 @@ photoSignal.set(nextPhoto, { history: "replace" });
 A slide reached by DRAGGING is such a write — swiping back and forth with a thumb
 is browsing, not a trail one wants to walk home along — and `SlideContainer`
 replaces for its own drags even when its state pushes.
+
+A slide PRESSED for (a step, a tab, a key, a command) whose address is the entry
+right behind is a back to it, the way the back button would go: in a trail of
+steps, "Summary" pressed on the payment step gives `[agenda, summary]` with the
+payment ahead, never `[agenda, summary, payment, summary]`, whose back button
+walks forward. Only when that entry differs by this param alone, and where the
+browser exposes its stack, as for a link (above); elsewhere the press stacks.
+Whatever answers the travel (`onCurrentChange`) is asked before anything is
+written, so a refused one leaves the history as it was.
 
 States written in the same batch — an effect putting the page back to 1 as the
 tab changes — leave in one navigation, and a push asked by any of them makes it

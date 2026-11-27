@@ -100,6 +100,7 @@ import {
 } from "@jsenv/dom";
 import { onNaviCommand } from "../control/commands.js";
 import { warnSignalCollision } from "../control/control_value.js";
+import { navBackToState } from "../nav/route.js";
 import {
   isRenderingPageChange,
   mayAnimateMovement,
@@ -742,8 +743,9 @@ const areaHeldOn = (slideElement) => {
  *   elsewhere depending on the page), and the param stays out of the address
  *   while the area IS that default. `weak` keeps the step from being inherited
  *   by links built to that route. Written by replacement unless the state says
- *   `history: "push"`, and even then a slide reached by DRAGGING replaces — see
- *   docs/navigation.md.
+ *   `history: "push"`, and even then a slide reached by DRAGGING replaces, and
+ *   a slide pressed for that the entry right behind shows is a BACK to it —
+ *   see docs/navigation.md.
  *   ONE STATE FOR CONTAINERS INSIDE ONE ANOTHER: a container in a slide,
  *   bound to the SAME signal as the container holding it, shares that state.
  *   For screens where one place is said at two levels — a column of
@@ -806,6 +808,11 @@ const areaHeldOn = (slideElement) => {
  *   from — a guard that says no, a session that is gone. A promise refuses it
  *   late, once whatever it had to ask has answered; the travel plays meanwhile
  *   and is undone if the answer is no.
+ *   Asked BEFORE the bound `signal` is written: it still holds the slide being
+ *   left, and a refused travel writes nothing — no history entry stacked, none
+ *   rewritten. A promise holds the write until it answers. For
+ *   `cause: "state"` the state already holds what was asked, and a refusal
+ *   writes the slide on screen back over it.
  *   It is not where the area is REMEMBERED: `signal` does that in both
  *   directions and is written by every way of travelling, while a callback
  *   assigning it catches only the ones it was written for — see
@@ -948,6 +955,9 @@ export const SlideContainer = ({
   // The change waiting for the travel to be over: what to tell the caller, and
   // what to put back if they refuse it.
   const commitAtRestRef = useRef(null);
+  // The last change told to the caller (see tellCurrentChange): a late answer
+  // to an earlier one has nothing left to decide.
+  const askedChangeRef = useRef(null);
   // Where the window is while it rolls, and nothing more: a looping container
   // rests where it rested before (below), so this is the travel itself rather
   // than a change of slide.
@@ -1076,22 +1086,37 @@ export const SlideContainer = ({
   // written by REPLACEMENT whatever the state declares:
   // - a drag, because browsing back and forth with a thumb is not a trail one
   //   wants to walk home along;
-  // - a correction — a refused travel put back, a walk that stopped before
-  //   where it was asked to go — because it is the entry that asked for the
-  //   wrong thing being amended, not a place one was;
+  // - a correction — a request from outside refused, a walk that stopped
+  //   before where it was asked to go — because it is the entry that asked for
+  //   the wrong thing being amended, not a place one was;
   // - the state itself asking (`cause: "state"`), because reading a value back
   //   and answering it is not somewhere one went.
+  // And one place aimed at is not a new one: the slide the entry right behind
+  // shows, in a state whose places are ones one came from. That travel is the
+  // back button, so it IS a back, and the history keeps the place left as the
+  // one ahead. Decided here, where nothing else is written after it in the same
+  // move (see navBackToState).
   const writeAreaAsked = (area, { cause } = {}) => {
     if (!currentSignal) {
       areaAskedSeenRef.current = area;
       return;
     }
     const value = valueOfArea(area);
-    areaAskedSeenRef.current = value;
     if (CAUSES_WRITTEN_BY_REPLACEMENT.includes(cause) && currentSignal.set) {
+      areaAskedSeenRef.current = value;
       currentSignal.set(value, { history: "replace" });
       return;
     }
+    if (
+      currentSignal.options?.history === "push" &&
+      navBackToState(currentSignal, value)
+    ) {
+      // The traversal writes the state when it lands. Until then the state
+      // still names the slide being left, and that is not news: the area it
+      // names once landed is the one this container already stands on.
+      return;
+    }
+    areaAskedSeenRef.current = value;
     currentSignal.value = value;
   };
   // What the state holds for one of this box's areas: the place a container
@@ -2022,44 +2047,50 @@ export const SlideContainer = ({
     return true;
   };
 
-  // The caller learns where the container went: the bound state is written
-  // first, then `onCurrentChange` is called, so a caller reading the state from
-  // inside its own handler reads where it now is. Written here rather than by
-  // the caller so that it is told about the travels that HAPPENED and about no
-  // others: the ones a lock refused never reach this point, and one refused
-  // late is written back below (see goBackToRefusedArea).
+  // The caller learns where the container is going, and may say no: asked
+  // BEFORE the bound state is written, so a refused travel leaves nothing
+  // behind — no entry stacked, none rewritten. Told here rather than by the
+  // caller so that it hears about the travels that HAPPENED and about no
+  // others: the ones a lock refused never reach this point.
+  //
+  // `false` refuses — a guard that says no, a session that is gone — and a
+  // promise answers late, once whatever it had to ask has answered: the travel
+  // plays meanwhile and the state waits for the answer, the container ahead of
+  // it for that long. A refused change is undone here, so what one sees never
+  // disagrees with what the caller holds: the slide goes back where it came
+  // from.
   const tellCurrentChange = (area, detail, leftArea) => {
-    writeAreaAsked(area, { cause: detail.cause });
-    if (!onCurrentChange) {
-      return;
-    }
-    answerCurrentChange(onCurrentChange(area, detail), leftArea);
-  };
-
-  // What a caller says back about a change it was told about: nothing, or a
-  // refusal. `false` refuses it — a guard that says no, a session that is gone —
-  // and a promise refuses it late, once whatever it had to ask has answered. A
-  // refused change is undone here, so what one sees never disagrees with what
-  // the caller holds: the slide goes back where it came from.
-  const answerCurrentChange = (answer, leftArea) => {
+    const askedChange = {};
+    askedChangeRef.current = askedChange;
+    const answer = onCurrentChange ? onCurrentChange(area, detail) : undefined;
     if (answer === false) {
       goBackToRefusedArea(leftArea);
       return;
     }
-    if (answer && typeof answer.then === "function") {
-      answer.then((value) => {
-        if (value === false) {
-          goBackToRefusedArea(leftArea);
-        }
-      });
+    if (!answer || typeof answer.then !== "function") {
+      writeAreaAsked(area, { cause: detail.cause });
+      return;
     }
+    answer.then((value) => {
+      // A travel told since is the one the state waits for.
+      if (askedChangeRef.current !== askedChange) {
+        return;
+      }
+      if (value === false) {
+        goBackToRefusedArea(leftArea);
+        return;
+      }
+      writeAreaAsked(area, { cause: detail.cause });
+    });
   };
   const goBackToRefusedArea = (leftArea) => {
     setProvisionalArea(null);
     setCurrentAreaState(leftArea);
-    // Written over rather than stacked on, whatever the state says otherwise:
-    // the entry a refused travel wrote is the one being corrected, and a
-    // refusal is not a place one was.
+    // The state still holds the slide left when the travel was the
+    // container's own, and this writes nothing. Asked by the state itself, it
+    // is written over rather than stacked on: the entry that asked for the
+    // refused slide is the one being corrected, and a refusal is not a place
+    // one was.
     writeAreaAsked(leftArea, { cause: "refusal" });
   };
 

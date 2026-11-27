@@ -310,17 +310,9 @@ export const route = (pattern, options = {}) => {
       const routeUrl = route.buildUrl(params);
       return integration.navTo(routeUrl, options);
     };
-    // `amending`: the params are what the states hold, the address one stands
-    // at amended (see replaceParams).
     route.redirectTo = (
       params,
-      {
-        callReason,
-        history = "replace",
-        debounceUrl,
-        isSignalChange,
-        amending = false,
-      } = {},
+      { callReason, history = "replace", debounceUrl, isSignalChange } = {},
     ) => {
       if (!integration) {
         if (import.meta.dev) {
@@ -330,11 +322,7 @@ export const route = (pattern, options = {}) => {
         }
         return Promise.resolve();
       }
-      const routeUrl = amending
-        ? resolveRouteUrl(
-            routePattern.buildMostPreciseUrl(params, { amending }),
-          )
-        : route.buildUrl(params);
+      const routeUrl = route.buildUrl(params);
       if (DEBUG) {
         console.debug(
           `${route}.redirectTo(${routeUrl}) (reason: ${callReason})`,
@@ -347,6 +335,29 @@ export const route = (pattern, options = {}) => {
         fromSignal: isSignalChange,
       });
     };
+    // Where replaceParams takes the address, read without going there (see
+    // navBackToState). The most specific route matching builds it: the params
+    // are what the states hold, the address one stands at amended. A signal
+    // change reaches a less specific route only when the more specific one does
+    // not carry the param (see writeValueInUrl): left to that one, the change
+    // would be dropped.
+    // buildUrlPreservingPath handles the catch-all case where this trailing-slash
+    // route matched a path it cannot represent (e.g. "/" on "/404") without
+    // corrupting the current URL.  Ancestor optimisation is trusted as-is.
+    const urlOfParamsReplaced = (newParams) => {
+      const mostSpecificRoute = findMostSpecificMatchingRoute(route, routeSet);
+      if (mostSpecificRoute !== route) {
+        const { routePattern: mostSpecificPattern } =
+          getRoutePrivateProperties(mostSpecificRoute);
+        return resolveRouteUrl(
+          mostSpecificPattern.buildMostPreciseUrl(newParams, {
+            amending: true,
+          }),
+        );
+      }
+      return routePattern.buildUrlPreservingPath(getUrl(), newParams);
+    };
+    getRoutePrivateProperties(route).urlOfParamsReplaced = urlOfParamsReplaced;
     route.replaceParams = (
       newParams,
       { callReason, isSignalChange, history = "replace", debounceUrl } = {},
@@ -358,55 +369,15 @@ export const route = (pattern, options = {}) => {
         );
         return null;
       }
-
-      const mostSpecificRoute = findMostSpecificMatchingRoute(route, routeSet);
-      const isMostSpecificRoute = mostSpecificRoute === route;
-
-      if (DEBUG) {
-        console.debug(
-          `[${route}] Most specific route selected: ${mostSpecificRoute}`,
-        );
-        console.debug(
-          `[${route}] Building URL with params:`,
-          newParams,
-          `on route ${mostSpecificRoute}`,
-        );
-      }
-
-      // If we found a more specific route, delegate to it; otherwise handle it ourselves.
-      // A signal change reaches this only when the more specific route does not
-      // carry the param (see writeValueInUrl): left to it, the change would be dropped.
-      if (!isMostSpecificRoute) {
-        if (DEBUG) {
-          console.debug(
-            `${route} delegating redirect to more specific route ${mostSpecificRoute}`,
-          );
-        }
-        return mostSpecificRoute.redirectTo(newParams, {
-          callReason: `replaceParams delegation from ${route} to ${mostSpecificRoute} (original reason: ${callReason})`,
-          history,
-          debounceUrl,
-          isSignalChange,
-          amending: true,
-        });
-      }
-
-      // This route is the most specific — compute the target URL.
-      // buildUrlPreservingPath handles the catch-all case where this trailing-slash
-      // route matched a path it cannot represent (e.g. "/" on "/404") without
-      // corrupting the current URL.  Ancestor optimisation is trusted as-is.
       if (!integration) {
         if (import.meta.dev) {
           console.warn(
-            `redirectTo called on "${route}" but integration not set`,
+            `replaceParams called on "${route}" but integration not set`,
           );
         }
         return Promise.resolve();
       }
-      const targetUrl = routePattern.buildUrlPreservingPath(
-        getUrl(),
-        newParams,
-      );
+      const targetUrl = urlOfParamsReplaced(newParams);
       if (DEBUG) {
         console.debug(
           `[${route}] navigating to ${targetUrl} (reason: ${callReason})`,
@@ -538,22 +509,12 @@ export const route = (pattern, options = {}) => {
           paramSignal,
         );
       }
-      const writeValueInUrl = (value) => {
-        // What the address wrote, it says already. A value it could not hold
-        // as written (autoFix) is put back by the pass that wrote it
-        // (repairedParamsByRoute). What anything writes in reaction to it —
-        // an effect resetting a page when a filter changes — is a write of its
-        // own, and goes on.
-        if (paramSignal.options.isWrittenByAddress()) {
-          return;
-        }
-        const rawParams = route.rawParamsSignal.peek();
-        const urlParamValue = rawParams[paramName];
-        const matching = route.matchingSignal.peek();
-
-        if (!matching) {
-          // Route not matching, no URL sync needed
-          return;
+      // The params the address takes when this state holds `value`: null when
+      // it already says that value, or when the write is not this route's to
+      // make.
+      const paramsOfWrite = (value) => {
+        if (!route.matchingSignal.peek()) {
+          return null;
         }
         // A param declared on an ancestor is carried by every route below it,
         // each with its own connection: all of them hear the write, the most
@@ -570,70 +531,70 @@ export const route = (pattern, options = {}) => {
             pathConnectionMap.has(paramName) ||
             queryConnectionMap.has(paramName)
           ) {
-            return;
+            return null;
           }
         }
-        if (urlParamValue === undefined) {
-          // No URL parameter exists - check if signal has meaningful value to add
-          if (connection.isDefaultValue(value)) {
-            // Signal using default value, keep URL clean (no parameter needed)
-            return;
-          }
-          if (debug) {
-            console.debug(
-              `[route] Signal->URL: ${paramName} adding custom value ${value} to URL (default: ${connection.getDefaultValue()})`,
-            );
-          }
-          route.replaceParams(
-            { [paramName]: value },
-            {
-              callReason: `${paramName} signal change on ${route}`,
-              isSignalChange: true,
-              history: historyOfWrite(),
-              debounceUrl,
-            },
-          );
-          return;
-        }
-
-        // URL parameter exists - check if we need to update or clean it up
+        const urlParamValue = route.rawParamsSignal.peek()[paramName];
+        // The default stays out of the address, to keep it clean.
         if (connection.isDefaultValue(value)) {
-          if (debug) {
-            console.debug(
-              `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`,
-            );
-          }
-          route.replaceParams(
-            { [paramName]: undefined },
-            {
-              callReason: `${paramName} signal reset to default on ${route}`,
-              isSignalChange: true,
-              history: historyOfWrite(),
-              debounceUrl,
-            },
-          );
+          return urlParamValue === undefined
+            ? null
+            : { [paramName]: undefined };
+        }
+        if (
+          urlParamValue !== undefined &&
+          compareTwoJsValues(value, urlParamValue)
+        ) {
+          return null;
+        }
+        return { [paramName]: value };
+      };
+      const writeValueInUrl = (value) => {
+        // What the address wrote, it says already. A value it could not hold
+        // as written (autoFix) is put back by the pass that wrote it
+        // (repairedParamsByRoute). What anything writes in reaction to it —
+        // an effect resetting a page when a filter changes — is a write of its
+        // own, and goes on.
+        if (paramSignal.options.isWrittenByAddress()) {
           return;
         }
-
-        if (compareTwoJsValues(value, urlParamValue)) {
-          // Values already match, no sync needed
+        const params = paramsOfWrite(value);
+        if (!params) {
           return;
         }
+        const toDefault = params[paramName] === undefined;
         if (debug) {
           console.debug(
-            `[route] Signal->URL: ${paramName} updating URL ${urlParamValue} -> ${value}`,
+            toDefault
+              ? `[route] Signal->URL: ${paramName} cleaning URL (removing default value ${value})`
+              : `[route] Signal->URL: ${paramName} writing ${value} in URL (default: ${connection.getDefaultValue()})`,
           );
         }
-        route.replaceParams(
-          { [paramName]: value },
-          {
-            callReason: `${paramName} signal change on ${route}`,
-            isSignalChange: true,
-            history: historyOfWrite(),
-            debounceUrl,
-          },
-        );
+        route.replaceParams(params, {
+          callReason: toDefault
+            ? `${paramName} signal reset to default on ${route}`
+            : `${paramName} signal change on ${route}`,
+          isSignalChange: true,
+          history: historyOfWrite(),
+          debounceUrl,
+        });
       };
+      const addressOfWrite = (value) => {
+        const params = paramsOfWrite(value);
+        if (!params) {
+          return null;
+        }
+        return getRoutePrivateProperties(route).urlOfParamsReplaced(params);
+      };
+      let addressOfWriteSet = addressOfWriteBySignal.get(paramSignal);
+      if (!addressOfWriteSet) {
+        addressOfWriteSet = new Set();
+        addressOfWriteBySignal.set(paramSignal, addressOfWriteSet);
+      }
+      addressOfWriteSet.add(addressOfWrite);
+      cleanupSet.add(() => {
+        addressOfWriteSet.delete(addressOfWrite);
+      });
       const cleanupSignalUrlEffect = effect(() => {
         const value = paramSignal.value;
         // Only the param signal re-runs this effect. Writing the url reads
@@ -818,6 +779,45 @@ const paramsTargetCanPlace = (redirectRoute, urlParams) => {
     }
   }
   return paramsCarriedOver;
+};
+
+// Where writing a state takes the address, one reader per route binding it
+// (see paramsOfWrite): asked by navBackToState before anything is written.
+const addressOfWriteBySignal = new WeakMap();
+/**
+ * Goes back to the entry right behind when it is the address writing `value`
+ * into `signal` would make: the state is then written by the traversal, as
+ * the browser's back button writes it, and nothing else is done here. Answers
+ * false and does nothing otherwise — the state is not bound to the address
+ * one is at, the write would not change it, the entry behind says anything
+ * else (another param included), or the browser does not expose its stack
+ * (see the adjacency in via_history.js).
+ *
+ * For a writer that knows its write is a place aimed at, with nothing written
+ * after it in the same move (a SlideContainer's own travel): the traversal
+ * lands after the call has returned, and a write made meanwhile would go to
+ * the entry being left. That is why a `history: "push"` write is never turned
+ * into a traversal on its own (see `fromSignal` in via_history.js).
+ *
+ * @returns {boolean} whether the back was started
+ */
+export const navBackToState = (signal, value) => {
+  const addressOfWriteSet = addressOfWriteBySignal.get(signal);
+  if (!addressOfWriteSet || !integration) {
+    return false;
+  }
+  for (const addressOfWrite of addressOfWriteSet) {
+    const url = addressOfWrite(value);
+    if (url === null) {
+      continue;
+    }
+    if (!integration.isEntryBehind(url)) {
+      return false;
+    }
+    integration.navBack();
+    return true;
+  }
+  return false;
 };
 
 let setupRoutesCalled = false;

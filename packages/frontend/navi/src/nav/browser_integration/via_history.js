@@ -117,23 +117,33 @@ export const setupBrowserIntegrationViaHistory = ({
     }
   };
   rememberEntryIsOfThisDocument();
-  const adjacentEntryDelta = (url) => {
+  const urlOfEntryNextDoor = (delta) => {
     const currentEntry = window.navigation?.currentEntry;
     if (!currentEntry) {
-      return 0;
+      return null;
     }
-    const entries = window.navigation.entries();
-    const index = currentEntry.index;
+    const entry = window.navigation.entries()[currentEntry.index + delta];
+    if (!entry || !sameDocumentEntryKeys.has(entry.key)) {
+      return null;
+    }
+    return entry.url;
+  };
+  const adjacentEntryDelta = (url) => {
     // Behind first: when the same page stands on both sides (A, B, A and one
     // is on B), a link to it reads as going back.
     for (const delta of [-1, 1]) {
-      const entry = entries[index + delta];
-      if (entry && entry.url === url && sameDocumentEntryKeys.has(entry.key)) {
+      if (urlOfEntryNextDoor(delta) === url) {
         return delta;
       }
     }
     return 0;
   };
+  // Whether a back would land on `target` (see navBackToState in route.js).
+  // Never while a back is in flight: the stack read here is the one around the
+  // entry being left.
+  const isEntryBehind = (target) =>
+    !backInFlight &&
+    urlOfEntryNextDoor(-1) === new URL(target, readAddress()).href;
 
   const handleRoutingTask = (target, options) => {
     // Everything below this line reasons on the URL as a whole: it is compared
@@ -797,6 +807,7 @@ export const setupBrowserIntegrationViaHistory = ({
     reload,
     navBack,
     whenBackLanded,
+    isEntryBehind,
     navForward,
     getDocumentState,
     carryByLinkNavigation,

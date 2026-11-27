@@ -184,6 +184,8 @@ setOnAllRouteReady((v) => {
 // would return to without moving.
 setRouteIntegration({
   navTo: (url, options) => navTo(url, options),
+  isEntryBehind: (url) => getBrowserIntegration().isEntryBehind(url),
+  navBack: (options) => getBrowserIntegration().navBack(options),
 });
 
 // "browser_history_api" or "browser_navigation_api".

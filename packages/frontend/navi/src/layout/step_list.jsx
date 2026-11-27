@@ -227,11 +227,19 @@ const css = /* css */ `
     translate: -50% -50%;
     pointer-events: none;
   }
-  .navi_step_list_step:hover .navi_step_list_dot,
+  /* A step that is not a place to go (see Step's pressable): drawn as the
+     others, with nothing to press. */
+  .navi_step_list .navi_step_list_step[data-unpressable] {
+    color: var(--x-step-list-muted);
+  }
+  .navi_step_list .navi_step_list_step[data-unpressable][data-current] {
+    color: var(--x-step-list-current-color);
+  }
+  button.navi_step_list_step:hover .navi_step_list_dot,
   .navi_step_list_step[data-hover] .navi_step_list_dot {
     background: color-mix(in srgb, var(--x-step-list-accent) 15%, transparent);
   }
-  .navi_step_list .navi_step_list_step:hover,
+  .navi_step_list button.navi_step_list_step:hover,
   .navi_step_list .navi_step_list_step[data-hover] {
     --button-color: var(--x-step-list-current-color);
   }
@@ -290,9 +298,11 @@ const StepListContext = createContext(null);
  *   (data-slide-container-follows), which is also what keeps the arrow keys
  *   working from here.
  * @param {boolean} [travelByClick=true] - whether pressing a step goes
- *   there. Off, the steps are read-only — shown, not offered. To DO
- *   something on a press, say `onClick` on the Item itself: like every other
- *   prop an Item carries, it lands on that step's button.
+ *   there, for every step at once. Off, the steps are read-only — shown, not
+ *   offered. To DO something on a press, say `onClick` on the Item itself:
+ *   like every other prop an Item carries, it lands on that step's button.
+ *   One step that is never a place to go (a confirmation only sending
+ *   reaches) says so on its Item: `pressable={false}`.
  * @param {boolean} [travelByKeyboard=true] - whether the arrow keys walk
  *   from one step to the other (the focus moves, Enter presses). Only when
  *   the list stands alone: connected to slides the arrows belong to the
@@ -566,6 +576,13 @@ export const StepList = ({
             const slotRight = last
               ? dotXs[index] + EDGE_INSET
               : dotXs[index] + slotWidth / 2;
+            const isCurrent = index === currentIndex;
+            const stepContent = (
+              <>
+                <span className="navi_step_list_dot" aria-hidden="true" />
+                <span className="navi_step_list_label">{step.label}</span>
+              </>
+            );
             return (
               <div
                 key={step.value}
@@ -576,35 +593,49 @@ export const StepList = ({
                   "--step-dot-x": `${dotXs[index] - slotLeft}px`,
                 }}
               >
-                <Button
-                  {...step.buttonProps}
-                  // bare, not discrete: what is drawn IS the dot and its
-                  // label — the hover wash a discrete button paints over its
-                  // whole surface is exactly what must not appear here (the
-                  // feedback is the circle over the dot, see the css).
-                  variant="bare"
-                  className="navi_step_list_step"
-                  aria-current={index === currentIndex ? "step" : undefined}
-                  data-current={index === currentIndex ? "" : undefined}
-                  readOnly={!travelByClick}
-                  // Towards the slides when connected, by name: the command
-                  // reaches the container wherever this list sits on the
-                  // page. What else a press should do is the Item's own
-                  // onClick, which arrived through buttonProps.
-                  command={
-                    slideContainer && travelByClick
-                      ? `--navi-go-to-slide:${step.value}`
-                      : undefined
-                  }
-                  commandFor={slideContainer}
-                  // A message about a step (a callout) points at its circle,
-                  // above it: the label lives below.
-                  data-callout-anchor=".navi_step_list_dot"
-                  data-callout-position="top"
-                >
-                  <span className="navi_step_list_dot" aria-hidden="true" />
-                  <span className="navi_step_list_label">{step.label}</span>
-                </Button>
+                {step.pressable ? (
+                  <Button
+                    {...step.buttonProps}
+                    // bare, not discrete: what is drawn IS the dot and its
+                    // label — the hover wash a discrete button paints over its
+                    // whole surface is exactly what must not appear here (the
+                    // feedback is the circle over the dot, see the css).
+                    variant="bare"
+                    className="navi_step_list_step"
+                    aria-current={isCurrent ? "step" : undefined}
+                    data-current={isCurrent ? "" : undefined}
+                    readOnly={!travelByClick}
+                    // Towards the slides when connected, by name: the command
+                    // reaches the container wherever this list sits on the
+                    // page. What else a press should do is the Item's own
+                    // onClick, which arrived through buttonProps.
+                    command={
+                      slideContainer && travelByClick
+                        ? `--navi-go-to-slide:${step.value}`
+                        : undefined
+                    }
+                    commandFor={slideContainer}
+                    // A message about a step (a callout) points at its circle,
+                    // above it: the label lives below.
+                    data-callout-anchor=".navi_step_list_dot"
+                    data-callout-position="top"
+                  >
+                    {stepContent}
+                  </Button>
+                ) : (
+                  // Not a control at all, rather than a read-only one: there is
+                  // no press to refuse and nothing to explain, so nothing takes
+                  // the focus or answers a press.
+                  <Box
+                    {...step.buttonProps}
+                    className="navi_step_list_step"
+                    data-unpressable=""
+                    aria-current={isCurrent ? "step" : undefined}
+                    data-current={isCurrent ? "" : undefined}
+                  >
+                    {stepContent}
+                  </Box>
+                )}
               </div>
             );
           })}
@@ -626,7 +657,11 @@ const sameSteps = (previousSteps, nextSteps) => {
   while (index < previousSteps.length) {
     const previous = previousSteps[index];
     const next = nextSteps[index];
-    if (previous.value !== next.value || previous.done !== next.done) {
+    if (
+      previous.value !== next.value ||
+      previous.done !== next.done ||
+      previous.pressable !== next.pressable
+    ) {
       return false;
     }
     if (!sameShallow(previous.buttonProps, next.buttonProps)) {
@@ -666,18 +701,33 @@ const sameShallow = (previousObject, nextObject) => {
  * @type {import("preact").FunctionComponent<{
  *   value: string,
  *   done?: boolean,
+ *   pressable?: boolean,
  *   [key: string]: any,
  * }>}
  * @param {boolean} [done] - this step is answered: its dot is filled — the
  *   fill's one meaning. Steps answered out of order are filled dots
  *   standing alone, dashed segments around them.
+ * @param {boolean} [pressable=true] - false for a step of the path that is
+ *   not a place to go: a confirmation one reaches only by sending. Drawn as
+ *   the others (its dot, its label, the road to it, the halo when the slides
+ *   stand on it), and no button: nothing to press, to focus, or to refuse.
+ *   The slide behind it is still reachable by the container's own ways (a
+ *   key, a drag, an address): a slide that holds says so on the slide before
+ *   (`preventNavNext`).
  */
-export const Step = ({ value, done, children, ...buttonProps }) => {
+export const Step = ({
+  value,
+  done,
+  pressable = true,
+  children,
+  ...buttonProps
+}) => {
   const registry = useContext(StepListContext);
   if (registry) {
     registry.renderedSteps.push({
       value: value ?? String(registry.renderedSteps.length),
       done: Boolean(done),
+      pressable,
       label: children,
       buttonProps,
     });
