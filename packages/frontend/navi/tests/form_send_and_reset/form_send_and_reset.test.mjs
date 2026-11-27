@@ -468,7 +468,9 @@ try {
                 document.querySelector("#left_popup_refused_title"),
               ),
             }));
-          const whileSaving = await readPicker();
+          // Only the value: whether the close has unmounted the popup yet
+          // races with the run going out.
+          const { value: valueWhileSaving } = await readPicker();
           await page
             .waitForFunction(
               // eslint-disable-next-line no-undef
@@ -479,7 +481,7 @@ try {
             .catch(() => {});
           return {
             calls: await readCalls(page, "left_popup_refused"),
-            while_saving: whileSaving,
+            value_while_saving: valueWhileSaving,
             after_refusal: await readPicker(),
             errors,
           };
