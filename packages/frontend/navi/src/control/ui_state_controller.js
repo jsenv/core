@@ -728,6 +728,15 @@ export const useUIStateController = (
           writeBoundSignal(controller.state);
           controller.followDefaultValue();
         },
+        // The rollback of a control whose run was refused or called off after
+        // it left the page (see rollBackLeftControl in control_hooks.jsx): no
+        // element is left to hear it, but the control still knows what it
+        // accepted, and its bound signal goes back with it. What it put back,
+        // for the picker it was the popup of.
+        rollBackAfterLeaving: (e) => {
+          controller.rollbackUIState(e);
+          return { uiState: controller.state };
+        },
         // Something typed, picked or toggled since the value the outside last
         // gave or accepted.
         holdsEdit: () => {
@@ -1852,7 +1861,29 @@ export const useUIGroupStateController = (
           }
           return;
         }
-        childUIStateController.setUIState(childNewState, e);
+        placingChildrenDepth++;
+        try {
+          childUIStateController.setUIState(childNewState, e);
+        } finally {
+          placingChildrenDepth--;
+        }
+      };
+      // While the group puts values on its children (placing, resetting,
+      // rolling back, clearing them), a nested group among them tells the
+      // group its value moved, as it does when someone answers in it. That is
+      // the group's own placement coming back: the group works out what it
+      // holds once its children are placed, and taken for an answer the echo
+      // would clear stateGivenFromAbove and run the group's uiAction and
+      // command, then its parent's. A leaf handed a value tells nobody (see
+      // useUIStateController); this is where a nested group's telling stops.
+      let placingChildrenDepth = 0;
+      const whilePlacingChildren = (place) => {
+        placingChildrenDepth++;
+        try {
+          place();
+        } finally {
+          placingChildrenDepth--;
+        }
       };
 
       const applyState = (
@@ -1883,7 +1914,7 @@ export const useUIGroupStateController = (
           stateChanged: true,
         });
         controller.onUIAction(e, {
-          skipCommand: internalBehavior,
+          skipCommand: internalBehavior || nobodyActedOnTheGroup(e),
           actingChild,
         });
         const el = controller.ref.current;
@@ -2193,6 +2224,10 @@ export const useUIGroupStateController = (
           if (!isMonitoringChild(childUIStateController)) {
             return;
           }
+          if (placingChildrenDepth > 0) {
+            // The echo of this group's own placement (see whilePlacingChildren).
+            return;
+          }
           const childControlType = childUIStateController.controlType;
           if (!isDebugNoop(debugUIGroup)) {
             debugUIGroup(
@@ -2250,11 +2285,13 @@ export const useUIGroupStateController = (
             detail: {},
           });
           chainEvent(ev, e);
-          for (const c of childUIStateControllerArray) {
-            if (shouldPropagateStateToChild(c)) {
-              c.resetUIState(ev);
+          whilePlacingChildren(() => {
+            for (const c of childUIStateControllerArray) {
+              if (shouldPropagateStateToChild(c)) {
+                c.resetUIState(ev);
+              }
             }
-          }
+          });
           onChange(e, { notifyExternal: true });
           controller.followDefaultValue();
         },
@@ -2263,11 +2300,13 @@ export const useUIGroupStateController = (
             detail: {},
           });
           chainEvent(ev, e);
-          for (const c of childUIStateControllerArray) {
-            if (shouldPropagateStateToChild(c)) {
-              c.rollbackUIState(ev);
+          whilePlacingChildren(() => {
+            for (const c of childUIStateControllerArray) {
+              if (shouldPropagateStateToChild(c)) {
+                c.rollbackUIState(ev);
+              }
             }
-          }
+          });
           onChange(e, { notifyExternal: true });
           controller.followDefaultValue();
         },
@@ -2276,16 +2315,18 @@ export const useUIGroupStateController = (
             detail: {},
           });
           chainEvent(ev, e);
-          for (const c of childUIStateControllerArray) {
-            if (
-              !isMonitoringChild(c) ||
-              c.controlType === "button" ||
-              c.controlType === "link"
-            ) {
-              continue;
+          whilePlacingChildren(() => {
+            for (const c of childUIStateControllerArray) {
+              if (
+                !isMonitoringChild(c) ||
+                c.controlType === "button" ||
+                c.controlType === "link"
+              ) {
+                continue;
+              }
+              c.clearUIState(ev);
             }
-            c.clearUIState(ev);
-          }
+          });
           onChange(e, { notifyExternal: true });
         },
         // The group was told yes, so what each of its parts shows is accepted
@@ -2763,6 +2804,19 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           }
           return child.getInteractionBlockingControls();
         },
+        // The popup's control left the page with its run out — the close it
+        // was optimistic about unmounted it (mount="while-opened") — and the
+        // run was refused: what it rolled back to comes here, the picker
+        // holding the value it adopted from it. A rollback, so nobody above
+        // hears an answer (see nobodyActedOnTheGroup).
+        takeBackFromLeftChild: (uiState, e) => {
+          updatingRef.current = true;
+          s.realUIStateController.setUIState(
+            uiStateOrEmpty(uiState, s.realUIStateController.emptyUIState),
+            e,
+          );
+          updatingRef.current = false;
+        },
         onChildUIAction: (child, e, { stateChanged, silent = false }) => {
           if (!stateChanged) {
             return;
@@ -3020,6 +3074,14 @@ const INTERNAL_EVENT_SET = new Set([
 ]);
 const isInternalEvent = (e) => {
   return INTERNAL_EVENT_SET.has(e.type);
+};
+// What runs a group's command is someone answering in it — the leaf's rule:
+// a value handed down, a reset, a rollback, a correction is nobody acting.
+// Except a picker relaying its popup: facade_propagate_up is internal to the
+// picker that relays it, and it carries the choice made in the popup — to the
+// group above, someone answered.
+const nobodyActedOnTheGroup = (e) => {
+  return isInternalEvent(e) && e.type !== "facade_propagate_up";
 };
 const isOutsideValueFollow = (e) => {
   return Boolean(findEvent(e, "outside_value_follow"));

@@ -1658,8 +1658,38 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         return;
       }
       scopeMap.set(ownerKey, scope);
+      scope.ownerKeySet.add(ownerKey);
       scopesVersionSignal.value = scopesVersionSignal.peek() + 1;
     };
+    // A deleted owner takes its scope with it: the keys it was found under
+    // stop naming it — a table dropped and created again under the same name
+    // starts on nothing of the old one — and its children leave, letting go
+    // of what their own relations hold. Deleted, not let go of by the range
+    // sweep: a read of the children (its columns, on the page still showing
+    // them) would go blank under a row the list just let go.
+    const releaseScope = (scope) => {
+      for (const ownerKey of scope.ownerKeySet) {
+        if (scopeMap.get(ownerKey) === scope) {
+          scopeMap.delete(ownerKey);
+        }
+      }
+      scope.ownerKeySet.clear();
+      scopesVersionSignal.value = scopesVersionSignal.peek() + 1;
+      for (const childItem of scope.childStore.arraySignal.peek()) {
+        leaveItem(childItem);
+      }
+    };
+    if (!ownerName) {
+      store.observeRemovals((removedOwnerArray) => {
+        for (const owner of removedOwnerArray) {
+          const ownerId = owner[idKey];
+          const scope = scopeMap.get(ownerId);
+          if (scope && scope.ownerId === ownerId) {
+            releaseScope(scope);
+          }
+        }
+      });
+    }
     const createScope = (ownerKey) => {
       // Keeps every child it is given (no `letsGoOfRows`): the scope stays
       // with its owner key, and the owner's collection is what holds them.
@@ -1673,7 +1703,15 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         },
         leaveItem,
       });
-      return { childStore, idArraySignal: signal([]) };
+      return {
+        childStore,
+        idArraySignal: signal([]),
+        // The owner row it belongs to, once one has taken it (see
+        // addItemSetup): undefined for children read by a key before their
+        // owner arrived.
+        ownerId: undefined,
+        ownerKeySet: new Set(),
+      };
     };
     addItemSetup((item, answer) => {
       const ownerId = item[idKey];
@@ -1686,12 +1724,23 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       } else {
         // Reuse an existing scope if one was already created under a uniqueKey
         // value (e.g. rows were fetched by tablename before the full table was loaded).
+        // Not one another owner took: a table created again under the name of
+        // one dropped meanwhile is another table, and the old one's columns
+        // are not its own.
         scope = scopeMap.get(ownerId);
         if (!scope) {
           for (const uniqueKey of uniqueKeys) {
             const uniqueKeyValue = item[uniqueKey];
-            if (uniqueKeyValue !== undefined && scopeMap.has(uniqueKeyValue)) {
-              scope = scopeMap.get(uniqueKeyValue);
+            if (uniqueKeyValue === undefined) {
+              continue;
+            }
+            const scopeUnderKey = scopeMap.get(uniqueKeyValue);
+            if (
+              scopeUnderKey &&
+              (scopeUnderKey.ownerId === undefined ||
+                scopeUnderKey.ownerId === ownerId)
+            ) {
+              scope = scopeUnderKey;
               break;
             }
           }
@@ -1699,6 +1748,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         if (!scope) {
           scope = createScope(ownerId);
         }
+        scope.ownerId = ownerId;
         // Register the scope under the id and every uniqueKey value so that
         // resolveOwnerId can address it whichever key a callback returns.
         registerScope(ownerId, scope);
@@ -1841,9 +1891,14 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
             return undefined;
           }
           // A value is produced by resultToValue above, which creates the
-          // owner's scope when it is missing, and scopes are never dropped.
+          // owner's scope when it is missing; a deleted owner took it away
+          // (see releaseScope), and its children with it.
           const [ownerId, idOrIdArray] = value;
-          const { childStore } = scopeMap.get(ownerId);
+          const scope = scopeMap.get(ownerId);
+          if (!scope) {
+            return isMany ? [] : undefined;
+          }
+          const { childStore } = scope;
           if (isMany) {
             return childStore.selectAll(idOrIdArray);
           }

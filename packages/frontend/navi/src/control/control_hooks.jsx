@@ -14,6 +14,7 @@
  *    and a picker answer once per gesture and do not read it.
  */
 import {
+  chainEvent,
   findFocusDelegateTarget,
   getElementSignature,
   getKeyboardEventDefaultAction,
@@ -115,6 +116,27 @@ import {
 // Distinct from undefined so that undefined (e.g. unchecked radio) can itself
 // be stored as a valid "last action value" and trigger the dedup logic.
 const NO_ACTION_YET = Symbol("no_action_yet");
+// A control that left the page while its run was out — a popup's content
+// unmounted by the close the run was optimistic about (mount="while-opened"),
+// a parked subtree — is refused: no element hears the rollback, so the
+// controller is asked directly. What it puts back still has a home: its bound
+// signal, and the picker it was the popup of, which holds that value by then.
+// A control knowing no last accepted value of its own (a group, but a Form)
+// leaves it.
+const rollBackLeftControl = (uiStateController, outcomeEvent) => {
+  if (!uiStateController.rollBackAfterLeaving) {
+    return;
+  }
+  const rollbackEvent = new CustomEvent("navi_rollback_ui_state", {
+    detail: {},
+  });
+  chainEvent(rollbackEvent, outcomeEvent);
+  const putBack = uiStateController.rollBackAfterLeaving(rollbackEvent);
+  uiStateController.parentUIStateController?.takeBackFromLeftChild?.(
+    putBack.uiState,
+    rollbackEvent,
+  );
+};
 // The groups that ARE one control made of parts: a press on a part, once its
 // own run ended, runs the group's action (auto_group_action).
 const AUTO_ACTION_GROUP_TYPE_SET = new Set([
@@ -2434,6 +2456,19 @@ const useInteractiveProps = (
             onActionError?.(outcome.error, outcomeEvent);
           } else {
             onActionEnd?.(outcome.data, outcomeEvent);
+          }
+          if (!ref.current) {
+            // Left the page with the run out: the rollback the element
+            // handlers below would have asked for has nobody to hear it.
+            const rollsBack = outcome.aborted
+              ? resetOnAbort &&
+                !uiStateController.queuedActionAllowedEvent &&
+                outcomeEvent.detail.event ===
+                  uiStateController.pendingActionEvent
+              : "error" in outcome && resetOnError;
+            if (rollsBack) {
+              rollBackLeftControl(uiStateController, outcomeEvent);
+            }
           }
           const queuedEvent = uiStateController.queuedActionAllowedEvent;
           if (!queuedEvent) {

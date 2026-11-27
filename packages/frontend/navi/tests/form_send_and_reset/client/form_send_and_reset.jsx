@@ -13,6 +13,7 @@ import {
   Form,
   Input,
   Label,
+  Picker,
   stateSignal,
 } from "@jsenv/navi";
 import { signal } from "@preact/signals";
@@ -24,6 +25,8 @@ const recordCall = (caseId, value) => {
   calls.push(value);
 };
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const leftPopupSignal = signal({ title: "old" });
+window.leftPopupSignal = leftPopupSignal;
 const recordingAction = (caseId, { delay = 0 } = {}) => {
   return async (value) => {
     recordCall(caseId, value);
@@ -325,6 +328,45 @@ const RollbackCases = () => (
     <Case id="reset_to_default">
       <Form command="--navi-reset" action={recordingAction("reset_to_default")}>
         <Input id="reset_to_default_title" name="title" defaultValue="draft" />
+      </Form>
+    </Case>
+
+    {/* A picker's popup form saving optimistically: the close unmounts it
+        (while-opened) before the refusal comes back, and the picker, which
+        adopted what was typed, goes back to what the form last had accepted. */}
+    <Case id="left_popup_refused">
+      <Picker
+        id="left_popup_refused_picker"
+        type="object"
+        signal={leftPopupSignal}
+        mount="while-opened"
+        ui={<span>{leftPopupSignal.value?.title}</span>}
+      >
+        <Form
+          command="--navi-close"
+          action={async (value) => {
+            recordCall("left_popup_refused", value);
+            await wait(150);
+            throw new Error("refused");
+          }}
+          optimistic
+          resetOnError
+        >
+          <Input id="left_popup_refused_title" name="title" />
+        </Form>
+      </Picker>
+    </Case>
+
+    {/* A nested group's command answers a press in it: the form putting it
+        back (a reset) runs none of it. */}
+    <Case id="nested_group_command">
+      <Form action={recordingAction("nested_group_command")}>
+        <CheckboxGroup name="tags" command="--navi-send">
+          <Input type="checkbox" id="nested_group_command_a" value="a" />
+        </CheckboxGroup>
+        <Button id="nested_group_command_reset" command="--navi-reset">
+          Reset
+        </Button>
       </Form>
     </Case>
   </div>

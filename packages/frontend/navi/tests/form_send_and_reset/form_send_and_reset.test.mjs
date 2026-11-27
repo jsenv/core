@@ -442,6 +442,77 @@ try {
         }
       },
     );
+
+    testInEngines(
+      test,
+      "picker popup form refused after the close took it away",
+      async ({ browser }) => {
+        const { page, errors } = await openPage(browser);
+        try {
+          await page.click("#left_popup_refused_picker");
+          await page.waitForSelector("#left_popup_refused_title", {
+            timeout: 2000,
+          });
+          await page.click("#left_popup_refused_title");
+          await page.keyboard.press("ControlOrMeta+a");
+          await page.keyboard.type("new");
+          await waitFrames(page);
+          await page.keyboard.press("Enter");
+          await waitForCallCount(page, "left_popup_refused", 1);
+          const readPicker = () =>
+            page.evaluate(() => ({
+              // eslint-disable-next-line no-undef
+              value: window.leftPopupSignal.value,
+              popup_mounted: Boolean(
+                // eslint-disable-next-line no-undef
+                document.querySelector("#left_popup_refused_title"),
+              ),
+            }));
+          const whileSaving = await readPicker();
+          await page
+            .waitForFunction(
+              // eslint-disable-next-line no-undef
+              () => window.leftPopupSignal.value?.title === "old",
+              null,
+              { timeout: 2000 },
+            )
+            .catch(() => {});
+          return {
+            calls: await readCalls(page, "left_popup_refused"),
+            while_saving: whileSaving,
+            after_refusal: await readPicker(),
+            errors,
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
+
+    testInEngines(
+      test,
+      "reset reaching a nested group runs none of its command",
+      async ({ browser }) => {
+        const { page, errors } = await openPage(browser);
+        try {
+          await page.click("#nested_group_command_a");
+          await waitForCallCount(page, "nested_group_command", 1);
+          await page.click("#nested_group_command_reset");
+          // A second send would be the group's --navi-send run by the reset.
+          await waitForCallCount(page, "nested_group_command", 2);
+          return {
+            calls: await readCalls(page, "nested_group_command"),
+            a_checked_after_reset: await page.evaluate(
+              // eslint-disable-next-line no-undef
+              () => document.querySelector("#nested_group_command_a").checked,
+            ),
+            errors,
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
   });
 } finally {
   await closeBrowsers();

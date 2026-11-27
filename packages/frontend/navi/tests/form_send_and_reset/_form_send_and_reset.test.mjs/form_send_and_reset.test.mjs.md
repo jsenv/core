@@ -39,6 +39,10 @@
 - [reset after a send goes to the default (webkit)](35_reset_after_a_send_goes_to_the_default_(webkit)/35_reset_after_a_send_goes_to_the_default_(webkit).md)
 - [named submit refused, then enter (chromium)](36_named_submit_refused__then_enter_(chromium)/36_named_submit_refused__then_enter_(chromium).md)
 - [named submit refused, then enter (webkit)](37_named_submit_refused__then_enter_(webkit)/37_named_submit_refused__then_enter_(webkit).md)
+- [picker popup form refused after the close took it away (chromium)](38_picker_popup_form_refused_after_the_close_took_it_away_(chromium)/38_picker_popup_form_refused_after_the_close_took_it_away_(chromium).md)
+- [picker popup form refused after the close took it away (webkit)](39_picker_popup_form_refused_after_the_close_took_it_away_(webkit)/39_picker_popup_form_refused_after_the_close_took_it_away_(webkit).md)
+- [reset reaching a nested group runs none of its command (chromium)](40_reset_reaching_a_nested_group_runs_none_of_its_command_(chromium)/40_reset_reaching_a_nested_group_runs_none_of_its_command_(chromium).md)
+- [reset reaching a nested group runs none of its command (webkit)](41_reset_reaching_a_nested_group_runs_none_of_its_command_(webkit)/41_reset_reaching_a_nested_group_runs_none_of_its_command_(webkit).md)
 
 ---
 

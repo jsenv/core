@@ -160,7 +160,9 @@ const searchAddresses = createAction(search, { inheritData: true });
 ```
 
 The new instance then starts on what the previous one held, its failure included,
-and `loading` says a newer answer is coming. A resource declares this for each of
+and `loading` says a newer answer is coming. What it starts on is not its own: a
+reset of that instance — a `keep` that expired, a `DELETE` — takes it back to
+nothing, never to another question's answer. A resource declares this for each of
 its reads: one item starts on nothing, a list hands over
 ([resource.md](./resource.md#what-a-read-shows-while-its-params-move)). When one
 action serves both kinds of screen, a binding says it for itself, in either

@@ -632,7 +632,11 @@ out with an example in its JSDoc:
   into the child, as it may carry a part of it.
 
 `ownerId` may be `{ [uniqueKey]: value }` when the owner is known by an
-alternate key. A scoped child takes relations of its own —
+alternate key: children read that way before their owner arrives are its own
+once it does. The children belong to that owner row, not to the key — a table
+dropped and created again under the same name starts on none of the old one's
+columns — and they leave with it when it is deleted, letting go of what their
+own relations hold. A scoped child takes relations of its own —
 `TABLE_COLUMNS.one("dataType", DATA_TYPE)`, fed by what the columns' callbacks
 embed — but none of the callbacks whose result names the child by itself
 (`.one()`'s `GET`/`PUT`/`DELETE`, `.many()`'s `GET_MANY`/`DELETE`/`DELETE_MANY`,

@@ -600,7 +600,10 @@ closed popup — is said on the control:
 Know what `optimistic` costs: **a save that fails does so behind a closed
 popup**. `resetOnError` puts the control back, and the error callout is drawn on
 what surrounds the closed popup — the card it opened from, typically; what the
-page shows meanwhile is the app's to draw and to take back. For a write not
+page shows meanwhile is the app's to draw and to take back. Under
+`mount="while-opened"` the control is gone by then: it still puts back what it
+last had accepted — in its bound signal, and in the picker it was the popup of
+— and the failure, with nothing left to be drawn on, is left to the report. For a write not
 worth being waited for; never for one whose refusal changes what the person
 does next.
 

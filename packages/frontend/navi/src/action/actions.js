@@ -171,8 +171,7 @@ export const resetActions = async (actionSet, options) => {
 export const abortRunningActions = (
   reason = "abortRunningActions was called",
 ) => {
-  const { runningSet } = getActivationInfo();
-  for (const runningAction of runningSet) {
+  for (const runningAction of readRunningActionSet()) {
     runningAction.abort(reason);
   }
 };
@@ -293,7 +292,24 @@ const formatActionSet = (actionSet, prefix = "") => {
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
+// Every instance that ran and was not reset since — for the dev inspector
+// below and the DEBUG log of updateActions only: kept in dev, read nowhere a
+// request goes through.
 const activationWeakSet = createIterableWeakSet("activation");
+
+// The instances with a run out, read where every request goes through. Not a
+// walk over every instance that ever ran: the ones holding a promise in
+// actionPromiseMap, which a run enters as it starts and leaves as it settles
+// (completed, failed, aborted) or is reset.
+const readRunningActionSet = () => {
+  const runningSet = new Set();
+  for (const action of actionPromiseMap.keys()) {
+    if (action.runningStateSignal.peek() === RUNNING) {
+      runningSet.add(action);
+    }
+  }
+  return runningSet;
+};
 
 const getActivationInfo = () => {
   const runningSet = new Set();
@@ -382,17 +398,17 @@ export const updateActions = ({
    * - stays*Set: actions that remain in their current state
    *
    * A proxy in any of the sets stands for the action it currently targets,
-   * exactly as proxy.run()/rerun()/reset() do: what enters activationWeakSet
-   * is always the target. A proxy kept in there would retarget on its own —
-   * to a never-run child once its params go falsy — and getActivationInfo
-   * would then meet an IDLE member on every later update of the document.
+   * exactly as proxy.run()/rerun()/reset() do: what runs, and what
+   * actionPromiseMap holds, is always the target. A proxy kept in there would
+   * retarget on its own — to a never-run child once its params go falsy —
+   * and the next update would find it IDLE while its target runs.
    */
   prerunSet = resolveActionProxies(prerunSet);
   runSet = resolveActionProxies(runSet);
   rerunSet = resolveActionProxies(rerunSet);
   resetSet = resolveActionProxies(resetSet);
 
-  const { runningSet, settledSet } = getActivationInfo();
+  const runningSet = readRunningActionSet();
 
   // Warn about overlapping sets in development
   if (import.meta.dev) {
@@ -559,6 +575,9 @@ ${lines.join("\n")}`,
         staysRunningSet.add(actionRunning);
       }
     }
+    // What stays settled is only said in the DEBUG log below.
+    const settledSet =
+      import.meta.dev && DEBUG ? getActivationInfo().settledSet : [];
     for (const actionSettled of settledSet) {
       const runningState = actionSettled.runningStateSignal.peek();
       if (willResetSet.has(actionSettled)) {
@@ -612,7 +631,9 @@ ${lines.join("\n")}`);
         willRunOrPrerun:
           willRunSet.has(actionToReset) || willPrerunSet.has(actionToReset),
       });
-      activationWeakSet.delete(actionToReset);
+      if (import.meta.dev) {
+        activationWeakSet.delete(actionToReset);
+      }
     }
   }
 
@@ -645,11 +666,15 @@ ${lines.join("\n")}`);
         // on — the other actions of the same update have nothing to do with
         // this one — and given back further down to whoever asked for THIS
         // action, still as a throw.
-        activationWeakSet.add(actionToPrerunOrRun);
+        if (import.meta.dev) {
+          activationWeakSet.add(actionToPrerunOrRun);
+        }
         resultArray.push({ type: "sync_error", error });
         return;
       }
-      activationWeakSet.add(actionToPrerunOrRun);
+      if (import.meta.dev) {
+        activationWeakSet.add(actionToPrerunOrRun);
+      }
 
       if (performRunResult && typeof performRunResult.then === "function") {
         actionToRunPrivateProperties.answeredAsync = true;
@@ -986,6 +1011,12 @@ export const createAction = (callback, rootOptions = {}) => {
       data,
       meta = {},
       completeSideEffect,
+      // What a binding moving to these params hands over (inheritData, see
+      // createActionProxyFromSignal): the instance starts on it, but it is
+      // another question's answer, never this instance's own — a reset goes
+      // back to the declared `value`, not to it.
+      standInValue,
+      standInError,
     } = options;
     if (!Object.hasOwn(options, "params")) {
       // even undefined should be respected it's only when not provided at all we use default
@@ -999,8 +1030,12 @@ export const createAction = (callback, rootOptions = {}) => {
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);
     const runningStateSignal = signal(runningState);
-    const errorSignal = signal(error);
-    const valueSignal = signal(valueInitial);
+    const errorSignal = signal(
+      standInError === undefined ? error : standInError,
+    );
+    const valueSignal = signal(
+      standInValue === undefined ? valueInitial : standInValue,
+    );
     const dataSignal = valueToData
       ? computed(() => valueToData(valueSignal.value))
       : valueSignal;
@@ -1844,8 +1879,8 @@ const createActionProxyFromSignal = (
       const previousActionTarget = actionTargetPreviousWeakRef?.deref();
       const previousTarget = previousActionTarget || action;
       return action.bindParams(params, {
-        error: previousTarget.errorSignal.peek(),
-        value: previousTarget.valueSignal.peek(),
+        standInError: previousTarget.errorSignal.peek(),
+        standInValue: previousTarget.valueSignal.peek(),
       });
     }
     return action.bindParams(params);

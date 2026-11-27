@@ -70,11 +70,12 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  * @param {boolean} [props.optimistic] - The send is taken as done on the form's
  *   own word: no busy state, and what follows it (`command="--navi-close"`, a
  *   slide moving on) runs at once, the run going on behind. A failure then has
- *   no sheet to be read in: `resetOnError` puts the form back and the error
- *   callout is drawn on what surrounds the closed sheet — while the form is
- *   still mounted: a sheet that unmounts its content once closed
- *   (`mount="while-opened"`) leaves the failure to the report, and the value
- *   where it was. For a write not worth being
+ *   no sheet to be read in: `resetOnError` puts the form back, and the error
+ *   callout is drawn on what surrounds the closed sheet while the form is
+ *   still mounted. A sheet that unmounts its content once closed
+ *   (`mount="while-opened"`) leaves the failure to the report, and the form,
+ *   gone, still puts back what it last had accepted: in its bound signal, and
+ *   in the picker it is the popup of. For a write not worth being
  *   waited for — a score, a note — never for one whose refusal changes what the
  *   person does next (see
  *   docs/popup_open.md#closing-when-a-button-also-runs-an-action).
@@ -240,6 +241,18 @@ const useFormGroup = (props) => {
     props.pristineKey,
     record,
   );
+  // What the form puts back when its run is refused after it left the page
+  // (see rollBackLeftControl in control_hooks.jsx): its fields are gone with
+  // it, but what it last had accepted is the baseline its sends are measured
+  // against. Its bound signal goes back to it, and the picker it was the popup
+  // of is handed it.
+  uiStateController.rollBackAfterLeaving = () => {
+    const lastAccepted = sentUIStateSignal.peek();
+    if (props.signal) {
+      props.signal.value = lastAccepted;
+    }
+    return { uiState: lastAccepted };
+  };
   useUnregisteredControlWarning(props.ref);
 
   const { children } = formProps;
