@@ -184,7 +184,7 @@ setOnAllRouteReady((v) => {
 // would return to without moving.
 setRouteIntegration({
   navTo: (url, options) => navTo(url, options),
-  isEntryBehind: (url) => getBrowserIntegration().isEntryBehind(url),
+  readUrlOfEntryBehind: () => getBrowserIntegration().readUrlOfEntryBehind(),
   navBack: (options) => getBrowserIntegration().navBack(options),
 });
 
@@ -200,6 +200,10 @@ export const navIntegratedVia = () => getBrowserIntegration().integration;
  * @param {object} [options.state] - What the new entry holds (see useNavState).
  * @param {string|object} [options.routeTransition] - What this navigation asks
  *   of a route transition (see `<Link routeTransition>`).
+ * @param {Element} [options.element] - The element pressed, when the call
+ *   answers a press: the door a route transition of the application's own
+ *   opens from (see docs/route_transitions.md, "A movement that opens from
+ *   the element pressed"). A `<Link>` says it without being asked.
  * @param {boolean} [options.asReturn] - A push that is a return by meaning:
  *   the page lands where its address was last left — the document's offset,
  *   the lists' positions — as a back would bring it, instead of opening at its

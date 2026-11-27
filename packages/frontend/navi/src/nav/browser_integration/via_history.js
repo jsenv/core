@@ -138,12 +138,11 @@ export const setupBrowserIntegrationViaHistory = ({
     }
     return 0;
   };
-  // Whether a back would land on `target` (see navBackToState in route.js).
-  // Never while a back is in flight: the stack read here is the one around the
-  // entry being left.
-  const isEntryBehind = (target) =>
-    !backInFlight &&
-    urlOfEntryNextDoor(-1) === new URL(target, readAddress()).href;
+  // Where a back would land (see navBackToState in route.js). Nothing while a
+  // back is in flight: the stack read here is the one around the entry being
+  // left.
+  const readUrlOfEntryBehind = () =>
+    backInFlight ? null : urlOfEntryNextDoor(-1);
 
   const handleRoutingTask = (target, options) => {
     // Everything below this line reasons on the URL as a whole: it is compared
@@ -675,6 +674,7 @@ export const setupBrowserIntegrationViaHistory = ({
       asReturn,
       open,
       fromSignal,
+      element,
     } = {},
   ) => {
     const routingOptions = {
@@ -695,6 +695,9 @@ export const setupBrowserIntegrationViaHistory = ({
       // that starts it rather than by an element — the programmatic half of
       // what a <Link routeTransition> says (see route_transition.jsx).
       routeTransition,
+      // The element pressed, when the call answers a press: what a link click
+      // announces as its anchor.
+      element,
     };
     if (open) {
       routeWithPopupOpen(url, routingOptions, open);
@@ -807,7 +810,7 @@ export const setupBrowserIntegrationViaHistory = ({
     reload,
     navBack,
     whenBackLanded,
-    isEntryBehind,
+    readUrlOfEntryBehind,
     navForward,
     getDocumentState,
     carryByLinkNavigation,

@@ -21,6 +21,7 @@ transition), `route_transition_fixed_bars/route_transition_fixed_bars.html`
 - [A traversal retraces its crossing](#a-traversal-retraces-its-crossing)
 - [Pages between fixed bars: the transition area](#pages-between-fixed-bars-the-transition-area)
 - [Custom movements](#custom-movements)
+- [A movement that opens from the element pressed](#a-movement-that-opens-from-the-element-pressed)
 - [Two routes matching one url](#two-routes-matching-one-url)
 - [Route transitions and `RouteTravel` — one pair, one system](#route-transitions-and-routetravel--one-pair-one-system)
 - [A transition says nothing about data](#a-transition-says-nothing-about-data)
@@ -236,7 +237,9 @@ link asked for, and what they deduced (a reverse, a page from anywhere).
 Remembering is one more history write for the push, and browsers count them —
 Safari refuses past 100 in ten seconds. A crossing played by the default, or by
 a relation written for that very way, is not written down: the back finds the
-same movement there, reversed, and the push costs one write.
+same movement there, reversed, and the push costs one write — unless it opened
+from the element pressed, which nothing finds again (see
+[below](#a-movement-that-opens-from-the-element-pressed)).
 
 That replay outranks everything the relations **deduce**, and nothing the author
 **wrote** for that exact way:
@@ -477,6 +480,135 @@ distance a page travels — the window less what the bars cut off it. A depth or
 distance a movement derives from them is derived on `::view-transition`, as above;
 written on `:root`, the `var()` finds nothing and takes its fallback.
 
+## A movement that opens from the element pressed
+
+A page can grow out of the button that opened it, and close back into it on the
+way back — what Material calls a container transform. `cover-bottom` says "from
+the bottom edge" and `zoom` "from the centre"; this says "from here". The
+rectangle is the press's, and navi hands it to a type of the application's own,
+on `::view-transition`:
+
+```
+--navi-route-transition-door-top / -left / -width / -height / -radius
+```
+
+- **In the coordinates of the picture that moves**: the page arriving on the way
+  in (`forward`), the page leaving on the way back. `inset()` and
+  `transform-origin` take them as they are, and `100%` there is the picture's own
+  size. Where each picture is drawn — a page scrolled, an area under a bar, a page
+  arriving that moves under the movement — is navi's business, and the door
+  follows it.
+- **The door is the element pressed**: a `<Link>`, a `<Button>` with a `route`,
+  an `href` or `--navi-nav-to`, pressed by pointer or by keyboard. When the shape
+  seen is not that element, `data-navi-route-transition-door` marks it: inside it
+  (a pill drawn by a `Box` within the `<a>`), or around it (a card a stretched
+  link covers).
+- **The radius is the one drawn.** A pill written `999px` is published as half
+  its height: interpolated from what is written, a clip would stay round for half
+  the movement. Corners that differ come as `a b c d / e f g h`, which
+  `inset(… round …)` takes.
+- **The way back closes into the door it opened from**, not into what is pressed
+  to close the page. The rectangle is kept with the crossing in the history entry
+  (see [above](#a-traversal-retraces-its-crossing)), so the back button, an arrow
+  on the page, the browser's forward replaying the way in and a back after a
+  reload all find it. It is kept as a place in its page: a page coming back where
+  it was left has its door where it was pressed, and one coming back scrolled
+  elsewhere has it where it now stands — off screen, possibly. A door in the
+  furniture is kept on the screen.
+- **Absent when no press started the movement**: an address typed, a `navTo()`
+  from code that names no `element`, a back that retraces no remembered
+  crossing. Every `var()` reading
+  it needs a fallback. navi's own types read no door, and get none: only a type
+  of the application's own pays for the measure and for the history write.
+
+```css
+:root[data-navi-route-transition-type="door"] {
+  &::view-transition {
+    /* No door: grow from the middle. */
+    --door-shape: inset(
+      var(--navi-route-transition-door-top, 50%)
+        calc(
+          100% - var(--navi-route-transition-door-left, 50%) -
+            var(--navi-route-transition-door-width, 0px)
+        )
+        calc(
+          100% - var(--navi-route-transition-door-top, 50%) -
+            var(--navi-route-transition-door-height, 0px)
+        )
+        var(--navi-route-transition-door-left, 50%) round
+        var(--navi-route-transition-door-radius, 0px)
+    );
+    --door-origin: calc(
+        var(--navi-route-transition-door-left, 50%) +
+          var(--navi-route-transition-door-width, 0px) / 2
+      )
+      calc(
+        var(--navi-route-transition-door-top, 50%) +
+          var(--navi-route-transition-door-height, 0px) / 2
+      );
+  }
+  &[data-navi-route-transition="forward"] {
+    --navi-route-transition-covered: old;
+    &::view-transition-old(root),
+    &::view-transition-old(navi-route-transition) {
+      animation-name: door-still;
+    }
+    &::view-transition-new(root),
+    &::view-transition-new(navi-route-transition) {
+      transform-origin: var(--door-origin);
+      animation-name: door-open;
+    }
+  }
+  &[data-navi-route-transition="back"] {
+    --navi-route-transition-covered: new;
+    &::view-transition-old(root),
+    &::view-transition-old(navi-route-transition) {
+      transform-origin: var(--door-origin);
+      animation-name: door-close;
+    }
+    &::view-transition-new(root),
+    &::view-transition-new(navi-route-transition) {
+      animation-name: door-still;
+    }
+  }
+}
+@keyframes door-open {
+  from {
+    clip-path: var(--door-shape);
+    scale: 0.85;
+    opacity: 0;
+  }
+  33% {
+    opacity: 1;
+  }
+  to {
+    clip-path: inset(0 round 0);
+    scale: 1;
+    opacity: 1;
+  }
+}
+/* door-open the other way round: from inset(0 round 0) to the door. */
+@keyframes door-close { … }
+/* The covered page stands still: left to the browser, it would fade. */
+@keyframes door-still {
+  to {
+    translate: 0 0;
+  }
+}
+```
+
+What the rectangle leaves to the type:
+
+- **The first frame shows the page arriving at the door's place**, not the
+  button's label: fading it in over the first third hides that.
+- **Both ends of the clip are written.** `inset()` interpolates with `inset()`,
+  `none` with nothing, so a keyframe leaving `clip-path` to the resting style
+  jumps.
+- **`clip-path` is painted by the main thread**, `scale` and `opacity` by the
+  compositor. The first frame of the movement is the one that builds the page
+  arriving, and when it is long the scale plays while the clip waits. A small
+  scale keeps that gap small.
+
 ## Two routes matching one url
 
 A relation is resolved through **which page is current** — not through the url,
@@ -529,6 +661,11 @@ row does not own: the tabs travel, and opening something from any of them plays
 its own movement. A relation written on a bare route covers every one of its
 params at once, so "from any section" is one line rather than one per tab. Demo:
 `src/nav/demos/route_transition/route_transition_with_travel.html`.
+
+A page written `{ route, params }` is that route at the params it names, whatever
+the others hold, and a param named `undefined` is the address leaving it out:
+`{ route: BOOKING_ROUTE, params: { step: undefined } }` is the booking page with
+no `?step`, which is the step's default when it has one.
 
 One trap that belongs to `RouteTravel` but bites here first: the travelling box
 must stay MOUNTED across the changes it animates. A `<RouteTravel>` rendered

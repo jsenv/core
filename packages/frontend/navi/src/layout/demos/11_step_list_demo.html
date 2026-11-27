@@ -361,6 +361,56 @@
         </div>
       );
 
+      const MOCKUP_COLORS = {
+        "--step-list-accent": "#002853",
+        "--step-list-current-color": "#002853",
+        "--step-list-muted": "#b8bec7",
+        "--step-list-line": "#dfe3e8",
+      };
+
+      const PlainDemo = () => (
+        <div className="demo-section">
+          <h2 id="plain">variant="plain"</h2>
+          <Case caption='Au départ — current="dispo", rien de rempli'>
+            <StepList variant="plain" current="dispo">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='Le chemin suit — current="club", "Dispo" done'>
+            <StepList variant="plain" current="club">
+              {annonceStepItems(doneUpTo(1))}
+            </StepList>
+          </Case>
+          <Case caption='En avance sur le chemin — current="place", rien de rempli'>
+            <StepList variant="plain" current="place">
+              {annonceStepItems()}
+            </StepList>
+          </Case>
+          <Case caption='En retard sur le chemin — current="dispo", "Dispo" et "Club" done'>
+            <StepList variant="plain" current="dispo">
+              {annonceStepItems(doneUpTo(2))}
+            </StepList>
+          </Case>
+          <Case caption='Des trous — done sur "Dispo" et "Place", current="club"'>
+            <StepList variant="plain" current="club">
+              {annonceStepItems((value) =>
+                value === "dispo" || value === "place"
+                  ? { done: true }
+                  : undefined,
+              )}
+            </StepList>
+          </Case>
+          <Case caption="Terminé — tout done, pas de current">
+            <StepList variant="plain">{annonceStepItems(doneUpTo(4))}</StepList>
+          </Case>
+          <Case caption='Couleurs de maquette, bold — current="club", "Dispo" done'>
+            <StepList variant="plain" current="club" bold style={MOCKUP_COLORS}>
+              {annonceStepItems(doneUpTo(1))}
+            </StepList>
+          </Case>
+        </div>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader title="StepList" />
@@ -372,6 +422,7 @@
           <CountDemo />
           <WidthDemo />
           <DarkDemo />
+          <PlainDemo />
           <IntegrationDemo />
         </Box>
       );

@@ -147,9 +147,26 @@ export const route = (pattern, options = {}) => {
     url: null,
     // Read as at the address a preload is for (see statesAt).
     matchingSignal: answerAsIf(signal(false)),
+    /**
+     * The params the address NAMES while this route matches, `{}` while it
+     * does not: path params, and search params read with the type of the state
+     * they are bound to (a search param no route declares stays text). A param
+     * the address leaves out is not there, even when its state holds a value:
+     * that value is its default, or a state the address leaves alone.
+     *
+     * What to build "the address one is at, one param changed" from: given to
+     * a link, a value read here is one the address already wrote, while a
+     * value read from `paramsSignal` may be a default the address leaves out,
+     * which the link then writes (see docs/navigation.md, "Search params").
+     */
     rawParamsSignal: answerAsIf(signal(ROUTE_NOT_MATCHING_PARAMS)),
     visited: false,
     visitedSignal: signal(false),
+    /**
+     * What this route's params HOLD while it matches: what the address names
+     * (`rawParamsSignal`), and for every param it leaves out, the value its
+     * state holds or its default. What a page reads to know where it is.
+     */
     paramsSignal: null,
     urlSignal: null,
     replaceParams: undefined,
@@ -390,14 +407,29 @@ export const route = (pattern, options = {}) => {
         fromSignal: isSignalChange,
       });
     };
-    route.matchesParams = (providedParams) => {
+    route.matchesParams = (providedParams = {}) => {
       // paramsSignal (not route.params) so a component calling this during render
       // subscribes to param changes: a navigation from /games/me/a to /games/me/b
       // leaves matchingSignal untouched, only the params change.
       const currentParams = route.paramsSignal.value;
+      // A param given as undefined names the address leaving it out, as a url
+      // built from it does (and as pageIsAt reads it). Read off the address,
+      // because the params say what an absent param resolves to — its default,
+      // or no key at all.
+      const namedParams = {};
+      for (const name of Object.keys(providedParams)) {
+        const value = providedParams[name];
+        if (value !== undefined) {
+          namedParams[name] = value;
+          continue;
+        }
+        if (route.rawParamsSignal.value[name] !== undefined) {
+          return false;
+        }
+      }
       const resolvedParams = routePattern.resolveParams({
         ...currentParams,
-        ...providedParams,
+        ...namedParams,
       });
       const same = compareTwoJsValues(currentParams, resolvedParams);
       return same;
@@ -785,11 +817,11 @@ const paramsTargetCanPlace = (redirectRoute, urlParams) => {
 // (see paramsOfWrite): asked by navBackToState before anything is written.
 const addressOfWriteBySignal = new WeakMap();
 /**
- * Goes back to the entry right behind when it is the address writing `value`
+ * Goes back to the entry right behind when it is the place writing `value`
  * into `signal` would make: the state is then written by the traversal, as
  * the browser's back button writes it, and nothing else is done here. Answers
  * false and does nothing otherwise — the state is not bound to the address
- * one is at, the write would not change it, the entry behind says anything
+ * one is at, the write would not change it, the entry behind holds anything
  * else (another param included), or the browser does not expose its stack
  * (see the adjacency in via_history.js).
  *
@@ -811,13 +843,100 @@ export const navBackToState = (signal, value) => {
     if (url === null) {
       continue;
     }
-    if (!integration.isEntryBehind(url)) {
+    const urlBehind = integration.readUrlOfEntryBehind();
+    if (!urlBehind || !addressesHoldSameStates(url, urlBehind)) {
       return false;
     }
     integration.navBack();
     return true;
   }
   return false;
+};
+// Whether two addresses are one place: the same routes matching, and every
+// state holding the same value there, as the routing pass reads an address
+// (see sync_routes_with_url) — a param named holds its value, a param left
+// out its default. Not a comparison of strings, because one place has several
+// addresses: a link writes a value its dynamic default stands for (see
+// entryIsWritten), while an amendment of the address one is at leaves it out.
+// A search param no matching route declares is compared as written.
+const addressesHoldSameStates = (urlA, urlB) => {
+  if (urlA === urlB) {
+    return true;
+  }
+  const a = new URL(urlA);
+  const b = new URL(urlB);
+  if (
+    a.origin !== b.origin ||
+    a.pathname !== b.pathname ||
+    a.hash !== b.hash ||
+    !activeRouteSet
+  ) {
+    return false;
+  }
+  // One reading per param, the most specific matching route's, as in the
+  // routing pass.
+  const readingByParamName = new Map();
+  for (const route of activeRouteSet) {
+    const { routePattern } = getRoutePrivateProperties(route);
+    const rawParamsA = routePattern.applyOn(urlA);
+    const rawParamsB = routePattern.applyOn(urlB);
+    if (!rawParamsA !== !rawParamsB) {
+      return false;
+    }
+    if (!rawParamsA) {
+      continue;
+    }
+    for (const connection of routePattern.queryConnectionMap.values()) {
+      const reading = readingByParamName.get(connection.paramName);
+      if (reading && reading.depth >= routePattern.depth) {
+        continue;
+      }
+      readingByParamName.set(connection.paramName, {
+        connection,
+        depth: routePattern.depth,
+        rawParamsA,
+        rawParamsB,
+      });
+    }
+  }
+  const names = new Set([...a.searchParams.keys(), ...b.searchParams.keys()]);
+  for (const name of names) {
+    const reading = readingByParamName.get(name);
+    if (!reading) {
+      if (
+        a.searchParams.getAll(name).join("&") !==
+        b.searchParams.getAll(name).join("&")
+      ) {
+        return false;
+      }
+      continue;
+    }
+    const { connection, rawParamsA, rawParamsB } = reading;
+    if (
+      !compareTwoJsValues(
+        stateValueAtAddress(connection, rawParamsA),
+        stateValueAtAddress(connection, rawParamsB),
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+const stateValueAtAddress = (connection, rawParams) => {
+  const value = rawParams[connection.paramName];
+  if (value !== undefined) {
+    return value;
+  }
+  // Left alone by an address silent about it (see sync_routes_with_url).
+  if (
+    connection.persists &&
+    connection.paramType === "query" &&
+    connection.history !== "push"
+  ) {
+    return connection.signal.peek();
+  }
+  return connection.getDefaultValue();
 };
 
 let setupRoutesCalled = false;

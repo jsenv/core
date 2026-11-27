@@ -391,6 +391,24 @@ path param changed, an optional segment filled — rebuilds what the routes
 declare, since the routes matching after the move are not those matching
 before; the pairs no route declares still go along, where they stood.
 
+A route says its params two ways. `route.paramsSignal` is what they HOLD: a param
+the address leaves out reads its default there. `route.rawParamsSignal` is what the
+address NAMES. A link to the page one is on, with one param changed and the
+visit's `weak` params kept (a link does not carry those over), is built from the
+second. A value given to a link is written in its address whenever the state's
+default is dynamic, since navi cannot tell what that default will be at the
+destination. Read from `paramsSignal`, such a default becomes a value given: on a
+booking page opening on the first free day, the address one is at follows that
+day, and the address the link leads to stays on it once the first free day has
+moved on.
+
+```jsx
+<Link
+  route={BOOKING_ROUTE}
+  routeParams={{ ...BOOKING_ROUTE.rawParamsSignal.value, step: "recap" }}
+>
+```
+
 One answer may be kept as several params — a level and its reach,
 `?levels=…&level_exact=…` — and drawn by one control whose value is the object.
 `stateSignalGroup({ levels: levelsSignal, level_exact: levelExactSignal })` is
@@ -1116,12 +1134,14 @@ A slide reached by DRAGGING is such a write — swiping back and forth with a th
 is browsing, not a trail one wants to walk home along — and `SlideContainer`
 replaces for its own drags even when its state pushes.
 
-A slide PRESSED for (a step, a tab, a key, a command) whose address is the entry
-right behind is a back to it, the way the back button would go: in a trail of
-steps, "Summary" pressed on the payment step gives `[agenda, summary]` with the
-payment ahead, never `[agenda, summary, payment, summary]`, whose back button
-walks forward. Only when that entry differs by this param alone, and where the
-browser exposes its stack, as for a link (above); elsewhere the press stacks.
+A slide PRESSED for (a step, a tab, a key, a command) that the entry right behind
+shows is a back to it, the way the back button would go: in a trail of steps,
+"Summary" pressed on the payment step gives `[agenda, summary]` with the payment
+ahead, never `[agenda, summary, payment, summary]`, whose back button walks
+forward. Only when every other state of that entry holds what it holds here
+(a param at its default is the same named in the address or left out of it),
+and where the browser exposes its stack, as for a link (above); elsewhere the
+press stacks.
 Whatever answers the travel (`onCurrentChange`) is asked before anything is
 written, so a refused one leaves the history as it was.
 

@@ -134,6 +134,12 @@ import {
   releaseTransitionDestination,
 } from "./transition_destination.js";
 import {
+  holdTransitionDoor,
+  isTransitionDoor,
+  measureTransitionDoor,
+  releaseTransitionDoor,
+} from "./transition_door.js";
+import {
   holdTransitionPress,
   releaseTransitionPress,
 } from "./transition_press.js";
@@ -195,7 +201,7 @@ const TRANSITION_COVERED_ATTRIBUTE = "data-navi-route-transition-covered";
 const TRANSITION_AREA_ATTRIBUTE = "data-navi-route-transition-area";
 const TRANSITION_TARGET_ATTRIBUTE = "data-navi-route-transition-target";
 // What a history entry remembers of the crossing that created it, in the
-// entry's own state: `{ fromDepth, type, direction, duration }` (see
+// entry's own state: `{ fromDepth, type, direction, duration, door }` (see
 // recordCrossing).
 const CROSSING_STATE_KEY = "jsenv_route_transition";
 const AREA_NAME = "navi-route-transition";
@@ -1021,7 +1027,8 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *
  * @param {object|null} from - a route (or the `routeFallback()` page), or
  *   `{ route, params }` when the page is a param of a route rather than a route
- *   of its own. `null` says the page is
+ *   of its own (a param named `undefined`: the address leaving it out). `null`
+ *   says the page is
  *   reached FROM ANYWHERE: its door is in the furniture (a gear in the top
  *   bar, a "+" in the tab bar) rather than on a screen, or it has no door at
  *   all — reached by its address from whatever screen one was on, as the
@@ -1076,7 +1083,10 @@ export const RouteTransitionArea = ({ children, ...rest }) => {
  *   which one is covered, next to its keyframes:
  *   `--navi-route-transition-covered: old` (the page arriving comes over the
  *   page being left) or `new` (the page being left slides off the page
- *   arriving) — see docs/route_transitions.md, "Custom movements".
+ *   arriving) — see docs/route_transitions.md, "Custom movements". It is
+ *   handed the rectangle of the element pressed as well, to open from it
+ *   (`--navi-route-transition-door-*`, see "A movement that opens from the
+ *   element pressed" there).
  *   Whatever is written here is what EVERY crossing of the pair plays. One
  *   crossing can ask for something else — `<Link routeTransition>`, or
  *   navTo(url, { routeTransition }) — which overrides this field by field, for
@@ -1319,13 +1329,21 @@ const reverseDirection = (direction) => {
   return direction;
 };
 
-const replayOf = ({ type, direction, duration }) => {
-  return { type, typeSaid: true, duration, direction };
+const replayOf = ({ type, direction, duration, door }) => {
+  return {
+    type,
+    typeSaid: true,
+    duration,
+    direction,
+    door: isTransitionDoor(door) ? door : undefined,
+  };
 };
 
 // What a press asked, field by field, over the crossing its traversal
 // retraces: a press naming only a direction keeps the movement retraced and
-// turns it round, as it would a relation's (see readNavigationRequest).
+// turns it round, as it would a relation's (see readNavigationRequest). The
+// door is not something a press asks: it stays the crossing's (see
+// resolveDoor).
 const layerRequest = (request, replay) => {
   if (!replay) {
     return request;
@@ -1340,6 +1358,7 @@ const layerRequest = (request, replay) => {
       request.duration === undefined ? replay.duration : request.duration,
     direction:
       request.direction === undefined ? replay.direction : request.direction,
+    door: replay.door,
   };
 };
 
@@ -1467,6 +1486,7 @@ const rebuildWatcher = () => {
           : (found && found.direction) || "forward",
       type,
       duration,
+      retracedDoor: request ? request.door : undefined,
     });
   };
   // `subscribe` rather than `effect`: it hands the value to a callback that is
@@ -1488,6 +1508,9 @@ let navigationRequest = null;
 // the other.
 let navigationReplay = null;
 let navigationUrl = null;
+// The element pressed to start the navigation, when a press did: where a
+// movement opens from (see resolveDoor).
+let navigationPressElement = null;
 // Where the document stands as the navigation begins — the other end of the
 // crossing, and what lets the NEXT navigation be recognised as this one's way
 // back. Read off the document url rather than off window.location: a traversal
@@ -1550,6 +1573,8 @@ observeBeforeRouting((details) => {
   navigationType = details.navigationType;
   navigationCut = !navigationMayMove(navigationType);
   navigationUrl = details.url;
+  navigationPressElement =
+    details.element && details.element.getAttribute ? details.element : null;
   navigationFromUrl = documentUrlSignal.peek();
   // Read before the document state moves, so the state peeked is the entry
   // being left.
@@ -1630,6 +1655,7 @@ observeAfterRouting(() => {
   navigationRequest = null;
   navigationReplay = null;
   navigationUrl = null;
+  navigationPressElement = null;
   navigationFromUrl = null;
   navigationFromDepth = undefined;
   navigationType = null;
@@ -1675,6 +1701,7 @@ observeAfterRouting(() => {
                 : "",
         type,
         duration,
+        retracedDoor: request ? request.door : undefined,
       });
     }
   }
@@ -1722,6 +1749,9 @@ const recordCrossing = ({ url, fromDepth, decision }) => {
   }
   if (decision.duration !== undefined) {
     crossing.duration = decision.duration;
+  }
+  if (decision.door !== undefined) {
+    crossing.door = decision.door;
   }
   navTo(url, {
     replace: true,
@@ -1791,14 +1821,60 @@ const findRelation = (fromPage, toPage) => {
   return null;
 };
 
+// The door a movement opens from, or closes back into (see transition_door.js).
+// A way in opens from what was pressed, on the page being left. A way back
+// closes into the door of the crossing it undoes: what is pressed to close the
+// page — an arrow on it, the back button — is not where the page came from.
+const resolveDoor = (direction, retracedDoor) => {
+  if (direction === "back") {
+    return retracedDoor;
+  }
+  if (navigationPressElement) {
+    const pressed = measureTransitionDoor(
+      navigationPressElement,
+      document.querySelector(`[${TRANSITION_AREA_ATTRIBUTE}]`),
+    );
+    if (pressed) {
+      return pressed;
+    }
+  }
+  return retracedDoor;
+};
+
+// navi's own movements read no door, and the browser's cross-fade neither: only
+// a type of the application's own may, and only for one is a door measured and
+// remembered.
+const typeMayReadDoor = (type) =>
+  type !== undefined && type !== "zoom" && !DIRECTED_TYPES.includes(type);
+
 // The transition whose direction the document is currently wearing. One per
 // document, as with view transitions themselves: a new one starting takes the
 // attributes over, and only their owner may take them off.
 let currentTransition = null;
 
-const beginTransition = ({ page, url, fromUrl, direction, type, duration }) => {
+const beginTransition = ({
+  page,
+  url,
+  fromUrl,
+  direction,
+  type,
+  duration,
+  retracedDoor,
+}) => {
   navigationAnimated = true;
-  navigationDecision = { type, direction, duration };
+  // Measured here, while rendering is held on the page being left: a movement
+  // waiting for the one on screen to land plays later, and the entry records
+  // the door before that (see recordCrossing).
+  const door =
+    navigationCut || !typeMayReadDoor(type)
+      ? undefined
+      : resolveDoor(direction, retracedDoor);
+  navigationDecision = { type, direction, duration, door };
+  if (door) {
+    // Where a movement opened from is a fact about one press: a traversal
+    // finds the movement again on its own, never its door.
+    navigationDecisionFoundAgain = false;
+  }
   if (navigationCut) {
     // Decided, recorded, not played (see navigationMayMove).
     return;
@@ -1940,6 +2016,9 @@ const playTransition = (
   }
   if (areaElement) {
     documentElement.setAttribute(TRANSITION_TARGET_ATTRIBUTE, "area");
+  }
+  if (transition.decision.door) {
+    holdTransitionDoor(transition.decision.door, direction);
   }
   // A duration of this relation's own, worn by the pictures for the length of
   // the transition, over whatever the application says on the root.
@@ -2087,6 +2166,9 @@ const releaseTransitionRoot = (transition) => {
   releaseTransitionDestination(transition);
   releaseTransitionFurniture(transition);
   releaseTransitionPress(transition);
+  if (transition.decision.door) {
+    releaseTransitionDoor();
+  }
   if (transition.restoreDuration) {
     transition.restoreDuration();
   }

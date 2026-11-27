@@ -980,6 +980,7 @@ const navToCommand = (source, event, { argument }) => {
         asReturn: linkAsksForReturn(source),
         open: linkAsksToOpen(source),
         routeTransition: readRouteTransitionRequest(source),
+        element: source,
       }),
   };
 };

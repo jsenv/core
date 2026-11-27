@@ -24,6 +24,14 @@
  * Both move smoothly on change (a CSS transition each), so pressing a step
  * or answering one is seen travelling rather than jumping.
  *
+ * `variant="plain"` draws ONE fact instead of two, the usual checkout
+ * stepper: how far one has got. A step is REACHED when answered or looked
+ * at, and the fill means reached: the current dot is filled like an
+ * answered one, and there is no halo — the position is the last dot filled.
+ * The dots ahead are filled too, in the color of the road ahead, which is
+ * solid and meets the dots (the gap between dot and line is the halo's
+ * room, and there is no halo). The path itself is computed the same way.
+ *
  * The steps are the CHILDREN — <StepList.Item value="club">Club</StepList.Item>.
  * An Item renders nothing: it REGISTERS with the list as it renders (order
  * of rendering is the order of the steps), and the list draws everything —
@@ -73,6 +81,8 @@ const css = /* css */ `
        on the plain name on this very element would beat anything an
        ancestor says. */
     --x-step-list-accent: var(--step-list-accent, #4f8ef7);
+    /* On every filled dot: the accent ones, and in the plain variant the
+       dots ahead, filled with the line color. */
     --x-step-list-on-accent: var(--step-list-on-accent, white);
     --x-step-list-muted: var(--step-list-muted, light-dark(#8a93a8, #8b99b8));
     --x-step-list-line: var(
@@ -164,6 +174,35 @@ const css = /* css */ `
     stroke-width: 1.5;
   }
 
+  /* The plain variant (see the top comment): every dot filled, the road
+     solid, no halo (not rendered). Reached is the accent, what is ahead the
+     line color — the dot and the road before it are one drawing, the way
+     the accent is for the path. */
+  .navi_step_list[data-variant="plain"] .navi_step_list_rail line {
+    stroke-dasharray: none;
+  }
+  .navi_step_list[data-variant="plain"] .navi_step_list_rail circle {
+    fill: var(--x-step-list-line);
+    stroke: var(--x-step-list-line);
+  }
+  .navi_step_list[data-variant="plain"] .navi_step_list_rail text {
+    fill: var(--x-step-list-on-accent);
+  }
+  /* Reached: answered, looked at, or covered by the path. Same weight as the
+     rule above, written after it on purpose. */
+  .navi_step_list[data-variant="plain"]
+    .navi_step_list_rail
+    g[data-current]
+    circle,
+  .navi_step_list[data-variant="plain"]
+    .navi_step_list_rail
+    g[data-done]
+    circle,
+  .navi_step_list[data-variant="plain"] .navi_step_list_rail_filled circle {
+    fill: var(--x-step-list-accent);
+    stroke: var(--x-step-list-accent);
+  }
+
   /* Connected to slides: the movement is not this component's anymore. The
      container paints --slide-travel-progress here (this element follows it,
      see data-slide-container-follows) — an asked-for travel animates it, a
@@ -203,6 +242,7 @@ const css = /* css */ `
     width: 100%;
     height: 100%;
     padding: 0;
+    font-weight: inherit;
     font-size: 12px;
     outline: none;
     --button-color: var(--x-step-list-muted);
@@ -262,6 +302,19 @@ const css = /* css */ `
     --button-color: var(--x-step-list-current-color);
     --button-color-readonly: var(--x-step-list-current-color);
   }
+  /* Plain: every reached label in the current color, the current one no
+     different — the weight is the page's (a bold StepList, bold labels). */
+  .navi_step_list[data-variant="plain"] .navi_step_list_step[data-current] {
+    font-weight: inherit;
+  }
+  .navi_step_list[data-variant="plain"] .navi_step_list_step[data-done] {
+    --button-color: var(--x-step-list-current-color);
+    --button-color-readonly: var(--x-step-list-current-color);
+  }
+  .navi_step_list[data-variant="plain"]
+    .navi_step_list_step[data-unpressable][data-done] {
+    color: var(--x-step-list-current-color);
+  }
 `;
 
 const RAIL_H = 34;
@@ -270,8 +323,12 @@ const RING_R = 14.5;
 // Room for the first and last dot (and their halo) not to touch the edges.
 const EDGE_INSET = 30;
 // Between a dot's edge and the line running to the next one: enough for the
-// halo of a current dot not to sit on the line.
+// halo of a current dot not to sit on the line. The plain variant has no
+// halo, and its line meets the dots.
 const LINE_GAP = 5;
+// Where a dot's drawing ends: its radius plus the outer half of its stroke
+// (stroke-width 1.5 in the css).
+const DOT_EDGE = DOT_R + 0.75;
 
 // What the Items say to the list holding them (see Step): where to write
 // themselves down. Null outside any list — a Step alone renders nothing and
@@ -285,12 +342,20 @@ const StepListContext = createContext(null);
  *   travelByClick?: boolean,
  *   travelByKeyboard?: boolean,
  *   duration?: string,
+ *   variant?: "plain",
  *   [key: string]: any,
  * }>}
  * @param {string} [current] - the step being looked at: its dot gets the
- *   halo, its label the emphasis. Omit for "nowhere" — a confirmation
- *   screen after the walk, say. With `slideContainer` the position is read
- *   off the container instead, and this prop is ignored.
+ *   halo, its label the emphasis (plain: its dot is filled, as reached).
+ *   Omit for "nowhere" — a confirmation screen after the walk, say. With
+ *   `slideContainer` the position is read off the container instead, and
+ *   this prop is ignored.
+ * @param {"plain"} [variant] - "plain": how far one has got, drawn as one
+ *   fill. The dots answered or looked at are filled with the accent and
+ *   their labels take the current color; the dots ahead are filled with the
+ *   line color (--step-list-line), their numbers in --step-list-on-accent;
+ *   the road is solid and meets the dots; no halo. Labels keep the page's
+ *   weight, the current one included.
  * @param {string} [slideContainer] - id of a <SlideContainer> these steps
  *   are the slides of. Pressing a step travels there
  *   (--navi-go-to-slide), the halo follows the container — drags included —
@@ -319,10 +384,12 @@ export const StepList = ({
   travelByClick = true,
   travelByKeyboard = true,
   duration,
+  variant,
   children,
   ...rest
 }) => {
   import.meta.css = css;
+  const plain = variant === "plain";
   const rootRef = useRef();
   // The dots spread over whatever width the component is given, so the
   // geometry is measured rather than declared — and measured again when the
@@ -468,11 +535,16 @@ export const StepList = ({
   // dot (radius plus stroke) when everything is; otherwise THROUGH the
   // answered prefix and onward to the edge of the next dot — the segment of
   // appetite (see the top comment), with the dot it points at left empty.
+  // A plain line runs under the dot it meets, so its fill stops at the dot's
+  // drawn edge: any further would tint that dot.
+  const lineGap = plain ? 0 : LINE_GAP;
   let fillX;
   if (pathEndIndex === -1) {
     fillX = 0;
   } else if (pathEndIndex >= stepCount - 1) {
     fillX = dotXs[stepCount - 1] + DOT_R + 3;
+  } else if (plain) {
+    fillX = dotXs[pathEndIndex + 1] - DOT_EDGE;
   } else {
     fillX = dotXs[pathEndIndex + 1] - DOT_R - LINE_GAP;
   }
@@ -504,9 +576,9 @@ export const StepList = ({
         >
           {index > 0 ? (
             <line
-              x1={dotXs[index - 1] + DOT_R + LINE_GAP}
+              x1={dotXs[index - 1] + DOT_R + lineGap}
               y1={cy}
-              x2={x - DOT_R - LINE_GAP}
+              x2={x - DOT_R - lineGap}
               y2={cy}
             />
           ) : null}
@@ -529,6 +601,7 @@ export const StepList = ({
       // for the CSS to draw with, and the arrow keys keep walking the slides
       // from this element.
       data-slide-container-follows={slideContainer}
+      data-variant={variant}
       style={{
         ...rest.style,
         ...(duration ? { "--step-list-duration": duration } : undefined),
@@ -541,7 +614,9 @@ export const StepList = ({
         <>
           {renderRail(false)}
           {renderRail(true)}
-          {currentIndex !== -1 && dotXs[currentIndex] !== undefined ? (
+          {!plain &&
+          currentIndex !== -1 &&
+          dotXs[currentIndex] !== undefined ? (
             <svg
               className="navi_step_list_rail"
               width={width}
@@ -604,6 +679,7 @@ export const StepList = ({
                     className="navi_step_list_step"
                     aria-current={isCurrent ? "step" : undefined}
                     data-current={isCurrent ? "" : undefined}
+                    data-done={step.done ? "" : undefined}
                     readOnly={!travelByClick}
                     // Towards the slides when connected, by name: the command
                     // reaches the container wherever this list sits on the
@@ -632,6 +708,7 @@ export const StepList = ({
                     data-unpressable=""
                     aria-current={isCurrent ? "step" : undefined}
                     data-current={isCurrent ? "" : undefined}
+                    data-done={step.done ? "" : undefined}
                   >
                     {stepContent}
                   </Box>

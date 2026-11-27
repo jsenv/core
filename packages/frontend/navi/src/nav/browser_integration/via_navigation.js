@@ -245,12 +245,11 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
     return null;
   };
-  // Whether a back would land on `target` (see navBackToState in route.js).
-  // Never while a back is in flight: the stack read here is the one around the
-  // entry being left.
-  const isEntryBehind = (target) =>
-    !backInFlight &&
-    entryNextDoor(-1)?.url === new URL(target, readAddress()).href;
+  // Where a back would land (see navBackToState in route.js). Nothing while a
+  // back is in flight: the stack read here is the one around the entry being
+  // left.
+  const readUrlOfEntryBehind = () =>
+    backInFlight ? null : entryNextDoor(-1)?.url || null;
 
   // An address that only sends elsewhere is answered by going there, and this
   // document never routes to it (see resolveRouteRedirection). A press that
@@ -944,6 +943,7 @@ export const setupBrowserIntegrationViaNavigation = ({
       asReturn,
       open,
       fromSignal,
+      element,
     } = {},
   ) => {
     if (replace && debounce && state === undefined) {
@@ -955,13 +955,14 @@ export const setupBrowserIntegrationViaNavigation = ({
       flushPendingReplace();
     }
     // Not state: what is asked of a transition, whether a push is a return
-    // (see link_return.js), and whether a signal write made it, are about the
-    // navigation, not about the entry it leaves behind. `info` is exactly
-    // that — handed to the navigate event and forgotten afterwards.
+    // (see link_return.js), whether a signal write made it, and the element
+    // pressed, are about the navigation, not about the entry it leaves behind.
+    // `info` is exactly that — handed to the navigate event and forgotten
+    // afterwards.
     const info =
-      routeTransition === undefined && !asReturn && !fromSignal
+      routeTransition === undefined && !asReturn && !fromSignal && !element
         ? undefined
-        : { routeTransition, asReturn, fromSignal };
+        : { routeTransition, asReturn, fromSignal, element };
     if (open) {
       await navToWithPopupOpen(url, { replace, state, info }, open);
       return;
@@ -1119,7 +1120,7 @@ export const setupBrowserIntegrationViaNavigation = ({
     reload,
     navBack,
     whenBackLanded,
-    isEntryBehind,
+    readUrlOfEntryBehind,
     navForward,
     getDocumentState,
     carryByLinkNavigation,
