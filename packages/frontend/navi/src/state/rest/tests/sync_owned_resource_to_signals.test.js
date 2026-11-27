@@ -1,10 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { signal } from "@preact/signals";
-import {
-  resource,
-  syncOwnedResourceToSignals,
-  syncResourceToSignals,
-} from "../resource_graph.js";
+import { resource, syncOwnedResourceToSignals } from "../resource_graph.js";
 
 const createTableResources = (initialTables = {}) => {
   let nextTableoid = 1;
@@ -199,26 +195,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       syncOwnedResourceToSignals(USER, ownerSignal, {
         username: someSignal,
       });
-    } catch (e) {
-      error = e.message;
-    }
-
-    return { error };
-  });
-
-  test("throws when syncResourceToSignals is called on a scoped resource", () => {
-    const TABLE = resource("table", {
-      idKey: "tableoid",
-      uniqueKeys: ["tablename"],
-    });
-    const TABLE_COLUMN = TABLE.scopedMany("columns", {
-      idKey: "column_name",
-    });
-
-    const someSignal = signal("value");
-    let error = null;
-    try {
-      syncResourceToSignals(TABLE_COLUMN, { column_name: someSignal });
     } catch (e) {
       error = e.message;
     }

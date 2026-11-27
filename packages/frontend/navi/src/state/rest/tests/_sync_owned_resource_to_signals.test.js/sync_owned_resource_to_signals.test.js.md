@@ -7,8 +7,7 @@
 - [switches child store when ownerSignal changes](3_switches_child_store_when_ownersignal_changes/3_switches_child_store_when_ownersignal_changes.md)
 - [does not update signal when a column in a different table changes](4_does_not_update_signal_when_a_column_in_a_different_table_changes/4_does_not_update_signal_when_a_column_in_a_different_table_changes.md)
 - [throws when called on a non-scoped resource](5_throws_when_called_on_a_non-scoped_resource/5_throws_when_called_on_a_non-scoped_resource.md)
-- [throws when syncResourceToSignals is called on a scoped resource](6_throws_when_syncresourcetosignals_is_called_on_a_scoped_resource/6_throws_when_syncresourcetosignals_is_called_on_a_scoped_resource.md)
-- [does nothing when ownerSignal is null](7_does_nothing_when_ownersignal_is_null/7_does_nothing_when_ownersignal_is_null.md)
+- [does nothing when ownerSignal is null](6_does_nothing_when_ownersignal_is_null/6_does_nothing_when_ownersignal_is_null.md)
 
 ---
 

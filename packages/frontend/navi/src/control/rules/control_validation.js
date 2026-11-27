@@ -127,9 +127,23 @@ const NAVI_CONSTRAINT_SET = new Set([
   TIME_RANGE_CONSTRAINT,
   NAVI_ACTION_ERROR_CONSTRAINT,
 ]);
+/**
+ * Adds a constraint every control checks, for a rule that genuinely holds
+ * everywhere in the app (docs/field_validation.md, "An app's own rules").
+ * Returns the function taking it back: a module re-evaluated by a hot reload
+ * calls it in its dispose, or the rule is checked twice.
+ *
+ * @param {object|Function} customConstraint - `{ name, check(field) }`, or the
+ *   bare `check`: `null` when the value passes, else the message (a string, or
+ *   `{ message, target }`).
+ * @returns {() => void}
+ */
 export const registerGlobalConstraint = (customConstraint) => {
   const constraint = normalizeConstraint(customConstraint);
   NAVI_CONSTRAINT_SET.add(constraint);
+  return () => {
+    NAVI_CONSTRAINT_SET.delete(constraint);
+  };
 };
 
 // A constraint may be written as a bare check function; the rest of the code

@@ -658,6 +658,14 @@ const CONSTRAINT_MESSAGES = {
     fr: "La date doit correspondre à un intervalle de <strong>[step]</strong> jour(s) (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
     en: "The date must correspond to an interval of <strong>[step]</strong> day(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
   },
+  "constraint.step.month.default": {
+    fr: "Le mois doit correspondre à un intervalle de <strong>[step]</strong> mois (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
+    en: "The month must correspond to an interval of <strong>[step]</strong> month(s) (e.g. <strong>[before]</strong> or <strong>[after]</strong>).",
+  },
+  "constraint.step.week.default": {
+    fr: "La semaine doit correspondre à un intervalle de <strong>[step]</strong> semaine(s) (par ex. la semaine du <strong>[before]</strong> ou celle du <strong>[after]</strong>).",
+    en: "The week must correspond to an interval of <strong>[step]</strong> week(s) (e.g. the week of <strong>[before]</strong> or of <strong>[after]</strong>).",
+  },
   "constraint.max.time.default": {
     fr: "L'heure doit être <strong>[max]</strong> ou moins.",
     en: "The time must be <strong>[max]</strong> or earlier.",

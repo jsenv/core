@@ -89,6 +89,12 @@ return {
       "category": {
         "id": 10,
         "label": "Widgets"
+      },
+      "settings": {
+        "featured": true,
+        "tags": [
+          "sale"
+        ]
       }
     },
     {
@@ -98,7 +104,8 @@ return {
       "category": {
         "id": 11,
         "label": "Gadgets"
-      }
+      },
+      "settings": undefined
     }
   ],
   "categoriesAfterLoad": [
@@ -127,6 +134,12 @@ return {
       "category": {
         "id": 10,
         "label": "Widgets"
+      },
+      "settings": {
+        "featured": true,
+        "tags": [
+          "sale"
+        ]
       }
     },
     {
@@ -136,7 +149,8 @@ return {
       "category": {
         "id": 11,
         "label": "Gadgets"
-      }
+      },
+      "settings": undefined
     },
     {
       "id": 3,
@@ -145,7 +159,8 @@ return {
       "category": {
         "id": 10,
         "label": "Widgets"
-      }
+      },
+      "settings": undefined
     }
   ],
   "widgetAAfterPatch": {
@@ -155,7 +170,8 @@ return {
     "category": {
       "id": 10,
       "label": "Widgets"
-    }
+    },
+    "settings": undefined
   },
   "widgetASettingsAfterGet": {
     "featured": false,
@@ -175,6 +191,12 @@ return {
       "category": {
         "id": 10,
         "label": "Widgets"
+      },
+      "settings": {
+        "featured": true,
+        "tags": [
+          "sale"
+        ]
       }
     },
     {
@@ -184,7 +206,8 @@ return {
       "category": {
         "id": 10,
         "label": "Widgets"
-      }
+      },
+      "settings": undefined
     }
   ]
 }

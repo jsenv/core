@@ -127,14 +127,17 @@ nothing to say.**
 - taken once the fields have registered — the earliest moment the form knows
   what it holds;
 - taken again after every **successful** send, so the next submit is measured
-  against what was just sent (a send that failed changes nothing: the same
+  against what was just sent — what that send carried, so what was typed while
+  it was out is still to send (a send that failed changes nothing: the same
   value must remain sendable);
 - never taken again on its own. A form does not notice that its fields were
   filled from the outside — see `pristineKey` below.
 
 Fields holding nothing are left out on both sides. Whether an empty field is
 absent or present-and-empty depends on when it registered, and comparing those
-would make an untouched form look changed.
+would make an untouched form look changed. Nothing is each field's own: an empty
+text, an unchecked yes/no (`false` under `boolean`), an empty list, a group whose
+every field holds nothing.
 
 ## What counts as already held
 

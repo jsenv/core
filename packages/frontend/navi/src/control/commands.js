@@ -20,6 +20,7 @@ import { readControlValue } from "./control_value.js";
 import { sendClosedPickerChange } from "./picker/picker_closed_change.js";
 import {
   dispatchRequestAction,
+  runWhenActionSucceeded,
   watchActionCompletion,
 } from "./rules/control_action.js";
 import { dispatchRequestInteraction } from "./rules/control_interaction.js";
@@ -85,6 +86,10 @@ import {
  * @param {Element} [options.anchor] Where a popup this opens should be placed,
  *   when that is not the element asking: a menu opened by a press belongs at the
  *   point the press happened, and the row that was pressed is not that point.
+ * @param {Element} [options.control] The control the command is about, when the
+ *   caller knows it rather than the DOM around the source: a form's own
+ *   `command` is about the form, whichever field the send came from. Read by
+ *   the commands aimed at a control (`--navi-reset`, `--navi-clear`).
  * @param {Element} [options.requester] Who asked, when that is not the source.
  *   A group triggers its own command from itself — what the command aims at is
  *   read around the group, not around the child — while the gesture was on one
@@ -121,7 +126,7 @@ export const resolveNaviCommand = (
   element,
   command,
   event,
-  { optional, value, anchor, requester } = {},
+  { optional, value, anchor, requester, control } = {},
 ) => {
   if (!event) {
     throw new Error(
@@ -151,6 +156,7 @@ export const resolveNaviCommand = (
     // a JS decision has none, and both must be able to say the same thing.
     value,
     requester,
+    control,
   });
   if (!execute) {
     if (optional) {
@@ -504,9 +510,11 @@ const updateCommand = (source, event, { argument }) => {
     },
   };
 };
-const clearCommand = (source, event) => {
+const clearCommand = (source, event, { control }) => {
   const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+    control ||
+    resolveExplicitTarget(source) ||
+    resolveFirstParentControl(source);
   if (!target) {
     return undefined;
   }
@@ -557,9 +565,11 @@ const clearCommand = (source, event) => {
     implementation: () => performClear(event),
   };
 };
-const resetCommand = (source, event) => {
+const resetCommand = (source, event, { control }) => {
   const target =
-    resolveExplicitTarget(source) || resolveFirstParentControl(source);
+    control ||
+    resolveExplicitTarget(source) ||
+    resolveFirstParentControl(source);
   if (!target) {
     return undefined;
   }
@@ -599,23 +609,28 @@ const resetCommand = (source, event) => {
 // answers: "save" stays, "delete" goes back to the list. Same shape as the
 // browser's own formaction/formmethod, and the same shape the action already
 // has (it is told which button requested it).
+// What follows a send, and where it is aimed from: the element that asked for
+// it — the submit button's own `formCommand`, else the form's `command`, else
+// the surface's answer, found from the form. Whichever it is, it is about the
+// form that sent (see the `control` handed to the command below): a
+// `--navi-reset` is "empty itself", wherever the Enter was typed.
 const resolveAfterSend = (target, requester, surface) => {
   const askedForByRequester = requester?.getAttribute?.("data-after-send");
   if (askedForByRequester) {
-    return askedForByRequester;
+    return { command: askedForByRequester, from: requester };
   }
   const askedFor = target.getAttribute?.("data-after-send");
   if (askedFor) {
-    return askedFor;
+    return { command: askedFor, from: target };
   }
   if (!surface) {
     return undefined;
   }
   if (surface.hasAttribute("data-slide")) {
-    return "--navi-done";
+    return { command: "--navi-done", from: target };
   }
   if (surface.getAttribute("aria-expanded") === "true") {
-    return "--navi-close";
+    return { command: "--navi-close", from: target };
   }
   return undefined;
 };
@@ -716,24 +731,27 @@ const sendCommand = (source, event, { requester }) => {
       const sentEvent = createSentEvent(event);
       const afterSendAtPress = resolveAfterSend(target, sendRequester, surface);
       const runAimedAtPress = afterSendAtPress
-        ? resolveNaviCommand(source, afterSendAtPress, sentEvent)
+        ? resolveNaviCommand(
+            afterSendAtPress.from,
+            afterSendAtPress.command,
+            sentEvent,
+            { control: target },
+          )
         : undefined;
       const runAfterSend = () => {
         const afterSend = resolveAfterSend(target, sendRequester, surface);
         if (!afterSend) {
           return;
         }
-        if (afterSend === afterSendAtPress) {
+        if (afterSend.command === afterSendAtPress?.command) {
           runAimedAtPress?.();
           return;
         }
-        triggerNaviCommand(source, afterSend, sentEvent);
+        triggerNaviCommand(afterSend.from, afterSend.command, sentEvent, {
+          control: target,
+        });
       };
-      const {
-        result: sent,
-        isRunning,
-        whenSucceeded,
-      } = watchActionCompletion(target, () =>
+      const completion = watchActionCompletion(target, () =>
         dispatchRequestAction(target, {
           onInvalid: () => {
             invalid = true;
@@ -761,10 +779,11 @@ const sendCommand = (source, event, { requester }) => {
           requester: sendRequester,
         }),
       );
+      const sent = completion.result;
       if (sent === false || invalid) {
         return sent;
       }
-      if (isRunning) {
+      if (completion.isRunning) {
         // An optimistic control takes its send as done on its own word: what
         // follows it runs at once and the run goes on detached — still
         // watched, still able to fail, its error callout then drawn on what
@@ -776,14 +795,14 @@ const sendCommand = (source, event, { requester }) => {
           runAfterSend();
           return sent;
         }
-        // The send is committing but has not finished: leaving now would take
-        // the form off the screen mid-submission (a popup closing over its own
-        // running action, a slide moving on before it is answered). What
-        // follows the send waits for the send to be real.
-        whenSucceeded(runAfterSend);
-        return sent;
       }
-      runAfterSend();
+      // A send still committing has not finished: leaving now would take the
+      // form off the screen mid-submission (a popup closing over its own
+      // running action, a slide moving on before it is answered). One that
+      // already settled — a synchronous action — has said how it went. Either
+      // way what follows the send waits for it to be real, and a failure keeps
+      // the form, its values and its error in front of the user.
+      runWhenActionSucceeded(completion, runAfterSend);
       return sent;
     },
   };

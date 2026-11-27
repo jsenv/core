@@ -587,7 +587,8 @@ const [delivery] = useAsyncData(DELIVERY.GET.bindParams({ id }), {
 It ticks only while that reader is mounted and the document visible (once at
 once when it shows again), never while a network policy answers reads from the
 store, and each tick revalidates: the answer stays drawn and `loading` stays
-false. `until`, `for` and a failure end it.
+false. `until`, `for` and a failure end it, and a binding moving to other params
+starts it again: another question is polled on its own `until` and `for`.
 
 Code that awaits the answer polls the instance itself — a gesture waiting for
 an account linked in another app, once the sheet it came from has closed:

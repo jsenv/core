@@ -93,6 +93,16 @@ export const getConstraintMessage = (
     };
   }
 
+  // 2. The Field around the control, where a form writes the sentence once
+  // for its label and its control.
+  const fieldMessage = controller.fieldMessagePropsRef?.current?.[propName];
+  if (fieldMessage) {
+    return {
+      message: fieldMessage,
+      origin: "field",
+    };
+  }
+
   return {
     message: generatedMessage,
     origin: "generated message",

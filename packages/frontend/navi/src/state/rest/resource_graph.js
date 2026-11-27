@@ -32,7 +32,6 @@ import {
   takeKeptRead,
   upsertKeptItem,
 } from "./kept_reads.js";
-import { getParamScope } from "./param_scope.js";
 import { createResourcePersistence } from "./resource_persist.js";
 import { createRangeReader } from "./resource_range_reader.js";
 
@@ -112,6 +111,28 @@ const RESOURCE_OPTIONS = new Set([
   "DELETE",
   "DELETE_MANY",
 ]);
+const ONE_OPTIONS = new Set([
+  "rerunOn",
+  "dependencies",
+  "onDelete",
+  "GET",
+  "PUT",
+  "DELETE",
+]);
+const MANY_OPTIONS = new Set([
+  "rerunOn",
+  "dependencies",
+  "GET",
+  "GET_MANY",
+  "POST",
+  "POST_MANY",
+  "PUT",
+  "PUT_MANY",
+  "PATCH",
+  "PATCH_MANY",
+  "DELETE",
+  "DELETE_MANY",
+]);
 const SCOPED_ONE_OPTIONS = new Set([
   "idKey",
   "rerunOn",
@@ -173,12 +194,21 @@ const SCOPED_MANY_OPTIONS = new Set([
  * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, keep, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
+ * @param {{ GET?: false | Array<"POST" | "PUT" | "PATCH" | "DELETE" | "*">, GET_MANY?: false | Array<"POST" | "PUT" | "PATCH" | "DELETE" | "*">, GET_RANGE?: false | Array<"POST" | "PUT" | "PATCH" | "DELETE" | "*"> }} [restCallbacks.rerunOn] -
+ *   which of this resource's own writes ask its reads again, read by read.
+ *   A key left out keeps its default: `GET` none (a write's answer updates
+ *   the store, and a `DELETE` resets the `GET` instead), `GET_MANY` `["POST"]`
+ *   (only the server knows whether a new item belongs to a list), `GET_RANGE`
+ *   `["POST", "DELETE"]` (a list read by slices holds places, which an insert
+ *   or a removal shifts). `"*"` is every write; `false`, none. A read never
+ *   asks another read again. Why each default: docs/list_refresh.md.
  * @param {Array<Object | { resource: Object, on?: string[], reads?: Array<"GET" | "GET_MANY" | "GET_RANGE"> }> | (() => Array<Object | { resource: Object, on?: string[], reads?: Array<"GET" | "GET_MANY" | "GET_RANGE"> }>)} [restCallbacks.dependencies] -
  *   resources whose writes rerun this one's reads: one listed bare counts every
  *   write, `{ resource, on: ["PATCH_MANY", "DELETE"] }` only the callbacks it
  *   names (`PATCH` is not `PATCH_MANY`), a write named in its `writes`
- *   included. A heard write reruns every completed `GET` and `GET_MANY` and
- *   invalidates the `GET_RANGE` readers; `reads: ["GET_RANGE"]` narrows that to
+ *   included. A heard write reruns every `GET` and `GET_MANY` that has run —
+ *   completed, still running (its answer would predate the write) or failed —
+ *   and invalidates the `GET_RANGE` readers; `reads: ["GET_RANGE"]` narrows that to
  *   the reads it names (with no `on`, after every write). A function returning
  *   that list names resources declared after this one (two resources depending
  *   on each other): it is called once, before the first request of any
@@ -423,7 +453,6 @@ export const resource = (name, restCallbacks = {}) => {
     store,
     addItemSetup,
     createRestAction: createRestActionForRoot,
-    paramScope: getParamScope(undefined),
     rerunOn: resolveRerunOn(rerunOn),
     dependencies,
     writes,
@@ -440,7 +469,9 @@ const createResource = (
     store,
     addItemSetup,
     createRestAction,
-    paramScope,
+    // The params of a withParams() scope, bound onto every action it exposes:
+    // undefined for a resource as declared.
+    params,
     rerunOn,
     dependencies,
     // The writes named in `writes`: a root resource, a scoped relation and
@@ -458,7 +489,6 @@ const createResource = (
     ownerDependency,
   },
 ) => {
-  const params = paramScope.params;
   const stateFacade = {
     // public
     name,
@@ -511,9 +541,7 @@ const createResource = (
 
   resourceLifecycleManager.registerResource(stateFacade, {
     rerunOn,
-    paramScope,
     dependencies,
-    uniqueKeys,
   });
   if (ownerDependency) {
     // A child collection mutated (POST etc.) makes the owner GET re-fetch:
@@ -533,10 +561,11 @@ const createResource = (
   };
 
   /**
-   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
-   *
-   * Actions from parameterized resources only trigger rerun/reset for other actions with
-   * identical parameters, preventing cross-contamination between different parameter sets.
+   * The resource with `params` bound into every action, and a rerun scope of its own: a
+   * write through it reruns its own reads and none of the resource's or of another scope,
+   * and the other way round. The scope is the object returned, not its params: two calls
+   * with equal params make two scopes. The store stays shared, so a row updated through one
+   * is updated everywhere (docs/resource.md, "`withParams()`").
    *
    * The actions are the resource's own kind: on a relation they keep its callback return
    * contract and write where it writes (`TABLE_COLUMNS.withParams(…).GET_MANY` returns
@@ -573,7 +602,6 @@ const createResource = (
     const resolvedParams = params
       ? { ...params, ...paramsToInject }
       : paramsToInject;
-    const resolvedParamScope = getParamScope(resolvedParams);
     return createResource(name, {
       idKey,
       uniqueKeys,
@@ -585,7 +613,7 @@ const createResource = (
       // its relation (a scoped child to the per-owner stores), never as root
       // items of `store`.
       createRestAction,
-      paramScope: resolvedParamScope,
+      params: resolvedParams,
       rerunOn: resolveRerunOn(withParamsRerunOn, rerunOn),
       dependencies: withParamsDeps ?? dependencies,
       writes,
@@ -638,10 +666,14 @@ const createResource = (
    *   relation declared on a scoped child.
    * @see docs/resource.md
    */
-  stateFacade.one = (
-    propertyName,
-    childResource,
-    {
+  stateFacade.one = (propertyName, childResource, oneOptions = {}) => {
+    const relationLabel = `${name}.one("${propertyName}")`;
+    if (import.meta.dev) {
+      // `writes` and the other verbs belong to the child resource or to a
+      // scoped relation: said here, they would do nothing.
+      warnUnknownOptions(relationLabel, oneOptions, ONE_OPTIONS);
+    }
+    const {
       rerunOn: oneRerunOn,
       dependencies: oneDependencies,
       onDelete,
@@ -649,10 +681,8 @@ const createResource = (
       GET,
       PUT,
       DELETE,
-    } = {},
-  ) => {
+    } = oneOptions;
     const declarationSite = getDeclarationSite();
-    const relationLabel = `${name}.one("${propertyName}")`;
     if (ownerName) {
       refuseCallbacksNamingScopedItem(
         relationLabel,
@@ -759,13 +789,17 @@ ${relationLabel} source location: ${declarationSite}`,
           valueOf: () => null,
         };
       });
+      // Enumerable, as the key is when the row arrived holding it: a copy of
+      // the row (persist, keepPageOnScreen, a spread) carries its relations
+      // whichever write brought the row in first.
       Object.defineProperty(item, propertyName, {
+        enumerable: true,
         get: () => childItemFacadeSignal.value,
         set: updateChildItemId,
       });
       if (cascade) {
         Object.defineProperty(item, childIdSymbol, {
-          get: () => childItemIdSignal.peek(),
+          get: () => childStore.resolveId(childItemIdSignal.peek()),
         });
       }
       debug(
@@ -779,12 +813,18 @@ ${relationLabel} source location: ${declarationSite}`,
     const createRestActionForOne = (
       verb,
       callback,
-      { onActionComplete, paramScope },
+      { onActionComplete },
     ) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemIdOrItemProps) => {
               const item = store.select(itemIdOrItemProps);
+              if (!item) {
+                // The server unlinked a parent this page does not hold (a
+                // range row let go of, a press before its read landed):
+                // nothing here points at the child, nothing to unlink.
+                return undefined;
+              }
               const childItemId = item[propertyName][childIdKey];
               store.upsert({
                 [idKey]: item[idKey],
@@ -807,7 +847,6 @@ ${relationLabel} source location: ${declarationSite}`,
         meta: {
           verb,
           isMany: false,
-          paramScope,
         },
         name: `${name}.${verb}`,
         // Another params' answer is another owner's.
@@ -849,7 +888,7 @@ ${relationLabel} source location: ${declarationSite}`,
       store: childStore,
       addItemSetup: childResource.addItemSetup,
       createRestAction: createRestActionForOne,
-      paramScope,
+      params,
       rerunOn: resolveRerunOn(oneRerunOn, rerunOn),
       dependencies: oneDependencies ?? dependencies,
     });
@@ -892,10 +931,15 @@ ${relationLabel} source location: ${declarationSite}`,
    * @param {Object} [restCallbacks] - `{ rerunOn, dependencies, GET, GET_MANY, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
    * @see docs/resource.md
    */
-  stateFacade.many = (
-    propertyName,
-    childResource,
-    {
+  stateFacade.many = (propertyName, childResource, manyOptions = {}) => {
+    if (import.meta.dev) {
+      warnUnknownOptions(
+        `${name}.many("${propertyName}")`,
+        manyOptions,
+        MANY_OPTIONS,
+      );
+    }
+    const {
       rerunOn: manyRerunOn,
       dependencies: manyDependencies,
 
@@ -909,8 +953,7 @@ ${relationLabel} source location: ${declarationSite}`,
       PATCH_MANY,
       DELETE,
       DELETE_MANY,
-    } = {},
-  ) => {
+    } = manyOptions;
     const declarationSite = getDeclarationSite();
     if (ownerName) {
       refuseCallbacksNamingScopedItem(
@@ -968,14 +1011,10 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         return arr;
       });
       Object.defineProperty(item, propertyName, {
+        enumerable: true,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
-      const stopSyncingRenames = syncIdArrayOnRename(
-        childStore,
-        childIdKey,
-        childItemIdArraySignal,
-      );
       if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         debug(
@@ -983,7 +1022,6 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         );
       }
       return () => {
-        stopSyncingRenames();
         for (const childItemId of childItemIdArraySignal.peek()) {
           childStore.release(childItemId);
         }
@@ -992,28 +1030,31 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     const createRestActionForMany = (
       verb,
       callback,
-      { isMany, onActionComplete, paramScope },
+      { isMany, onActionComplete },
     ) => {
       if (!isMany) {
         return createRestActionAffectingOneItem(verb, callback, {
           onActionComplete,
-          paramScope,
         });
       }
       return createRestActionAffectingManyItems(verb, callback, {
         onActionComplete,
-        paramScope,
       });
     };
     const createRestActionAffectingOneItem = (
       verb,
       callback,
-      { onActionComplete, paramScope },
+      { onActionComplete },
     ) => {
       const applyResultToValue =
         verb === "DELETE"
           ? ([itemId, childItemId]) => {
               const item = store.select(itemId);
+              if (!item) {
+                // A parent this page does not hold: left alone, as a POST
+                // leaves it (see joinParentArray).
+                return childItemId;
+              }
               const childItemArray = item[propertyName];
               const childItemArrayWithoutThisOne = [];
               let found = false;
@@ -1026,7 +1067,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
               }
               if (found) {
                 store.upsert({
-                  [idKey]: itemId,
+                  [idKey]: item[idKey],
                   [propertyName]: childItemArrayWithoutThisOne,
                 });
               }
@@ -1071,7 +1112,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         declarationSite,
       );
       const action = createAction(callback, {
-        meta: { verb, isMany: false, paramScope },
+        meta: { verb, isMany: false },
         name: `${name}.${verb}`,
         // Another params' answer is another row.
         inheritData: verb !== "GET",
@@ -1119,7 +1160,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     const createRestActionAffectingManyItems = (
       verb,
       callback,
-      { onActionComplete, paramScope },
+      { onActionComplete },
     ) => {
       const applyResultToValue =
         verb === "GET"
@@ -1133,6 +1174,13 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           : verb === "DELETE"
             ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
                 const item = store.select(itemIdOrMutableId);
+                if (!item) {
+                  // A parent this page does not hold: left alone, as a POST
+                  // leaves it.
+                  return childItemIdOrMutableIdArray.map((value) =>
+                    isProps(value) ? value[childIdKey] : value,
+                  );
+                }
                 const childItemArray = item[propertyName];
                 const deletedChildItemSet = new Set(
                   childStore.selectAll(childItemIdOrMutableIdArray),
@@ -1179,7 +1227,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         declarationSite,
       );
       const action = createAction(callback, {
-        meta: { verb, isMany: true, paramScope },
+        meta: { verb, isMany: true },
         name: `${name}.${verb}[many]`,
         // A list standing in for the next one beats a skeleton. A screen where
         // the previous owner's list would be false says so on its binding.
@@ -1247,7 +1295,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       store: childStore,
       addItemSetup: childResource.addItemSetup,
       createRestAction: createRestActionForMany,
-      paramScope,
+      params,
       rerunOn: resolveRerunOn(manyRerunOn, rerunOn),
       dependencies: manyDependencies ?? dependencies,
     });
@@ -1270,6 +1318,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
    * callback), `null` when that answer holds none; setting it to `null` clears it.
    * Mutations apply directly to the owner's signal, so the parent GET is never rerun; an
    * owner the store does not hold yet is left alone, its child comes with its next read.
+   * An action's data is that child, read on its owner (`user.profile`): it follows every
+   * later write, as another relation's data follows the store.
    *
    * Returns the child relationship resource, itself chainable:
    * `USER_PROFILE.one("theme", THEME)` adds a reactive `.theme` property on each profile,
@@ -1388,6 +1438,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       applyProps(ownerItem[propertyName], answer);
 
       Object.defineProperty(ownerItem, propertyName, {
+        enumerable: true,
         get: () => {
           // eslint-disable-next-line no-unused-expressions
           childVersionSignal.value;
@@ -1403,14 +1454,14 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     const createRestActionForScopedOne = (
       verb,
       callback,
-      { onActionComplete, paramScope, writeName, writeRerunOn },
+      { onActionComplete, writeName, writeRerunOn },
     ) => {
       const childActionName = `${childName}.${writeName || verb}`;
       const action = createAction(callback, {
         name: childActionName,
         meta: writeName
-          ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
-          : { verb, isMany: false, paramScope },
+          ? { verb, isMany: false, writeName, writeRerunOn }
+          : { verb, isMany: false },
         // Another params' answer is another owner's.
         inheritData: verb !== "GET",
         resultToValue: (result) => {
@@ -1436,6 +1487,18 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           }
           return [ownerId, props];
         },
+        // The owner's child, read where it lives — the owner's row, which
+        // every later write of this relation updates — as every other
+        // relation's data is the store's item. The answer's props stand in
+        // for an owner the store does not hold.
+        valueToData: (value) => {
+          if (value === undefined) {
+            return undefined;
+          }
+          const [ownerId, props] = value;
+          const owner = store.select(ownerId);
+          return owner ? owner[propertyName] : props;
+        },
         completeSideEffect: onActionComplete,
       });
       if (verb === "GET") {
@@ -1456,7 +1519,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       store,
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedOne,
-      paramScope,
+      params,
       rerunOn: resolveRerunOn(scopedOneRerunOn, rerunOn),
       dependencies: scopedOneDependencies ?? dependencies,
       writes: scopedOneWrites,
@@ -1631,9 +1694,6 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         updateChildItemIdArray(item[propertyName], answer);
       }
 
-      // When an id is renamed (PUT/PATCH changes the idKey), patch the id array.
-      syncIdArrayOnRename(childStore, childIdKey, idArraySignal);
-
       const childItemArraySignal = computed(() => {
         const childItemArray = childStore.selectAll(idArraySignal.value);
         Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
@@ -1646,6 +1706,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       });
 
       Object.defineProperty(item, propertyName, {
+        enumerable: true,
         get: () => childItemArraySignal.value,
         set: updateChildItemIdArray,
       });
@@ -1653,7 +1714,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     const createRestActionForScopedMany = (
       verb,
       callback,
-      { isMany, onActionComplete, paramScope, writeName, writeRerunOn },
+      { isMany, onActionComplete, writeName, writeRerunOn },
     ) => {
       const childActionName = `${childName}.${writeName || verb}`;
       const throwInvalidResult = createInvalidResultThrower(
@@ -1663,8 +1724,8 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       const action = createAction(callback, {
         name: childActionName,
         meta: writeName
-          ? { verb, isMany, paramScope, writeName, writeRerunOn }
-          : { verb, isMany, paramScope },
+          ? { verb, isMany, writeName, writeRerunOn }
+          : { verb, isMany },
         // One item: another params' answer is another row. A list standing in
         // for the next one beats a skeleton, and a screen where the previous
         // owner's list would be false says so on its binding.
@@ -1705,18 +1766,20 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           const { childStore, idArraySignal } = scope;
 
           if (verb === "DELETE") {
+            // The collection may still name a child by an id it was renamed
+            // away from: read through the store, as its rows are.
             if (isMany) {
               const idArray = childStore.drop(rest[0]);
               const toRemoveSet = new Set(idArray);
               idArraySignal.value = idArraySignal
                 .peek()
-                .filter((id) => !toRemoveSet.has(id));
+                .filter((id) => !toRemoveSet.has(childStore.resolveId(id)));
               return [ownerId, idArray];
             }
             const childId = childStore.drop(rest[0]);
             idArraySignal.value = idArraySignal
               .peek()
-              .filter((id) => id !== childId);
+              .filter((id) => childStore.resolveId(id) !== childId);
             return [ownerId, childId];
           }
 
@@ -1780,7 +1843,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       store,
       addItemSetup: childAddItemSetup,
       createRestAction: createRestActionForScopedMany,
-      paramScope,
+      params,
       rerunOn: resolveRerunOn(scopedManyRerunOn, rerunOn),
       dependencies: scopedManyDependencies ?? dependencies,
       writes: scopedManyWrites,
@@ -1833,7 +1896,6 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     let restAction = createRestAction(verb, restCallbackUnderPolicy, {
       isMany,
       onActionComplete,
-      paramScope,
     });
     if (params) {
       restAction = restAction.bindParams(params);
@@ -1866,7 +1928,6 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         {
           isMany,
           onActionComplete,
-          paramScope,
           writeName,
           writeRerunOn,
         },
@@ -1896,25 +1957,23 @@ const createRestActionFactoryForRoot = (
   const createActionForRoot = (
     verb,
     restCallback,
-    { isMany, onActionComplete, paramScope, writeName, writeRerunOn },
+    { isMany, onActionComplete, writeName, writeRerunOn },
   ) => {
     if (!isMany) {
       return createActionAffectingOneItem(verb, restCallback, {
         onActionComplete,
-        paramScope,
         writeName,
         writeRerunOn,
       });
     }
     return createActionAffectingManyItems(verb, restCallback, {
       onActionComplete,
-      paramScope,
     });
   };
   const createActionAffectingOneItem = (
     verb,
     callback,
-    { onActionComplete, paramScope, writeName, writeRerunOn },
+    { onActionComplete, writeName, writeRerunOn },
   ) => {
     // A write named in `writes` answers as its verb does, under its own name.
     const actionName = writeName ? `${name}.${writeName}` : `${name}.${verb}`;
@@ -1936,8 +1995,8 @@ const createRestActionFactoryForRoot = (
     const action = createAction(callback, {
       name: actionName,
       meta: writeName
-        ? { verb, isMany: false, paramScope, writeName, writeRerunOn }
-        : { verb, isMany: false, paramScope },
+        ? { verb, isMany: false, writeName, writeRerunOn }
+        : { verb, isMany: false },
       resultToValue: (result, action) => {
         if (verb === "DELETE") {
           if (!isProps(result) && !primitiveCanBeId(result)) {
@@ -2003,7 +2062,7 @@ const createRestActionFactoryForRoot = (
   const createActionAffectingManyItems = (
     verb,
     callback,
-    { onActionComplete, paramScope },
+    { onActionComplete },
   ) => {
     const applyResultToValue =
       verb === "DELETE"
@@ -2014,7 +2073,7 @@ const createRestActionFactoryForRoot = (
           };
 
     const action = createAction(callback, {
-      meta: { verb, isMany: true, paramScope },
+      meta: { verb, isMany: true },
       name: `${name}.${verb}_MANY`,
       resultToValue: applyResultToValue,
       // Before the first answer there is no id array; the data is then
@@ -2042,20 +2101,7 @@ const createRestActionFactoryForRoot = (
                 );
               })
           : undefined,
-      completeSideEffect: (actionCompleted) => {
-        onActionComplete(actionCompleted);
-        if (
-          verb === "DELETE" ||
-          actionCompleted.valueSignal.peek().length === 0
-        ) {
-          return null;
-        }
-        // When an id is renamed (PUT/PATCH changes the idKey), the store fires observeProperties
-        // with a mutation containing oldValue/newValue for that key. We patch this action's
-        // valueSignal (the id array) so that selectAll keeps returning the right items.
-        // The returned unsubscribe function is called by completeSideEffectCleanup on reset.
-        return syncIdArrayOnRename(store, idKey, actionCompleted.valueSignal);
-      },
+      completeSideEffect: onActionComplete,
     });
     if (verb === "GET") {
       markKeepableRead(action);
@@ -2413,36 +2459,6 @@ const toWholeScopedChild = (childStore, childIdKey, props) => {
   return wholeProps;
 };
 
-const syncIdArrayOnRename = (store, idKey, idArraySignal) => {
-  return store.observeProperties((mutations) => {
-    const idArray = idArraySignal.peek();
-    if (idArray.length === 0) {
-      return;
-    }
-    const idSet = new Set(idArray);
-    const idMutationMap = new Map();
-    for (const mutation of mutations) {
-      const idKeyMutation = mutation[idKey];
-      if (!idKeyMutation) {
-        continue;
-      }
-      const { oldValue, newValue } = idKeyMutation;
-      if (!idSet.has(oldValue)) {
-        continue;
-      }
-      idMutationMap.set(oldValue, newValue);
-    }
-    if (idMutationMap.size === 0) {
-      return;
-    }
-    const idUpdatedArray = [];
-    for (const id of idArray) {
-      idUpdatedArray.push(idMutationMap.get(id) ?? id);
-    }
-    idArraySignal.value = idUpdatedArray;
-  });
-};
-
 const isProps = (value) => {
   return value !== null && typeof value === "object";
 };
@@ -2532,43 +2548,14 @@ Received an object with keys: ${keys.join(", ")}.`,
 };
 
 /**
- * Keeps external signals in sync with properties of the resource's store items:
- * when a tracked property changes on an item, the corresponding signal is
- * updated automatically.
+ * Keeps signals naming children of a `scopedMany` resource (or of a
+ * `withParams()` of one) in step with their renames: a signal holding a
+ * child's id or one of its unique keys is written the new value when the child
+ * it names at that moment is renamed — which keeps the URL right when the
+ * signal is a route parameter.
  *
- * Since signals are typically connected to route parameters via the route template
- * syntax, this keeps the URL in sync when a store item's mutable key is renamed.
- *
- * @example
- * const usernameSignal = stateSignal();
- * const USER_ROUTE = route(`/users/:username=${usernameSignal}/`);
- *
- * const USER = resource("user", {
- *   idKey: "id",
- *   uniqueKeys: ["username"],
- *   PUT: async ({ id, username }) => ({ id, username }),
- * });
- *
- * syncResourceToSignals(USER, { username: usernameSignal });
- * // When a user item's username is updated via USER.PUT,
- * // usernameSignal.value is set to the new username,
- * // which in turn triggers the route Signal->URL sync and updates the browser URL.
- */
-export const syncResourceToSignals = (resource, propertyToSignalMap) => {
-  if (resource.ownerName) {
-    // A scoped child's `store` is its owner's: watching it would sync the
-    // owner items' properties, not the child's.
-    throw new Error(
-      `syncResourceToSignals: "${resource.name}" lives inside each "${resource.ownerName}", so it has no store of its own to watch.${resource.getChildStore ? " Use syncOwnedResourceToSignals instead." : ""}`,
-    );
-  }
-  syncStoreToSignals(resource.store, propertyToSignalMap);
-};
-
-/**
- * The same, for a `scopedMany` resource (or a `withParams()` of one): its items
- * live in one store per owner, so the store to watch is the one of the owner
- * `ownerSignal` names (by id or by any unique key), and it is switched when the
+ * The children live in one store per owner, so the store watched is the one of
+ * the owner `ownerSignal` names (by id or by any unique key), switched when the
  * signal changes. Nothing is synced while `ownerSignal` holds `null`/`undefined`
  * or names an owner nothing has been loaded for yet.
  *
@@ -2576,9 +2563,18 @@ export const syncResourceToSignals = (resource, propertyToSignalMap) => {
  * `scopedMany` declared on a scoped child is kept per item with no owner key to
  * find it by: both are refused.
  *
+ * @example
+ * // TABLE_COLUMN = TABLE.scopedMany("columns", { idKey: "column_name", … })
+ * const columnNameSignal = stateSignal(undefined, { type: "string" });
+ * syncOwnedResourceToSignals(TABLE_COLUMN, tablenameSignal, {
+ *   column_name: columnNameSignal,
+ * });
+ * // TABLE_COLUMN.PUT renaming the column the signal names writes the new name
+ * // into columnNameSignal, and so into the URL it is a parameter of.
+ *
  * @param {Object} resource - a resource made by `.scopedMany()`
  * @param {import("@preact/signals").Signal} ownerSignal - the owner whose children are watched
- * @param {Object} propertyToSignalMap - `{ [propertyName]: signal }`, as for `syncResourceToSignals`
+ * @param {Object} propertyToSignalMap - `{ [propertyName]: signal }`, each property the child's idKey or one of its uniqueKeys
  */
 export const syncOwnedResourceToSignals = (
   resource,
@@ -2588,7 +2584,7 @@ export const syncOwnedResourceToSignals = (
   if (!resource.getChildStore) {
     if (!resource.ownerName) {
       throw new Error(
-        `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource. Use syncResourceToSignals instead.`,
+        `syncOwnedResourceToSignals: "${resource.name}" is not a scoped resource: its children have no store per owner to watch.`,
       );
     }
     throw new Error(

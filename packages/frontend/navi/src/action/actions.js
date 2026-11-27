@@ -53,8 +53,8 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  * Memory design (the surprising part): by default nothing here keeps actions
  * alive. Child actions are held through ephemerons (createJsValueWeakMap) so a
  * child and its params are garbage-collected together, running actions live in
- * iterable *weak* sets, and property/signal mirroring uses weakEffect. Three
- * consequences to be aware of:
+ * iterable *weak* sets, and a proxy follows its target through weakEffect.
+ * Three consequences to be aware of:
  * - an action can exist in several places only if everyone shares the same
  *   instance (the caches above are what makes lookups return it);
  * - prerun actions may have no other reference yet, so
@@ -68,7 +68,10 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
  * effect subscribes that effect to them, and the root action never dies — so
  * the effect, and everything its closure holds, never dies either. Stringifying
  * an action for a debug message is the easy way to do it by accident, which is
- * why toString peeks.
+ * why toString peeks. The other way round holds too: an effect of the instance
+ * reading its computed `dataSignal` keeps that computed subscribed to the store
+ * rows it selects, and the store then holds the instance — which is why
+ * action.data and its siblings are getters peeking at the signals.
  *
  * A failing run rejects, and writes its error into errorSignal as well. The
  * callers that cannot take a rejection — a run started from a signal effect, a
@@ -170,16 +173,16 @@ export const abortRunningActions = (
 };
 
 /**
- * Registry that prevents prerun actions from being garbage collected.
+ * Registry that keeps a prerun action from being garbage collected while its
+ * run is out.
  *
  * When an action is prerun, it might not have any active references yet
- * (e.g., the component that will use it hasn't loaded yet due to dynamic imports).
- * This registry keeps a reference to prerun actions for a configurable duration
- * to ensure they remain available when needed.
+ * (e.g., the component that will use it hasn't loaded yet due to dynamic
+ * imports): held here, the run it started still lands on the instance that
+ * component looks up.
  *
- * Actions are automatically unprotected when:
- * - The protection duration expires (default: 5 minutes)
- * - The action is explicitly stopped via .reset()
+ * An action is let go of when its run settles (completed, failed or aborted),
+ * when it is reset, or after 5 minutes for a run that never settles.
  */
 const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
@@ -448,12 +451,9 @@ ${lines.join("\n")}`,
   const staysFailedSet = new Set();
   const staysCompletedSet = new Set();
 
-  // Every decision below reads an action's state from its signals. The plain
-  // properties copying them (action.runningState, action.isPrerun) catch up
-  // only once the effect or batch in progress is over: a reset asked just
-  // before this update in the same effect — a kept answer the lookup found
-  // expired — still reads as completed there, and the run asked after it
-  // would join an answer that is gone.
+  // Every decision below reads an action's state off its signals, peeked:
+  // updates are asked from inside effects (a route's params, a binding's
+  // lookup), which must not subscribe to the instances they ask about.
 
   // Step 1: Determine which actions will be reset
   collect_actions_to_reset: {
@@ -481,10 +481,12 @@ ${lines.join("\n")}`,
         isRerunHeldByNetworkPolicy(action)
       ) {
         // A completed read is the answer under a network policy: rerunning it
-        // would only ask the network again (see network_policy.js).
+        // would only ask the network again (see network_policy.js). Answered
+        // with what it holds, as a run would be.
         action.debug(
           `"${action}": rerun held by the network policy, stays completed`,
         );
+        willJoinSet.add(action);
         return;
       }
       if (runningState === RUNNING || runningState === COMPLETED) {
@@ -699,6 +701,15 @@ ${lines.join("\n")}`);
   join_active_runs: {
     for (const actionToJoin of willJoinSet) {
       const runningPromise = actionPromiseMap.get(actionToJoin);
+      // Told how it ended, as a run tells whoever asked for it: a control
+      // waiting on the outcome (its busy state, the slot a list's guard
+      // lends it, the command deferred behind it) would wait forever.
+      answerJoin(actionToJoin, runningPromise, {
+        event,
+        onComplete,
+        onError,
+        onAbort,
+      });
       if (runningPromise) {
         hasAsync = true;
         resultArray.push({ type: "async", promise: runningPromise });
@@ -761,6 +772,33 @@ ${lines.join("\n")}`);
   };
 };
 
+const answerJoin = (
+  actionToJoin,
+  runningPromise,
+  { event, onComplete, onError, onAbort },
+) => {
+  if (!onComplete && !onError && !onAbort) {
+    return;
+  }
+  if (!runningPromise) {
+    onComplete?.(actionToJoin.dataSignal.peek(), actionToJoin);
+    return;
+  }
+  runningPromise.then(
+    (value) => {
+      if (actionToJoin.runningStateSignal.peek() === COMPLETED) {
+        onComplete?.(actionToJoin.dataSignal.peek(), actionToJoin);
+        return;
+      }
+      // Aborted, or called off by a reset: the run settles with its reason.
+      onAbort?.(value, { event, action: actionToJoin });
+    },
+    (error) => {
+      onError?.(error, { event, action: actionToJoin });
+    },
+  );
+};
+
 const resolveActionProxies = (actionSet) => {
   const resolvedSet = new Set();
   for (const action of actionSet) {
@@ -810,7 +848,6 @@ const OPTIONS_CREATE_ACTION_READS = new Set([
   "params",
   "isPrerun",
   "runningState",
-  "aborted",
   "error",
   "value",
   "resultToValue",
@@ -819,7 +856,6 @@ const OPTIONS_CREATE_ACTION_READS = new Set([
   "inheritData",
   "dataDefault",
   "data",
-  "completed",
   "sideEffect",
   "meta",
   "outputSignal",
@@ -903,8 +939,7 @@ export const createAction = (callback, rootOptions = {}) => {
       params,
       isPrerun = false,
       runningState = IDLE,
-      aborted = false,
-      error = null,
+      error,
       value,
       resultToValue,
       valueToData,
@@ -913,7 +948,6 @@ export const createAction = (callback, rootOptions = {}) => {
       dataDefault,
       data = dataDefault,
 
-      completed = false,
       sideEffect = () => {},
       meta = {},
 
@@ -1291,13 +1325,6 @@ export const createAction = (callback, rootOptions = {}) => {
       rootAction,
       parentAction,
       params,
-      isPrerun,
-      runningState,
-      aborted,
-      error,
-      value,
-      data,
-      completed,
       prerun,
       run,
       rerun,
@@ -1350,34 +1377,27 @@ export const createAction = (callback, rootOptions = {}) => {
       dataSignal,
       errorSignal,
     });
+    // The same state, read as plain properties by code that must not
+    // subscribe: peeked when asked, so never a step behind the signals. Not
+    // copied over by effects: an effect reading dataSignal keeps it subscribed
+    // to the store rows it selects, and the store — alive as long as the page —
+    // would then hold every instance that ever answered with a row.
+    Object.defineProperties(action, {
+      isPrerun: { enumerable: true, get: () => isPrerunSignal.peek() },
+      runningState: { enumerable: true, get: () => runningStateSignal.peek() },
+      aborted: {
+        enumerable: true,
+        get: () => runningStateSignal.peek() === ABORTED,
+      },
+      completed: {
+        enumerable: true,
+        get: () => runningStateSignal.peek() === COMPLETED,
+      },
+      error: { enumerable: true, get: () => errorSignal.peek() },
+      value: { enumerable: true, get: () => valueSignal.peek() },
+      data: { enumerable: true, get: () => dataSignal.peek() },
+    });
     Object.preventExtensions(action);
-
-    // Mirror signals into plain properties (action.error, action.data, …)
-    // so non-reactive code can read them without subscribing.
-    effects: {
-      weakEffect([action], (actionRef) => {
-        isPrerun = isPrerunSignal.value;
-        actionRef.isPrerun = isPrerun;
-      });
-      weakEffect([action], (actionRef) => {
-        runningState = runningStateSignal.value;
-        actionRef.runningState = runningState;
-        aborted = runningState === ABORTED;
-        actionRef.aborted = aborted;
-        completed = runningState === COMPLETED;
-        actionRef.completed = completed;
-      });
-      weakEffect([action], (actionRef) => {
-        error = errorSignal.value;
-        actionRef.error = error;
-      });
-      weakEffect([action], (actionRef) => {
-        value = valueSignal.value;
-        data = dataSignal.value;
-        actionRef.value = value;
-        actionRef.data = data;
-      });
-    }
 
     private_properties: {
       let sideEffectCleanup;
@@ -1558,25 +1578,36 @@ export const createAction = (callback, rootOptions = {}) => {
           removeAbortListeners();
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
+          // A settled prerun is pinned no longer: its answer, or its marked
+          // failure, is what the screen it prepared reads when it comes.
+          prerunProtectionRegistry.unprotect(action);
+          // What a callback throws or rejects with can be anything —
+          // `throw "nope"`, `Promise.reject()` — and only an object has a name
+          // to read or takes the action that failed it.
+          const errorIsObject =
+            error !== null &&
+            (typeof error === "object" || typeof error === "function");
           const isAbort =
             (internalAbortSignal.aborted &&
               error === internalAbortSignal.reason) ||
-            error.name === "AbortError";
+            (errorIsObject && error.name === "AbortError");
           if (isAbort) {
             writeActionState(() => {
               runningStateSignal.value = ABORTED;
             });
-            if (isPrerun && abortSignal.aborted) {
-              prerunProtectionRegistry.unprotect(action);
-            }
             onAbort?.(error, { event, action, args });
             return error;
           }
           if (import.meta.dev && DEBUG) {
             console.log(`"${action}": failed (error: ${error})`);
           }
-          error.action = action;
-          if (isPrerun) {
+          if (errorIsObject) {
+            error.action = action;
+          }
+          // Read now rather than at the start of the run: a prerun joined by
+          // the run its screen asked for was promoted onto it, and its failure
+          // is that screen's own.
+          if (isPrerunSignal.peek()) {
             markErrorAsPrerunFailure(error);
           }
           writeActionState(() => {
@@ -1674,14 +1705,19 @@ export const createAction = (callback, rootOptions = {}) => {
         }
 
         actionPromiseMap.delete(action);
+        // A reset the same update follows with a run leaves the state to that
+        // run: whoever follows the instance sees it go from what it held
+        // straight to RUNNING, never through an IDLE nobody asked for — a poll
+        // reading it as the end of its own run, a reader as an empty instance.
+        if (willRunOrPrerun) {
+          return;
+        }
         writeActionState(() => {
-          if (!willRunOrPrerun) {
-            errorSignal.value = undefined;
-            valueSignal.value = valueInitial;
-            answered = false;
-            if (outputSignal) {
-              outputSignal.value = undefined;
-            }
+          errorSignal.value = undefined;
+          valueSignal.value = valueInitial;
+          answered = false;
+          if (outputSignal) {
+            outputSignal.value = undefined;
           }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
@@ -1943,8 +1979,6 @@ const createActionProxyFromSignal = (
     isProxy: true,
     callback: undefined,
     params: undefined,
-    aborted: undefined,
-    completed: undefined,
     prerun: proxyMethod("prerun", { explicitRunIntent: true }),
     run: proxyMethod("run", { explicitRunIntent: true }),
     rerun: proxyMethod("rerun", { explicitRunIntent: true }),
@@ -1994,6 +2028,8 @@ const createActionProxyFromSignal = (
   for (const propertyName of [
     "isPrerun",
     "runningState",
+    "aborted",
+    "completed",
     "error",
     "value",
     "data",
@@ -2021,8 +2057,6 @@ const createActionProxyFromSignal = (
     callSourceSignal.value = `[Proxy] ${currentAction.callSource}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
-    actionProxy.aborted = currentAction.aborted;
-    actionProxy.completed = currentAction.completed;
     actionProxy.meta = currentAction.meta;
   });
 

@@ -18,7 +18,6 @@ import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const MAX_LINE_BREAKS_CONSTRAINT = {
   name: "max_line_breaks",
-  messageAttribute: "data-max-line-breaks-message",
   check: (field) => {
     const maxLineBreaksAttribute =
       field.controlHostProps["data-max-line-breaks"];

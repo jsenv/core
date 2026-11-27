@@ -3,7 +3,6 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const DISABLED_CONSTRAINT = {
   name: "disabled",
-  messageAttribute: "data-disabled-message",
   check: (field, { intent } = {}) => {
     const disabled = field.controlHostProps.disabled;
     if (!disabled) {

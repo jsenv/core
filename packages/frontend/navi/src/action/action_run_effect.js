@@ -3,6 +3,7 @@ import { computed } from "@preact/signals";
 import { stringifyForDisplay } from "../utils/stringify_for_display.js";
 import { addActionAsker, callOffUnlessAsked } from "./action_askers.js";
 import { getActionPrivateProperties } from "./action_private_properties.js";
+import { RUNNING } from "./action_run_states.js";
 import { createAction } from "./actions.js";
 import { runUnwatched } from "./run_unwatched.js";
 
@@ -116,14 +117,17 @@ export const actionRunEffect = (
           );
         } else if (
           getActionPrivateProperties(actionTarget).keepsAnswers ||
-          actionTarget.isPrerunSignal.peek()
+          actionTarget.isPrerunSignal.peek() ||
+          actionTarget.runningStateSignal.peek() === RUNNING
         ) {
           // The lookup that moved the binding here already reset an answer
           // older than its `keep`: what the instance holds is still good, and
           // a prerun still out is joined rather than asked again. So is an
           // answer only a prerun asked for, kept or not: asked ahead for this
           // very arrival (a <RouteTravel prefetch> neighbour), nothing has read
-          // it yet, and the run promotes it.
+          // it yet, and the run promotes it. And so is a run already out for
+          // these params — another binding asked them first: asked again, it
+          // would be called off and sent a second time.
           runUnwatched(() => actionTarget.run({ reason: "params modified" }));
         } else {
           runUnwatched(() => actionTarget.rerun({ reason: "params modified" }));

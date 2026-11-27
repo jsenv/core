@@ -76,27 +76,37 @@ const css = /* css */ `
 `;
 
 /**
- * Field — a semantic wrapper that connects a label to a form control.
+ * A label and its control, connected: the Field hands its id to the `Label`
+ * inside it (`htmlFor`) and to the labelable control inside it (Input, Select,
+ * Picker, Button) as its `id`, so a press on the label reaches the control
+ * with nothing wired. The label shows the state its control reports — read-only,
+ * disabled, required. Every `Box` prop is accepted too.
  *
- * It generates a stable `fieldId` (or accepts an explicit one) that is
- * automatically forwarded to the `Label` inside the field as `htmlFor` and to
- * the labelable control inside it (Input, Select, Picker, Button) as its `id`,
- * so clicking the label focuses the control without requiring manual wiring.
+ * @type {import("preact").FunctionComponent<{
+ *   children?: import("preact").ComponentChildren,
+ *   as?: "label" | string,
+ *   fieldId?: string,
+ *   flex?: boolean | "x" | "y",
+ *   spacingWithControl?: string,
+ *   [key: string]: any,
+ * }>}
  *
- * It also tracks the readOnly / disabled / interactive state reported by its
- * child control and reflects it on the `Label` (dimmed color, cursor change).
- *
- * Props:
- *   fieldId   — optional explicit field id instead of the auto-generated one (an `id`
- *               is the wrapper's own DOM id)
- *   as="label" — the field IS the label, wrapping its control: no id needed
- *   flex="y"  — vertical layout; automatically sets alignX="start" and data-vertical
- *   children  — any JSX; should contain a `Label` and a form control
- *   ...rest   — forwarded to the wrapping element (className, style, flex, spacing, …)
+ * @param {string} [fieldId]
+ *   The id handed to the label and the control, instead of a generated one (an
+ *   `id` is the wrapper's own DOM id).
+ * @param {"label"} [as]
+ *   `"label"`: the Field IS the label, wrapping its control — no id needed.
+ * @param {string} [spacingWithControl]
+ *   The space between the label and the control: `"xs"` by default, `"s"` with
+ *   `as="label"`.
+ * @param {string} [requiredMessage]
+ *   Any constraint's `<name>Message` (`requiredMessage`, `minLengthMessage`…)
+ *   applies to the control inside the Field, which can still say its own: the
+ *   sentence is written once for the label and its control.
  *
  * @example
  * <Field flex spacingWithControl="s">
- *   Date de début
+ *   <Label>Date de début</Label>
  *   <Input name="start_date" required />
  * </Field>
  */
@@ -173,16 +183,29 @@ const FIELD_PSEUDO_CLASSES = [
   ":-navi-loading",
 ];
 
+/**
+ * The text naming a control: inside a `Field` it points at the Field's control,
+ * wrapping a control it names that one. It shows the state the control reports
+ * (dimmed while read-only or disabled). Every `Box` prop is accepted too.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   children?: import("preact").ComponentChildren,
+ *   htmlFor?: string,
+ *   requiredIndicator?: boolean | import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ *
+ * @param {boolean | import("preact").ComponentChildren} [requiredIndicator]
+ *   Marks the label while its control is required: `true` for the usual
+ *   asterisk, or what to show. The control says it is required — the label
+ *   only follows — so the mark never drifts from the constraint it announces.
+ * @param {string} [requiredMessage]
+ *   Any constraint's `<name>Message` applies to the control the label wraps or
+ *   points at, as on a `Field`.
+ */
 export const Label = (props) => {
   import.meta.css = css;
-  const {
-    children,
-    // Marks the label when its control is required. Takes what to show, or
-    // true for the usual asterisk. The control is the one that knows it is
-    // required — it tells its labels — so a form never has to say it twice,
-    // and the mark cannot drift from the constraint it announces.
-    requiredIndicator,
-  } = props;
+  const { children, requiredIndicator } = props;
   const controlId = useContext(ControlIdContext);
   // What a popup opened from the control is named by (see getTriggerLabelIds
   // in picker_custom.jsx): aria-labelledby can only point at an id.

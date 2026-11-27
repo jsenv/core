@@ -720,6 +720,9 @@ const usePoll = (action, poll) => {
   const pollRef = useRef(poll);
   pollRef.current = poll;
   const polling = Boolean(poll);
+  // A binding is one object across all its params, and its params moving is
+  // another question: one `until` ended on does not end the next.
+  const params = action.paramsSignal.value;
   useEffect(() => {
     if (!polling) {
       return undefined;
@@ -727,8 +730,8 @@ const usePoll = (action, poll) => {
     return startPolling(action, () => pollRef.current, {
       reason: "useAsyncData({ poll })",
     });
-    // Another action is another question, polled on its own `for`.
-  }, [action, polling]);
+    // Another question is polled on its own `until` and `for`.
+  }, [action, polling, params]);
 };
 
 // ─── Loading ──────────────────────────────────────────────────────────────────

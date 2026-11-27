@@ -33,12 +33,22 @@ export const useConstraintValidityState = (ref) => {
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) {
-      return;
+      return undefined;
     }
     setConstraintValidityState(checkValue());
-    element.addEventListener(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT, () => {
+    const onValidityChange = () => {
       setConstraintValidityState(checkValue());
-    });
+    };
+    element.addEventListener(
+      NAVI_VALIDITY_CHANGE_CUSTOM_EVENT,
+      onValidityChange,
+    );
+    return () => {
+      element.removeEventListener(
+        NAVI_VALIDITY_CHANGE_CUSTOM_EVENT,
+        onValidityChange,
+      );
+    };
   }, []);
 
   return constraintValidityState;

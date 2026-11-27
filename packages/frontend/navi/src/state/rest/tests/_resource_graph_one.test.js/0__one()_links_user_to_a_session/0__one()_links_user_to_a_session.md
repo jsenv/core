@@ -31,11 +31,19 @@ return {
 {
   "userBeforeSessionLoad": {
     "id": 1,
-    "name": "Alice"
+    "name": "Alice",
+    "session": {
+      "valueOf": () => {/* hidden */}
+    }
   },
   "userAfterSessionLoad": {
     "id": 1,
-    "name": "Alice"
+    "name": "Alice",
+    "session": {
+      "id": 10,
+      "userId": 1,
+      "token": "abc123"
+    }
   },
   "sessionStore": [
     {

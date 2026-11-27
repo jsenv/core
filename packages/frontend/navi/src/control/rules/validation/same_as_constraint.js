@@ -4,7 +4,6 @@ import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
-  messageAttribute: "data-same-as-message",
   check: (field) => {
     const sameAs = field.controlHostProps["data-same-as"];
     if (sameAs === undefined) {

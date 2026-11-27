@@ -172,9 +172,9 @@ const STATE_SIGNAL_OPTIONS = new Set([
  *   clamped to `min`/`max` and rounded to `step`, a value outside `oneOf` replaced by the signal's
  *   default value, or made absent when the signal has no default (an enumeration has no nearest
  *   value, and its order says nothing). The default must therefore pass the rules itself: one of
- *   `oneOf`. Without it the refused value is held as-is, marked invalid, and `validSignal` reads
- *   `undefined`. When the value came from the address, the address is rewritten with the repaired
- *   one (a replace).
+ *   `oneOf`. Without it the refused value is held as-is and marked invalid, and `validSignal` reads
+ *   the repair all the same — what `autoFix` would have held. When the value came from the address,
+ *   the address is rewritten with the repaired one (a replace).
  * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: a url built for a
  *   page writes it only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the
  *   signal's current value, and it goes back to the default value when the route stops matching. A url
@@ -230,7 +230,7 @@ const STATE_SIGNAL_OPTIONS = new Set([
  * @example
  * // Dynamic default that doesn't override user choices
  * const backendTheme = signal("light");
- * const userTheme = stateSignal(backendTheme, { persists: true });
+ * const userTheme = stateSignal(backendTheme, { id: "theme", persists: true });
  *
  * // Initially: userTheme.value = "light" (from dynamic default)
  * // User sets: userTheme.value = "dark" (explicit choice, persisted)
@@ -242,6 +242,7 @@ const STATE_SIGNAL_OPTIONS = new Set([
  * // Dynamic default with static fallback
  * const backendValue = signal(undefined); // might be undefined initially
  * const userValue = stateSignal(backendValue, {
+ *   id: "user-value",
  *   default: "fallback",
  *   persists: true
  * });
@@ -309,6 +310,19 @@ export const stateSignal = (defaultValue, options = {}) => {
   if (weak && persists) {
     throw new TypeError(
       `stateSignal "${id}": weak and persists are contradictory — a weak param qualifies one visit, it cannot be restored from a previous session.`,
+    );
+  }
+  if (id === undefined && (persists || version !== undefined || owner)) {
+    // The id is the storage key. Generated, it is the order the signals were
+    // created in, which a lazy route or a reordered import changes: values
+    // would be restored into each other.
+    const optionName = persists
+      ? "persists"
+      : version !== undefined
+        ? "version"
+        : "owner";
+    throw new TypeError(
+      `stateSignal: ${optionName} needs an id, the key the value is kept under.`,
     );
   }
 

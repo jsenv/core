@@ -1998,19 +1998,18 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
   `;
 
-  return /* html */ `
-    <svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border" />
-      <path d="${innerPath}" class="navi_callout_background" />
-    </svg>`;
+  return /* html */ ` <svg
+    width="${adjustedWidth}"
+    height="${adjustedHeight}"
+    viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path d="${outerPath}" class="navi_callout_border" />
+    <path d="${innerPath}" class="navi_callout_background" />
+  </svg>`;
 };
 
 /**
@@ -2074,19 +2073,18 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
   `;
 
-  return /* html */ `
-    <svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border" />
-      <path d="${innerPath}" class="navi_callout_background" />
-    </svg>`;
+  return /* html */ ` <svg
+    width="${adjustedWidth}"
+    height="${adjustedHeight}"
+    viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <path d="${outerPath}" class="navi_callout_border" />
+    <path d="${innerPath}" class="navi_callout_background" />
+  </svg>`;
 };
 
 /**
@@ -2096,35 +2094,34 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
  * @returns {string} - SVG markup
  */
 const generateSvgWithoutArrow = (width, height) => {
-  return /* html */ `
-    <svg
+  return /* html */ ` <svg
+    width="${width}"
+    height="${height}"
+    viewBox="0 0 ${width} ${height}"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    role="presentation"
+    aria-hidden="true"
+  >
+    <rect
+      class="navi_callout_border"
+      x="0"
+      y="0"
       width="${width}"
       height="${height}"
-      viewBox="0 0 ${width} ${height}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <rect
-        class="navi_callout_border"
-        x="0"
-        y="0"
-        width="${width}"
-        height="${height}"
-        rx="${CORNER_RADIUS}"
-        ry="${CORNER_RADIUS}"
-      />
-      <rect
-        class="navi_callout_background"
-        x="${BORDER_WIDTH}"
-        y="${BORDER_WIDTH}"
-        width="${width - BORDER_WIDTH * 2}"
-        height="${height - BORDER_WIDTH * 2}"
-        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-      />
-    </svg>`;
+      rx="${CORNER_RADIUS}"
+      ry="${CORNER_RADIUS}"
+    />
+    <rect
+      class="navi_callout_background"
+      x="${BORDER_WIDTH}"
+      y="${BORDER_WIDTH}"
+      width="${width - BORDER_WIDTH * 2}"
+      height="${height - BORDER_WIDTH * 2}"
+      rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+      ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+    />
+  </svg>`;
 };
 
 const USER_GESTURE_EVENT_TYPES = [

@@ -1,4 +1,4 @@
-import { batch, computed, effect, signal } from "@preact/signals";
+import { batch, computed, signal } from "@preact/signals";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
@@ -135,16 +135,34 @@ export const arraySignalStore = (
     return entry;
   };
 
+  // The ids rows were renamed away from, each to the id its row took: a
+  // holder keeps the id it was given (a list's answer, a relation's pointer,
+  // a range's ranks) and the store answers it with the row that id became.
+  // Kept here rather than pushed into every holder: a store following its
+  // holders would hold each of them for as long as it lives — every list
+  // read ever answered included, each asked again by the next write.
+  // An id a row holds is never a key here (an id taken again by a row stops
+  // being a rename), so following the chain always ends.
+  const renamedIdMap = new Map();
+  const resolveId = (id) => {
+    let resolved = id;
+    while (!entryById.has(resolved) && renamedIdMap.has(resolved)) {
+      resolved = renamedIdMap.get(resolved);
+    }
+    return resolved;
+  };
+
   // How many holders hold each id: the ranks of a list run and of a
   // composition (see createHeldItems, and resource_range_reader.js), the
   // parent rows pointing at it through a relation (resource_graph.js). Counted
   // by id rather than on the entry: a holder may hold an id before its row
   // arrives, and keeps holding it while its row is gone and comes back.
   const holdCountById = new Map();
-  const hold = (id) => {
-    if (id === undefined) {
+  const hold = (idHeld) => {
+    if (idHeld === undefined) {
       return;
     }
+    const id = resolveId(idHeld);
     holdCountById.set(id, (holdCountById.get(id) || 0) + 1);
     const entry = entryById.get(id);
     if (entry) {
@@ -153,11 +171,12 @@ export const arraySignalStore = (
       leavingSoon.delete(id);
     }
   };
-  const release = (id) => {
+  const release = (idHeld) => {
+    // Held under an id its row was renamed away from: the count went with
+    // the row (see replaceItem), and the id leads to it.
+    const id = resolveId(idHeld);
     const count = holdCountById.get(id);
     if (count === undefined) {
-      // Under an id its row no longer has: the count went with the row when
-      // it was renamed (see replaceItem), and keeps it.
       return;
     }
     if (count > 1) {
@@ -233,16 +252,6 @@ export const arraySignalStore = (
     entryById.set(item[idKey], createEntry(item, true));
   }
 
-  const itemPropertiesObserverSet = new Set();
-  const observeItemProperties = (itemSignal, callback, { properties } = {}) => {
-    const propertiesSet = properties ? new Set(properties) : null;
-    const observer = { itemSignal, callback, propertiesSet };
-    itemPropertiesObserverSet.add(observer);
-    return () => {
-      itemPropertiesObserverSet.delete(observer);
-    };
-  };
-
   const propertiesObserverSet = new Set();
   const observeProperties = (callback, { properties } = {}) => {
     const propertiesSet = properties ? new Set(properties) : null;
@@ -295,7 +304,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
         break;
       }
     }
-    if (!id) {
+    if (id === undefined) {
       throw new Error(
         `None of the existing item uses ${uniqueKey}: ${uniqueKeyValue}, so item properties must specify the "${idKey}" key.`,
       );
@@ -305,9 +314,11 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
   // Read by id, a render follows that row alone — an upsert replaces only the
   // items it changes (see assign below), so a row nobody wrote stays still
   // while the rest of the store moves. An id the store does not hold is
-  // followed through the version, until its row arrives.
+  // followed through the version, until its row arrives. An id a row was
+  // renamed away from reads that row: renaming empties the signal under the
+  // old id, so whoever read it reads again and lands on the row.
   const readItem = (id) => {
-    const entry = entryById.get(id);
+    const entry = entryById.get(resolveId(id));
     if (entry) {
       return entry.itemSignal.value;
     }
@@ -382,30 +393,6 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     const pins = !letsGoOfRows || rangeAnswerDepth === 0;
     const mutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
-      for (const itemPropertiesObserver of itemPropertiesObserverSet) {
-        const { itemSignal, callback, propertiesSet } = itemPropertiesObserver;
-        const watchedItem = itemSignal.peek();
-        if (!watchedItem) {
-          continue;
-        }
-        const itemMutations = mutationsMap.get(watchedItem[idKey]);
-        if (itemMutations) {
-          if (propertiesSet) {
-            let hasRelevantMutation = false;
-            for (const p of propertiesSet) {
-              if (Object.hasOwn(itemMutations, p)) {
-                hasRelevantMutation = true;
-                break;
-              }
-            }
-            if (hasRelevantMutation) {
-              callback(itemMutations);
-            }
-          } else {
-            callback(itemMutations);
-          }
-        }
-      }
       if (propertiesObserverSet.size) {
         const allMutations = Array.from(mutationsMap.values());
         for (const propertiesObserver of propertiesObserverSet) {
@@ -513,6 +500,8 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
       entry.itemSignal = createItemSignal(entry, item);
       entry.watched = false;
       entryById.set(newId, entry);
+      renamedIdMap.set(id, newId);
+      renamedIdMap.delete(newId);
       const holdCount = holdCountById.get(id);
       if (holdCount !== undefined) {
         holdCountById.delete(id);
@@ -540,6 +529,7 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     const insert = (props) => {
       const item = createItemFromProps(props, answer);
       entryById.set(item[idKey], createEntry(item, pins));
+      renamedIdMap.delete(item[idKey]);
       changed = true;
       return item;
     };
@@ -726,78 +716,6 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     return entryMatchingArray[entryMatchingArray.length - 1].item[idKey];
   };
 
-  const signalForKey = (key, keyValueSignal) => {
-    if (key === idKey) {
-      return _signalForIdKey(keyValueSignal);
-    }
-    if (uniqueKeys.includes(key)) {
-      return _signalForUniqueKey(key, keyValueSignal);
-    }
-    throw new Error(
-      `signalForKey: "${key}" is not the idKey or a uniqueKey of this store (idKey: ${idKey}, uniqueKeys: ${uniqueKeys.join(", ")})`,
-    );
-  };
-  const _signalForUniqueKey = (uniqueKey, uniqueKeyValueSignal) => {
-    const itemIdSignal = signal(null);
-    const check = (value) => {
-      const item = select(uniqueKey, value);
-      if (!item) {
-        return false;
-      }
-      itemIdSignal.value = item[idKey];
-      return true;
-    };
-    if (!check(uniqueKeyValueSignal.peek())) {
-      effect(function () {
-        const uniqueKeyValue = uniqueKeyValueSignal.value;
-        if (check(uniqueKeyValue)) {
-          this.dispose();
-        }
-      });
-    }
-    return computed(() => {
-      return select(itemIdSignal.value);
-    });
-  };
-
-  const _signalForIdKey = (idValueSignal) => {
-    const itemIdSignal = signal(null);
-    const check = (value) => {
-      const item = select(idKey, value);
-      if (!item) {
-        return false;
-      }
-      itemIdSignal.value = item[idKey];
-      return true;
-    };
-    if (!check(idValueSignal.peek())) {
-      effect(function () {
-        const idValue = idValueSignal.value;
-        if (check(idValue)) {
-          this.dispose();
-        }
-      });
-    }
-    // When the id itself is renamed, keep itemIdSignal in sync.
-    observeProperties(
-      (mutationsArray) => {
-        const currentId = itemIdSignal.peek();
-        if (currentId === null) return;
-        for (const mutations of mutationsArray) {
-          const mutation = mutations[idKey];
-          if (mutation.oldValue === currentId) {
-            itemIdSignal.value = mutation.newValue;
-            break;
-          }
-        }
-      },
-      { properties: [idKey] },
-    );
-    return computed(() => {
-      return select(itemIdSignal.value);
-    });
-  };
-
   Object.assign(store, {
     idKey,
     uniqueKeys,
@@ -810,11 +728,10 @@ ${[idKey, ...uniqueKeys].join(", ")}`,
     hold,
     release,
     createHeldItems,
+    resolveId,
 
-    observeItemProperties,
     observeProperties,
     observeRemovals,
-    signalForKey,
   });
   return store;
 };
@@ -863,34 +780,32 @@ class HeldItems extends Map {
   }
 }
 
+// Each signal names a row by one of its keys, and follows that key when the
+// row it names at the time is renamed: an address naming a row by its slug
+// keeps naming it after the slug changed.
 export const syncStoreToSignals = (store, propertyToSignalMap) => {
-  const { idKey } = store;
+  const { idKey, uniqueKeys } = store;
   const cleanupCallbackSet = new Set();
   for (const [propertyName, targetSignal] of Object.entries(
     propertyToSignalMap,
   )) {
-    if (propertyName === idKey) {
-      const unsubscribe = store.observeProperties(
-        (mutationsArray) => {
-          for (const mutations of mutationsArray) {
-            const mutation = mutations[idKey];
-            if (mutation.oldValue === targetSignal.peek()) {
-              targetSignal.value = mutation.newValue;
-              break;
-            }
-          }
-        },
-        { properties: [idKey] },
+    if (propertyName !== idKey && !uniqueKeys.includes(propertyName)) {
+      throw new Error(
+        `"${propertyName}" is not the idKey or a uniqueKey of this store (idKey: ${idKey}, uniqueKeys: ${uniqueKeys.join(", ")})`,
       );
-      cleanupCallbackSet.add(unsubscribe);
-      continue;
     }
-    const itemSignal = store.signalForKey(propertyName, targetSignal);
-    const unsubscribe = store.observeItemProperties(
-      itemSignal,
-      (propertyMutations) => {
-        const mutation = propertyMutations[propertyName];
-        targetSignal.value = mutation.newValue;
+    const unsubscribe = store.observeProperties(
+      (mutationsArray) => {
+        for (const mutations of mutationsArray) {
+          const mutation = mutations[propertyName];
+          if (mutation.added) {
+            continue;
+          }
+          if (mutation.oldValue === targetSignal.peek()) {
+            targetSignal.value = mutation.newValue;
+            break;
+          }
+        }
       },
       { properties: [propertyName] },
     );

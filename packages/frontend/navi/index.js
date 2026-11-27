@@ -63,7 +63,6 @@ export { localStorageSignal } from "./src/state/local_storage_signal.js";
 export {
   resource,
   syncOwnedResourceToSignals,
-  syncResourceToSignals,
 } from "./src/state/rest/resource_graph.js";
 export { forgetOwner, stateSignal } from "./src/state/state_signal.js";
 export { stateSignalGroup } from "./src/state/state_signal_group.js";

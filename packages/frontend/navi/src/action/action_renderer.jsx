@@ -51,19 +51,11 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   } = renderBranches;
   const { idle, loading, aborted, error, completed, data } =
     useActionStatus(action);
-  const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
   useLayoutEffect(() => {
     resetErrorBoundary();
   }, [action, loading, idle, resetErrorBoundary]);
-
-  useLayoutEffect(() => {
-    UIRenderedPromise.resolve();
-    return () => {
-      actionUIRenderedPromiseWeakMap.delete(action);
-    };
-  }, [action]);
 
   if (disabled) {
     return null;
@@ -85,7 +77,10 @@ export const ActionRenderer = ({ action, children, disabled }) => {
   }
   const renderCompletedSafe = renderCompleted || renderCompletedDefault;
   if (loading) {
-    if (action.canDisplayOldData && data !== undefined) {
+    // What the instance holds stays drawn while it is asked again — a write
+    // rerunning the read, a refresh: loading says a request is out, not that
+    // there is nothing to show (docs/data_states.md).
+    if (data !== undefined) {
       return renderCompletedSafe(data, action);
     }
     return renderLoading(action);
@@ -95,27 +90,6 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     return renderError(error, "action_error", action);
   }
   return renderCompletedSafe(data, action);
-};
-
-const defaultPromise = Promise.resolve();
-defaultPromise.resolve = () => {};
-
-const actionUIRenderedPromiseWeakMap = new WeakMap();
-const useUIRenderedPromise = (action) => {
-  if (!action) {
-    return defaultPromise;
-  }
-  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
-  if (actionUIRenderedPromise) {
-    return actionUIRenderedPromise;
-  }
-  let resolve;
-  const promise = new Promise((res) => {
-    resolve = res;
-  });
-  promise.resolve = resolve;
-  actionUIRenderedPromiseWeakMap.set(action, promise);
-  return promise;
 };
 
 const isPlainObject = (obj) => {

@@ -19,7 +19,6 @@ import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const DISPLAYABLE_CONSTRAINT = {
   name: "displayable",
-  messageAttribute: "data-displayable-message",
   check: (field) => {
     const displayable = field.controlHostProps["data-displayable"];
     if (!isConstraintAttributeOn(displayable)) {

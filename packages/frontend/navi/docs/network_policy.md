@@ -76,7 +76,8 @@ was asked:
   the action's own value knows which ids answered `/users?scope=shareable`. So a
   rerun asked of a completed read under the policy is held — the action keeps
   its state, its value and its data, exactly as a `run()` on a completed action
-  would.
+  would, and answers whoever asked with that data (a control's press ends
+  there, as it would after a run).
 - **A `GET_RANGE` revalidation fails quietly.** A list that comes back to the
   screen draws the composition it left and asks again for the window it draws;
   under the policy that ask fails, and a failed revalidation keeps the rows it

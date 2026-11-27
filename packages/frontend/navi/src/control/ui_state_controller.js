@@ -1037,7 +1037,7 @@ const isNamelessGrouping = (child, uiState) =>
 // Is this value the empty the child writes when it holds nothing? Reading it
 // back out of the object means the child holds nothing — which is `undefined`,
 // not the empty itself (see the object group's distributeChildUIState below).
-const uiStateIsChildEmpty = (uiState, child) => {
+export const uiStateIsChildEmpty = (uiState, child) => {
   const { emptyUIState } = child;
   if (emptyUIState === undefined) {
     return false;

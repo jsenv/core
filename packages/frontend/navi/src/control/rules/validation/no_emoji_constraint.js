@@ -19,7 +19,6 @@ import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const NO_EMOJI_CONSTRAINT = {
   name: "no_emoji",
-  messageAttribute: "data-no-emoji-message",
   check: (field) => {
     const noEmoji = field.controlHostProps["data-no-emoji"];
     if (!isConstraintAttributeOn(noEmoji)) {

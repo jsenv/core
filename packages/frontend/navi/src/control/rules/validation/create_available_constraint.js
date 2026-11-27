@@ -1,18 +1,23 @@
 import { constraintI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 
+/**
+ * A constraint refusing a value already taken — a name among the ones the app
+ * holds. The set may be incomplete or late (a page rarely holds every item the
+ * server has): it helps with what is known, and the server, which knows for
+ * sure, says the rest with its response.
+ *
+ * @param {Set<any>} existingValueSet - The values taken.
+ * @param {string} [message="constraint.available"] - The i18n key of the
+ *   sentence (given `{ value }`), not the sentence itself: register it in
+ *   naviI18n.
+ * @returns {{ name: "available", check: (field: object) => string | null }}
+ */
 export const createAvailableConstraint = (
-  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
-  // but this is already nice to help user with what we know
-  // it's also possible that front is unsync with backend, preventing user to choose a value
-  // that is actually free.
-  // But this is unlikely to happen and user could reload the page to be able to choose that name
-  // that suddenly became available
   existingValueSet,
   message = "constraint.available",
 ) => {
   return {
     name: "available",
-    messageAttribute: "data-available-message",
     check: (field) => {
       const fieldValue = field.uiState;
       const hasConflict = existingValueSet.has(fieldValue);

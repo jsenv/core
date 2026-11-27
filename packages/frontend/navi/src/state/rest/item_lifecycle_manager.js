@@ -2,7 +2,7 @@ import { createIterableWeakSet } from "@jsenv/dom";
 
 import { FAILED, RUNNING } from "../../action/action_run_states.js";
 import { getActionDispatcher } from "../../action/actions.js";
-import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { runUnwatched } from "../../action/run_unwatched.js";
 
 // WeakMap<action, Set<string>> — tracks which top-level properties were present in
 // the GET response for a given action instance. Used by scoped_many_effect to check
@@ -135,17 +135,10 @@ export const createResourceLifecycleManager = () => {
   };
 
   const registerResource = (resourceScope, config) => {
-    const {
-      rerunOn,
-      paramScope = null,
-      dependencies = [],
-      uniqueKeys = [],
-    } = config;
+    const { rerunOn, dependencies = [] } = config;
 
     registeredResources.set(resourceScope, {
       rerunOn,
-      paramScope,
-      uniqueKeys,
       restActionSet: new Set(),
       rangeReaderSet: new Set(),
     });
@@ -345,14 +338,6 @@ export const createResourceLifecycleManager = () => {
         triggeringAction,
         isTriggerScope,
       );
-      const paramScope = config.paramScope;
-
-      // Skip if no rerun or reset rules apply
-      const hasUniqueKeyAutorerun =
-        (triggerVerb === "POST" ||
-          triggerVerb === "PUT" ||
-          triggerVerb === "PATCH") &&
-        config.uniqueKeys.length > 0;
 
       const readsReachedByDependency = findReadsReachedBy(
         resourceScope,
@@ -370,27 +355,19 @@ export const createResourceLifecycleManager = () => {
         !triggerIsMany &&
         isScopedManyOwner(resourceScope, triggerResourceScope);
 
+      // A DELETE resets the reads of its own resource only (delete_effect
+      // below): another resource has nothing to walk for it.
+      const deleteReachesReads = triggerVerb === "DELETE" && isTriggerScope;
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
-        triggerVerb !== "DELETE" &&
-        !hasUniqueKeyAutorerun &&
+        !deleteReachesReads &&
         !dependencyRerunsGet &&
         !dependencyRerunsGetMany &&
         !ownsPostedScopedMany
       ) {
         continue;
       }
-
-      // Parameter scope predicate for config-driven rules
-      // Same scope ID or no scope = compatible, subset check for different scopes
-      const paramScopePredicate = (candidateAction) => {
-        const candidateParamScope = candidateAction.meta.paramScope;
-        if (candidateParamScope.id === paramScope.id) {
-          return true;
-        }
-        return isParamSubset(candidateParamScope.params, paramScope.params);
-      };
 
       for (const restAction of config.restActionSet) {
         const actionCandidateArray = restAction.matchAllSelfOrDescendant(
@@ -405,7 +382,8 @@ export const createResourceLifecycleManager = () => {
           const candidateIsPlural = actionCandidate.meta.isMany;
           const isSameResource = triggerResourceScope === resourceScope;
 
-          // Config-driven same-resource effects (respects param scope)
+          // Config-driven same-resource effects: the scope is the facade, so
+          // a candidate of this config is one of the same scope.
           config_effect: {
             if (
               !isSameResource ||
@@ -420,15 +398,12 @@ export const createResourceLifecycleManager = () => {
             if (!shouldRerun) {
               break config_effect;
             }
-            if (!paramScopePredicate(actionCandidate)) {
-              break config_effect;
-            }
             actionsToRerun.add(actionCandidate);
             reasonSet.add("same-resource autorerun");
             continue;
           }
 
-          // DELETE effects on same resource (ignores param scope)
+          // DELETE effects on same resource
           delete_effect: {
             if (!isSameResource || triggerVerb !== "DELETE") {
               break delete_effect;
@@ -460,39 +435,6 @@ export const createResourceLifecycleManager = () => {
             actionsToReset.add(actionCandidate);
             reasonSet.add("same-resource DELETE reset");
             continue;
-          }
-
-          // Unique key effects: rerun GET when matching resource created/updated
-          unique_key_effect: {
-            if (
-              hasUniqueKeyAutorerun &&
-              candidateVerb === "GET" &&
-              !candidateIsPlural &&
-              isSameResource
-            ) {
-              const { valueSignal } = triggeringAction;
-              const modifiedValue = valueSignal.peek();
-
-              if (modifiedValue && typeof modifiedValue === "object") {
-                for (const uniqueKey of config.uniqueKeys) {
-                  const modifiedUniqueId = modifiedValue[uniqueKey];
-                  const candidateParams = actionCandidate.params;
-
-                  if (
-                    modifiedUniqueId !== undefined &&
-                    candidateParams &&
-                    typeof candidateParams === "object" &&
-                    candidateParams[uniqueKey] === modifiedUniqueId
-                  ) {
-                    actionsToRerun.add(actionCandidate);
-                    reasonSet.add(
-                      `${triggeringAction.meta.verb}-uniqueKey autorerun`,
-                    );
-                    break;
-                  }
-                }
-              }
-            }
           }
 
           // Cross-resource dependency effects: rerun dependent GET / GET_MANY
@@ -651,11 +593,15 @@ export const createResourceLifecycleManager = () => {
     if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
       const reason = `${restActionWhoJustCompleted} triggered ${reasons.join(" and ")}`;
       const dispatchActions = getActionDispatcher();
-      dispatchActions({
-        rerunSet: actionsToRerun,
-        resetSet: actionsToReset,
-        reason,
-      });
+      // Nobody awaits these: the write that caused them is answered already.
+      // A read failing here stays on its action, where a screen shows it.
+      runUnwatched(() =>
+        dispatchActions({
+          rerunSet: actionsToRerun,
+          resetSet: actionsToReset,
+          reason,
+        }),
+      );
     }
   };
 
@@ -728,6 +674,11 @@ const writeCallbackNameOf = (triggeringAction) => {
   return isMany ? `${verb}_MANY` : verb;
 };
 const shouldRerunAfter = (rerunConfig, verb) => {
+  // A read changes nothing another read could be stale about: `"*"` is every
+  // write.
+  if (verb === "GET") {
+    return false;
+  }
   if (rerunConfig === false) {
     return false;
   }
@@ -814,24 +765,13 @@ const isNamedWriteOf = (resourceScope, writeName) => {
   const writeAction = resourceScope[writeName];
   return Boolean(writeAction && writeAction.meta?.writeName === writeName);
 };
-const isParamSubset = (parentParams, childParams) => {
-  if (!parentParams || !childParams) {
-    return false;
-  }
-  for (const [key, value] of Object.entries(parentParams)) {
-    if (!(key in childParams) || !compareTwoJsValues(childParams[key], value)) {
-      return false;
-    }
-  }
-  return true;
-};
 
 // Whether a GET of the owner read the item a scoped child's action was answered
 // for. The child's value names its owner first ([ownerKey, …], see scopedMany);
 // the GET's value is the id of the item it read. The key may be a unique key
 // rather than that id: both lead to the owner's one store of children. Values
-// are read off the signals: the child's action is still completing, and its
-// `value` property is only written once that batch ends.
+// are peeked: this runs inside the child's completion, and must not subscribe
+// anything to them.
 const isOwnerReadBy = (
   childResource,
   childAction,

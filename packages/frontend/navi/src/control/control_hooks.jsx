@@ -343,6 +343,9 @@ export const useControlProps = (
     persists,
     uiActionInternal,
   });
+  // The `*Message` props of the Field around the control, which its own win
+  // over (see getConstraintMessage). A ref, read when a message is asked for.
+  uiStateController.fieldMessagePropsRef = useContext(MessagePropsRefContext);
   // After the controller: whether a group listens is asked of the parent it
   // registers into. Read by useInteractiveProps below.
   controlInfo.readOnlyUncontrolled = useReadOnlyUncontrolled(

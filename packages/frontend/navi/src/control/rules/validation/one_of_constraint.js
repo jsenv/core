@@ -3,7 +3,6 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
 export const ONE_OF_CONSTRAINT = {
   name: "one_of",
-  messageAttribute: "data-one-of-message",
   check: (field) => {
     const oneOf = field.controlHostProps["data-one-of"];
     if (!oneOf) {

@@ -19,7 +19,6 @@ import { uiStateAsText } from "../ui_state_as_text.js";
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
-  messageAttribute: "data-required-message",
   check: (field) => {
     const required = field.controlHostProps.required;
     if (!required) {
@@ -68,8 +67,9 @@ export const REQUIRED_CONSTRAINT = {
       };
     }
     if (type === "checkbox") {
+      // A checkbox alone (an "I accept") has no group around it.
       const parent = field.parentUIStateController;
-      if (parent.controlType === "checkbox_group") {
+      if (parent?.controlType === "checkbox_group") {
         // handled by parent
         return null;
       }
@@ -124,7 +124,6 @@ CONSTRAINT_ATTRIBUTE_SET.add("required");
 
 export const PATTERN_CONSTRAINT = {
   name: "pattern",
-  messageAttribute: "data-pattern-message",
   check: (field) => {
     const pattern = field.controlHostProps.pattern;
     if (!pattern) {
@@ -159,7 +158,6 @@ CONSTRAINT_ATTRIBUTE_SET.add("pattern");
 // the value again refuses it for the same reason and in the same words.
 export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
-  messageAttribute: "data-type-message",
   check: (field) => {
     const type = field.controlHostProps.type;
     if (type !== "email") {
@@ -179,7 +177,6 @@ export const TYPE_EMAIL_CONSTRAINT = {
 
 export const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
-  messageAttribute: "data-min-length-message",
   check: (field) => {
     const type = field.controlHostProps.type ?? "text";
     const isInput =
@@ -227,7 +224,6 @@ const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
 
 export const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
-  messageAttribute: "data-max-length-message",
   check: (field) => {
     const type = field.controlHostProps.type ?? "text";
     // A multiple selection has a length the way a string has one — how many
@@ -303,7 +299,6 @@ const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
 
 export const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
-  messageAttribute: "data-type-message",
   check: (field) => {
     if (field.controlType !== "input" && field.controlType !== "picker") {
       return null;
@@ -350,7 +345,6 @@ const DATE_INPUT_TYPE_SET = new Set([
 
 export const MIN_CONSTRAINT = {
   name: "min",
-  messageAttribute: "data-min-message",
   check: (field) => {
     if (field.controlType === "duration_group") {
       const min = field.controlHostProps.min;
@@ -419,7 +413,6 @@ CONSTRAINT_ATTRIBUTE_SET.add("min");
 
 export const MAX_CONSTRAINT = {
   name: "max",
-  messageAttribute: "data-max-message",
   check: (field) => {
     if (field.controlType === "duration_group") {
       const max = field.controlHostProps.max;
@@ -495,7 +488,6 @@ const STEP_SUPPORTED_TYPE_SET = new Set([
 
 export const STEP_CONSTRAINT = {
   name: "step",
-  messageAttribute: "data-step-message",
   check: (field) => {
     if (field.controlType === "duration_group") {
       const step = field.controlHostProps.step;
@@ -627,28 +619,30 @@ export const STEP_CONSTRAINT = {
         });
       }
     }
-    {
-      const step = parseInt(stepString, 10);
-      const baseDate = minString
-        ? new Date(`${minString}T00:00:00`)
-        : new Date(0);
-      const valueDate = new Date(`${valueAsString}T00:00:00`);
-      const diffDays = Math.round((valueDate - baseDate) / 86400000);
-      if (diffDays % step === 0) {
-        return null;
-      }
-      const beforeDays = Math.floor(diffDays / step) * step;
-      const afterDays = beforeDays + step;
-      const beforeDate = new Date(baseDate);
-      beforeDate.setDate(beforeDate.getDate() + beforeDays);
-      const afterDate = new Date(baseDate);
-      afterDate.setDate(afterDate.getDate() + afterDays);
-      return constraintI18n("constraint.step.date.default", {
-        step: stepString,
-        before: formatDateIso(beforeDate.toISOString().slice(0, 10), type),
-        after: formatDateIso(afterDate.toISOString().slice(0, 10), type),
-      });
+    // date, month, week, datetime-local: HTML counts their step in days,
+    // months, weeks and seconds, from `min` or from where the platform starts
+    // counting for that type (see STEP_UNITS_BY_TYPE).
+    const units = STEP_UNITS_BY_TYPE[type];
+    if (!units) {
+      return null;
     }
+    const step = parseFloat(stepString);
+    const value = units.parse(valueAsString);
+    const base = minString ? units.parse(minString) : units.origin;
+    if (!(step > 0) || value === undefined || base === undefined) {
+      return null;
+    }
+    const remainder = (((value - base) % step) + step) % step;
+    const epsilon = step * 1e-9;
+    if (remainder < epsilon || remainder > step - epsilon) {
+      return null;
+    }
+    const before = value - remainder;
+    return units.message(
+      stepString,
+      units.format(before),
+      units.format(before + step),
+    );
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("step");
@@ -748,4 +742,123 @@ const formatDateIso = (iso, inputType) => {
     return iso;
   }
   return formatDay(date, { lang: locale });
+};
+
+// Each step-counted date type, in the unit HTML counts its step in: what a
+// value is in that unit (undefined when it does not parse), where the count
+// starts when there is no `min`, how a counted value is shown, and the sentence.
+// Counted in UTC: a day is a day whatever the clock change in between.
+const DAY_MS = 86400000;
+const parseDateParts = (string) => {
+  const match = /^(\d{4,})-(\d{2})-(\d{2})$/.exec(string);
+  if (!match) {
+    return undefined;
+  }
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+};
+const isoDateOfMs = (ms) => new Date(ms).toISOString().slice(0, 10);
+// The week HTML counts from is the one starting on Monday 1969-12-29.
+const WEEK_ORIGIN_MS = Date.UTC(1969, 11, 29);
+const mondayOfIsoWeek = (string) => {
+  const match = /^(\d{4,})-W(\d{2})$/.exec(string);
+  if (!match) {
+    return undefined;
+  }
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  // Week 1 is the one holding January 4th.
+  const january4 = Date.UTC(year, 0, 4);
+  const january4WeekDay = (new Date(january4).getUTCDay() + 6) % 7;
+  return january4 - january4WeekDay * DAY_MS + (week - 1) * 7 * DAY_MS;
+};
+const STEP_UNITS_BY_TYPE = {
+  "date": {
+    parse: (string) => {
+      const ms = parseDateParts(string);
+      return ms === undefined ? undefined : ms / DAY_MS;
+    },
+    origin: 0,
+    format: (days) => formatDateIso(isoDateOfMs(days * DAY_MS), "date"),
+    message: (step, before, after) =>
+      constraintI18n("constraint.step.date.default", { step, before, after }),
+  },
+  "month": {
+    parse: (string) => {
+      const match = /^(\d{4,})-(\d{2})$/.exec(string);
+      if (!match) {
+        return undefined;
+      }
+      return Number(match[1]) * 12 + Number(match[2]) - 1;
+    },
+    origin: 1970 * 12,
+    format: (months) => {
+      const year = Math.floor(months / 12);
+      const month = String((months % 12) + 1).padStart(2, "0");
+      return formatDateIso(`${year}-${month}`, "month");
+    },
+    message: (step, before, after) =>
+      constraintI18n("constraint.step.month.default", { step, before, after }),
+  },
+  "week": {
+    parse: (string) => {
+      const monday = mondayOfIsoWeek(string);
+      return monday === undefined
+        ? undefined
+        : (monday - WEEK_ORIGIN_MS) / (7 * DAY_MS);
+    },
+    origin: 0,
+    format: (weeks) =>
+      formatDateIso(isoDateOfMs(WEEK_ORIGIN_MS + weeks * 7 * DAY_MS), "week"),
+    message: (step, before, after) =>
+      constraintI18n("constraint.step.week.default", { step, before, after }),
+  },
+  "datetime-local": {
+    parse: (string) => {
+      const match =
+        /^(\d{4,}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/.exec(
+          string,
+        );
+      if (!match) {
+        return undefined;
+      }
+      const dayMs = parseDateParts(match[1]);
+      if (dayMs === undefined) {
+        return undefined;
+      }
+      const seconds =
+        Number(match[2]) * 3600 + Number(match[3]) * 60 + Number(match[4] || 0);
+      return dayMs / 1000 + seconds;
+    },
+    origin: 0,
+    format: (seconds) => {
+      const ms = seconds * 1000;
+      const dayMs = Math.floor(ms / DAY_MS) * DAY_MS;
+      const showSeconds = seconds % 60 !== 0;
+      return `${formatDateIso(isoDateOfMs(dayMs), "date")} ${formatMsToTime(ms - dayMs, showSeconds)}`;
+    },
+    // The step is in seconds, said in the unit it is a whole number of, as a
+    // time's is.
+    message: (step, before, after) => {
+      const stepSeconds = parseFloat(step);
+      if (stepSeconds % 3600 === 0) {
+        return constraintI18n("constraint.step.time.hour", {
+          step: String(stepSeconds / 3600),
+          before,
+          after,
+        });
+      }
+      if (stepSeconds % 60 === 0) {
+        return constraintI18n("constraint.step.time.minute", {
+          step: String(stepSeconds / 60),
+          before,
+          after,
+        });
+      }
+      return constraintI18n("constraint.step.time.second", {
+        step,
+        before,
+        after,
+      });
+    },
+  },
 };

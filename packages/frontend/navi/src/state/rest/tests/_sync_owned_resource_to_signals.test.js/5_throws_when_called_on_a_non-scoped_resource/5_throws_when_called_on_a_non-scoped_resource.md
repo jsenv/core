@@ -22,7 +22,7 @@ return { error };
 
 ```js
 {
-  "error": 'syncOwnedResourceToSignals: "user" is not a scoped resource. Use syncResourceToSignals instead.'
+  "error": 'syncOwnedResourceToSignals: "user" is not a scoped resource: its children have no store per owner to watch.'
 }
 ```
 

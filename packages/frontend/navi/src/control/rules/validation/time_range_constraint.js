@@ -10,7 +10,6 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 // is the one the answer is about.
 export const TIME_RANGE_CONSTRAINT = {
   name: "time_after",
-  messageAttribute: "data-time-after-message",
   check: (field) => {
     const after = field.controlHostProps["data-time-after"];
     if (after === undefined) {

@@ -5,7 +5,6 @@ import { MAX_LENGTH_CONSTRAINT } from "../validation/standard_constraints.js";
 
 export const READONLY_CONSTRAINT = {
   name: "readonly",
-  messageAttribute: "data-readonly-message",
   check: (field, { intent } = {}) => {
     // Not off the rendered `readOnly`/`aria-readonly`: they also carry the run
     // of the control's own action, a frame behind (see readOnlyWithoutRun in

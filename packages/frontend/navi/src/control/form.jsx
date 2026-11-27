@@ -8,23 +8,19 @@
  * <form> element (FormNested).
  */
 
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { signal } from "@preact/signals";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { triggerNaviCommand } from "./commands.js";
 import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { isUIStateHeld } from "./held_ui_state.js";
-import { dispatchRequestAction } from "./rules/control_action.js";
+import { uiStateIsChildEmpty } from "./ui_state_controller.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
 /**
@@ -111,9 +107,11 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   `"--navi-left"`/`"--navi-right"`/`"--navi-up"`/`"--navi-down"` move on the
  *   slide map it is in, `"--navi-nav-to:/the/url"` takes the user to a page,
  *   `"--navi-void"` stays put — the one for a form inside a popup that must
- *   stay open once it is sent (a side panel one keeps editing in).
+ *   stay open once it is sent (a side panel one keeps editing in),
+ *   `"--navi-reset"` empties the form itself and stays.
  *   Any navi command, really: it is triggered from the form, so it finds its
- *   target the way that command always does.
+ *   target the way that command always does — a command aimed at a control
+ *   (`--navi-reset`, `--navi-clear`) is about the form itself.
  *
  *   Left out, the surface the form sits in decides (see resolveAfterSend in
  *   commands.js): a popup closes, a slide goes on to the next one — or back to
@@ -176,6 +174,11 @@ const useFormGroup = (props) => {
   // form as its fields change, which is what turns the submit button below
   // interactive the moment there is something to send.
   const uiState = uiStateController.uiStateSignal.value;
+  // What the form is measured against (useHeldUIStateAsSent, and each send
+  // that went through). A signal read here, so the form re-renders whenever
+  // it moves — the first take included, which nothing else re-renders when
+  // the fields were already filled at their first render (a record).
+  const sentUIStateSignal = useMemo(() => signal(undefined), []);
   // A form holding no field — a "Continue", an "Accept", a "Join" alone in it —
   // has no answer that could ever differ from the last one: "unchanged" would
   // refuse every send, and its action would never run. The press is its whole
@@ -187,8 +190,8 @@ const useFormGroup = (props) => {
   const changed =
     !holdsField ||
     !compareTwoJsValues(
-      withoutEmptyFields(uiState),
-      uiStateController.sentUIState,
+      withoutEmptyFields(uiState, uiStateController),
+      sentUIStateSignal.value,
     );
   // Read by READONLY_CONSTRAINT from a submit button held back by this form,
   // which has to be able to say what it is waiting for.
@@ -203,10 +206,15 @@ const useFormGroup = (props) => {
     Boolean(props.canSendWhileUnchanged) ||
     !uiStateController.holdsFieldSignal.peek() ||
     !compareTwoJsValues(
-      withoutEmptyFields(value),
-      uiStateController.sentUIState,
+      withoutEmptyFields(value, uiStateController),
+      sentUIStateSignal.peek(),
     );
-  useHeldUIStateAsSent(uiStateController, props.pristineKey, record);
+  useHeldUIStateAsSent(
+    uiStateController,
+    sentUIStateSignal,
+    props.pristineKey,
+    record,
+  );
   useUnregisteredControlWarning(props.ref);
 
   const { basePseudoState, children } = formProps;
@@ -222,10 +230,14 @@ const useFormGroup = (props) => {
     formProps,
     // What was sent is what the next submit is measured against. On success
     // only: an action that failed has not been sent, and the user must be able
-    // to try the same value again.
-    onnavi_action_end: () => {
-      uiStateController.sentUIState = withoutEmptyFields(
-        uiStateController.uiState,
+    // to try the same value again. The value the run was asked with, carried by
+    // the navi_action_allowed event that started it — not what the form holds
+    // now: what was typed while the run was out has not been sent yet.
+    onnavi_action_end: (e) => {
+      const actionAllowedEvent = e.detail.event;
+      sentUIStateSignal.value = withoutEmptyFields(
+        actionAllowedEvent.detail.uiState,
+        uiStateController,
       );
     },
     inside: (
@@ -259,14 +271,13 @@ const FormControl = (props) => {
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
       pseudoClasses={FormPseudoClasses}
       onSubmit={(e) => {
+        // The browser would load the form's action URL.
+        e.preventDefault();
         const form = e.currentTarget;
-        dispatchRequestAction(form, {
-          event: e,
-          name: "form_submit",
-          always: () => {
-            e.preventDefault();
-          },
-          requester: e.submitter || form,
+        // The send a press on the form's submit makes: the action, then what
+        // follows it (`command`, or the surface the form is in).
+        triggerNaviCommand(form, "--navi-send", e, {
+          requester: e.submitter,
         });
       }}
       onReset={(e) => {
@@ -323,7 +334,7 @@ const readHeldUIState = (uiStateController, record) => {
   const uiState = uiStateController.uiState;
   // A form given a value holds all of it, whatever its fields say.
   if (uiStateController.hasValueProp) {
-    return withoutEmptyFields(uiState);
+    return withoutEmptyFields(uiState, uiStateController);
   }
   const held = { ...uiState };
   for (const child of uiStateController.getChildControllers?.() || []) {
@@ -335,43 +346,50 @@ const readHeldUIState = (uiStateController, record) => {
       delete held[child.name];
     }
   }
-  return withoutEmptyFields(held);
+  return withoutEmptyFields(held, uiStateController);
 };
 
 // The record moved: the baseline moves with it where it moved, and nowhere
 // else. A key nobody is editing is measured against what its field shows of
 // the record now; a key being edited, against the record itself — the edit
 // stays a change, and typing the record's value back makes it none.
-const moveBaselineWithRecord = (uiStateController, recordBefore, record) => {
+const moveBaselineWithRecord = (
+  uiStateController,
+  baselineBefore,
+  recordBefore,
+  record,
+) => {
   const before = asObject(recordBefore);
   const after = asObject(record);
   const uiState = asObject(uiStateController.uiState);
-  const baseline = { ...uiStateController.sentUIState };
+  const baseline = { ...baselineBefore };
+  const fieldsByKey = readFieldsByKey(uiStateController);
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
   for (const key of keys) {
     if (compareTwoJsValues(before[key], after[key])) {
       continue;
     }
-    const field = findFieldAnswering(uiStateController, key);
+    const field = fieldsByKey.get(key);
     baseline[key] = field && field.holdsEdit() ? after[key] : uiState[key];
   }
-  return withoutEmptyFields(baseline);
+  return withoutEmptyFields(baseline, uiStateController);
 };
-// A nameless grouping answers for its controls' keys (see
-// readNamedChildUIStates in ui_state_controller.js).
-const findFieldAnswering = (groupController, key) => {
-  for (const child of groupController.getChildControllers()) {
-    if (child.name === key) {
-      return child;
-    }
-    if (!child.name && child.getChildControllers) {
-      const field = findFieldAnswering(child, key);
-      if (field) {
-        return field;
+// The field answering each key of a group's value. A nameless grouping
+// answers for its controls' keys (see readNamedChildUIStates in
+// ui_state_controller.js).
+const readFieldsByKey = (groupController, fieldsByKey = new Map()) => {
+  for (const child of groupController.getChildControllers?.() || []) {
+    if (child.name) {
+      if (!fieldsByKey.has(child.name)) {
+        fieldsByKey.set(child.name, child);
       }
+      continue;
+    }
+    if (child.getChildControllers) {
+      readFieldsByKey(child, fieldsByKey);
     }
   }
-  return undefined;
+  return fieldsByKey;
 };
 const asObject = (value) =>
   value !== null && typeof value === "object" ? value : {};
@@ -379,26 +397,61 @@ const asObject = (value) =>
 // A field holding nothing is a field the form has nothing to say about, and
 // whether it is absent or present-and-empty is an accident of when it
 // registered — the baseline is taken before the fields have had their say, the
-// value at submit after. Compared as they are, an empty form would look changed
-// by the mere existence of an empty field.
-const withoutEmptyFields = (uiState) => {
+// value at submit after, and a field mounted later (a slide built when near, an
+// Expandable opened) is absent from one and present in the other. Compared as
+// they are, an empty form would look changed by the mere existence of an empty
+// field. So both sides leave out what each field holds when nothing was
+// answered, in that field's own shape.
+const withoutEmptyFields = (uiState, groupController) => {
   if (!uiState || typeof uiState !== "object") {
     return {};
   }
+  const fieldsByKey = readFieldsByKey(groupController);
   const kept = {};
   for (const key of Object.keys(uiState)) {
     const value = uiState[key];
-    if (value !== undefined && value !== "") {
+    if (!holdsNothing(value, fieldsByKey.get(key))) {
       kept[key] = value;
     }
   }
   return kept;
+};
+// No value, an empty text, the field's own empty (an unchecked yes/no is
+// `false`, an empty list `[]` — see resolveEmptyUIState), or a group of fields
+// each holding nothing. `field` is undefined for a key no field answers (a key
+// of the record, say): only the shapes that say nothing whatever asks.
+const holdsNothing = (value, field) => {
+  if (value === undefined || value === "") {
+    return true;
+  }
+  if (field && uiStateIsChildEmpty(value, field)) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (isPlainObject(value)) {
+    const partsByKey = field ? readFieldsByKey(field) : new Map();
+    return Object.keys(value).every((key) =>
+      holdsNothing(value[key], partsByKey.get(key)),
+    );
+  }
+  return false;
+};
+const isPlainObject = (value) => {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 };
 
 // Taken in a layout effect rather than during render because the fields
 // register themselves in their own effects, which run first — this is the
 // earliest moment the form knows what it holds. Everything after this baseline
 // is a real send moving it forward (see useFormGroup's own onnavi_action_end).
+// Written into a signal the form reads in its render: a take that moves the
+// baseline re-renders the form, which reads `changed` against it.
 //
 // Taken a second time at the end of the tick, because "the earliest moment" is
 // not always late enough: a field that re-renders on its own schedule rather
@@ -412,31 +465,24 @@ const withoutEmptyFields = (uiState) => {
 // brought it (followDefaultValue), so the baseline moves in the effect after,
 // and only where the record moved — a whole retake would call what is being
 // typed the reference.
-const useHeldUIStateAsSent = (uiStateController, pristineKey, record) => {
-  // The render that brought a new pristineKey read `changed` against the
-  // previous baseline, and nothing else is going to move: the button would stay
-  // lit on a form that holds exactly what it was just given. So ask for the one
-  // render that reads the new baseline — the first take on mount has nobody to
-  // tell, every field it is waiting for re-renders the form as it registers.
-  const [, rereadBaseline] = useState(0);
-  const isFirstRef = useRef(true);
+const useHeldUIStateAsSent = (
+  uiStateController,
+  sentUIStateSignal,
+  pristineKey,
+  record,
+) => {
   const recordTakenRef = useRef(record);
+  const writeBaseline = (baseline) => {
+    if (compareTwoJsValues(sentUIStateSignal.peek(), baseline)) {
+      return;
+    }
+    sentUIStateSignal.value = baseline;
+  };
   useLayoutEffect(() => {
     const takeBaseline = () => {
-      const baselineBefore = uiStateController.sentUIState;
-      const baseline = readHeldUIState(
-        uiStateController,
-        recordTakenRef.current,
-      );
-      uiStateController.sentUIState = baseline;
-      return !compareTwoJsValues(baselineBefore, baseline);
+      writeBaseline(readHeldUIState(uiStateController, recordTakenRef.current));
     };
-    const moved = takeBaseline();
-    const isFirst = isFirstRef.current;
-    isFirstRef.current = false;
-    if (moved && !isFirst) {
-      rereadBaseline((count) => count + 1);
-    }
+    takeBaseline();
     // A microtask, not a timeout: everything that belongs to this arrival —
     // the renders preact still has queued, the state they push into the form —
     // happens before the tick ends, and nothing a person does can land in
@@ -446,9 +492,7 @@ const useHeldUIStateAsSent = (uiStateController, pristineKey, record) => {
       if (abandoned) {
         return;
       }
-      if (takeBaseline()) {
-        rereadBaseline((count) => count + 1);
-      }
+      takeBaseline();
     });
     return () => {
       abandoned = true;
@@ -460,16 +504,14 @@ const useHeldUIStateAsSent = (uiStateController, pristineKey, record) => {
       return;
     }
     recordTakenRef.current = record;
-    const baselineBefore = uiStateController.sentUIState;
-    const baseline = moveBaselineWithRecord(
-      uiStateController,
-      recordBefore,
-      record,
+    writeBaseline(
+      moveBaselineWithRecord(
+        uiStateController,
+        sentUIStateSignal.peek(),
+        recordBefore,
+        record,
+      ),
     );
-    uiStateController.sentUIState = baseline;
-    if (!compareTwoJsValues(baselineBefore, baseline)) {
-      rereadBaseline((count) => count + 1);
-    }
   }, [uiStateController, record]);
 };
 
@@ -520,11 +562,12 @@ const FormPseudoClasses = [
 ];
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
-// requestSubmit overridden on the form element so that programmatic form
-// submissions go through the navi interaction gate (interactivity check) and
-// then the action gate (validity). On the element rather than on
-// HTMLFormElement.prototype: only a navi form has those gates, and a prototype
-// patch would be installed by importing navi, whether a form is used or not.
+// requestSubmit overridden on the form element so that a programmatic
+// submission is the send a press makes: through the navi interaction gate
+// (interactivity check), the action gate (validity), and on to what follows a
+// send. On the element rather than on HTMLFormElement.prototype: only a navi
+// form has those gates, and a prototype patch would be installed by importing
+// navi, whether a form is used or not.
 const useRequestSubmitThroughGates = (ref) => {
   useLayoutEffect(() => {
     const form = ref.current;
@@ -534,15 +577,12 @@ const useRequestSubmitThroughGates = (ref) => {
         HTMLFormElement.prototype.requestSubmit.call(form, submitter);
         return;
       }
-      const programmaticEvent = new CustomEvent("programmatic_request_submit", {
-        cancelable: true,
-        detail: { submitter },
-      });
-      dispatchRequestAction(form, {
-        event: programmaticEvent,
-        name: "requestSubmit",
-        requester: submitter,
-      });
+      triggerNaviCommand(
+        form,
+        "--navi-send",
+        new CustomEvent("request_submit"),
+        { requester: submitter },
+      );
     };
     return () => {
       delete form.requestSubmit;

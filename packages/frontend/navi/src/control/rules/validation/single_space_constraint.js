@@ -28,7 +28,6 @@ const applyRule = (field) => {
 
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
-  messageAttribute: "data-single-space-message",
   check: (field) => {
     const singleSpace = field.controlHostProps["data-single-space"];
     if (!isConstraintAttributeOn(singleSpace)) {
