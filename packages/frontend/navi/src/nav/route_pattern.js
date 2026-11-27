@@ -398,7 +398,9 @@ export const createRoutePattern = (
    * pageNaming, givenElsewhere }.
    * owner is relative to this route: "own" | "ancestor" | "descendant" | "extra".
    * givenElsewhere: an explicit value for another address than the one
-   * amended (see entryIsWritten).
+   * amended (see entryIsWritten). `asked`, when given, names the explicit
+   * params that are: the rest are carried from the address amended, as their
+   * states hold them.
    *
    * Sources, in priority order (first write wins):
    * - explicit params (an explicit undefined pins the param to its default)
@@ -417,7 +419,10 @@ export const createRoutePattern = (
    * Every family signal is read (not only the stored ones) so that a url
    * computed inside a preact computed() subscribes to all of them.
    */
-  const buildIntendedState = (explicitParams, { amending = false } = {}) => {
+  const buildIntendedState = (
+    explicitParams,
+    { amending = false, asked = null } = {},
+  ) => {
     const intended = new Map();
     const reachableDescendants = new Set();
     const setEntry = (
@@ -504,7 +509,7 @@ export const createRoutePattern = (
     for (const [name, value] of Object.entries(explicitParams)) {
       const { connection, segmentIndex, owner } = findFamilyConnection(name);
       setEntry(name, value, connection, segmentIndex, owner, true);
-      intended.get(name).givenElsewhere = !amending;
+      intended.get(name).givenElsewhere = asked ? name in asked : !amending;
     }
     for (const connection of connections) {
       const { paramName } = connection;
@@ -1120,11 +1125,12 @@ export const createRoutePattern = (
   // search params are updated. When buildMostPreciseUrl performs an ancestor
   // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
   // as-is because the built pathname will differ from the route's own base pathname.
-  // A weak param is never inherited from its signal by a url built for a link
-  // (see readSignalForUrlBuild). A url amended in place is another matter: the
-  // route is matching, so the signal IS this visit's state, kept in step with
-  // the address by every routing pass — and what it holds is carried over, so
-  // that changing another param does not end the visit this one qualifies.
+  // A weak param is never inherited from its signal by a url built for a page
+  // one goes to (see readSignalForUrlBuild). A url amending the address one is
+  // at is another matter — a state written, a link that amends: the signal IS
+  // this visit's state, kept in step with the address by every routing pass —
+  // and what it holds is carried over, so that changing another param does not
+  // end the visit this one qualifies.
   // Read from the signal, not from the url being amended: several signals
   // written in one batch flush one url write at a time, and the routing pass
   // of the first would take the others for gone — and reset them — if the url
@@ -1199,12 +1205,23 @@ export const createRoutePattern = (
     return names;
   };
 
-  const buildUrlPreservingPath = (currentUrl, params = {}) => {
-    params = carryOverWeakParams(params);
+  // `paramsHeld`: the params are what their states hold already (a state
+  // written, amending its own address), or values asked of the address built
+  // (a link amending it), which a dynamic default cannot judge (see
+  // entryIsWritten). What is carried from the address is held either way.
+  const buildUrlPreservingPath = (
+    currentUrl,
+    params = {},
+    { paramsHeld = true } = {},
+  ) => {
+    let paramsKept = carryOverWeakParams(params);
     if (currentUrl) {
-      params = carryOverPathParams(currentUrl, params);
+      paramsKept = carryOverPathParams(currentUrl, paramsKept);
     }
-    const intendedState = buildIntendedState(params, { amending: true });
+    const intendedState = buildIntendedState(paramsKept, {
+      amending: true,
+      asked: paramsHeld ? null : params,
+    });
     const relativeBuiltUrl = buildMostPreciseUrlFor(intendedState);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);

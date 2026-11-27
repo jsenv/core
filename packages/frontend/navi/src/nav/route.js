@@ -60,11 +60,11 @@ const ROUTE_OPTIONS = new Set([
  *   carries the value it holds there (`/alerts/create?step=recap`).
  *   Writing one changes that param alone: the other pairs of the address,
  *   another route's or none's (`utm_source`), stay as they were written.
- *   Writing one AMENDS the history entry one is on — a param qualifies the
- *   screen, it is not a place, and one entry per write turns a single
- *   back-press into as many as the user moved. A state whose values ARE places
- *   says so where it is declared (`stateSignal(v, { history: "push" })`), and
- *   one write can still say otherwise (`signal.set(v, { history })`).
+ *   Writing one TAKES THE PLACE of the history entry one is on — a param
+ *   qualifies the screen, it is not a place, and one entry per write turns a
+ *   single back-press into as many as the user moved. A state whose values ARE
+ *   places says so where it is declared (`stateSignal(v, { history: "push" })`),
+ *   and one write can still say otherwise (`signal.set(v, { history })`).
  * @param {Object<string, RegExp | Array | ((value: string) => boolean)>} [options.params]
  *   Which values a path param accepts, by param name: a regexp tested against the
  *   decoded segment, the list of accepted values (compared as strings, so it can
@@ -154,10 +154,8 @@ export const route = (pattern, options = {}) => {
      * the address leaves out is not there, even when its state holds a value:
      * that value is its default, or a state the address leaves alone.
      *
-     * What to build "the address one is at, one param changed" from: given to
-     * a link, a value read here is one the address already wrote, while a
-     * value read from `paramsSignal` may be a default the address leaves out,
-     * which the link then writes (see docs/navigation.md, "Search params").
+     * Not what to build "the address one is at, one param changed" from: that
+     * is `buildUrl(params, { amend: true })`, `<Link amend>`.
      */
     rawParamsSignal: answerAsIf(signal(ROUTE_NOT_MATCHING_PARAMS)),
     visited: false,
@@ -291,7 +289,10 @@ export const route = (pattern, options = {}) => {
     // it subscribes to exactly those, which is what reading the signals during
     // render gave it.
     const relativeUrlByParamsKey = new Map();
-    route.buildRelativeUrl = (params) => {
+    route.buildRelativeUrl = (params, { amend = false } = {}) => {
+      if (amend) {
+        return relativeToBase(buildAmendedUrl(params));
+      }
       const paramsKey = getParamsCacheKey(params);
       if (paramsKey === null) {
         return routePattern.buildMostPreciseUrl(params);
@@ -308,7 +309,23 @@ export const route = (pattern, options = {}) => {
       }
       return relativeUrlComputed.value;
     };
-    route.buildUrl = (params) => {
+    /**
+     * The url of this route at `params`.
+     *
+     * `amend`: the address one is at, with `params` changed — what the page
+     * holds and `params` does not name is kept, the visit's `weak` params and
+     * the pairs no route declares included. What a state write makes, for a
+     * link or a call that changes something about the page one is on (see
+     * `<Link amend>`). Without it, the url of a page one goes to, as built
+     * from anywhere: `weak` params left at their default unless named.
+     *
+     * @param {object} [params]
+     * @param {{ amend?: boolean }} [options]
+     */
+    route.buildUrl = (params, { amend = false } = {}) => {
+      if (amend) {
+        return buildAmendedUrl(params);
+      }
       const routeRelativeUrl = route.buildRelativeUrl(params);
       const routeUrl = resolveRouteUrl(routeRelativeUrl);
       return routeUrl;
@@ -316,15 +333,15 @@ export const route = (pattern, options = {}) => {
     // Options travel as they do to navTo() itself — `routeTransition` is the
     // one that matters here: what this one navigation asks of a route
     // transition (see route_transition.jsx), which is the programmatic half of
-    // what a <Link routeTransition> says.
-    route.navTo = (params, options) => {
+    // what a <Link routeTransition> says. `amend` is buildUrl's.
+    route.navTo = (params, { amend, ...options } = {}) => {
       if (!integration) {
         if (import.meta.dev) {
           console.warn(`navTo called on "${route}" but integration not set`);
         }
         return Promise.resolve();
       }
-      const routeUrl = route.buildUrl(params);
+      const routeUrl = route.buildUrl(params, { amend });
       return integration.navTo(routeUrl, options);
     };
     route.redirectTo = (
@@ -352,28 +369,57 @@ export const route = (pattern, options = {}) => {
         fromSignal: isSignalChange,
       });
     };
-    // Where replaceParams takes the address, read without going there (see
-    // navBackToState). The most specific route matching builds it: the params
-    // are what the states hold, the address one stands at amended. A signal
-    // change reaches a less specific route only when the more specific one does
-    // not carry the param (see writeValueInUrl): left to that one, the change
-    // would be dropped.
+    // The address `currentUrl` amended with `params`: one function for a state
+    // written (`paramsHeld`) and for a link amending the page (see buildUrl),
+    // so that the two never spell one place two ways. Built by the most
+    // specific route matching while this one matches: a frame's param is
+    // written on the page below it, and a signal change reaches a less
+    // specific route only when the more specific one does not carry the param
+    // (see writeValueInUrl). Built by this route otherwise: a link amending its
+    // way onto a page of its own, carrying the visit's states it declares too.
     // buildUrlPreservingPath handles the catch-all case where this trailing-slash
     // route matched a path it cannot represent (e.g. "/" on "/404") without
     // corrupting the current URL.  Ancestor optimisation is trusted as-is.
-    const urlOfParamsReplaced = (newParams) => {
-      const mostSpecificRoute = findMostSpecificMatchingRoute(route, routeSet);
-      if (mostSpecificRoute !== route) {
-        const { routePattern: mostSpecificPattern } =
-          getRoutePrivateProperties(mostSpecificRoute);
-        return resolveRouteUrl(
-          mostSpecificPattern.buildMostPreciseUrl(newParams, {
-            amending: true,
+    const amendedUrlOf = (params, { currentUrl, paramsHeld }) => {
+      const amendingRoute = route.matchingSignal.peek()
+        ? findMostSpecificMatchingRoute(route, routeSet)
+        : route;
+      return getRoutePrivateProperties(
+        amendingRoute,
+      ).routePattern.buildUrlPreservingPath(currentUrl, params, {
+        paramsHeld,
+      });
+    };
+    // A link reads it while rendering: one computed per set of params, as for
+    // buildRelativeUrl, that follows the address it amends.
+    const amendedUrlByParamsKey = new Map();
+    const buildAmendedUrl = (params) => {
+      const paramsKey = getParamsCacheKey(params);
+      if (paramsKey === null) {
+        return amendedUrlOf(params, {
+          currentUrl: routedUrlSignal.value,
+          paramsHeld: false,
+        });
+      }
+      let amendedUrlComputed = amendedUrlByParamsKey.get(paramsKey);
+      if (!amendedUrlComputed) {
+        if (amendedUrlByParamsKey.size >= PARAMS_CACHE_MAX) {
+          amendedUrlByParamsKey.clear();
+        }
+        amendedUrlComputed = computed(() =>
+          amendedUrlOf(params, {
+            currentUrl: routedUrlSignal.value,
+            paramsHeld: false,
           }),
         );
+        amendedUrlByParamsKey.set(paramsKey, amendedUrlComputed);
       }
-      return routePattern.buildUrlPreservingPath(getUrl(), newParams);
+      return amendedUrlComputed.value;
     };
+    // Where replaceParams takes the address, read without going there (see
+    // navBackToState).
+    const urlOfParamsReplaced = (newParams) =>
+      amendedUrlOf(newParams, { currentUrl: getUrl(), paramsHeld: true });
     getRoutePrivateProperties(route).urlOfParamsReplaced = urlOfParamsReplaced;
     route.replaceParams = (
       newParams,
@@ -858,8 +904,10 @@ export const navBackToState = (signal, value) => {
 // out its default. Not a comparison of strings, because one place has several
 // addresses: a link writes a value its dynamic default stands for (see
 // entryIsWritten), while an amendment of the address one is at leaves it out.
-// A search param no matching route declares is compared as written.
-const addressesHoldSameStates = (urlA, urlB) => {
+// A search param no matching route declares is compared as written. What
+// every "is the entry next door where this goes" asks: navBackToState, and a
+// push taken as a traversal (see the integrations).
+export const addressesHoldSameStates = (urlA, urlB) => {
   if (urlA === urlB) {
     return true;
   }
@@ -944,6 +992,9 @@ let activeRouteSet = null;
 // True once the routes have been matched against an address. Before that, no
 // route matching says nothing about the page: nothing has been asked yet.
 export const routedSignal = signal(false);
+// The address the routes were last matched against: what a url amending it
+// follows (see buildUrl's `amend`).
+const routedUrlSignal = signal(null);
 
 const routePreloadMap = new WeakMap();
 export const registerRoutePreload = (route, preload) => {
@@ -1229,6 +1280,9 @@ This prevents cross-test pollution and ensures clean state.`,
       // not the routing's: the routes have changed, and the pass goes on to
       // the end (publishing, repairs, the rest of the navigation).
       batchWithEffectErrorsApart(() => {
+        // With the statuses and the states, so a url amending it is read once
+        // all of them say this address.
+        routedUrlSignal.value = url;
         for (const {
           route,
           routePrivateProperties,
@@ -1502,6 +1556,7 @@ This prevents cross-test pollution and ensures clean state.`,
     activeRouteSet = null;
     activeCleanup = null;
     routedSignal.value = false;
+    routedUrlSignal.value = null;
   };
   activeCleanup = clearRoutes;
   return {
@@ -1565,6 +1620,12 @@ if (import.meta.hot) {
 // stand for: anything else (an object, a function) builds without the cache.
 // A key set to undefined is content too — it says "without this one", which
 // a params object not naming it does not say (see buildIntendedState).
+// What buildRelativeUrl says of an address the routes resolve: its part below
+// the base url (see resolveRouteUrl).
+const relativeToBase = (url) => {
+  const base = resolveRouteUrl("");
+  return url.startsWith(base) ? `/${url.slice(base.length)}` : url;
+};
 const PARAMS_CACHE_MAX = 1000;
 export const getParamsCacheKey = (params) => {
   if (params === undefined || params === null) {

@@ -378,10 +378,11 @@ A search key or value that names no text (`?q=-50%`, a link cut inside an
 escape) is kept as written: the signal bound to it receives that text, for its
 validation to judge, and the routes match as they would without it.
 
-Writing it AMENDS the history entry one is on rather than stacking a new one: a
-param that qualifies a screen is not a place, and one entry per write turns a
-single back-press into as many as the user moved. A state whose values ARE places
-says so — see [`history: "push"`](#a-state-whose-values-are-places-history-push).
+Writing it TAKES THE PLACE of the history entry one is on rather than stacking a
+new one: a param that qualifies a screen is not a place, and one entry per write
+turns a single back-press into as many as the user moved. A state whose values
+ARE places says so — see
+[`history: "push"`](#a-state-whose-values-are-places-history-push).
 
 A write changes the params it is about and nothing else: on
 `/places/clubs?view=map&utm_source=newsletter`, writing the clubs' `q` keeps the
@@ -391,23 +392,33 @@ path param changed, an optional segment filled — rebuilds what the routes
 declare, since the routes matching after the move are not those matching
 before; the pairs no route declares still go along, where they stood.
 
-A route says its params two ways. `route.paramsSignal` is what they HOLD: a param
-the address leaves out reads its default there. `route.rawParamsSignal` is what the
-address NAMES. A link to the page one is on, with one param changed and the
-visit's `weak` params kept (a link does not carry those over), is built from the
-second. A value given to a link is written in its address whenever the state's
-default is dynamic, since navi cannot tell what that default will be at the
-destination. Read from `paramsSignal`, such a default becomes a value given: on a
-booking page opening on the first free day, the address one is at follows that
-day, and the address the link leads to stays on it once the first free day has
-moved on.
+A link does what a write does when it says `amend`: its address is the one the
+reader is at, with its `routeParams` changed — the visit's `weak` params and the
+pairs no route declares kept, a param named `undefined` taken out. For a link
+inside a page that changes something about it: a step, a filter, a sheet opened
+over it.
 
 ```jsx
-<Link
-  route={BOOKING_ROUTE}
-  routeParams={{ ...BOOKING_ROUTE.rawParamsSignal.value, step: "recap" }}
->
+<Link route={BOOKING_ROUTE} routeParams={{ step: "recap" }} amend>
+  Continue
+</Link>
 ```
+
+Without it, a link is built for a page one goes to, as from anywhere else: a
+`weak` param it does not name is left at its default, which is what a bar entry
+and a "start over" want. Where the link points cannot tell the two apart — the
+bar's "Book" and the page's "Continue" both lead to the booking page one is on —
+so the link says which one it is. In code, `route.buildUrl(params, { amend: true })`
+and `route.navTo(params, { amend: true })`. An amending link's address follows the
+reader's, so it is drawn again whenever a param it does not name changes.
+
+Rebuilding the address by hand instead, the page's params spread into
+`routeParams`, breaks on the first `weak` param the spread forgets, and on what
+`route.paramsSignal` holds: what the params HOLD, a param the address leaves out
+at its default. A value given to a link is written in its address whenever the
+state's default is dynamic, since navi cannot tell what that default will be at
+the destination: spread from there, the first free day becomes a day the link
+pins. What the address NAMES is `route.rawParamsSignal`.
 
 One answer may be kept as several params — a level and its reach,
 `?levels=…&level_exact=…` — and drawn by one control whose value is the object.
@@ -810,8 +821,10 @@ Where the browser exposes its stack (the Navigation API — not iOS Safari, whos
 `navTo()` whose destination is the entry right next to the current one becomes a
 real traversal**: a "back" link to the page one just came from behaves as a back
 — no A, B, A, B… growth, and the scroll comes back — and one step forward too.
-Only towards entries of this document, and never when the push carries explicit
-state. A traversal lands when the browser answers, after the call has returned;
+The destination is that entry when every state holds there what it holds in the
+entry, however the two addresses spell it: a param at its default is the same
+named or left out. Only towards entries of this document, and never when the
+push carries explicit state. A traversal lands when the browser answers, after the call has returned;
 so a state written with `history: "push"` stacks its entry, since what is
 written right after it (a layer, then what is open inside it) belongs on that
 entry. The one writer that knows nothing follows its write is a `SlideContainer`

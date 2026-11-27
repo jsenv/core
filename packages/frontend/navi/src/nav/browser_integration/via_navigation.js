@@ -41,7 +41,7 @@ import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
-import { resolveRouteRedirection } from "../route.js";
+import { addressesHoldSameStates, resolveRouteRedirection } from "../route.js";
 import { isUrlOfThisDocument } from "../route_pattern.js";
 import {
   isTargetWriteInProgress,
@@ -234,12 +234,14 @@ export const setupBrowserIntegrationViaNavigation = ({
     }
     return entry;
   };
+  // The entry next door a push leads to: the one holding the same states,
+  // however each address spells them (see addressesHoldSameStates).
   const adjacentEntryKey = (url) => {
     // Behind first: when the same page stands on both sides, a link to it
     // reads as going back.
     for (const delta of [-1, 1]) {
       const entry = entryNextDoor(delta);
-      if (entry && entry.url === url) {
+      if (entry && addressesHoldSameStates(entry.url, url)) {
         return entry.key;
       }
     }

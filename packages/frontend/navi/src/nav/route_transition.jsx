@@ -1486,6 +1486,7 @@ const rebuildWatcher = () => {
           : (found && found.direction) || "forward",
       type,
       duration,
+      pressElement: navigationPressElement,
       retracedDoor: request ? request.door : undefined,
     });
   };
@@ -1650,6 +1651,7 @@ observeAfterRouting(() => {
   const fromDepth = navigationFromDepth;
   const type = navigationType;
   const historyDirection = navigationHistoryDirection;
+  const pressElement = navigationPressElement;
   // Read here and dropped here: a request answers for the navigation it was
   // made on, and the next one is back to the relations.
   navigationRequest = null;
@@ -1701,6 +1703,7 @@ observeAfterRouting(() => {
                 : "",
         type,
         duration,
+        pressElement,
         retracedDoor: request ? request.door : undefined,
       });
     }
@@ -1825,13 +1828,13 @@ const findRelation = (fromPage, toPage) => {
 // A way in opens from what was pressed, on the page being left. A way back
 // closes into the door of the crossing it undoes: what is pressed to close the
 // page — an arrow on it, the back button — is not where the page came from.
-const resolveDoor = (direction, retracedDoor) => {
+const resolveDoor = (direction, { pressElement, retracedDoor }) => {
   if (direction === "back") {
     return retracedDoor;
   }
-  if (navigationPressElement) {
+  if (pressElement) {
     const pressed = measureTransitionDoor(
-      navigationPressElement,
+      pressElement,
       document.querySelector(`[${TRANSITION_AREA_ATTRIBUTE}]`),
     );
     if (pressed) {
@@ -1859,6 +1862,9 @@ const beginTransition = ({
   direction,
   type,
   duration,
+  // The element pressed, handed by the caller: the routing end decides once
+  // the navigation's own fields are dropped (see observeAfterRouting).
+  pressElement,
   retracedDoor,
 }) => {
   navigationAnimated = true;
@@ -1868,7 +1874,7 @@ const beginTransition = ({
   const door =
     navigationCut || !typeMayReadDoor(type)
       ? undefined
-      : resolveDoor(direction, retracedDoor);
+      : resolveDoor(direction, { pressElement, retracedDoor });
   navigationDecision = { type, direction, duration, door };
   if (door) {
     // Where a movement opened from is a fact about one press: a traversal

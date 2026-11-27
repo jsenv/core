@@ -15,6 +15,11 @@ export const ButtonRouteResolver = (props) => {
       `currentExcept/currentAlso amend what the button's own route says about being current, so they need a "route" prop.`,
     );
   }
+  if (import.meta.dev && props.amend) {
+    console.warn(
+      `amend changes the params of the address a route builds, so it needs a "route" prop.`,
+    );
+  }
   return <Next {...props} />;
 };
 
@@ -25,6 +30,7 @@ const ButtonWithRoute = (props) => {
   const {
     route,
     routeParams,
+    amend,
     current,
     currentExcept,
     currentAlso,
@@ -46,7 +52,7 @@ const ButtonWithRoute = (props) => {
       }
     }
   }
-  const url = route.buildUrl(routeParams);
+  const url = route.buildUrl(routeParams, { amend });
   // What a route Link reads, with the same amendments (see link.jsx).
   const linkMatching = useRouteCurrent(route, routeParams, {
     except: currentExcept,
@@ -64,7 +70,7 @@ const ButtonWithRoute = (props) => {
       }}
       {...rest}
     >
-      {children || route.buildRelativeUrl(routeParams)}
+      {children || route.buildRelativeUrl(routeParams, { amend })}
     </Next>
   );
 };

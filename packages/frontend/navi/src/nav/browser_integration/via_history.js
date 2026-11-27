@@ -4,7 +4,7 @@ import { runUnwatched } from "../../action/run_unwatched.js";
 import { setActionDispatcher } from "../../action/actions.js";
 import { noteShownByBrowser } from "../page_change.js";
 import { whenRenderingResumes } from "../rendering_hold.js";
-import { resolveRouteRedirection } from "../route.js";
+import { addressesHoldSameStates, resolveRouteRedirection } from "../route.js";
 import { isUrlOfThisDocument } from "../route_pattern.js";
 import {
   forgetScrollersOnArrival,
@@ -94,7 +94,9 @@ export const setupBrowserIntegrationViaHistory = ({
   // comes back where they left it. So a push whose destination is the entry
   // right behind (or right ahead) is turned into a traversal, and the whole
   // traverse machinery (routing, scroll, movement) answers it as if the
-  // browser's own button had been pressed.
+  // browser's own button had been pressed. The destination is that entry when
+  // it holds the same states, however each address spells them (see
+  // addressesHoldSameStates).
   //
   // Only where the browser exposes the stack (window.navigation — everywhere
   // but Firefox today; without it a push stays a push, which is what this
@@ -132,7 +134,8 @@ export const setupBrowserIntegrationViaHistory = ({
     // Behind first: when the same page stands on both sides (A, B, A and one
     // is on B), a link to it reads as going back.
     for (const delta of [-1, 1]) {
-      if (urlOfEntryNextDoor(delta) === url) {
+      const urlNextDoor = urlOfEntryNextDoor(delta);
+      if (urlNextDoor && addressesHoldSameStates(urlNextDoor, url)) {
         return delta;
       }
     }

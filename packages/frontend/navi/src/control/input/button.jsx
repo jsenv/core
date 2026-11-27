@@ -139,6 +139,7 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   optimistic?: boolean,
  *   route?: object,
  *   routeParams?: object,
+ *   amend?: boolean,
  *   current?: boolean,
  *   currentExcept?: object | object[],
  *   currentAlso?: object | object[],
@@ -165,6 +166,9 @@ const COMMAND_DEFAULT_PROPS_FACTORIES = {
  *   and says whether it is the page one is on — `[data-href-current]` for the
  *   eye, `aria-current="page"` for assistive tech. A bar entry drawn as a
  *   button for its press feedback.
+ * @param {boolean} [amend] With `route`: the address one is at with
+ *   `routeParams` changed, the rest of the page kept — what `<Link amend>`
+ *   says, for a press drawn as a button.
  * @param {boolean} [current] Forces that "current" state: `true` on, `false`
  *   off. Left out, it is read from the route (or the `href`).
  * @param {object|object[]} [currentExcept] Route(s) inside the button's own

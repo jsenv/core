@@ -498,6 +498,14 @@ const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
  *   instead of a raw `href`: the URL is built from the route (see
  *   `routeParams`) and "current" is derived from whether the route matches.
  * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
+ * @param {boolean} [props.amend] - The link changes something about the page
+ *   one is on — a step, a filter, a sheet opened over it — rather than leading
+ *   to a page: its address is the one the reader is at with `routeParams`
+ *   changed, the visit's `weak` params and the pairs no route declares kept
+ *   (`routeParams={{ step: "recap" }}`; `{ step: undefined }` takes one out).
+ *   What writing those states would make, and it follows the address. Without
+ *   it, the link is built as from anywhere else, and a `weak` param it does not
+ *   name is left at its default: a bar entry, "start over".
  * @param {string} [props.slide] - Makes this a tab for a slide rather than for
  *   a URL: the area of a `<SlideContainer>` it goes to. The container is the one
  *   the surrounding `<Nav slideContainer={id}>` names, and it is also what says
@@ -674,11 +682,17 @@ export const Link = (props) => {
       `currentExcept/currentAlso amend what the link's own route says about being current, so they need a "route" prop.`,
     );
   }
+  if (import.meta.dev && props.amend) {
+    console.warn(
+      `amend changes the params of the address a route builds, so it needs a "route" prop.`,
+    );
+  }
   return <LinkPlain {...props} />;
 };
 const LinkWithRoute = ({
   route,
   routeParams,
+  amend,
   current,
   currentExcept,
   currentAlso,
@@ -696,7 +710,7 @@ const LinkWithRoute = ({
       );
     }
   }
-  const url = route.buildUrl(routeParams);
+  const url = route.buildUrl(routeParams, { amend });
   if (import.meta.dev) {
     for (const amendingRoute of [currentExcept, currentAlso].flat()) {
       if (amendingRoute) {
@@ -718,7 +732,7 @@ const LinkWithRoute = ({
   return (
     <Link
       href={url}
-      hrefText={route.buildRelativeUrl(routeParams)}
+      hrefText={route.buildRelativeUrl(routeParams, { amend })}
       current={innerCurrent}
       {...rest}
     >

@@ -175,9 +175,10 @@ const STATE_SIGNAL_OPTIONS = new Set([
  *   `oneOf`. Without it the refused value is held as-is, marked invalid, and `validSignal` reads
  *   `undefined`. When the value came from the address, the address is rewritten with the repaired
  *   one (a replace).
- * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
- *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
- *   value, and it goes back to the default value when the route stops matching. Use it for params like an
+ * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: a url built for a
+ *   page writes it only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the
+ *   signal's current value, and it goes back to the default value when the route stops matching. A url
+ *   amending the address one is at keeps it: a state written, `<Link amend>`. Use it for params like an
  *   "edit this one" id, where every other link to the screen must lead to the plain screen — or for a draft:
  *   the create screen's fields, which die with the screen (docs/create_and_edit.md).
  *   Incompatible with `persists` (throws).
