@@ -1,8 +1,4 @@
-import {
-  createPubSub,
-  dispatchInternalCustomEvent,
-  findEvent,
-} from "@jsenv/dom";
+import { createPubSub, dispatchInternalCustomEvent } from "@jsenv/dom";
 
 /**
  * Tells a typed field's control that the user gave up on what they typed:
@@ -179,29 +175,18 @@ export const addInputEffect = (
     input.removeEventListener("paste", onEvent);
   });
 
-  input.addEventListener("navi_ui_state_change", (e) => {
-    // radios are unchecked by an internal setUIState call when another radio is checked.
-    // navi_ui_state_change is dispatched whenever setUIState changes state, so we
-    // listen here to keep currentState in sync — otherwise input_effect thinks the
-    // radio is still checked and ignores the next user click as "state unchanged".
-    if (input.type === "radio") {
-      currentState = e.detail.value;
-    }
-    const clearEvent = findEvent(
-      e,
-      (eInChain) =>
-        eInChain.type === "navi_set_ui_state" && eInChain.detail.isClear,
-    );
-    const isClear = Boolean(clearEvent);
-    if (isClear) {
-      // "navi_clear" behaves like an async event
-      // a bit like form reset because
-      // our action will be updated async after the component re-renders
-      // and we need to wait that to happen to properly call action with the right value
-      debugInteraction(e, `navi_clear received, scheduling callback`);
-      onAsyncEvent(e, { skipDebounce: true });
-    }
-  });
+  if (input.type === "radio") {
+    // A radio is unchecked by its sibling's setUIState, with no event of its
+    // own (see ui_state_controller.js): currentState follows, or the next
+    // press on it would read as "unchanged" and be ignored.
+    const onUIStateChange = (e) => {
+      currentState = e.detail.value !== undefined;
+    };
+    input.addEventListener("navi_ui_state_change", onUIStateChange);
+    addTeardown(() => {
+      input.removeEventListener("navi_ui_state_change", onUIStateChange);
+    });
+  }
 
   return teardown;
 };

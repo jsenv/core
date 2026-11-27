@@ -1,4 +1,4 @@
-# [named submit refused, then enter (webkit)](../../../browser_harness.mjs)
+# [record save the server normalizes (chromium)](../../../browser_harness.mjs)
 
 ```js
 const browser = await browserOf(engine);
@@ -9,14 +9,15 @@ return fn({ browser, engine });
 {
   "calls": [
     {
-      "title": "a",
-      "intent": "publish"
-    },
-    {
-      "title": "ab",
-      "intent": "publish"
+      "name": "Bob "
     }
-  ]
+  ],
+  "name_after_save": "Bob",
+  "save_after_save": {
+    "aria-readonly": "true",
+    "data-readonly-reason": "form-unchanged"
+  },
+  "errors": []
 }
 ```
 

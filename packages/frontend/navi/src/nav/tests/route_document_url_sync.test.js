@@ -1122,6 +1122,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     // Define signals first so they're available in the callback
     const zoneLonSignal = stateSignal(undefined);
     const mapLonSignal = stateSignal(zoneLonSignal, {
+      id: "map_lon",
       default: -1,
       type: "float",
       persists: true,

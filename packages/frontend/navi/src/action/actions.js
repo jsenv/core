@@ -22,10 +22,7 @@ import {
   IDLE,
   RUNNING,
 } from "./action_run_states.js";
-import {
-  markErrorAsDisplayedBy,
-  markErrorAsPrerunFailure,
-} from "./action_error_report.js";
+import { markErrorAsPrerunFailure } from "./action_error_report.js";
 import { pollAction } from "./action_poll.js";
 import { takeKeptValue } from "./kept_values.js";
 import { isRerunHeldByNetworkPolicy } from "./network_policy.js";
@@ -138,6 +135,14 @@ export const setActionDependenciesRegistrar = (registrar) => {
   registerActionDependencies = registrar;
 };
 
+/**
+ * Asks several actions again as one update — a "refresh everything", the app
+ * back from the background. A `GET_RANGE` reader in the set holds no answer to
+ * run again: the lists reading it ask again for the window they draw.
+ *
+ * @param {Iterable<object>} actionSet - actions, bindings or range readers
+ * @param {object} [options] - handed to the dispatch (`reason`…)
+ */
 export const rerunActions = async (actionSet, options) => {
   const rerunSet = new Set();
   for (const actionOrReader of actionSet) {
@@ -336,13 +341,6 @@ if (import.meta.dev) {
       }
       console.table(activations);
       return activations;
-    },
-    cleanup: {
-      activation: {
-        forceCleanup: () => activationWeakSet.forceCleanup(),
-        schedule: () => activationWeakSet.schedule(),
-        getStats: () => activationWeakSet.getStats(),
-      },
     },
   };
 }
@@ -799,6 +797,49 @@ const answerJoin = (
   );
 };
 
+// The params an object holding signals makes, as one signal — one per object of
+// equal values (signals compared by reference), so equal bindings share it and
+// what is derived from it (a debounced signal) is derived once. Undefined for
+// an object holding no signal.
+const signalOfParamsObjectMap = createJsValueWeakMap();
+const readSignalOfParamsObject = (paramsObject) => {
+  if (!isPlainObject(paramsObject)) {
+    return undefined;
+  }
+  const existing = signalOfParamsObjectMap.get(paramsObject);
+  if (existing) {
+    return existing;
+  }
+  const readByKey = {};
+  let holdsSignal = false;
+  for (const key of Object.keys(paramsObject)) {
+    const value = paramsObject[key];
+    const valueSignal = isSignal(value)
+      ? value
+      : value
+        ? value[SYMBOL_OBJECT_SIGNAL]
+        : undefined;
+    if (valueSignal) {
+      holdsSignal = true;
+      readByKey[key] = () => valueSignal.value;
+    } else {
+      readByKey[key] = () => value;
+    }
+  }
+  if (!holdsSignal) {
+    return undefined;
+  }
+  const paramsSignal = computed(() => {
+    const params = {};
+    for (const key of Object.keys(readByKey)) {
+      params[key] = readByKey[key]();
+    }
+    return params;
+  });
+  signalOfParamsObjectMap.set(paramsObject, paramsSignal);
+  return paramsSignal;
+};
+
 const resolveActionProxies = (actionSet) => {
   const resolvedSet = new Set();
   for (const action of actionSet) {
@@ -854,11 +895,8 @@ const OPTIONS_CREATE_ACTION_READS = new Set([
   "valueToData",
   "provisionalValue",
   "inheritData",
-  "dataDefault",
   "data",
-  "sideEffect",
   "meta",
-  "outputSignal",
   "completeSideEffect",
 ]);
 const OPTIONS_CREATE_ACTION_HINTS = {
@@ -945,13 +983,8 @@ export const createAction = (callback, rootOptions = {}) => {
       valueToData,
       provisionalValue,
       inheritData = false,
-      dataDefault,
-      data = dataDefault,
-
-      sideEffect = () => {},
+      data,
       meta = {},
-
-      outputSignal,
       completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
@@ -1200,9 +1233,14 @@ export const createAction = (callback, rootOptions = {}) => {
       }
       const { debounce, ...optionsWithoutDebounce } = options;
       if (debounce) {
-        if (!isSignal(newParamsOrSignal)) {
+        // An object holding signals moves with them, as a signal does: the
+        // delay applies to the params it makes.
+        const paramsSignal = isSignal(newParamsOrSignal)
+          ? newParamsOrSignal
+          : readSignalOfParamsObject(newParamsOrSignal);
+        if (!paramsSignal) {
           console.warn(
-            `bindParams({ debounce }) expects a signal, received ${typeof newParamsOrSignal}: params that cannot change have nothing to settle.`,
+            `bindParams({ debounce }) expects a signal or an object holding one, received ${typeof newParamsOrSignal}: params that cannot change have nothing to settle.`,
           );
         } else {
           // The delay lives in a signal derived from theirs, one per (signal,
@@ -1210,7 +1248,7 @@ export const createAction = (callback, rootOptions = {}) => {
           // so two call sites asking the same question with the same delay get
           // the one instance, and two different delays get two.
           const debouncedParamsSignal = getDebouncedSignal(
-            newParamsOrSignal,
+            paramsSignal,
             debounce,
           );
           return bindParams(debouncedParamsSignal, {
@@ -1258,11 +1296,11 @@ export const createAction = (callback, rootOptions = {}) => {
       return childAction;
     };
 
-    const matchAllSelfOrDescendant = (predicate, { includeProxies } = {}) => {
+    const matchAllSelfOrDescendant = (predicate) => {
       const matches = [];
 
       const traverse = (currentAction) => {
-        if (currentAction.isProxy && !includeProxies) {
+        if (currentAction.isProxy) {
           // proxy action should be ignored because the underlying action will be found anyway
           // and if we check the proxy action we'll end up with duplicates
           // (loading the proxy would load the action it proxies)
@@ -1400,7 +1438,6 @@ export const createAction = (callback, rootOptions = {}) => {
     Object.preventExtensions(action);
 
     private_properties: {
-      let sideEffectCleanup;
       let completeSideEffectCleanup;
       // The run whose outcome is this instance's: the last one started, until
       // a reset says nobody holds an answer. A run called off that way keeps
@@ -1498,10 +1535,6 @@ export const createAction = (callback, rootOptions = {}) => {
           isPrerun,
           action,
         });
-        const returnValue = sideEffect(...args);
-        if (typeof returnValue === "function") {
-          sideEffectCleanup = returnValue;
-        }
 
         let runResult;
         let rejected = false;
@@ -1559,9 +1592,6 @@ export const createAction = (callback, rootOptions = {}) => {
             answered = true;
             runningStateSignal.value = COMPLETED;
             const data = dataSignal.value;
-            if (outputSignal) {
-              outputSignal.value = data;
-            }
             onComplete?.(data, action);
             completeSideEffectCleanup = completeSideEffect?.(action);
           });
@@ -1616,10 +1646,6 @@ export const createAction = (callback, rootOptions = {}) => {
             onError?.(error, { event, action, args });
           });
 
-          if (onError) {
-            // Asking for the error IS taking it.
-            markErrorAsDisplayedBy(error, "onError");
-          }
           // Handed back, not delivered: failRun decides whether this leaves as
           // a throw or as a rejection, because only the caller below knows
           // which of the two this run was. The error is in errorSignal either
@@ -1695,10 +1721,6 @@ export const createAction = (callback, rootOptions = {}) => {
           keptAnswerRegistry.drop(action);
         }
 
-        if (sideEffectCleanup) {
-          sideEffectCleanup(reason);
-          sideEffectCleanup = undefined;
-        }
         if (completeSideEffectCleanup) {
           completeSideEffectCleanup(reason);
           completeSideEffectCleanup = undefined;
@@ -1716,9 +1738,6 @@ export const createAction = (callback, rootOptions = {}) => {
           errorSignal.value = undefined;
           valueSignal.value = valueInitial;
           answered = false;
-          if (outputSignal) {
-            outputSignal.value = undefined;
-          }
           isPrerunSignal.value = true;
           runningStateSignal.value = IDLE;
         });
@@ -1769,9 +1788,6 @@ export const createAction = (callback, rootOptions = {}) => {
  * @param {Object} action - The base action to proxy
  * @param {Signal} paramsSignal - Signal containing parameters for the action
  * @param {Object} options - Configuration options
- * @param {boolean} options.rerunOnChange - Ensures the action is rerun every time a signal value is modified.
- *   This enables live updates - for example, performing an HTTP GET request every time
- *   a list of filters changes, providing real-time results without user interaction.
  * @param {boolean} options.inheritData - Whether a new target action starts with the previous target's value
  *   and error, instead of nothing. Defaults to what the action declares (createAction).
  *   When true, the facade stays on the latest known data: `action.dataSignal.value` only changes when a
@@ -1786,8 +1802,6 @@ const createActionProxyFromSignal = (
   action,
   paramsSignal,
   {
-    runOnce = false,
-    rerunOnChange = false,
     inheritData = getActionPrivateProperties(action).inheritData,
     onChange,
     syncParams,
@@ -1923,9 +1937,9 @@ const createActionProxyFromSignal = (
   // binding follows its params only while something reads what it says (a
   // mounted component, a run's subscriber), and catches up when read again;
   // unread, every method retargets first (see proxyMethod). A binding asked to
-  // act on their changes (runOnce, rerunOnChange, onChange: a route action,
-  // actionRunEffect) follows them for as long as it exists.
-  const followsParamsAlways = runOnce || rerunOnChange || Boolean(onChange);
+  // act on their changes (onChange: a route action, actionRunEffect) follows
+  // them for as long as it exists.
+  const followsParamsAlways = Boolean(onChange);
   let readerCount = 0;
   let stopFollowingParams = null;
   const readerWatchOptions = followsParamsAlways
@@ -2048,7 +2062,7 @@ const createActionProxyFromSignal = (
   // placeholders assigned above until a SECOND one happens. A proxy answering
   // `params: undefined` is then taken for a proxy holding no params, and
   // whoever asks it to run on truthy params does nothing (actionRunEffect's
-  // onChange). The caller's own callbacks (onChange, runOnce, rerunOnChange)
+  // onChange). The caller's own callback (onChange)
   // stay below on purpose: they are told about changes, not about the proxy
   // coming into existence.
   onActionTargetChange((actionTarget) => {
@@ -2125,39 +2139,6 @@ const createActionProxyFromSignal = (
     return true;
   };
 
-  if (runOnce) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (!actionTargetPrevious && actionTarget) {
-        action.debug(
-          `Action proxy "${actionProxy}": target changed, running action once (reason: runOnce)`,
-        );
-        actionTarget.run({ reason: "runOnce" });
-      }
-    });
-  }
-  if (rerunOnChange) {
-    onActionTargetChange(
-      (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {
-        if (explicitRunIntent) {
-          return;
-        }
-        if (
-          actionTarget &&
-          actionTargetPrevious &&
-          !actionTargetPrevious.isPrerun
-        ) {
-          action.debug(
-            `Action proxy "${actionProxy}": target changed, rerunning action (reason: rerunOnChange)`,
-            {
-              newTarget: actionTarget,
-              previousTarget: actionTargetPrevious,
-            },
-          );
-          actionTarget.rerun({ reason: "rerunOnChange (params modified)" });
-        }
-      },
-    );
-  }
   if (onChange) {
     onActionTargetChange(
       (actionTarget, actionTargetPrevious, { explicitRunIntent }) => {

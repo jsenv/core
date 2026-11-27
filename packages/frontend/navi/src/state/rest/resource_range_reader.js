@@ -48,18 +48,23 @@
  */
 
 import { signal, untracked } from "@preact/signals";
-import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { isSignal } from "../../utils/is_signal.js";
 import { createJsValueWeakMap } from "../../utils/js_value_weak_map.js";
 import { writeRangeAnswer } from "./array_signal_store.js";
 import {
   getKeptReadKey,
+  getParamsKey,
   noteKeptFrameMoved,
   serializeItem,
   takeKeptRead,
   upsertKeptItem,
 } from "./kept_reads.js";
 
+// How many compositions a reader keeps, the ones read or written last: one per
+// collection a person comes back to. Unbounded, a reader following a search
+// field would keep one per word typed, and the rows of each, for the life of
+// the page.
+const MAX_COMPOSITIONS = 16;
 // The ranks kept of a composition for the next document: the window a list
 // draws, widened by at least one step on each side, and snapped to steps so a
 // scroll within one draws the same ranks and writes nothing.
@@ -75,7 +80,8 @@ export const createRangeReader = (
     store,
     params: boundParams,
     invalidationSignal = signal(0),
-    compositionSet = new Set(),
+    // By the key of their params, oldest first (see touchComposition).
+    compositionMap = new Map(),
     // Bumped whenever what is kept of a composition for the next document
     // changes (see readKept); shared like the compositions themselves.
     keptVersionSignal = signal(0),
@@ -94,17 +100,26 @@ export const createRangeReader = (
   };
   // Which composition this reader is about: the values its params hold, not its
   // own identity, so two `bindParams({ scope: "thread" })` made in two places
-  // read and write the same one. There are as many compositions as there are
-  // collections read through this reader — a handful, walked with the deep
-  // comparison the rest of the codebase memoizes on.
+  // read and write the same one.
   const currentParams = () => untracked(() => resolveParams(boundParams));
   const findComposition = (params) => {
-    for (const composition of compositionSet) {
-      if (compareTwoJsValues(composition.params, params)) {
-        return composition;
-      }
+    const composition = compositionMap.get(getParamsKey(params));
+    if (!composition) {
+      return null;
     }
-    return null;
+    // Read or written: the last one to let go of.
+    compositionMap.delete(composition.key);
+    compositionMap.set(composition.key, composition);
+    return composition;
+  };
+  const addComposition = (composition) => {
+    compositionMap.set(composition.key, composition);
+    while (compositionMap.size > MAX_COMPOSITIONS) {
+      const [oldestKey, oldest] = compositionMap.entries().next().value;
+      compositionMap.delete(oldestKey);
+      releaseRanks(oldest.idByIndex);
+      bumpKeptVersion();
+    }
   };
   const keptKeyOf = (params) => getKeptReadKey(actionName, params);
   const bumpKeptVersion = () => {
@@ -137,6 +152,7 @@ export const createRangeReader = (
     }
     const composition = {
       params,
+      key: getParamsKey(params),
       idByIndex: new Map(),
       count: kept.count,
       keptFrom: undefined,
@@ -156,7 +172,7 @@ export const createRangeReader = (
         composition.keptTo = index + 1;
       }
     }
-    compositionSet.add(composition);
+    addComposition(composition);
     bumpKeptVersion();
     return composition;
   };
@@ -238,10 +254,10 @@ export const createRangeReader = (
   // stand for a composition that is gone.
   readRange.invalidationSignal = invalidationSignal;
   readRange.invalidate = () => {
-    for (const composition of compositionSet) {
+    for (const composition of compositionMap.values()) {
       releaseRanks(composition.idByIndex);
     }
-    compositionSet.clear();
+    compositionMap.clear();
     callOffReadsInFlight();
     invalidationSignal.value = invalidationSignal.peek() + 1;
     bumpKeptVersion();
@@ -299,13 +315,14 @@ export const createRangeReader = (
     if (!composition) {
       composition = {
         params,
+        key: getParamsKey(params),
         idByIndex: new Map(),
         count,
         keptFrom: undefined,
         keptTo: undefined,
         answeredAt: 0,
       };
-      compositionSet.add(composition);
+      addComposition(composition);
     } else if (replace) {
       idByIndexReplaced = composition.idByIndex;
       composition.idByIndex = new Map();
@@ -363,8 +380,9 @@ export const createRangeReader = (
       return { key, answeredAt: 0, readEntry: () => undefined };
     }
     const readEntry = () => {
-      if (!compositionSet.has(composition)) {
-        // Dropped since (an invalidation): the order it stood for is gone.
+      if (compositionMap.get(composition.key) !== composition) {
+        // Dropped since (an invalidation, older than the ones kept): the order
+        // it stood for is gone.
         return undefined;
       }
       const items = {};
@@ -422,7 +440,7 @@ export const createRangeReader = (
       store,
       params: boundParams ? { ...boundParams, ...paramsToBind } : paramsToBind,
       invalidationSignal,
-      compositionSet,
+      compositionMap,
       keptVersionSignal,
       callsInFlight,
     });

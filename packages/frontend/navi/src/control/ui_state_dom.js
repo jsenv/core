@@ -15,9 +15,19 @@ export const dispatchRequestClearUIState = (element, e) => {
     event: e,
   });
 };
+// Back to where the control starts: its defaultValue, the default of the
+// stateSignal it is bound to, or its empty (`--navi-reset`, a form's reset).
 export const dispatchRequestResetUIState = (element, e) => {
   const controlHost = findControlHost(element) || element;
   return dispatchInternalCustomEvent(controlHost, "navi_reset_ui_state", {
+    event: e,
+  });
+};
+// Back to what the outside last accepted: the run this value went out with
+// failed or was called off, the edit was cancelled.
+export const dispatchRequestRollbackUIState = (element, e) => {
+  const controlHost = findControlHost(element) || element;
+  return dispatchInternalCustomEvent(controlHost, "navi_rollback_ui_state", {
     event: e,
   });
 };

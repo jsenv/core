@@ -11,11 +11,7 @@
 - [effect returning {t: Date.now()}: reruns on every false→true transition](7_effect_returning_%7Bt_date_now()%7D_reruns_on_every_false%E2%86%92true_transition/7_effect_returning_%7Bt_date_now()%7D_reruns_on_every_false%E2%86%92true_transition.md)
 - [action with initial params](8_action_with_initial_params/8_action_with_initial_params.md)
 - [returning empty object](9_returning_empty_object/9_returning_empty_object.md)
-- [outputSignal lifecycle with actionRunEffect and userIdSignal](10_outputsignal_lifecycle_with_actionruneffect_and_useridsignal/10_outputsignal_lifecycle_with_actionruneffect_and_useridsignal.md)
-- [signal default to empty array](11_signal_default_to_empty_array/11_signal_default_to_empty_array.md)
-- [state signal default to empty array](12_state_signal_default_to_empty_array/12_state_signal_default_to_empty_array.md)
-- [dataSignal values](13_datasignal_values/13_datasignal_values.md)
-- [outputSignal with run effect](14_outputsignal_with_run_effect/14_outputsignal_with_run_effect.md)
+- [dataSignal values](10_datasignal_values/10_datasignal_values.md)
 
 ---
 

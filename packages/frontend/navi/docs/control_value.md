@@ -24,6 +24,7 @@ somewhere else in the app.
 - [Clearing, resetting, and what is shown meanwhile](#clearing-resetting-and-what-is-shown-meanwhile)
 - [`value` and `signal` exclude each other](#value-and-signal-exclude-each-other)
 - [A `stateSignal` brings more than a value](#a-statesignal-brings-more-than-a-value)
+- [What a `stateSignal` keeps between visits](#what-a-statesignal-keeps-between-visits)
 - [A time of day: typed, or turned](#a-time-of-day-typed-or-turned)
 
 ## The three answers
@@ -287,7 +288,9 @@ space trimmed), another screen or device changed it, a refresh arrived. The
 control takes the new default **while it holds no edit** — nothing typed, picked
 or toggled since the value the outside last accepted. An edit is never undone:
 the default waits, and lands once that edit is accepted (the action succeeded)
-or taken back (the action failed, the popup was cancelled).
+or taken back (the action failed, the popup was cancelled). An edit a form is
+sending is no longer one: the record arriving while the send is out is the
+answer it waits for, and lands at once — " Bob " saved, "Bob" shown.
 
 This holds for a control, for a group given a `defaultValue` (a selectable list,
 a `ControlGroup`), and for everything inside a picker's popup, which stays
@@ -509,14 +512,19 @@ CSS.
 
 ## Clearing, resetting, and what is shown meanwhile
 
-Three things that look alike and are not:
+Things that look alike and are not:
 
-| gesture / prop            | what it does                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| `--navi-clear`, the cross | the control holds its own empty — `""`, `[]`, `{}`, unchecked                       |
-| `--navi-reset`            | the control goes back to its `defaultValue`                                         |
-| `defaultValue`            | where it starts, and where a reset goes back to — a real value, sent like any other |
-| `placeholder`             | what is SHOWN while it holds nothing, and never a value                             |
+| gesture / prop                                                          | what it does                                                                              |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `--navi-clear`, the cross                                               | the control holds its own empty — `""`, `[]`, `{}`, unchecked                             |
+| `--navi-reset`                                                          | the control goes back to its `defaultValue` (a bound `stateSignal`'s default), else empty |
+| a run refused or called off (`resetOnError`), Escape cancelling an edit | the control goes back to the last value the outside accepted                              |
+| `defaultValue`                                                          | where it starts, and where a reset goes back to — a real value, sent like any other       |
+| `placeholder`                                                           | what is SHOWN while it holds nothing, and never a value                                   |
+
+A reset and a rollback part ways once a value was accepted: a checkbox saved
+checked, then unchecked and refused, goes back to checked — while a reset puts
+it back to its default.
 
 So a row whose cross means "back to the one from my profile" needs nothing of
 its own: clearing empties it, and `placeholder` is where that sentence is
@@ -548,6 +556,33 @@ does not have to be told twice: `type` (which decides the input type and the
 validation messages), `min`, `max`, `step`, and its **default**, which seeds
 `defaultValue`/`defaultChecked` — so a reset goes back to the signal's original
 default rather than to whatever it happened to hold at the last render.
+
+## What a `stateSignal` keeps between visits
+
+`persists: true` keeps the value in localStorage under the state's `id`, which
+it then needs, and the next visit starts from it rather than from the default.
+Only a value of its own is kept:
+
+- **A static default** is never kept: a state written back to it removes its
+  copy, so a default changed in the code reaches everyone who had not chosen.
+- **A default read from another signal** (`stateSignal(profileSignal, …)`) is
+  followed while the state holds nothing of its own, and stays out of storage.
+  A value written is kept, even one equal to the default of the moment, since
+  the default may move away from it. That includes a write that changes nothing
+  — a picker confirmed as it was, a group placing a value into a bound child,
+  `s.value = s.peek()`: from then on, the default no longer reaches the state.
+  Writing `undefined` gives it back to its default.
+
+`version` names the copy: a new version reads none of the old ones, and removes
+them. `owner` keeps one copy per owner, a signal naming whose it is (the
+signed-in user): when it changes, the state starts again as at creation — what
+the address names, else that owner's copy, else the default — and
+`forgetOwner(owner)` removes the copies of an owner gone for good.
+
+A value kept on the device under a key the app builds — a choice per place, a
+flag kept across a redirect — needs none of this:
+`localStorageSignal(key, { type })` is that value typed, read back by the same
+rules, and moved by a write from another tab.
 
 ## A time of day: typed, or turned
 

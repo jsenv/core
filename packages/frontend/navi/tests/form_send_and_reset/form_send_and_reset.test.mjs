@@ -279,6 +279,149 @@ try {
 
     testInEngines(
       test,
+      "record save the server normalizes",
+      async ({ browser }) => {
+        const { page, errors } = await openPage(browser);
+        try {
+          await page.click("#record_normalized_name");
+          await page.keyboard.press("ControlOrMeta+a");
+          await page.keyboard.type("Bob ");
+          await page.click("#record_normalized_save");
+          await waitForCallCount(page, "record_normalized", 1);
+          await page
+            .waitForFunction(
+              () =>
+                // eslint-disable-next-line no-undef
+                document.querySelector("#record_normalized_name").value ===
+                "Bob",
+              null,
+              { timeout: 2000 },
+            )
+            .catch(() => {});
+          await waitFrames(page);
+          return {
+            calls: await readCalls(page, "record_normalized"),
+            name_after_save: await readValue(page, "#record_normalized_name"),
+            save_after_save: await readOnlyOf(page, "#record_normalized_save"),
+            errors,
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
+
+    for (const caseId of ["plain_signal_rollback", "state_signal_rollback"]) {
+      testInEngines(
+        test,
+        `checkbox on a ${caseId.startsWith("plain") ? "plain signal" : "stateSignal"}, saved then refused`,
+        async ({ browser }) => {
+          const { page } = await openPage(browser);
+          const boxSelector = `#${caseId}_box`;
+          try {
+            await page.click(boxSelector);
+            await waitForCallCount(page, caseId, 1);
+            await page
+              .waitForFunction(
+                // eslint-disable-next-line no-undef
+                (s) => !document.querySelector(s).closest("[aria-busy='true']"),
+                boxSelector,
+                { timeout: 2000 },
+              )
+              .catch(() => {});
+            await page.click(boxSelector);
+            await waitForCallCount(page, caseId, 2);
+            await page
+              .waitForFunction(
+                // eslint-disable-next-line no-undef
+                (s) => document.querySelector(s).checked === true,
+                boxSelector,
+                { timeout: 2000 },
+              )
+              .catch(() => {});
+            await waitFrames(page);
+            return {
+              calls: await readCalls(page, caseId),
+              checked_after_refusal: await page.evaluate(
+                // eslint-disable-next-line no-undef
+                (s) => document.querySelector(s).checked,
+                boxSelector,
+              ),
+            };
+          } finally {
+            await page.close();
+          }
+        },
+      );
+    }
+
+    testInEngines(
+      test,
+      "value refused, then asked again",
+      async ({ browser }) => {
+        const { page } = await openPage(browser);
+        try {
+          await page.click("#retry_refused_input");
+          await page.keyboard.type("x");
+          await page.keyboard.press("Tab");
+          await waitForCallCount(page, "retry_refused", 1);
+          // The refusal puts the field back where it was, empty.
+          await page
+            .waitForFunction(
+              () =>
+                // eslint-disable-next-line no-undef
+                document.querySelector("#retry_refused_input").value === "",
+              null,
+              { timeout: 2000 },
+            )
+            .catch(() => {});
+          await page.click("#retry_refused_input");
+          await page.keyboard.type("x");
+          await page.keyboard.press("Tab");
+          await waitForCallCount(page, "retry_refused", 2);
+          return {
+            calls: await readCalls(page, "retry_refused"),
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
+
+    testInEngines(
+      test,
+      "reset after a send goes to the default",
+      async ({ browser }) => {
+        const { page, errors } = await openPage(browser);
+        try {
+          await page.click("#reset_to_default_title");
+          await page.keyboard.press("ControlOrMeta+a");
+          await page.keyboard.type("x");
+          await page.keyboard.press("Enter");
+          await waitForCallCount(page, "reset_to_default", 1);
+          await page
+            .waitForFunction(
+              () =>
+                // eslint-disable-next-line no-undef
+                document.querySelector("#reset_to_default_title").value ===
+                "draft",
+              null,
+              { timeout: 2000 },
+            )
+            .catch(() => {});
+          return {
+            calls: await readCalls(page, "reset_to_default"),
+            title_after_send: await readValue(page, "#reset_to_default_title"),
+            errors,
+          };
+        } finally {
+          await page.close();
+        }
+      },
+    );
+
+    testInEngines(
+      test,
       "named submit refused, then enter",
       async ({ browser }) => {
         const { page } = await openPage(browser);

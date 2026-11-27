@@ -418,8 +418,8 @@ on — by default a checkbox, a radio, their groups, a picker, a selectable list
 and `<Details>`; a text input and a form keep the value that was refused.
 
 `uiAction` is a notification: the value has changed, here it is. Use it for what
-cannot fail — logging, moving something else on screen, keeping a local
-variable. Anything that can fail or take time is an `action`, and it does not
+cannot fail and is not the value itself — logging, moving something else on
+screen. Anything that can fail or take time is an `action`, and it does not
 have to be an action instance: a plain function is wrapped into one, bound to
 the control's value, so the callback receives what the control now holds.
 
@@ -519,10 +519,9 @@ user typing is one cause among several: a `value` prop coming back down after a
 render, a popup control propagating its choice up to the picker holding it, a
 group cascading a value into its children, a group filling a control it builds
 (a popup's fields at the opening), a new `defaultValue` taken by a field nobody
-edited — all of them reach `uiAction`, so that a signal or a local variable
-listening to it never drifts out of sync. The one value it does not hear is the
-one a control starts on by itself, its own `defaultValue` or `value`: a mirror
-reads that one at mount. Reading it as "the user did something" is the natural
+edited — all of them reach `uiAction`, so that what moves along with the value
+never drifts out of sync. The one value it does not hear is the one a control
+starts on by itself, its own `defaultValue` or `value`, read at mount. Reading it as "the user did something" is the natural
 mistake.
 
 The second argument says which one it was. Every event navi dispatches carries
@@ -544,7 +543,9 @@ the event that caused it, and `findEvent(event, type)` walks that chain back:
 ```
 
 Useful types to match on: `navi_clear_ui_state` (the clear cross, or a
-`--navi-clear` command), `navi_reset_ui_state`, and the browser events at the
+`--navi-clear` command), `navi_reset_ui_state` (a reset, back to the default),
+`navi_rollback_ui_state` (back to the last accepted value: a refused run, a
+cancelled edit), and the browser events at the
 root of the chain (`click`, `keydown`, `input`) — a change no user gesture
 caused has none of them.
 
@@ -607,9 +608,8 @@ accepted, or the data held when `for` ran out; a failure rejects it, and so do
 `signal` aborting and a newer `poll()` of the same instance. An instance nobody
 ran is asked at once.
 
-`rerunActions(actionSet)` reruns several at once;
-`updateActions({ prerunSet, runSet, rerunSet, resetSet })` settles the four
-kinds of request in one pass — a route change goes through it.
+`rerunActions(actionSet)` reruns several at once, through the same dispatch a
+route change goes through.
 
 ## See also
 

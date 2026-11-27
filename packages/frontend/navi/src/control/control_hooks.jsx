@@ -8,10 +8,10 @@
  *    use `onInput` internally and route through `dispatchRequestAction` so the behavior
  *    is consistent regardless of input type.
  *
- * 2. Any field (text, checkbox, radio, picker…) can opt into debounce with
- *    `actionDebounce` (ms). The input effect every field installs (input_effect.js)
- *    handles the timing centrally rather than each component having to manage its
- *    own debounce logic.
+ * 2. A typed field (text, number…) can opt into debounce with `actionDebounce`
+ *    (ms). The input effect it installs (input_effect.js) handles the timing
+ *    centrally rather than each component managing its own. A checkbox, a radio
+ *    and a picker answer once per gesture and do not read it.
  */
 import {
   findFocusDelegateTarget,
@@ -30,10 +30,7 @@ import {
 } from "preact/hooks";
 
 import { RUNNING } from "@jsenv/navi/src/action/action_run_states.js";
-import {
-  useAction,
-  useActionBoundToOneParam,
-} from "@jsenv/navi/src/action/use_action.js";
+import { useAction } from "@jsenv/navi/src/action/use_action.js";
 import {
   isWriteAction,
   useNetworkPolicyReason,
@@ -109,7 +106,7 @@ import {
   useUIStateController,
 } from "./ui_state_controller.js";
 import {
-  dispatchRequestResetUIState,
+  dispatchRequestRollbackUIState,
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "./ui_state_dom.js";
@@ -118,6 +115,13 @@ import {
 // Distinct from undefined so that undefined (e.g. unchecked radio) can itself
 // be stored as a valid "last action value" and trigger the dedup logic.
 const NO_ACTION_YET = Symbol("no_action_yet");
+// The groups that ARE one control made of parts: a press on a part, once its
+// own run ended, runs the group's action (auto_group_action).
+const AUTO_ACTION_GROUP_TYPE_SET = new Set([
+  "radio_group",
+  "checkbox_group",
+  "wheel_group",
+]);
 
 // The control types rendered as an element `<label for>` can name: HTML's
 // labelable elements are button, input, select, textarea, output, meter and
@@ -254,13 +258,7 @@ const LISTENERS_CALLED_BY_REACTIONS = new Set([
  */
 export const useControlProps = (
   props,
-  {
-    controlType,
-    persists,
-    uiActionInternal,
-    listenersOn = "host",
-    nameOn = "host",
-  },
+  { controlType, uiActionInternal, listenersOn = "host", nameOn = "host" },
 ) => {
   const debugUIState = useDebugUIState();
   const debugAction = useDebugAction();
@@ -340,7 +338,6 @@ export const useControlProps = (
     controlInfo,
     syncDomState,
     standalone,
-    persists,
     uiActionInternal,
   });
   // The `*Message` props of the Field around the control, which its own win
@@ -958,6 +955,18 @@ export const useControlProps = (
 
       const isInputTextual = controlType === "input";
       if (isInputTextual) {
+        // What typing asks for: the field's own action, the command that
+        // follows it, or the action of the group it is a part of
+        // (auto_group_action, below). A field with none of them — most fields
+        // of a form, which the form reads when it sends — asks nothing: a
+        // placeholder action run at every keystroke would cost a request, its
+        // events and two validation passes for nothing to run.
+        const typingRequestsAction =
+          Boolean(props.action) ||
+          Boolean(props.command) ||
+          AUTO_ACTION_GROUP_TYPE_SET.has(
+            uiStateController.parentUIStateController?.controlType,
+          );
         return {
           keyDown: (e) => {
             const blocked = uiStateController.rules.guard.checkKeydown(
@@ -976,12 +985,14 @@ export const useControlProps = (
               allowed: () => syncUIStateWithDOM(e),
             };
           },
-          naviChange: (e) => {
-            return {
-              name: "navi_change",
-              allowed: () => requestActionOnAllowed(e),
-            };
-          },
+          naviChange: typingRequestsAction
+            ? (e) => {
+                return {
+                  name: "navi_change",
+                  allowed: () => requestActionOnAllowed(e),
+                };
+              }
+            : undefined,
         };
       }
 
@@ -991,6 +1002,12 @@ export const useControlProps = (
       getDefaultEventReactionDefinitions();
     const { eventReactionDefinitions } = props;
     const lastActionValueRef = useRef(NO_ACTION_YET);
+    // What went out is remembered while it stands: a run refused or called
+    // off sent nothing, and the same value asked again is a new request — a
+    // date picked again after the server refused it.
+    uiStateController.forgetLastActionValue = () => {
+      lastActionValueRef.current = NO_ACTION_YET;
+    };
     const requestActionOnAllowed = (e) => {
       if (actionEvent === "custom") {
         return false;
@@ -1005,14 +1022,10 @@ export const useControlProps = (
         return false;
       }
       const currentValue = readControlValue(control);
-      // For checkables: skip value dedup. The browser only fires `input` when state
-      // actually changes, so there is no spurious double-dispatch to guard against.
-      // Dedup would wrongly block re-try after a failed action: resetOnError unchecks
-      // the box but lastActionValueRef still holds the checked value, preventing the
-      // next user click from firing the action.
-      // Same for radio siblings: when a sibling check unchecks this radio
-      // (radio_sibling_uncheck, internal event, no synthetic input), lastActionValueRef
-      // keeps the stale value and blocks the user from re-checking this radio.
+      // Not for checkables: the browser fires `input` only when the state
+      // actually changes, so there is no double dispatch to guard against — and
+      // a radio its sibling unchecked (radio_sibling_uncheck, no request) still
+      // remembers the value it sent, which would refuse checking it again.
       if (!isCheckable) {
         const lastActionValue = lastActionValueRef.current;
         const valueSameAsLastAction =
@@ -1324,12 +1337,12 @@ const createControlInfo = (props, { controlType }) => {
         // The signal is the source of truth: a `checked` passed alongside is
         // ignored, not merged (warnSignalCollision says so in dev).
         warnSignalCollision(props, controlType, "checked");
-        if (props.defaultChecked) {
+        if (Object.hasOwn(props, "defaultChecked")) {
           // resolveInputProps may seed defaultChecked from a bound signal's
-          // default: the control stays uncontrolled and follows the signal
-          // through stateFromSignal.
+          // default — `false` included: the control stays uncontrolled and
+          // follows the signal through stateFromSignal.
           hasStateProp = false;
-          stateInitial = value;
+          stateInitial = props.defaultChecked ? value : undefined;
           stateFromSignal = signal.value ? value : undefined;
         } else {
           // A bound signal with no resolved default: its live value seeds state.
@@ -1540,8 +1553,8 @@ const useReadOnlyUncontrolled = (props, controlInfo, uiStateController) => {
  * - Binds the group's action to the aggregated state signal
  * - Provides context to children: ParentUIStateController, ControlName, Disabled, ReadOnly,
  *   Required, Loading, Action, ActionRequester
- * - Overrides `onnavi_reset_ui_state` to cascade resets to all monitored children
- *   by dispatching `navi_reset_ui_state` DOM events on each child's DOM element
+ * - A reset or a rollback asked of the group reaches every monitored child
+ *   through the group controller (resetUIState / rollbackUIState)
  * - Overrides `onnavi_action_allowed` to track the action requester
  *
  * @returns {[controlRootProps, controlgroupProps, controlgroupChildrenWrapperProps]}
@@ -1577,11 +1590,11 @@ export const useControlgroupProps = (
     cascadeValidationToChildren,
     standalone,
   });
-  const [boundAction] = useActionBoundToOneParam(
-    action,
-    uiGroupStateController.uiStateSignal,
-    { verb: props.actionVerb },
-  );
+  // Bound without reading the value: a group re-rendering at every change of
+  // what it holds re-renders the controls under it with it.
+  const boundAction = useAction(action, uiGroupStateController.uiStateSignal, {
+    verb: props.actionVerb,
+  });
   // Mirror single-input behaviour: a controlled value with nobody listening
   // makes the group read-only so children don't appear interactive when they
   // can't change. A form or a group collecting it IS someone listening — that
@@ -2170,6 +2183,9 @@ const useInteractiveProps = (
       onnavi_reset_ui_state: (e) => {
         uiStateController.resetUIState(e);
       },
+      onnavi_rollback_ui_state: (e) => {
+        uiStateController.rollbackUIState(e);
+      },
       onnavi_get_ui_state: (e) => {
         // `own`: what this control holds by itself, ignoring what a button
         // inherits from the control around it (see ownUIStateSignal).
@@ -2202,6 +2218,7 @@ const useInteractiveProps = (
     Object.assign(controlRootProps, {
       onnavi_clear_ui_state: controlHostProps.onnavi_clear_ui_state,
       onnavi_reset_ui_state: controlHostProps.onnavi_reset_ui_state,
+      onnavi_rollback_ui_state: controlHostProps.onnavi_rollback_ui_state,
       onnavi_get_ui_state: controlHostProps.onnavi_get_ui_state,
       onnavi_set_ui_state: controlHostProps.onnavi_set_ui_state,
       onnavi_request_check: controlHostProps.onnavi_request_check,
@@ -2317,7 +2334,7 @@ const useInteractiveProps = (
           if (isBlurInvalid) {
             return;
           }
-          dispatchRequestResetUIState(e.currentTarget, e);
+          dispatchRequestRollbackUIState(e.currentTarget, e);
           onCancel?.(e, reason);
           return;
         }
@@ -2456,15 +2473,19 @@ const useInteractiveProps = (
         const superseded =
           Boolean(uiStateController.queuedActionAllowedEvent) ||
           e.detail.event !== uiStateController.pendingActionEvent;
+        if (!superseded) {
+          uiStateController.forgetLastActionValue?.();
+        }
         if (resetOnAbort && !superseded) {
-          dispatchRequestResetUIState(e.currentTarget, e);
+          dispatchRequestRollbackUIState(e.currentTarget, e);
         }
       },
       onnavi_action_error: (e) => {
         const { error } = e.detail;
         debugAction(e, `action error`, error);
+        uiStateController.forgetLastActionValue?.();
         if (resetOnError) {
-          dispatchRequestResetUIState(e.currentTarget, e);
+          dispatchRequestRollbackUIState(e.currentTarget, e);
         }
         uiStateController.onActionError(e);
       },
@@ -2484,9 +2505,7 @@ const useInteractiveProps = (
         const parentController = uiStateController.parentUIStateController;
         if (
           parentController &&
-          (parentController.controlType === "radio_group" ||
-            parentController.controlType === "checkbox_group" ||
-            parentController.controlType === "wheel_group")
+          AUTO_ACTION_GROUP_TYPE_SET.has(parentController.controlType)
         ) {
           const parentEl = parentController.ref.current;
           if (parentEl) {

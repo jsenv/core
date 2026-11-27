@@ -5,7 +5,7 @@ import {
   getElementSignature,
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
-import { useCallback, useLayoutEffect, useState } from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import {
   clearActionError,
@@ -36,7 +36,13 @@ export const useExecuteAction = (
     }
   }, [error]);
 
-  const addErrorMessage = (error, { requester } = {}) => {
+  // Read when an error comes back, not when the run was asked: an inline
+  // mapping reads what the render around it holds (a text, a prop), and the
+  // callback below is kept across renders.
+  const errorMappingRef = useRef(errorMapping);
+  errorMappingRef.current = errorMapping;
+
+  const addErrorMessage = (error, { requester, claimedBy } = {}) => {
     // The error is stored on the element that owns the action (the form/element
     // itself). The requester — the submit button that sent, the row of a list
     // whose command sent — is stored as the callout display target, so the
@@ -45,9 +51,13 @@ export const useExecuteAction = (
     if (!element) {
       // The control left the page while its run was out (its own answer can
       // unmount it, see the outcome events below): there is no box to hang
-      // the refusal on. onActionError is still told, by the run's side effect.
+      // the refusal on, and nothing claims it — the report says so if nothing
+      // else shows it. onActionError is still told, by the run's side effect.
       return;
     }
+    // Drawn here, so taken here: a mapping answering nothing hides it on
+    // purpose, which is taking it too.
+    markErrorAsDisplayedBy(error, claimedBy);
     let target = requester;
     // A requester that is no longer on the page is not a place to show
     // anything: the clear cross leaves with the value it optimistically
@@ -59,6 +69,7 @@ export const useExecuteAction = (
     }
     let message;
     let status;
+    const errorMapping = errorMappingRef.current;
     if (errorMapping) {
       const errorMappingResult = errorMapping(error);
       // Anything the chain below does not recognize — nothing returned, above
@@ -217,14 +228,15 @@ export const useExecuteAction = (
             });
           },
           onError: (error) => {
-            markErrorAsDisplayedBy(
-              error,
-              `<${element.tagName.toLowerCase()} action>`,
-            );
+            const claimedBy = `<${element.tagName.toLowerCase()} action>`;
             if (errorEffect === "show_validation_message") {
-              addErrorMessage(error, { requester });
+              addErrorMessage(error, { requester, claimedBy });
             } else if (errorEffect === "throw") {
+              // Claimed by the boundary that draws it.
               setError(error);
+            } else {
+              // "none": the control takes the error and shows nothing.
+              markErrorAsDisplayedBy(error, claimedBy);
             }
             tellOutcome("navi_action_error", { error }, (outcomeEvent) => {
               triggerError(error, outcomeEvent);

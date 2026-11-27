@@ -16,6 +16,20 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   icon?: import("preact").ComponentChildren | null,
  *   clearable?: boolean,
  *   value?: any,
+ *   signal?: import("@preact/signals").Signal,
+ *   defaultValue?: any,
+ *   action?: Function | object,
+ *   actionEvent?: "change" | "mousedown" | "custom",
+ *   actionDebounce?: number,
+ *   uiAction?: (value: any, event: Event) => void,
+ *   optimistic?: boolean,
+ *   resetOnError?: boolean,
+ *   resetOnAbort?: boolean,
+ *   resetOnCancel?: boolean,
+ *   onCancel?: (event: Event, reason: "escape_key" | "blur_invalid") => void,
+ *   cancelOnEscape?: boolean,
+ *   cancelOnBlurInvalid?: boolean,
+ *   standalone?: boolean,
  *   boolean?: boolean,
  *   selectOnPress?: boolean,
  *   enterSendsNothing?: boolean,
@@ -30,6 +44,42 @@ import { resolveInputProps } from "./resolve_input_props.js";
  *   checkbox is worth".
  * @param {boolean} [boolean] Makes a checkbox a yes/no: `true` checked, `false`
  *   unchecked, everywhere it hands its value. Takes no `value`.
+ * @param {import("@preact/signals").Signal} [signal] Binds the value both ways:
+ *   the field writes it, and writing it moves the field. A `stateSignal` also
+ *   brings its type, bounds and default (docs/control_value.md).
+ * @param {any} [defaultValue] Where the field starts, and where `--navi-reset`
+ *   takes it back; a new one is followed while the field holds no edit.
+ * @param {Function|object} [action] Runs with the value as it changes — in a
+ *   textual field, at every keystroke unless `actionEvent="change"` or
+ *   `actionDebounce` says otherwise. While it runs the field is busy, so
+ *   read-only unless `optimistic`; a failure is drawn on it (docs/actions.md,
+ *   "`action` or `uiAction`"). A request that follows typing, like
+ *   suggestions, is a binding rather than the field's action.
+ * @param {"change"|"mousedown"|"custom"} [actionEvent] When `action` runs:
+ *   `"change"` at Enter or once the field is left holding a new value,
+ *   `"mousedown"` at the press rather than its release, `"custom"` never by
+ *   itself. Left out, at every change of the value.
+ * @param {number} [actionDebounce] For a textual field: how long, in
+ *   milliseconds, the value must stay still before `action` runs.
+ * @param {Function} [uiAction] Told every value the field takes, whoever moved
+ *   it; for what moves along with the value and cannot fail.
+ * @param {boolean} [optimistic] The field stays interactive while its action
+ *   runs, and wears `data-optimistic`: a newer value calls the running one off
+ *   and goes out once it settled, so the latest wins.
+ * @param {boolean} [resetOnError] A refused run puts back the last value
+ *   accepted. On by default for a checkbox and a radio; a textual field keeps
+ *   what was typed.
+ * @param {boolean} [resetOnAbort] The same for a run called off, unless a newer
+ *   value replaced it. On by default for a checkbox and a radio.
+ * @param {boolean} [resetOnCancel] Escape puts back the last value accepted. On
+ *   by default for a checkbox and a radio.
+ * @param {Function} [onCancel] Told `(event, reason)` when the person gives up
+ *   on what they typed: `"escape_key"` under `cancelOnEscape` or
+ *   `resetOnCancel`, `"blur_invalid"` (leaving the field holding a refused
+ *   value) under `cancelOnBlurInvalid`. What giving up does is the caller's:
+ *   `Editable` ends its edition there.
+ * @param {boolean} [standalone] The field answers for itself: not part of the
+ *   value of the form or group around it, nor of its reset or validation.
  * @param {"checkbox"|"switch"|"icon"|"button"} [variant] How a checkbox is
  *   drawn. `"button"` is a button that stays pressed — a mode ("Edit" /
  *   "Done"), show/hide, a setting: its children are its words and its

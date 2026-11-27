@@ -191,11 +191,7 @@ export const activeRouteReadsSignal = computed(() => {
 
 // Besides `when` and `prefetch`, what the binding reads (actionRunEffect,
 // then bindParams).
-const ROUTE_ACTION_BINDING_OPTIONS = new Set([
-  "debounce",
-  "inheritData",
-  "rerunOnChange",
-]);
+const ROUTE_ACTION_BINDING_OPTIONS = new Set(["debounce", "inheritData"]);
 /**
  * Binds an action to a route: it runs when the route matches, with the params
  * the effect reads off the address, runs again on a `reload()`, and is aborted

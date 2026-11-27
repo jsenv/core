@@ -1,5 +1,15 @@
 import { ABORTED, COMPLETED, IDLE, RUNNING } from "./action_run_states.js";
 
+/**
+ * The state of an action as plain values, read from its signals so the render
+ * calling it follows them. It never suspends and never starts a run — for a
+ * component drawing the state of a run someone else starts (a button's own, a
+ * route's); `useAsyncData` is the one for the data a component asks for.
+ * Without an action, everything reads idle.
+ *
+ * @param {object} [action]
+ * @returns {{ params: any, runningState: object, isPrerun: boolean, idle: boolean, loading: boolean, aborted: boolean, error: any, completed: boolean, data: any }}
+ */
 export const useActionStatus = (action) => {
   if (!action) {
     return {
@@ -9,7 +19,7 @@ export const useActionStatus = (action) => {
       idle: true,
       loading: false,
       aborted: false,
-      error: null,
+      error: undefined,
       completed: false,
       data: undefined,
     };

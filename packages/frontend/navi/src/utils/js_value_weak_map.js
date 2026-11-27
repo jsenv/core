@@ -12,7 +12,10 @@
  * Implementation:
  * - Dual WeakMap (key->value, value->key) provides ephemeron behavior
  * - WeakRef registry enables iteration without preventing GC
- * - Primitives stored in Map (permanent retention - avoid for keys)
+ * - A primitive key cannot be held weakly, so its value is (WeakRef): the
+ *   entry lives as long as something else holds the value, and leaves with it
+ *   (FinalizationRegistry). Held strongly, every string a field ever sent
+ *   would keep the action instance bound to it for the life of the page.
  *
  * Use case: Action caching where params (key) and action (value) should have
  * synchronized lifetimes while allowing natural garbage collection.
@@ -28,8 +31,18 @@ export const createJsValueWeakMap = () => {
   // Registry for iteration/deep equality (holds WeakRefs)
   const keyRegistry = new Set(); // Set of WeakRef(key)
 
-  // Primitive cache
+  // Primitive key -> WeakRef(value), or the value itself when it is not an
+  // object (nothing to collect).
   const primitiveCache = new Map();
+  const primitiveFinalization = new FinalizationRegistry((key) => {
+    const entry = primitiveCache.get(key);
+    // Set again since: the entry is another value's now.
+    if (entry instanceof WeakRef && entry.deref() === undefined) {
+      primitiveCache.delete(key);
+    }
+  });
+  const readPrimitiveEntry = (entry) =>
+    entry instanceof WeakRef ? entry.deref() : entry;
 
   function cleanupKeyRegistry() {
     for (const keyRef of keyRegistry) {
@@ -48,8 +61,11 @@ export const createJsValueWeakMap = () => {
           yield [key, keyToValue.get(key)];
         }
       }
-      for (const [k, v] of primitiveCache) {
-        yield [k, v];
+      for (const [k, entry] of primitiveCache) {
+        const v = readPrimitiveEntry(entry);
+        if (v !== undefined) {
+          yield [k, v];
+        }
       }
     },
 
@@ -72,7 +88,7 @@ export const createJsValueWeakMap = () => {
         }
         return undefined;
       }
-      return primitiveCache.get(key);
+      return readPrimitiveEntry(primitiveCache.get(key));
     },
 
     set(key, value) {
@@ -97,6 +113,12 @@ export const createJsValueWeakMap = () => {
         keyToValue.set(key, value);
         valueToKey.set(value, key);
         keyRegistry.add(new WeakRef(key));
+      } else if (
+        value &&
+        (typeof value === "object" || typeof value === "function")
+      ) {
+        primitiveCache.set(key, new WeakRef(value));
+        primitiveFinalization.register(value, key);
       } else {
         primitiveCache.set(key, value);
       }
@@ -154,7 +176,7 @@ export const createJsValueWeakMap = () => {
         },
         primitive: {
           total: primitiveCache.size,
-          note: "Primitive keys never GC'd",
+          note: "Primitive keys hold their value weakly",
         },
       };
     },

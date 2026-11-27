@@ -41,7 +41,7 @@ export const useArraySignalMembership = (...args) => {
   return [isMember, add, remove];
 };
 
-export const arraySignalMembership = (...args) => {
+const arraySignalMembership = (...args) => {
   if (args.length < 2) {
     throw new Error(
       "arraySignalMemberShip requires at least 2 arguments: [arraySignal, id]",

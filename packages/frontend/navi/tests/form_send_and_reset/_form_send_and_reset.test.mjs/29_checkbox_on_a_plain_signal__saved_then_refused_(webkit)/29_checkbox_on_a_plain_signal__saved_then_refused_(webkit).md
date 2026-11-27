@@ -1,4 +1,4 @@
-# [named submit refused, then enter (chromium)](../../../browser_harness.mjs)
+# [checkbox on a plain signal, saved then refused (webkit)](../../../browser_harness.mjs)
 
 ```js
 const browser = await browserOf(engine);
@@ -8,15 +8,10 @@ return fn({ browser, engine });
 ```js
 {
   "calls": [
-    {
-      "title": "a",
-      "intent": "publish"
-    },
-    {
-      "title": "ab",
-      "intent": "publish"
-    }
-  ]
+    true,
+    false
+  ],
+  "checked_after_refusal": true
 }
 ```
 

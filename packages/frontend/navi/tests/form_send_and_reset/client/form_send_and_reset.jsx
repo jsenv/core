@@ -13,7 +13,9 @@ import {
   Form,
   Input,
   Label,
+  stateSignal,
 } from "@jsenv/navi";
+import { signal } from "@preact/signals";
 import { render } from "preact";
 
 window.formCalls = {};
@@ -245,3 +247,86 @@ const ValidationCases = () => (
   </div>
 );
 render(<ValidationCases />, document.querySelector("#app_validation"));
+
+// What a control goes back to: a reset to where it starts, a rollback to what
+// the outside last accepted.
+const recordSignal = signal({ name: "Ann" });
+const plainCheckedSignal = signal(false);
+const stateCheckedSignal = stateSignal(false, {
+  id: "form_send_and_reset_checked",
+});
+// Accepts the first save, refuses the next ones.
+const acceptingOnce = (caseId) => {
+  return async (value) => {
+    recordCall(caseId, value);
+    await wait(20);
+    if (window.formCalls[caseId].length > 1) {
+      throw new Error("refused");
+    }
+  };
+};
+const RollbackCases = () => (
+  <div>
+    {/* The server answers a save with the value normalized. */}
+    <Case id="record_normalized">
+      <Form
+        record={recordSignal.value}
+        action={async (value) => {
+          recordCall("record_normalized", value);
+          await wait(20);
+          recordSignal.value = { name: value.name.trim() };
+        }}
+      >
+        <Input id="record_normalized_name" name="name" />
+        <Button
+          id="record_normalized_save"
+          type="submit"
+          readOnlyWhileFormUnchanged
+        >
+          Save
+        </Button>
+      </Form>
+    </Case>
+
+    {/* A yes/no saved once, then refused: back to what was saved. */}
+    <Case id="plain_signal_rollback">
+      <Input
+        id="plain_signal_rollback_box"
+        type="checkbox"
+        boolean
+        signal={plainCheckedSignal}
+        action={acceptingOnce("plain_signal_rollback")}
+      />
+    </Case>
+    <Case id="state_signal_rollback">
+      <Input
+        id="state_signal_rollback_box"
+        type="checkbox"
+        boolean
+        signal={stateCheckedSignal}
+        action={acceptingOnce("state_signal_rollback")}
+      />
+    </Case>
+
+    {/* Refused once: the same value asked again is a new request. */}
+    <Case id="retry_refused">
+      <Input
+        id="retry_refused_input"
+        actionEvent="change"
+        resetOnError
+        action={(value) => {
+          recordCall("retry_refused", value);
+          throw new Error("refused");
+        }}
+      />
+    </Case>
+
+    {/* Sent, then reset: back to its default, not to what was sent. */}
+    <Case id="reset_to_default">
+      <Form command="--navi-reset" action={recordingAction("reset_to_default")}>
+        <Input id="reset_to_default_title" name="title" defaultValue="draft" />
+      </Form>
+    </Case>
+  </div>
+);
+render(<RollbackCases />, document.querySelector("#app_rollback"));

@@ -11,11 +11,7 @@ import "./src/nav/url_target/url_target.js";
 // actions
 export { ActionRenderer } from "./src/action/action_renderer.jsx";
 export { actionRunEffect } from "./src/action/action_run_effect.js";
-export {
-  createAction,
-  rerunActions,
-  updateActions,
-} from "./src/action/actions.js";
+export { createAction, rerunActions } from "./src/action/actions.js";
 // How a callback reads what caused it. Every event navi dispatches carries the
 // one it came from, and findEvent walks that chain back: which interaction asked
 // for an action (`findEvent(event, "swipe_left")`, see
@@ -55,10 +51,7 @@ export {
   durationToString,
   parseDuration,
 } from "@jsenv/validity";
-export {
-  arraySignalMembership,
-  useArraySignalMembership,
-} from "./src/state/array_signal_membership.js";
+export { useArraySignalMembership } from "./src/state/array_signal_membership.js";
 export { localStorageSignal } from "./src/state/local_storage_signal.js";
 export {
   resource,
@@ -67,8 +60,6 @@ export {
 export { forgetOwner, stateSignal } from "./src/state/state_signal.js";
 export { stateSignalGroup } from "./src/state/state_signal_group.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
-export { useStateArray } from "./src/state/use_state_array.js";
-export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
 export { compareTwoJsValues } from "./src/utils/compare_two_js_values.js";
 // state fetching
 export {
@@ -82,8 +73,6 @@ export {
   errorIsDisplayed,
   markErrorAsDisplayedBy,
 } from "./src/action/action_error_report.js";
-export { createRequestCanceller } from "./src/state/request_canceller.js";
-export { useCancelPrevious } from "./src/state/use_cancel_previous.js";
 export {
   moveArrayItemByIndex,
   swapArrayItemByIndex,

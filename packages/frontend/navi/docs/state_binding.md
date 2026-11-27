@@ -142,9 +142,11 @@ Decide what the signal IS:
   save. A late answer still pulls the picture back for one round trip. Right
   when another client or a background refresh may change the row while it is on
   screen.
-- **Never two writes in flight for one field.** Debounce the write, or cancel
-  the one before it (`createRequestCanceller`), so no answer is older than the
-  latest intent. Right when the write is the expensive part.
+- **Never two writes in flight for one field.** Debounce the write, or make it
+  the control's `action` with `optimistic`: a newer value calls the running
+  write off (its callback's `signal`) and goes out once that one settled, so no
+  answer is older than the latest intent. Right when the write is the expensive
+  part.
 
 ## What binds itself
 

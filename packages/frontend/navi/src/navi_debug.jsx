@@ -157,7 +157,9 @@ const naviDebug = import.meta.dev ? createNaviDebug() : null;
 // The logger is called as `debug(message, …)` or, to group a side effect under
 // the native event that caused it, `debug(event, message, …)`.
 // In production every hook is the no-op returner and the bundler drops the
-// call sites along with their messages.
+// call sites whose arguments are pure. One whose message costs something to
+// build (a value stringified, an element's signature) builds it behind
+// `isDebugNoop` (below), or the production build still builds it.
 
 /** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
 export const useDebugCommand = import.meta.dev

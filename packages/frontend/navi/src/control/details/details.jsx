@@ -60,7 +60,6 @@ const DetailsField = (props) => {
   import.meta.css = css;
   const {
     ref,
-    persists,
     label = "Summary",
     loading,
     focusGroup,
@@ -82,7 +81,6 @@ const DetailsField = (props) => {
       },
       {
         controlType: "details",
-        persists,
       },
     );
   const { value, children } = detailsProps;

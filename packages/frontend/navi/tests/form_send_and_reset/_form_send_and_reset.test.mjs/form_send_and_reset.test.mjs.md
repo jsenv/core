@@ -27,8 +27,18 @@
 - [step on a datetime field (webkit)](23_step_on_a_datetime_field_(webkit)/23_step_on_a_datetime_field_(webkit).md)
 - [message written on the field (chromium)](24_message_written_on_the_field_(chromium)/24_message_written_on_the_field_(chromium).md)
 - [message written on the field (webkit)](25_message_written_on_the_field_(webkit)/25_message_written_on_the_field_(webkit).md)
-- [named submit refused, then enter (chromium)](26_named_submit_refused__then_enter_(chromium)/26_named_submit_refused__then_enter_(chromium).md)
-- [named submit refused, then enter (webkit)](27_named_submit_refused__then_enter_(webkit)/27_named_submit_refused__then_enter_(webkit).md)
+- [record save the server normalizes (chromium)](26_record_save_the_server_normalizes_(chromium)/26_record_save_the_server_normalizes_(chromium).md)
+- [record save the server normalizes (webkit)](27_record_save_the_server_normalizes_(webkit)/27_record_save_the_server_normalizes_(webkit).md)
+- [checkbox on a plain signal, saved then refused (chromium)](28_checkbox_on_a_plain_signal__saved_then_refused_(chromium)/28_checkbox_on_a_plain_signal__saved_then_refused_(chromium).md)
+- [checkbox on a plain signal, saved then refused (webkit)](29_checkbox_on_a_plain_signal__saved_then_refused_(webkit)/29_checkbox_on_a_plain_signal__saved_then_refused_(webkit).md)
+- [checkbox on a stateSignal, saved then refused (chromium)](30_checkbox_on_a_statesignal__saved_then_refused_(chromium)/30_checkbox_on_a_statesignal__saved_then_refused_(chromium).md)
+- [checkbox on a stateSignal, saved then refused (webkit)](31_checkbox_on_a_statesignal__saved_then_refused_(webkit)/31_checkbox_on_a_statesignal__saved_then_refused_(webkit).md)
+- [value refused, then asked again (chromium)](32_value_refused__then_asked_again_(chromium)/32_value_refused__then_asked_again_(chromium).md)
+- [value refused, then asked again (webkit)](33_value_refused__then_asked_again_(webkit)/33_value_refused__then_asked_again_(webkit).md)
+- [reset after a send goes to the default (chromium)](34_reset_after_a_send_goes_to_the_default_(chromium)/34_reset_after_a_send_goes_to_the_default_(chromium).md)
+- [reset after a send goes to the default (webkit)](35_reset_after_a_send_goes_to_the_default_(webkit)/35_reset_after_a_send_goes_to_the_default_(webkit).md)
+- [named submit refused, then enter (chromium)](36_named_submit_refused__then_enter_(chromium)/36_named_submit_refused__then_enter_(chromium).md)
+- [named submit refused, then enter (webkit)](37_named_submit_refused__then_enter_(webkit)/37_named_submit_refused__then_enter_(webkit).md)
 
 ---
 

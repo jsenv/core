@@ -26,7 +26,7 @@ State navi shows is bound, not copied back by a callback: a control, a popup, a 
 
 ## Actions
 
-Actions are async operations with lifecycle management — pending, success, error. You can declare actions that run when navigating to a route, and any component can subscribe to them via `useAsyncData` to reflect what is happening: loading states, results, errors. No manual wiring. See [docs/actions.md](./docs/actions.md), and [docs/data_states.md](./docs/data_states.md) for drawing a skeleton, a result and an error from the same action.
+Actions are async operations with a lifecycle — idle, running, completed, failed, aborted. You can declare actions that run when navigating to a route, and any component can subscribe to them via `useAsyncData` to reflect what is happening: loading states, results, errors. No manual wiring. See [docs/actions.md](./docs/actions.md), and [docs/data_states.md](./docs/data_states.md) for drawing a skeleton, a result and an error from the same action.
 
 Code loaded on demand is the same thing: a page's `import()` is a route action, started with the page's data on the url change and prefetched when a link to it is hovered or focused; a component inside a page that stays reads its own with `useAsyncData(() => import(…))`. One wait, one failure, no lazy-shaped API. See [docs/dynamic_import.md](./docs/dynamic_import.md).
 
@@ -53,7 +53,7 @@ Field components (`Input` of every type, checkbox and radio included, `Select`, 
 
 `Picker` is a control whose value is chosen in a popup: a list of options, a confirmation, or several controls composing one object value. Its trigger wears the wait and the error of what the choice runs. See [docs/control_object.md](./docs/control_object.md).
 
-Validation goes beyond native browser constraints: custom rules, better error positioning, real-time feedback, and a UX that doesn't punish users before they've finished typing. See [docs/field_validation.md](./docs/field_validation.md).
+Validation goes beyond native browser constraints: custom rules, a message placed next to what it is about, and a validity known at every keystroke while the message waits for a send — nobody is told off before they finished typing. See [docs/field_validation.md](./docs/field_validation.md).
 
 Some values are moved rather than typed: `Spin` puts the way back and the way on around a value one step at a time, and `SpinGroup` makes several of them read as one — `TimeSpin` ("07h30") and `TimeRangeSpin` ("de 7h à 21h", end after start) are built that way. `Wheel` is the scroll picker a phone shows for the same job, with `TimeWheel` and `TimeRangeWheel` built on it.
 

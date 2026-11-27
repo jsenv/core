@@ -9,8 +9,9 @@ them apart is the whole subject.
 
 **What only a browser can answer.** A keystroke blocked before the value exists,
 a callout placed next to the field, `required` on a radio group, `data-one-of`
-reading an option list out of the document, the moment a message appears
-(typing? blur? submit?). This is navi's, and it stays navi's.
+reading an option list out of the document,
+[the moment a message appears](#when-a-message-appears). This is navi's, and it
+stays navi's.
 
 **« Is this value acceptable ».** A length, a set of allowed characters, a
 value that renders nothing, a business rule. This is not a DOM question — a
@@ -106,6 +107,29 @@ re-judged the whole value would refuse every keystroke over it, blaming the
 person for a character they did not type, and refuse the deletion that would
 have fixed it. So a change is refused only when it makes the value worse. What
 is already there is the constraint's business, and it says so at submit.
+
+## When a message appears
+
+Every constraint runs at every change of the value, silently: the validity is
+current at each keystroke (in the field's `title`, and for
+`useConstraintValidityState` below), and nothing is drawn. A message is drawn
+when the value is about to be sent and is refused — a form's send, the field's
+own `action`. Leaving a field draws nothing: a constraint allowed to correct the
+value puts it right there (`autoFix`), and leaving it invalid is a cancel the
+field may answer (`cancelOnBlurInvalid`), not a message.
+
+What closes the message depends on what it is about:
+
+- **A field's.** It closes at the next keystroke, the value still refused or
+  not: it sits over what is being typed, and the person is already correcting
+  it. The next send shows it again if the value is still refused. A field whose
+  `action` runs at every keystroke sends at every keystroke, so its message
+  follows the value as it is typed.
+- **A group's**, `required` on a radio or checkbox group. It stays until the
+  group is valid: there is nothing under it to type into, and the press that
+  answers it closes it.
+- **A server's refusal** (an `error`). It stays until it is closed, with its
+  button or Escape, or until the next send.
 
 ## Reading the validity without submitting
 

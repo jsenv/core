@@ -21,7 +21,7 @@ import { Box } from "../../box/box.jsx";
 import { moveFocusTo } from "../../utils/focus/focus_transfer.js";
 import { Input } from "../input/input.jsx";
 import { Textarea } from "../input/textarea.jsx";
-import { dispatchRequestResetUIState } from "../ui_state_dom.js";
+import { dispatchRequestRollbackUIState } from "../ui_state_dom.js";
 
 const css = /* css */ `
   .navi_editable_wrapper {
@@ -270,7 +270,7 @@ export const Editable = (props) => {
       // An edition starts from the value, not from what a cancelled one left
       // typed in the field. Done before the focus: written into a focused
       // field, it would read as a change to send (see input_effect.js).
-      dispatchRequestResetUIState(field, editing.event);
+      dispatchRequestRollbackUIState(field, editing.event);
     }
     moveFocusTo(field);
     const initialValue = editing.event?.detail?.initialValue;

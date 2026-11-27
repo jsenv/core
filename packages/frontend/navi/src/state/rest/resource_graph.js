@@ -486,6 +486,7 @@ const createResource = (
     // properties added afterwards, so every facade of the relation — the one
     // scopedMany returns and each withParams() of it — carries both.
     getChildStore,
+    childStoresVersionSignal,
     ownerDependency,
   },
 ) => {
@@ -500,12 +501,33 @@ const createResource = (
     // returns: the rows asked for, each through the signal of that row (see
     // readItem in array_signal_store.js), or the whole store for `useArray`
     // — a card reading its own row stays still while the page next to it
-    // loads rows of its own. A row read by id stays in the store while it is
-    // read; `useArray` is what the store holds now, and a row the lists let go
-    // of leaves it (see mayLeave in array_signal_store.js). `useAllByIds`
-    // skips the ids the store does not hold.
+    // loads rows of its own.
+    /**
+     * Every row the store holds now, in the order they arrived. The store
+     * keeps what something holds: a row the lists let go of leaves it (see
+     * mayLeave in array_signal_store.js), so this shrinks as they do. Not a
+     * hook: fine in a loop or a condition.
+     * @returns {Array<object>}
+     */
     useArray: () => store.arraySignal.value,
-    useById: (id) => store.select(id),
+    /**
+     * One row as it is now, followed by the render that reads it, and kept in
+     * the store while it is read. `undefined` while the store does not hold
+     * it; the render hears when it arrives. Takes the id (one the row was
+     * renamed from still reads it), or props naming the row by a unique key,
+     * found by reading the whole store. Not a hook.
+     * @param {any} idOrProps
+     * @returns {object | undefined}
+     */
+    useById: (idOrProps) => store.select(idOrProps),
+    /**
+     * The rows as they are now, for ids kept across reads — what was picked out
+     * of a search, kept under the next word (docs/resource.md). An id the store
+     * does not hold drops out. An entry given by a unique key rather than by id
+     * is found by reading the whole store. Not a hook.
+     * @param {Array<any>} idArray
+     * @returns {Array<object>}
+     */
     useAllByIds: (idArray) => {
       const items = [];
       for (const idOrProps of idArray) {
@@ -537,6 +559,7 @@ const createResource = (
     addItemSetup,
     ownerName,
     getChildStore,
+    childStoresVersionSignal,
   };
 
   resourceLifecycleManager.registerResource(stateFacade, {
@@ -620,6 +643,7 @@ const createResource = (
       namedWriteVerbs,
       ownerName,
       getChildStore,
+      childStoresVersionSignal,
       ownerDependency,
     });
   };
@@ -810,11 +834,7 @@ ${relationLabel} source location: ${declarationSite}`,
       };
     });
 
-    const createRestActionForOne = (
-      verb,
-      callback,
-      { onActionComplete },
-    ) => {
+    const createRestActionForOne = (verb, callback, { onActionComplete }) => {
       const applyResultToValue =
         verb === "DELETE"
           ? (itemIdOrItemProps) => {
@@ -1629,6 +1649,17 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
     // ownerKey (id or any uniqueKey value) → { childStore, idArraySignal }
     // One owner can be registered under several keys, all pointing to the same scope.
     const scopeMap = new Map();
+    // Bumped when an owner key gets its scope: what a reader waiting for the
+    // store of an owner not loaded yet follows (syncOwnedResourceToSignals),
+    // rather than every write of the owners' store.
+    const scopesVersionSignal = signal(0);
+    const registerScope = (ownerKey, scope) => {
+      if (scopeMap.get(ownerKey) === scope) {
+        return;
+      }
+      scopeMap.set(ownerKey, scope);
+      scopesVersionSignal.value = scopesVersionSignal.peek() + 1;
+    };
     const createScope = (ownerKey) => {
       // Keeps every child it is given (no `letsGoOfRows`): the scope stays
       // with its owner key, and the owner's collection is what holds them.
@@ -1670,11 +1701,11 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
         }
         // Register the scope under the id and every uniqueKey value so that
         // resolveOwnerId can address it whichever key a callback returns.
-        scopeMap.set(ownerId, scope);
+        registerScope(ownerId, scope);
         for (const uniqueKey of uniqueKeys) {
           const uniqueKeyValue = item[uniqueKey];
           if (uniqueKeyValue !== undefined) {
-            scopeMap.set(uniqueKeyValue, scope);
+            registerScope(uniqueKeyValue, scope);
           }
         }
       }
@@ -1761,7 +1792,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
           let scope = scopeMap.get(ownerId);
           if (!scope) {
             scope = createScope(ownerId);
-            scopeMap.set(ownerId, scope);
+            registerScope(ownerId, scope);
           }
           const { childStore, idArraySignal } = scope;
 
@@ -1855,6 +1886,7 @@ ${name}.many("${propertyName}") source location: ${declarationSite}`,
       getChildStore: ownerName
         ? undefined
         : (ownerKey) => scopeMap.get(ownerKey)?.childStore,
+      childStoresVersionSignal: ownerName ? undefined : scopesVersionSignal,
       // scopedOne needs no such dependency: its mutation result carries the
       // updated object directly.
       ownerDependency: { owner: stateFacade, propertyName },
@@ -2592,10 +2624,11 @@ export const syncOwnedResourceToSignals = (
     );
   }
   effect(() => {
-    // Always subscribe to the parent store so the effect re-runs when a new
-    // owner item is added (which creates the child store).
+    // Asked again when an owner key gets its store: the owner may load after
+    // this call. Not every write of the owners' store, whose whole array
+    // would be rebuilt for it.
     // eslint-disable-next-line no-unused-expressions
-    resource.store.arraySignal.value;
+    resource.childStoresVersionSignal.value;
     const ownerKey = ownerSignal.value;
     if (ownerKey === null || ownerKey === undefined) {
       return null;

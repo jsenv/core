@@ -10,12 +10,14 @@ import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
+  isDebugNoop,
   useDebugFocus,
   useDebugInteraction,
   useDebugPopup,
   useDebugUIState,
 } from "../navi_debug.jsx";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { warnOnce } from "../utils/warn_once.js";
 import { resolveNaviCommand, triggerNaviCommand } from "./commands.js";
 import { findControlRoot } from "./control_dom.js";
 import { warnSignalCollision } from "./control_value.js";
@@ -25,7 +27,6 @@ import {
   getUIStateControllerById,
   onUIStateControllerDestroyed,
 } from "./controller_registry.js";
-import { FormContext } from "./form_context.js";
 import { createControlRules } from "./rules/control_rules.js";
 
 /**
@@ -100,7 +101,7 @@ export const ParentUIStateControllerContext = createContext();
  * 3. Uncheck radio siblings (radio-only).
  * 4. Dispatch `navi_ui_state_change` on the element so external subscribers stay in sync.
  * 5. Call `uiAction` + `uiActionInternal` + `command` (user-observable reactions).
- * 6. Notify the parent group controller (if any) via `notifyParentAboutChildUIAction`.
+ * 6. Notify the parent group controller (if any) via `onChildUIAction`.
  * 7. Dispatch a synthetic `input` event so `addInputEffect` / `navi_change` listeners fire.
  *
  * When `stateIsTheSame` (value didn't change):
@@ -117,7 +118,7 @@ export const ParentUIStateControllerContext = createContext();
  */
 export const useUIStateController = (
   props,
-  { controlInfo, syncDomState, uiActionInternal, persists, standalone } = {},
+  { controlInfo, syncDomState, uiActionInternal, standalone } = {},
 ) => {
   const debugPopup = useDebugPopup();
   const debugInteraction = useDebugInteraction();
@@ -132,10 +133,6 @@ export const useUIStateController = (
   // the distribution on the way down.
   const parentFromContext = useContext(ParentUIStateControllerContext);
   const parentUIStateController = standalone ? undefined : parentFromContext;
-  const formContext = useContext(FormContext);
-  if (persists === undefined && formContext) {
-    persists = true;
-  }
   const controlType = controlInfo.controlType;
   const isRadio = controlType === "input" && props.type === "radio";
   const isProxy = Boolean(props["navi-control-proxy-for"]);
@@ -167,10 +164,12 @@ export const useUIStateController = (
         parentUIStateController?.uiStateSignal ?? null,
       );
       const { stateInitial } = controlInfo;
-      debugUIState(
-        `Creating "${controlType}" ui state controller - initial state:`,
-        JSON.stringify(stateInitial),
-      );
+      if (!isDebugNoop(debugUIState)) {
+        debugUIState(
+          `Creating "${controlType}" ui state controller - initial state:`,
+          JSON.stringify(stateInitial),
+        );
+      }
       const [publishUIState, subscribeUIState] = createPubSub();
       const ownUIStateSignal = signal(stateInitial);
       const inherit =
@@ -182,7 +181,8 @@ export const useUIStateController = (
             const parentSig = parentUiStateSignalHolder.value;
             const parentUIState = parentSig?.value;
             const ownUIState = ownUIStateSignal.value;
-            return ownUIState || parentUIState;
+            // A value of its own, `0` or `""` included, is the button's.
+            return ownUIState === undefined ? parentUIState : ownUIState;
           })
         : ownUIStateSignal;
       // What the control is worth, which its action is bound to: what it
@@ -227,6 +227,11 @@ export const useUIStateController = (
         name: props.name,
 
         state: stateInitial,
+        // Where a reset takes the control back (see resolveResetUIState):
+        // what it was started on — its defaultValue, a value a group placed on
+        // it as it registered — then each default it took. `state` moves on
+        // with every value the outside accepts; this does not.
+        startState: stateInitial,
         uiState: stateInitial,
         // What a bound signal last said — the change detector for writes coming
         // from the outside. Kept apart from `state` on purpose: `state` is the
@@ -270,33 +275,14 @@ export const useUIStateController = (
         // reach until that popup opens. Letting it block interaction would make
         // a picker whose content is loading impossible to open at all.
         getInteractionBlockingControls: () => [],
+        // A named button joins the group's value as the one that asked for a
+        // send — at its press, and at each send it stands as requester for.
+        mergeIntoRequestingGroup: (e) => {
+          mergeRequesterButtonIntoGroup(controller, e);
+        },
         onUIAction: (e, { skipCommand, skipBoundSignal } = {}) => {
-          if (controlType === "button" && controller.controlHostProps.name) {
-            const buttonName = controller.controlHostProps.name;
-            const parentController = controller.parentUIStateController;
-            if (parentController && parentController.wantRequesterButtonState) {
-              const currentState = parentController.uiState;
-              const mergedState = {
-                ...currentState,
-                [buttonName]: controller.uiState,
-              };
-              parentController.syncInternalState(mergedState);
-              debugUIState(
-                `merging button state into parent control group:`,
-                mergedState,
-              );
-              // The sender's value is part of the answer, and whoever mirrors
-              // this group — a picker, through its façade — reads the group's
-              // state, not its children's: told the way a mount sync is
-              // (silently, nobody has answered yet), so the send that follows
-              // finds the value there. Not through the group's own onChange:
-              // that re-aggregates from the children, and a button is not one.
-              parentController.parentUIStateController?.onChildUIAction?.(
-                parentController,
-                e,
-                { stateChanged: true, silent: true },
-              );
-            }
+          if (controlType === "button") {
+            mergeRequesterButtonIntoGroup(controller, e);
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
@@ -359,9 +345,6 @@ export const useUIStateController = (
               return false;
             }
           }
-          const controllerSig = getElementSignature(
-            e.currentTarget || controller.ref.current,
-          );
           const currentUIState = controller.uiState;
           // What a control is STARTED on is accepted, as its own defaultValue
           // would be: a value placed on it as it registers, or what a picker
@@ -373,6 +356,7 @@ export const useUIStateController = (
               (e.type === "facade_child_mount_sync" && !controller.holdsEdit())
             ) {
               controller.state = newUIState;
+              controller.startState = newUIState;
             }
           }
           const stateIsTheSame = compareTwoJsValues(newUIState, currentUIState);
@@ -383,10 +367,12 @@ export const useUIStateController = (
               }
               return true;
             }
-            debugUIState(
-              e,
-              `${controllerSig}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
-            );
+            if (!isDebugNoop(debugUIState)) {
+              debugUIState(
+                e,
+                `${getElementSignature(e.currentTarget || controller.ref.current)}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state unchanged, no update needed`,
+              );
+            }
             if (
               controlType === "input" &&
               controller.controlHostProps.type === "radio" &&
@@ -477,7 +463,9 @@ export const useUIStateController = (
               }
             }
           }
-          debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
+          if (!isDebugNoop(debugUIState)) {
+            debugUIState(e, `publishUIState(${JSON.stringify(newUIState)})`);
+          }
           publishUIState(newUIState, e);
           // A picker hands what it holds to the control in its popup — see
           // useUIFacadeStateController, which is what puts this here.
@@ -519,19 +507,19 @@ export const useUIStateController = (
               // holds just changed — see isPropagateDownEvent.
               writeBoundSignal(newUIState);
             }
-            if (e.type === "facade_child_mount_sync") {
+            if (import.meta.dev && e.type === "facade_child_mount_sync") {
               const wasEmptyString =
                 currentUIState === "" && newUIState === undefined;
               const wasUndefinedNowEmpty =
                 currentUIState === undefined && newUIState === "";
               if (wasEmptyString) {
-                console.warn(
+                warnOnce(
                   `[navi] Picker mount sync changed state from "" to undefined. ` +
                     `This will call uiAction on mount, which is likely unintended. ` +
                     `Initialise the signal with undefined instead of "" to avoid this.`,
                 );
               } else if (wasUndefinedNowEmpty) {
-                console.warn(
+                warnOnce(
                   `[navi] Picker mount sync changed state from undefined to "". ` +
                     `This will call uiAction on mount, which is likely unintended. ` +
                     `The child component is emitting "" for an empty value — it should emit undefined instead.`,
@@ -562,6 +550,7 @@ export const useUIStateController = (
               e.type === "facade_propagate_up" ||
               e.type === "cancel_rollback" ||
               e.type === "navi_reset_ui_state" ||
+              e.type === "navi_rollback_ui_state" ||
               e.type === "auto_fix"
             ) {
               // Exception: when the facade propagates a child state change up to the
@@ -624,14 +613,16 @@ export const useUIStateController = (
             // Proxy: forward the state change to the real input.
             // Use a dedicated internal event so that when the real input's setUIState
             // sees stateIsTheSame=true (already updated by the real input's own flow),
-            // it does NOT fire notifyParentAboutChildUIAction(stateChanged=false) back
+            // it does NOT fire onChildUIAction(stateChanged=false) back
             // to the group — which would trigger the group action with a stale value.
             const targetController = getUIStateControllerById(controlProxyFor);
             if (targetController) {
-              debugUIState(
-                e,
-                `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.ref.current)}`,
-              );
+              if (!isDebugNoop(debugUIState)) {
+                debugUIState(
+                  e,
+                  `forwarding set_ui_state "${newUIState}" to ${getElementSignature(targetController.ref.current)}`,
+                );
+              }
               const forwardEvent = new CustomEvent(
                 "proxy_forward_set_ui_state",
                 { detail: {} },
@@ -714,11 +705,24 @@ export const useUIStateController = (
         clearUIState: (e) => {
           controller.setUIState(resolveClearedUIState(controller), e);
         },
+        // Back to where the control starts. What it accepted meanwhile stays
+        // the rollback target: a reset is a value put on the control, not one
+        // the outside said yes to.
         resetUIState: (e) => {
+          const resetUIState = resolveResetUIState(controller);
+          controller.setUIState(resetUIState, e);
+          // A bound signal mirrors what the control holds (see
+          // PROPAGATE_DOWN_EVENT_SET), so it goes back too.
+          writeBoundSignal(resetUIState);
+          controller.followDefaultValue();
+        },
+        // Back to what the outside last accepted: the run that took the
+        // value away failed or was called off, or the edit was cancelled.
+        rollbackUIState: (e) => {
           controller.setUIState(controller.state, e);
           // What the control holds moved back, and a bound signal mirrors what
           // it holds (see PROPAGATE_DOWN_EVENT_SET). Left on the value the
-          // reset just undid — written there by the control itself at the
+          // rollback just undid — written there by the control itself at the
           // pick — the signal would hand it straight back on the next render,
           // and the refused value would win over the rollback.
           writeBoundSignal(controller.state);
@@ -753,6 +757,7 @@ export const useUIStateController = (
           }
           controller.defaultValueTaken = defaultValue;
           controller.state = defaultValue;
+          controller.startState = defaultValue;
           controller.setUIState(
             defaultValue,
             new CustomEvent("outside_value_follow", { detail: {} }),
@@ -761,25 +766,31 @@ export const useUIStateController = (
         // Read by the callout manager when it has nowhere else to point.
         getCalloutAnchorElement: (event) =>
           resolveCalloutAnchorElement(controller.ref.current, event),
-        // What the control shows becomes what is acknowledged: the outside said
-        // yes to it, so it is where a rollback goes back to. Left alone for a
-        // control whose value is GIVEN — the prop is already its truth — and
-        // while a newer request waits behind this one, whose own answer is what
-        // will settle what is accepted.
-        acknowledgeUIState: () => {
-          if (controller.hasStateProp || controller.queuedActionAllowedEvent) {
+        // What the outside said yes to becomes what is acknowledged, so it is
+        // where a rollback goes back to: the value a run went out with when it
+        // is that run's answer (`{ sentUIState }`), else what the control
+        // shows. Not what it shows once a run answers: a newer value may be on
+        // its way by then (typed meanwhile, queued behind an optimistic run),
+        // and only its own answer settles it. Left alone for a control whose
+        // value a `value`/`checked` prop GIVES — the prop is already its
+        // truth. A bound signal is not such a prop: the control writes it.
+        acknowledgeUIState: (answer) => {
+          if (controller.hasStateProp && !controller.props.signal) {
             return;
           }
           // A picker told yes is told for what its popup shows too, the way a
           // group tells its children. First, so that a default one of them
           // takes on the way is part of what this control accepts below.
           controller.facadeChild?.acknowledgeUIState();
-          controller.state = controller.uiState;
+          controller.state =
+            answer && Object.hasOwn(answer, "sentUIState")
+              ? answer.sentUIState
+              : controller.uiState;
           controller.followDefaultValue();
         },
         onActionEnd: (e) => {
           debugUIState(`"${controlType}" actionEnd called`);
-          acknowledgeOwnAction(controller);
+          acknowledgeOwnAction(controller, e);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -904,6 +915,7 @@ export const useUIStateController = (
         if (controller.hasStateProp) {
           controller.hasStateProp = false;
           controller.state = stateInitial;
+          controller.startState = stateInitial;
           controller.stateFromSignalPrevious = stateInitial;
         }
         if (controlInfo.signal) {
@@ -1115,11 +1127,56 @@ const resolveCalloutAnchorElement = (element, event) => {
 // own navi_action_* events (it is given a placeholder action so they exist),
 // and taking those for an acknowledgement is how a row would remember its own
 // selection as accepted and hand it back on the group's rollback.
-const acknowledgeOwnAction = (controller) => {
+/**
+ * A named button says which button sent: its name and value join the value of
+ * the group asking for it (a Form, a ControlGroup), as HTML's submitter does.
+ * Written at the press, and again by every send for its own requester — the
+ * stand-in for an Enter included (see sendCommand) — so a send says which
+ * button asked for IT, never the one a refused press left behind.
+ */
+const mergeRequesterButtonIntoGroup = (buttonController, e) => {
+  const buttonName = buttonController.controlHostProps.name;
+  if (!buttonName) {
+    return;
+  }
+  const parentController = buttonController.parentUIStateController;
+  if (!parentController || !parentController.wantRequesterButtonState) {
+    return;
+  }
+  const currentState = parentController.uiState;
+  const buttonValue = buttonController.uiState;
+  if (currentState && currentState[buttonName] === buttonValue) {
+    return;
+  }
+  parentController.syncInternalState({
+    ...currentState,
+    [buttonName]: buttonValue,
+  });
+  // The sender's value is part of the answer, and whoever mirrors this group —
+  // a picker, through its façade — reads the group's state, not its
+  // children's: told the way a mount sync is (silently, nobody has answered
+  // yet), so the send that follows finds the value there. Not through the
+  // group's own onChange: that re-aggregates from the children, and a button
+  // is not one.
+  parentController.parentUIStateController?.onChildUIAction?.(
+    parentController,
+    e,
+    { stateChanged: true, silent: true },
+  );
+};
+
+// The run answered: what it went out with is accepted, carried by the
+// navi_action_allowed event that started it (see control_action.js).
+const acknowledgeOwnAction = (controller, actionEndEvent) => {
   if (!controller.props.action) {
     return;
   }
-  controller.acknowledgeUIState();
+  const actionAllowedEvent = actionEndEvent.detail.event;
+  controller.acknowledgeUIState(
+    actionAllowedEvent
+      ? { sentUIState: actionAllowedEvent.detail.uiState }
+      : undefined,
+  );
 };
 
 // What a group of checkboxes or radios is worth is a claim about values, and
@@ -1188,6 +1245,7 @@ const isRadioControl = (child) =>
 // object around it (see distributeChildUIState below) and keeps what they do
 // not answer for, so merged whole it would carry its siblings' keys back up,
 // stale.
+const namelessChildWarnedSet = new WeakSet();
 const readNamedChildUIStates = (children, { warnNameless }) => {
   const values = {};
   for (const child of children) {
@@ -1208,7 +1266,13 @@ const readNamedChildUIStates = (children, { warnNameless }) => {
         );
         continue;
       }
-      if (warnNameless) {
+      if (
+        import.meta.dev &&
+        warnNameless &&
+        !namelessChildWarnedSet.has(child)
+      ) {
+        // Once per child: the group reads its children at every change.
+        namelessChildWarnedSet.add(child);
         console.warn(
           "A group child is missing a name property, its state won't be included in the group state: give it a `name` if it is part of this answer, or `standalone` if it answers for itself (docs/form_changed.md).",
           child,
@@ -1387,7 +1451,7 @@ const GROUP_DEFAULTS = {
  *   does not touch state, does not trigger the action pipeline.
  *
  * **Child UI action flow**:
- * 1. Child leaf fires `notifyParentAboutChildUIAction(e, { stateChanged })`.
+ * 1. Child leaf fires `onChildUIAction(e, { stateChanged })`.
  * 2. Group's `onChildUIAction` receives it.
  *    - If `stateChanged=true`: re-aggregates → `setUIState` → full reactions + action pipeline.
  *    - If `stateChanged=false`: calls `onUIAction` → uiAction + command only.
@@ -1666,10 +1730,12 @@ export const useUIGroupStateController = (
           notifyExternal === "silent" && controller.stateGivenFromAbove
             ? controller.uiState
             : aggregateGroupUIState(controller.uiState);
-        debugUIGroup(
-          e,
-          `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
-        );
+        if (!isDebugNoop(debugUIGroup)) {
+          debugUIGroup(
+            e,
+            `${controlType}.getUIState -> ${JSON.stringify(groupUIState)}`,
+          );
+        }
         if (notifyExternal === true || notifyExternal === "if-it-moves") {
           if (
             notifyExternal === "if-it-moves" &&
@@ -1803,10 +1869,12 @@ export const useUIGroupStateController = (
         // (see onChange). Only what goes through here has been said out loud.
         controller.announcedUIState = newUIState;
         uiStateSignal.value = newUIState;
-        debugUIGroup(
-          e,
-          `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-        );
+        if (!isDebugNoop(debugUIGroup)) {
+          debugUIGroup(
+            e,
+            `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+          );
+        }
         publishUIState(newUIState);
         if (!internalBehavior) {
           writeBoundSignal(newUIState);
@@ -2126,11 +2194,13 @@ export const useUIGroupStateController = (
             return;
           }
           const childControlType = childUIStateController.controlType;
-          debugUIGroup(
-            `${controlType}.onChildUIAction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
-              childUIStateController.uiState,
-            )}`,
-          );
+          if (!isDebugNoop(debugUIGroup)) {
+            debugUIGroup(
+              `${controlType}.onChildUIAction("${childControlType}") stateChanged=${stateChanged} -> child state: ${JSON.stringify(
+                childUIStateController.uiState,
+              )}`,
+            );
+          }
           if (stateChanged) {
             onChange(e, {
               notifyExternal: silent
@@ -2188,6 +2258,19 @@ export const useUIGroupStateController = (
           onChange(e, { notifyExternal: true });
           controller.followDefaultValue();
         },
+        rollbackUIState: (e) => {
+          const ev = new CustomEvent("propagate_down_rollback_ui_state", {
+            detail: {},
+          });
+          chainEvent(ev, e);
+          for (const c of childUIStateControllerArray) {
+            if (shouldPropagateStateToChild(c)) {
+              c.rollbackUIState(ev);
+            }
+          }
+          onChange(e, { notifyExternal: true });
+          controller.followDefaultValue();
+        },
         clearUIState: (e) => {
           const ev = new CustomEvent("propagate_down_clear_ui_state", {
             detail: {},
@@ -2207,8 +2290,8 @@ export const useUIGroupStateController = (
         },
         // The group was told yes, so what each of its parts shows is accepted
         // too: a group holds no value of its own — its rollback puts the
-        // children back where they were (see resetUIState), and they can only
-        // go back to what was acknowledged if they were told.
+        // children back where they were (see rollbackUIState), and they can
+        // only go back to what was acknowledged if they were told.
         acknowledgeUIState: () => {
           for (const c of childUIStateControllerArray) {
             if (shouldPropagateStateToChild(c)) {
@@ -2277,11 +2360,24 @@ export const useUIGroupStateController = (
                   newUIState = fallbackState;
                 }
                 controller.stateGivenFromAbove = true;
+                // An edit this group's run is sending is no edit any more: the
+                // default arriving while the run is out is the answer it waits
+                // for — a record saved, read back normalized.
+                const sendingUIState = controller.actionInFlight
+                  ? controller.pendingActionEvent?.detail.uiState
+                  : undefined;
                 for (const child of childUIStateControllerArray) {
                   if (!shouldPropagateStateToChild(child)) {
                     continue;
                   }
-                  if (!child.holdsEdit()) {
+                  if (
+                    !child.holdsEdit() ||
+                    (sendingUIState !== undefined &&
+                      compareTwoJsValues(
+                        child.uiState,
+                        resolvedDistributeChildUIState(sendingUIState, child),
+                      ))
+                  ) {
                     controller.placeChildUIState(child, newUIState, e);
                     continue;
                   }
@@ -2300,13 +2396,16 @@ export const useUIGroupStateController = (
                   if (child.getChildControllers || child.hasStateProp) {
                     continue;
                   }
+                  // The default taken, behind the edit: where a rollback and a
+                  // reset of the field go from now on.
                   child.state = childNewState;
+                  child.startState = childNewState;
                 }
                 controller.syncInternalState(aggregateGroupUIState(newUIState));
               }
             : undefined,
         onActionEnd: (e) => {
-          acknowledgeOwnAction(controller);
+          acknowledgeOwnAction(controller, e);
           controller.rules.validation.syncValidity(e);
         },
         onActionError: (e) => {
@@ -2418,12 +2517,16 @@ export const useUIGroupStateController = (
       if (
         boundSignal &&
         !hasValueProp &&
-        !compareTwoJsValues(defaultValue, prevDefaultValue)
+        !compareTwoJsValues(defaultValue, prevDefaultValue) &&
+        !compareTwoJsValues(defaultValue, controller.uiState)
       ) {
         // The signal moved from the outside: the children are placed from it
         // again, exactly as they were when they registered. Without this a
         // group would answer a write to its own signal by silently writing its
-        // former value back over it on the next child interaction.
+        // former value back over it on the next child interaction. What the
+        // group wrote itself comes back here on the next render too, already
+        // shown by its children: placing it again would set every child to
+        // what it holds, at each keystroke.
         placeChildrenFrom(defaultValue);
       }
       controller.followDefaultValue();
@@ -2497,19 +2600,19 @@ const EMPTY_OBJECT = {};
  *
  * **Relationship**: picker input ↔ first child (Input, ControlGroup, …)
  *
- * - Child → picker input: when the child's UI state changes,
- *   `onChildUIAction` forwards the new value to the picker input using
- *   `dispatchRequestSetUIState` with `internalBehavior: true` so the picker input
- *   updates without triggering another propagation cycle.
+ * - Child → picker input: when the child's UI state changes, `onChildUIAction`
+ *   sets the new value on the picker's own controller with a
+ *   `facade_propagate_up` event: internal, so no command and no action
+ *   pipeline run for it.
  *
- * - Picker input → child: we listen to `navi_ui_state_change` on the picker
- *   input element. When the event fires AND we are not currently in a
- *   child→picker propagation (`updatingRef`), we push the new value down to
- *   the child with `internalBehavior: true`.
+ * - Picker input → child: the picker's controller calls
+ *   `pushStateDownToFacadeChild`, handed to it during render so it is in place
+ *   before any layout effect, which places the value on the child with
+ *   `initial_state_push` or `propagate_down_set_ui_state`.
  *
- * The `updatingRef` flag breaks the potential loop:
- *   child changes → we update picker input → navi_ui_state_change fires →
- *   we see updatingRef=true → skip → no loop.
+ * The `updatingRef` flag breaks the potential loop: the child changes → the
+ * picker takes the value → it would push it back down → updatingRef is true →
+ * skipped.
  *
  * So a control placed inside the picker popup needs no
  * `command="--navi-update"` to reach the picker input.
@@ -2850,7 +2953,7 @@ const warnIfChildCannotHold = (props, child, newUIState) => {
  *
  * - `"state_prop_change"` — re-syncing with the external `state` prop (`_checkForUpdates`).
  * - `"radio_sibling_uncheck"` — a radio sibling is being unchecked programmatically.
- * - `"propagate_down_set_ui_state"` / `"propagate_down_reset_ui_state"` / `"propagate_down_clear_ui_state"` —
+ * - `"propagate_down_set_ui_state"` / `"propagate_down_reset_ui_state"` / `"propagate_down_rollback_ui_state"` / `"propagate_down_clear_ui_state"` —
  *   parent (group or facade) is pushing state down to children.
  *
  * State IS propagated by these events (e.g. `facade_child_mount_sync` travels from
@@ -2877,6 +2980,7 @@ const INTERNAL_EVENT_SET = new Set([
   "facade_propagate_up",
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
+  "propagate_down_rollback_ui_state",
   "propagate_down_clear_ui_state",
   // Silent mount/unmount sync: state is propagated from child group → facade → picker input
   // so the picker knows the child's current value (e.g. for "store value at open"),
@@ -2893,13 +2997,15 @@ const INTERNAL_EVENT_SET = new Set([
   // notification below still happen, exactly as they did on the way in (see
   // picker_custom.jsx's onClose).
   "cancel_rollback",
-  // A rollback navi asks for (see dispatchRequestResetUIState): the action
-  // failed or was aborted, the edit was cancelled, a reset command aimed here.
-  // Nobody acted on the control, so no command — a `<Picker type="confirm"
-  // action command>` refused by the server would otherwise go where only its
-  // success leads. Where the value moves back, uiAction and the parent
-  // notification below still happen, as for cancel_rollback.
+  // A value navi puts back (see ui_state_dom.js): a reset aimed here goes to
+  // where the control starts, a rollback to what was last accepted — the
+  // action failed or was aborted, the edit was cancelled. Nobody acted on the
+  // control, so no command — a `<Picker type="confirm" action command>`
+  // refused by the server would otherwise go where only its success leads.
+  // Where the value moves, uiAction and the parent notification below still
+  // happen, as for cancel_rollback.
   "navi_reset_ui_state",
+  "navi_rollback_ui_state",
   // A constraint allowed to correct the value put it right as the value was
   // committed (see applyAutoFix). Nobody pressed anything, so no command and
   // no action of the control's own — but what it holds really did move, so
@@ -2928,12 +3034,14 @@ const isOutsideValueFollow = (e) => {
  * did move, and a bound `signal` is that state's mirror rather than a reaction
  * to it: leaving it behind makes the app and the control disagree about what is
  * on screen, which is how a popup reopens on the tab the user cancelled out of.
- * The way UP is deliberately not part of this: a picker's own signal is written
- * when the picker commits, not while its popup is being played with.
+ * The way UP is not part of this: a picker's own signal follows its popup
+ * gesture by gesture through facade_propagate_up, and what waits for the close
+ * is the picker's action (docs/control_value.md).
  */
 const PROPAGATE_DOWN_EVENT_SET = new Set([
   "propagate_down_set_ui_state",
   "propagate_down_reset_ui_state",
+  "propagate_down_rollback_ui_state",
   "propagate_down_clear_ui_state",
   // The FIRST value handed down is one too: a control placed as it registers
   // (a group filling a child that just arrived, a picker filling its popup)
@@ -3054,6 +3162,23 @@ const uiStateOrEmpty = (uiState, emptyUIState) => {
     return emptyUIState;
   }
   return uiState;
+};
+
+// Where a reset takes a control: where it starts. Given its value by a
+// `value`/`checked` prop, it has nowhere else to go. Bound to a signal, it goes
+// back to the default that signal declares — seeded as its defaultValue (see
+// resolveInputProps) — or holds nothing when there is none. Otherwise back to
+// what it was started on or last took as a default (startState).
+const resolveResetUIState = (controller) => {
+  if (controller.hasStateProp && !controller.props.signal) {
+    return controller.state;
+  }
+  if (controller.props.signal) {
+    return controller.defaultValue === undefined
+      ? resolveClearedUIState(controller)
+      : controller.defaultValue;
+  }
+  return controller.startState;
 };
 
 // What a cleared control shows: its own empty, kept in the shape it was holding.

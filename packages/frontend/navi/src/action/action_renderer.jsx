@@ -23,6 +23,22 @@ const renderErrorDefault = (error) => {
 };
 const renderCompletedDefault = () => null;
 
+/**
+ * Draws an action's state, one branch per state. `children` as a function is
+ * the completed branch, handed the data — kept drawn while the instance runs
+ * again; as an object, `idle`, `loading`, `aborted`, `error`, `completed`, or
+ * `always`, handed every state at once. An error it draws is claimed
+ * (docs/error_handling.md). `disabled` draws nothing.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   action: object,
+ *   children?: Function | import("preact").ComponentChildren | {
+ *     idle?: Function, loading?: Function, aborted?: Function,
+ *     error?: Function, completed?: Function, always?: Function,
+ *   },
+ *   disabled?: boolean,
+ * }>}
+ */
 export const ActionRenderer = ({ action, children, disabled }) => {
   import.meta.css = css;
   if (action === undefined) {

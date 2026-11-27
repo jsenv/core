@@ -518,7 +518,8 @@ export const createControlValidation = (
     }
     // Propagate a silent validity update up the controller chain.
     // Parent controllers (group, facade) don't report — the leaf's callout is enough.
-    // They just need their validity state kept current so _attemptCommit can read it.
+    // They just need their validity state kept current: a send reads it, and a
+    // group's own message closes once the group is valid (checkValidity).
     let parentController = controller.parentUIStateController;
     while (parentController) {
       parentController.rules.validation.checkValidity({ event });

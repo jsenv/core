@@ -1,47 +1,7 @@
-import { useCallback, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
-import { addIntoArray, removeFromArray } from "../utils/array_add_remove.js";
-import { isSignal } from "../utils/is_signal.js";
 import { createAction } from "./actions.js";
 
-// used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
-// when inside a <form> the form params are updated when the form element single param is updated
-export const useActionBoundToOneParam = (
-  action,
-  paramsSignal,
-  { verb } = {},
-) => {
-  if (!isSignal(paramsSignal)) {
-    throw new Error(
-      `useActionBoundToOneParam expects a signal as second argument, got: ${paramsSignal}`,
-    );
-  }
-  const boundAction = useBoundAction(action, paramsSignal, verb);
-  const getValue = useCallback(() => paramsSignal.value, []);
-  const setValue = useCallback((value) => {
-    paramsSignal.value = value;
-  }, []);
-  return [boundAction, getValue(), setValue];
-};
-export const useActionBoundToOneArrayParam = (action, paramsSignal) => {
-  const [boundAction, value, setValue] = useActionBoundToOneParam(
-    action,
-    paramsSignal,
-  );
-
-  const add = (valueToAdd, valueArray = value) => {
-    setValue(addIntoArray(valueArray, valueToAdd));
-  };
-
-  const remove = (valueToRemove, valueArray = value) => {
-    setValue(removeFromArray(valueArray, valueToRemove));
-  };
-
-  const result = [boundAction, value, setValue];
-  result.add = add;
-  result.remove = remove;
-  return result;
-};
 // The action bound to the signal, without reading it: the caller is not
 // re-rendered by the params (a control, a <details>). `verb` is what a plain
 // function's action says it does to the server, which puts it under the network

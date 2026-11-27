@@ -178,7 +178,7 @@ const errorIsAccountedFor = (error) => {
  * overlay in dev). Same answer preact gives an error no boundary handled.
  */
 const errorReportedSet = new WeakSet();
-export const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
+export const reportErrorIfNobodyDisplaysIt = (error) => {
   if (error && typeof error === "object") {
     errorPendingDecisionSet.add(error);
   }
@@ -195,9 +195,6 @@ export const reportErrorIfNobodyDisplaysIt = (error, { action } = {}) => {
         return;
       }
       errorReportedSet.add(error);
-    }
-    if (action && error && typeof error === "object" && !error.action) {
-      error.action = action;
     }
     throw error;
   };

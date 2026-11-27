@@ -1,6 +1,7 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
 
 import { isSignal } from "../utils/is_signal.js";
+import { warnOnce } from "../utils/warn_once.js";
 import { isNumberInput } from "./input/resolve_input_props.js";
 import { getUIStateFromElement } from "./ui_state_dom.js";
 
@@ -218,7 +219,7 @@ export const warnSignalCollision = (props, controlType, stateProp) => {
     return;
   }
   if (Object.hasOwn(props, stateProp)) {
-    console.warn(
+    warnOnce(
       `[navi] "${controlType}" got both "signal" and "${stateProp}". ` +
         `"signal" is the source of truth; "${stateProp}" is ignored. ` +
         `Pass only "signal".`,
@@ -239,7 +240,7 @@ export const warnSignalAsState = (props, controlType, stateProps) => {
   }
   for (const stateProp of stateProps) {
     if (isSignal(props[stateProp])) {
-      console.warn(
+      warnOnce(
         `[navi] "${controlType}" got a signal as "${stateProp}". ` +
           `A signal binds a control through "signal" — did you mean signal={...}? ` +
           `As "${stateProp}" it is taken for the value itself.`,

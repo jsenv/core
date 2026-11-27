@@ -790,10 +790,12 @@ export const stateSignal = (defaultValue, options = {}) => {
       });
     });
   }
-  // Create isDefaultValue function for this signal
+  // The other side of isCustomValue, read the same way: an array the url
+  // hands back equal to the default is the default, whatever its order.
   const isDefaultValue = (value) => {
-    const currentDefault = getDefaultValue(false);
-    return value === currentDefault;
+    return compareTwoJsValues(value, getDefaultValue(false), {
+      ignoreArrayOrder,
+    });
   };
 
   // Store signal with its options (used by route_pattern.js)

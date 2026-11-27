@@ -235,6 +235,17 @@ export const tryActionAfterInteractionAllowed = (
     }
   }
 
+  // Which button sent is part of what is sent: this send's own requester,
+  // whatever an earlier press left in the value (see
+  // mergeRequesterButtonIntoGroup).
+  const requesterController = requester?.__uiStateController__;
+  if (
+    requesterController &&
+    requesterController.controlType === "button" &&
+    requesterController.parentUIStateController === activeController
+  ) {
+    requesterController.mergeIntoRequestingGroup(event);
+  }
   // Read after the gate, never before: a constraint allowed to correct the
   // value rewrites it in there (see applyAutoFix), and what goes out has to be
   // what the control ends up holding.

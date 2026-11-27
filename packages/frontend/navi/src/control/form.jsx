@@ -8,7 +8,7 @@
  * <form> element (FormNested).
  */
 
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
@@ -71,7 +71,10 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   own word: no busy state, and what follows it (`command="--navi-close"`, a
  *   slide moving on) runs at once, the run going on behind. A failure then has
  *   no sheet to be read in: `resetOnError` puts the form back and the error
- *   callout is drawn on what surrounds the closed sheet. For a write not worth being
+ *   callout is drawn on what surrounds the closed sheet — while the form is
+ *   still mounted: a sheet that unmounts its content once closed
+ *   (`mount="while-opened"`) leaves the failure to the report, and the value
+ *   where it was. For a write not worth being
  *   waited for — a score, a note — never for one whose refusal changes what the
  *   person does next (see
  *   docs/popup_open.md#closing-when-a-button-also-runs-an-action).
@@ -159,6 +162,27 @@ const useFormGroup = (props) => {
   // (resolveAfterSend in commands.js).
   delete propsForGroup.command;
   propsForGroup["data-after-send"] = props.command;
+  // What the form is measured against (useHeldUIStateAsSent, and each send
+  // that went through). A signal read in the render below, so the form
+  // re-renders whenever it moves — the first take included, which nothing else
+  // re-renders when the fields were already filled at their first render (a
+  // record).
+  const sentUIStateSignal = useMemo(() => signal(undefined), []);
+  // What was sent is what the next submit is measured against. On success
+  // only: an action that failed has not been sent, and the user must be able
+  // to try the same value again. The value the run was asked with, carried by
+  // the navi_action_allowed event that started it — not what the form holds
+  // now: what was typed while the run was out has not been sent yet. Handed to
+  // the group, which calls it from its own action end, before acknowledging
+  // what was sent.
+  propsForGroup.onnavi_action_end = (e) => {
+    const actionAllowedEvent = e.detail.event;
+    const groupController = childrenWrapperProps.uiGroupStateController;
+    sentUIStateSignal.value = withoutEmptyFields(
+      readSentBaseline(actionAllowedEvent.detail.uiState, groupController),
+      groupController,
+    );
+  };
   const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
     propsForGroup,
     {
@@ -170,32 +194,33 @@ const useFormGroup = (props) => {
     },
   );
   const uiStateController = childrenWrapperProps.uiGroupStateController;
-  // The signal, not the plain property: reading it here is what re-renders the
-  // form as its fields change, which is what turns the submit button below
-  // interactive the moment there is something to send.
-  const uiState = uiStateController.uiStateSignal.value;
-  // What the form is measured against (useHeldUIStateAsSent, and each send
-  // that went through). A signal read here, so the form re-renders whenever
-  // it moves — the first take included, which nothing else re-renders when
-  // the fields were already filled at their first render (a record).
-  const sentUIStateSignal = useMemo(() => signal(undefined), []);
-  // A form holding no field — a "Continue", an "Accept", a "Join" alone in it —
-  // has no answer that could ever differ from the last one: "unchanged" would
-  // refuse every send, and its action would never run. The press is its whole
-  // answer, so it always has something to send.
-  const holdsField = uiStateController.holdsFieldSignal.value;
   // False until a field differs from what was last sent, true while it does,
   // and false again the moment it comes back to it — the plain fact about the
-  // value, with no opinion about what a submit would do with it.
-  const changed =
-    !holdsField ||
-    !compareTwoJsValues(
-      withoutEmptyFields(uiState, uiStateController),
-      sentUIStateSignal.value,
-    );
-  // Read by READONLY_CONSTRAINT from a submit button held back by this form,
-  // which has to be able to say what it is waiting for.
-  uiStateController.changed = changed;
+  // value, with no opinion about what a submit would do with it. A form
+  // holding no field — a "Continue", an "Accept", a "Join" alone in it — has
+  // no answer that could ever differ from the last one: "unchanged" would
+  // refuse every send, and its action would never run. The press is its whole
+  // answer, so it always has something to send.
+  //
+  // A signal read by the submit button waiting for it
+  // (`readOnlyWhileFormUnchanged`), which re-renders on its own as it flips.
+  // A plain value in FormContext would re-render every control of the form
+  // instead: each reads that context, to know it is in a form.
+  const changedSignal = useMemo(
+    () =>
+      computed(
+        () =>
+          !uiStateController.holdsFieldSignal.value ||
+          !compareTwoJsValues(
+            withoutEmptyFields(
+              uiStateController.uiStateSignal.value,
+              uiStateController,
+            ),
+            sentUIStateSignal.value,
+          ),
+      ),
+    [uiStateController],
+  );
   // Asked by the action gate at submit time, whichever way the submit came in —
   // a submit event, a --navi-send command, requestSubmit() (see
   // control_action.js). The value it is given, not `changed` above: a
@@ -217,29 +242,14 @@ const useFormGroup = (props) => {
   );
   useUnregisteredControlWarning(props.ref);
 
-  const { basePseudoState, children } = formProps;
-  // const disabled = basePseudoState[":disabled"];
-  // const readOnly = basePseudoState[":read-only"];
-  const loading = basePseudoState[":-navi-loading"];
+  const { children } = formProps;
   const formContextValue = useMemo(() => {
-    return { loading, changed };
-  }, [loading, changed]);
+    return { changedSignal };
+  }, [changedSignal]);
 
   return {
     formRootProps,
     formProps,
-    // What was sent is what the next submit is measured against. On success
-    // only: an action that failed has not been sent, and the user must be able
-    // to try the same value again. The value the run was asked with, carried by
-    // the navi_action_allowed event that started it — not what the form holds
-    // now: what was typed while the run was out has not been sent yet.
-    onnavi_action_end: (e) => {
-      const actionAllowedEvent = e.detail.event;
-      sentUIStateSignal.value = withoutEmptyFields(
-        actionAllowedEvent.detail.uiState,
-        uiStateController,
-      );
-    },
     inside: (
       <FormContext.Provider value={formContextValue}>
         <ControlgroupChildrenWrapper
@@ -257,15 +267,13 @@ const useFormGroup = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const { formRootProps, formProps, onnavi_action_end, inside } =
-    useFormGroup(props);
+  const { formRootProps, formProps, inside } = useFormGroup(props);
   useRequestSubmitThroughGates(ref);
 
   return (
     <Box
       {...formRootProps}
       {...formProps}
-      onnavi_action_end={onnavi_action_end}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
@@ -308,18 +316,13 @@ const FormControl = (props) => {
 // <ControlGroup>, which is the shape without the send (see
 // docs/control_object.md).
 const FormNested = (props) => {
-  const { formRootProps, formProps, onnavi_action_end, inside } = useFormGroup({
+  const { formRootProps, formProps, inside } = useFormGroup({
     ...props,
     standalone: true,
   });
 
   return (
-    <Box
-      {...formRootProps}
-      {...formProps}
-      onnavi_action_end={onnavi_action_end}
-      pseudoClasses={FormPseudoClasses}
-    >
+    <Box {...formRootProps} {...formProps} pseudoClasses={FormPseudoClasses}>
       {inside}
     </Box>
   );
@@ -347,6 +350,21 @@ const readHeldUIState = (uiStateController, record) => {
     }
   }
   return withoutEmptyFields(held, uiStateController);
+};
+
+// What a send leaves the form measured against: what it carried — except
+// where a field shows a value the outside put there while the send was out (a
+// record answering it, read back normalized): holding no edit, the field
+// shows what the form holds now.
+const readSentBaseline = (sentUIState, groupController) => {
+  const baseline = { ...asObject(sentUIState) };
+  const uiState = asObject(groupController.uiState);
+  for (const [key, field] of readFieldsByKey(groupController)) {
+    if (!field.holdsEdit()) {
+      baseline[key] = uiState[key];
+    }
+  }
+  return baseline;
 };
 
 // The record moved: the baseline moves with it where it moved, and nowhere

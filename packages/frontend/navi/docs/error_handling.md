@@ -211,10 +211,11 @@ gets a crash overlay thrown over it. navi's own report reads the same mark
 Everything navi ships already marks: `<ErrorBoundary>` when it renders its
 fallback, `<ActionRenderer>` when it renders its error branch,
 `useAsyncData({ error: true })` when it hands the error to the component, and a
-run given an `onError` — asking for the error is taking it. Every control with
-an `action` runs it that way, so the control claims the failure whatever it
-then shows: a callout, a boundary (`actionErrorEffect="throw"`), or nothing
-(`"none"`, a mapping returning nothing). `<List.Items>` claims the failure it
+control with an `action` when its failure comes back: as it draws the callout,
+or as it decides to show nothing (`"none"`, a mapping returning nothing). A
+control that left the page while its run was out claims nothing — nothing shows
+the failure, so the report does — and under `actionErrorEffect="throw"` the
+boundary that draws it claims it. `<List.Items>` claims the failure it
 draws in place of the items (its own row or `renderError`), and a failed
 revalidation, which it hands to the component beside the items it keeps —
 `refreshError`, to `renderItem` and to `onRequestStateChange` — as

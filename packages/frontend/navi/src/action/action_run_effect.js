@@ -15,7 +15,9 @@ const askerByBindingWeakMap = new WeakMap();
  * @param {object | Function} action - The action to run, or a function made into one.
  * @param {Function} deriveActionParamsFromSignals - A function that reads signals and returns
  *   the params to pass to the action. It is re-evaluated automatically whenever a signal it
- *   read changes. Return `false`/`null`/`undefined` to skip running the action.
+ *   read changes. Return any falsy value — `false`, `null`, `undefined`, and so
+ *   `0` and `""` too — to skip running the action: params the action runs with
+ *   are an object, or a value that is not falsy.
  * @param {object} [options]
  * @param {number} [options.debounce] - When set, the action is only run once the derived params
  *   have been stable for this many milliseconds. Useful to avoid firing a backend call on every

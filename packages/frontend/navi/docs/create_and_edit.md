@@ -382,12 +382,14 @@ The list re-reads itself after a `POST` — whether a new item belongs to it is
 the backend's to say — and not after a `PUT`, whose values the store carries
 into every list holding that item (see
 [list_refresh.md](./list_refresh.md#rerunon-verb-by-verb)). **The detail GET is
-not saved by the store**: the action for that id had never run, and the store
-holding the item is not an action having its data. Nor is it redundant: a
-detail representation is richer than what a write answers — here the GET adds
-the place's name, and a screen trusting the POST would show "Lieu: —". Skipping
-it could only ever be a per-resource decision ("my POST answers the same shape
-as my GET").
+still sent**: the action for that id had never run. While it is out, the page
+draws the row the POST put in the store (a first load is no first load when the
+store already knows the row, see
+[data_states.md](./data_states.md)) — so for one request it shows what the POST
+answered, "Lieu: —", and the place's name arrives with the GET. Nor is the GET
+redundant: a detail representation is richer than what a write answers.
+Skipping it could only ever be a per-resource decision ("my POST answers the
+same shape as my GET").
 
 Coming back to that page later in the session costs **nothing**: a completed
 action is not run again for the same params — that, not a cache, opens a visited

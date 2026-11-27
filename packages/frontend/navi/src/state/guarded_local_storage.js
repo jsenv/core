@@ -35,3 +35,28 @@ export const listLocalStorageKeys = () => {
     return [];
   }
 };
+
+// Another tab writing the key: `callback` gets the text it holds now
+// (`undefined` once removed, or after a clear). The page's own writes are not
+// heard, the browser only tells the other tabs.
+export const listenLocalStorageKey = (key, callback) => {
+  const onstorage = (e) => {
+    if (e.key !== key && e.key !== null) {
+      return;
+    }
+    let localStorage;
+    try {
+      localStorage = window.localStorage;
+    } catch {
+      return;
+    }
+    if (e.storageArea !== localStorage) {
+      return;
+    }
+    callback(e.newValue === null ? undefined : e.newValue);
+  };
+  window.addEventListener("storage", onstorage);
+  return () => {
+    window.removeEventListener("storage", onstorage);
+  };
+};
