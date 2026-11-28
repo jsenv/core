@@ -32,6 +32,11 @@ import {
   takeKeptRead,
   upsertKeptItem,
 } from "./kept_reads.js";
+import {
+  groupCarriesByKey,
+  parseCarries,
+  setUpCarryingProperties,
+} from "./carried_rows.js";
 import { createResourcePersistence } from "./resource_persist.js";
 import { createRangeReader } from "./resource_range_reader.js";
 
@@ -98,6 +103,7 @@ const RESOURCE_OPTIONS = new Set([
   "keep",
   "dependencies",
   "persist",
+  "carries",
   "writes",
   "GET",
   "GET_MANY",
@@ -191,7 +197,7 @@ const SCOPED_MANY_OPTIONS = new Set([
  * "What a read shows while its params move").
  *
  * @param {string} name - resource name, used in action names and error messages
- * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, keep, dependencies, persist, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
+ * @param {Object} restCallbacks - `{ idKey, uniqueKeys, rerunOn, keep, dependencies, persist, carries, writes, GET, GET_MANY, GET_RANGE, POST, POST_MANY, PUT, PUT_MANY, PATCH, PATCH_MANY, DELETE, DELETE_MANY }`
  * @param {string} [restCallbacks.idKey] - primary key property, defaults to `"id"`
  * @param {string[]} [restCallbacks.uniqueKeys] - alternate keys the store can find an item by (e.g. `"username"`)
  * @param {{ GET?: false | Array<"POST" | "PUT" | "PATCH" | "DELETE" | "*">, GET_MANY?: false | Array<"POST" | "PUT" | "PATCH" | "DELETE" | "*">, GET_RANGE?: false | Array<"POST" | "PUT" | "PATCH" | "DELETE" | "*"> }} [restCallbacks.rerunOn] -
@@ -258,6 +264,14 @@ const SCOPED_MANY_OPTIONS = new Set([
  *   the copy until a `GET` lands again. One row is kept per params the GET was
  *   asked with, so it is meant for a singleton or a handful of rows, not for a
  *   resource whose GET is asked for every id.
+ * @param {Object<string, Object>} [restCallbacks.carries] - which objects inside
+ *   each row are rows of another resource, by path from the row:
+ *   `{ "my_profile.clubs[].place": PLACE }` (a property, `[]` for each entry of an
+ *   array, `.` between). Every write of a row writes them into that resource's
+ *   store and holds them there while the row carries them, as `.one()` holds its
+ *   child; the row keeps them as plain objects. A property of the row that is
+ *   itself a row is a relation (`.one()`), not a path here (docs/resource.md, "An
+ *   answer carrying rows of a resource").
  * @see docs/resource.md — relationships, callback return contracts, decision table
  *
  * @example
@@ -287,6 +301,7 @@ export const resource = (name, restCallbacks = {}) => {
     keep,
     dependencies,
     persist,
+    carries,
     writes,
 
     GET,
@@ -312,6 +327,18 @@ export const resource = (name, restCallbacks = {}) => {
   const addItemSetup = (callback) => {
     setupCallbackSet.add(callback);
   };
+  if (carries) {
+    const carriesLabel = `resource(${name})`;
+    const carriedByKey = groupCarriesByKey(
+      parseCarries(carries, carriesLabel, { fromRow: true }),
+    );
+    addItemSetup((item, answer) =>
+      setUpCarryingProperties(item, carriedByKey, {
+        answer,
+        label: carriesLabel,
+      }),
+    );
+  }
   const itemPrototype = {
     [Symbol.toStringTag]: name,
     toString() {

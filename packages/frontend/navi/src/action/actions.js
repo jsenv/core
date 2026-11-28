@@ -3,6 +3,7 @@ import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { computed, effect, signal, untracked } from "@preact/signals";
 
 import { getDebouncedSignal } from "../state/debounce_signal.js";
+import { parseCarries, writeCarriedRows } from "../state/rest/carried_rows.js";
 import { batchWithEffectErrorsApart } from "../utils/batch_with_effect_errors_apart.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import { isSignal } from "../utils/is_signal.js";
@@ -909,6 +910,7 @@ const mergeActionParams = (currentParams, newParams) => {
 // does not read would be accepted and do nothing.
 const OPTIONS_CREATE_ACTION_READS = new Set([
   "keep",
+  "carries",
   "dependencies",
   "name",
   "params",
@@ -974,6 +976,15 @@ const actionWeakMap = new WeakMap();
  *   returning that list is called once, before the first request of any
  *   resource leaves. `reads` throws: an action is one question, asked again
  *   whole.
+ * @param {Object<string, Object>} [rootOptions.carries] - which objects of the
+ *   answer are rows of a resource, by path: `{ "clubs[].place": PLACE }` (a
+ *   property, `[]` for each entry of an array, `.` between; `"[]"` alone for an
+ *   answer that is a list of rows). Each answer writes them into that resource's
+ *   store as a `.one()` child of it would be: a screen opening one of them draws
+ *   the row at once (docs/resource.md, "An answer carrying rows of a resource").
+ *   The answer keeps them as it came, plain objects. `null` or `undefined` on
+ *   the way is skipped; an object without the resource's `idKey` is skipped with
+ *   a warning. Writing those rows later reruns nothing: `dependencies` does.
  * @param {{ verb?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" }} [rootOptions.meta] -
  *   `verb` puts the action under the network policy (docs/network_policy.md).
  */
@@ -993,6 +1004,10 @@ export const createAction = (callback, rootOptions = {}) => {
 
   const keptAnswerRegistry = rootOptions.keep
     ? createKeptAnswerRegistry(rootOptions.keep)
+    : null;
+  const carriesLabel = `createAction(${callback.name || "anonymous"})`;
+  const carriedArray = rootOptions.carries
+    ? parseCarries(rootOptions.carries, carriesLabel)
     : null;
   let rootAction;
 
@@ -1651,6 +1666,12 @@ export const createAction = (callback, rootOptions = {}) => {
            */
 
           writeActionState(() => {
+            if (carriedArray) {
+              writeCarriedRows(carriedArray, runResult, {
+                answer: true,
+                label: carriesLabel,
+              });
+            }
             const value = resultToValue
               ? resultToValue(runResult, action)
               : runResult;

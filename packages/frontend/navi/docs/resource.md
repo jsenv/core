@@ -33,6 +33,7 @@ Actions are read in components through the action system (`useAsyncData`,
 ([data_states.md](./data_states.md#data-and-loading-are-independent)).
 
 - [`store.upsert()` is not how data enters the store](#storeupsert-is-not-how-data-enters-the-store)
+  - [An answer carrying rows of a resource](#an-answer-carrying-rows-of-a-resource)
 - [`persist`: the last answer, drawn again after a reload](#persist-the-last-answer-drawn-again-after-a-reload)
 - [`keepPageOnScreen`: the page on screen, drawn again by the next document](#keeppageonscreen-the-page-on-screen-drawn-again-by-the-next-document)
 - [`GET_RANGE`: feeding a list that loads as it scrolls](#get_range-feeding-a-list-that-loads-as-it-scrolls)
@@ -89,7 +90,57 @@ socket.addEventListener("message", (message) => {
 ```
 
 A list that loads its rows a slice at a time is **not** one of those cases —
-that is `GET_RANGE`, below.
+that is `GET_RANGE`, below. Nor is an answer that carries rows of a resource
+inside something else: that is `carries`, next.
+
+### An answer carrying rows of a resource
+
+Some answers are no resource's rows but carry some: the sections of a profile
+(partners, tournaments, the clubs played at, together), a dashboard, a search
+answering people and places at once. Nobody writes to them, so modelling them
+as resources buys nothing. But the places inside are places: a club page opened
+from one of those cards should draw the club at once, the way it does from a
+list of places ([data_states.md](./data_states.md#data-and-loading-are-independent)).
+`carries` says which objects of the answer are rows of which resource:
+
+```js
+const PROFILE_SECTIONS = createAction(
+  ({ user }) => fetchJson(`/users/${user}/profile/sections`),
+  {
+    // { partners, tournaments, clubs: [{ place: { id, … }, games_count }] }
+    carries: { "clubs[].place": PLACE },
+  },
+);
+```
+
+A path is properties joined by `.`, with `[]` after an array: each of its
+entries is followed. Each answer writes what it finds there into the resource's
+store, compared in depth as an answer is, and the row stays there as a `.one()`
+child of the answer would. The answer itself is left as it came:
+`club.place` is the plain object the card draws, `null` where the server said
+`null`. The row the store holds, followed as it changes, is
+`PLACE.useById(club.place.id)`. Writing those rows later reruns nothing; what
+makes the answer out of date is still said with `dependencies`.
+
+A resource declares it for the objects inside its rows, by path from the row:
+
+```js
+const ME = resource("me", {
+  GET: async () => ({ id: "me", ...(await fetchJson("/me")) }),
+  carries: { "my_profile.clubs[].place": PLACE },
+});
+```
+
+Every write of a row (any verb, a list, a range, a relation bringing it)
+writes them, and the row holds them in their store while it carries them, as
+`.one()` holds its child. A property of the row that is itself a row stays a
+relation (`ME.one("user", USER)`): the row then reads the child as the store
+holds it. `carries` is for the objects a relation cannot name, deeper in the
+row.
+
+A hand-written `PLACE.store.upsertAnswer(club.place)` in the callback is the
+missing `carries`: the app deciding, read by read, what navi decides for a
+relation.
 
 ## `persist`: the last answer, drawn again after a reload
 

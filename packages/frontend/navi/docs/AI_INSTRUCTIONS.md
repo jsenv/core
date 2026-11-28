@@ -97,9 +97,10 @@ start when unsure which export solves a problem.
   its params move, `GET_RANGE` (its inclusive `end`,
   the count for the screen around the list, a question following a search
   field), a search as the same `GET_MANY`, `withParams()` scopes and
-  `dependencies`, `persist` (and `keepPageOnScreen` for the page on screen), a
-  function versus the verb's instance. Before writing a resource, and before
-  caching a response yourself.
+  `dependencies`, `persist` (and `keepPageOnScreen` for the page on screen),
+  `carries` for an answer holding rows of a resource deeper than a relation
+  reaches, a function versus the verb's instance. Before writing a resource,
+  and before caching a response yourself.
 - `data_states.md` — `data`, `loading` and `error` are three questions;
   `loading: true` never suspends; a skeleton is told whether it is loading.
   Before drawing a skeleton on `!data` or hiding content because `error` is set.
